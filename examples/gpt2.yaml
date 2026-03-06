@@ -1,0 +1,10 @@
+inputs:
+  - src::gpt2
+output: { path: test, shard: 100MB }
+transforms:
+  - copy: { from: ln_f.weight, to: ln_f_copy.weight }
+  - move: { from: ^h(.*), to: i\1 }
+  - assign: { from: ln_f_copy.weight, to: ln_f.weight }
+  - scale: { target: ln_f.weight, by: 0.5 }
+  - assert: { not: { equal: { left: ln_f.weight, right: ln_f_copy.weight } } }
+  - delete: { target: ln_f_copy.weight }
