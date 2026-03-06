@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, Iterable, Literal, TypeVar
 
@@ -18,25 +19,39 @@ try:
 except ImportError:  # pragma: no cover
     T = TypeVar("T")
 
-    def tqdm(iterable: Iterable[T], **_: object) -> Iterable[T]:
-        return iterable
+    class _TqdmDummy:
+        def __init__(self, iterable=None, total=None, **_):
+            self.iterable = iterable
+
+        def __iter__(self):
+            if self.iterable is None:
+                return iter(())
+            return iter(self.iterable)
+
+        def update(self, *_):
+            pass
+
+        def close(self):
+            pass
+
+    def tqdm(iterable=None, **kwargs):  # type: ignore
+        return _TqdmDummy(iterable, **kwargs)
 
 
 logger = logging.getLogger("brainsurgery")
 
-DEFAULT_SHARD_SIZE = "5GB"
-
 
 class InMemoryStateDictProvider:
-    def __init__(self, model_paths: Dict[str, Path]):
+    def __init__(self, model_paths: Dict[str, Path], max_io_workers: int):
         self.model_paths = model_paths
         self.state_dicts: Dict[str, Dict[str, torch.Tensor]] = {}
+        self.max_io_workers = max_io_workers
 
     def get_state_dict(self, model: str) -> Dict[str, torch.Tensor]:
         if model not in self.state_dicts:
             path = self.model_paths[model]
             logger.info("Opening cranium for brain '%s' at %s", model, path)
-            self.state_dicts[model] = load_state_dict_from_path(path)
+            self.state_dicts[model] = load_state_dict_from_path(path, max_io_workers=self.max_io_workers)
             logger.info(
                 "Brain '%s' exposed: %d tensors on the operating table",
                 model,
@@ -46,11 +61,11 @@ class InMemoryStateDictProvider:
             logger.debug("Revisiting exposed brain '%s'", model)
         return self.state_dicts[model]
 
-    def save_output(self, plan: SurgeryPlan) -> Path:
+    def save_output(self, plan: SurgeryPlan, *, default_shard_size, max_io_workers) -> Path:
         output_model = infer_output_model(plan)
         state_dict = self.get_state_dict(output_model)
 
-        output_path, output_format, shard_size = resolve_output_destination(plan.output)
+        output_path, output_format, shard_size = resolve_output_destination(plan.output, default_shard_size=default_shard_size)
 
         logger.info(
             "Closing incision and preserving brain '%s' to %s (%s)",
@@ -72,7 +87,7 @@ class InMemoryStateDictProvider:
             return output_path
 
         output_dir = resolve_sharded_output_directory(plan.output.path, output_path)
-        index_path = save_sharded_safetensors(state_dict, output_dir, shard_size)
+        index_path = save_sharded_safetensors(state_dict, output_dir, shard_size, max_io_workers=max_io_workers)
         logger.info(
             "Patient stable. Wrote %d tensors across sharded safetensors in %s",
             len(state_dict),
@@ -81,13 +96,14 @@ class InMemoryStateDictProvider:
         return index_path
 
 
-
 def resolve_output_destination(
     output: OutputSpec,
+    *,
+    default_shard_size: str,
 ) -> tuple[Path, Literal["safetensors", "torch"], int | None]:
     path = output.path
     format_value = output.format
-    shard_size = resolve_shard_size(output)
+    shard_size = resolve_shard_size(output, default_shard_size=default_shard_size)
 
     if format_value is not None:
         if format_value == "safetensors":
@@ -118,7 +134,6 @@ def resolve_output_destination(
     return resolved_path, resolved_format, shard_size
 
 
-
 def resolve_output_destination_for_explicit_safetensors(path: Path) -> tuple[Path, Literal["safetensors"]]:
     if path.exists() and path.is_dir():
         return path / "model.safetensors", "safetensors"
@@ -132,7 +147,6 @@ def resolve_output_destination_for_explicit_safetensors(path: Path) -> tuple[Pat
     return path, "safetensors"
 
 
-
 def resolve_output_destination_for_explicit_torch(path: Path) -> tuple[Path, Literal["torch"]]:
     if path.exists() and path.is_dir():
         raise RuntimeError("output.format='torch' requires a file path, not a directory")
@@ -143,18 +157,16 @@ def resolve_output_destination_for_explicit_torch(path: Path) -> tuple[Path, Lit
     return path, "torch"
 
 
-
-def resolve_shard_size(output: OutputSpec) -> int | None:
+def resolve_shard_size(output: OutputSpec, default_shard_size: str) -> int | None:
     raw = output.shard
 
     if raw is None:
         if is_directory_style_output(output):
-            raw = DEFAULT_SHARD_SIZE
+            raw = default_shard_size
         else:
             return None
 
     return parse_shard_size(raw)
-
 
 
 def is_directory_style_output(output: OutputSpec) -> bool:
@@ -172,7 +184,6 @@ def is_directory_style_output(output: OutputSpec) -> bool:
         return True
 
     return path.suffix == ""
-
 
 
 def parse_shard_size(raw: str | None) -> int | None:
@@ -202,7 +213,6 @@ def parse_shard_size(raw: str | None) -> int | None:
     return value * multipliers[unit]
 
 
-
 def resolve_sharded_output_directory(original_path: Path, resolved_path: Path) -> Path:
     if original_path.exists() and original_path.is_dir():
         return original_path
@@ -213,10 +223,8 @@ def resolve_sharded_output_directory(original_path: Path, resolved_path: Path) -
     )
 
 
-
 def tensor_nbytes(tensor: torch.Tensor) -> int:
     return tensor.numel() * tensor.element_size()
-
 
 
 def shard_state_dict(
@@ -255,11 +263,12 @@ def shard_state_dict(
     return shards
 
 
-
 def save_sharded_safetensors(
     state_dict: Dict[str, torch.Tensor],
     output_dir: Path,
     max_shard_size: int,
+    *,
+    max_io_workers: int,
 ) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -273,21 +282,34 @@ def save_sharded_safetensors(
         max_shard_size,
     )
 
+    shard_infos: list[tuple[int, str, Path, dict[str, torch.Tensor]]] = []
     weight_map: dict[str, str] = {}
 
-    shard_bar = tqdm(
-        enumerate(shards, start=1),
-        total=total_shards,
-        desc="Shard save",
-        unit="shard",
-        leave=False,
-    )
-    for shard_index, shard in shard_bar:
+    for shard_index, shard in enumerate(shards, start=1):
         shard_name = f"model-{shard_index:05d}-of-{total_shards:05d}.safetensors"
         shard_path = output_dir / shard_name
-        save_safetensors_file(shard, str(shard_path))
+        shard_infos.append((shard_index, shard_name, shard_path, shard))
         for key in shard:
             weight_map[key] = shard_name
+
+    num_workers = choose_num_io_workers(total_shards, max_io_workers=max_io_workers)
+    logger.info("Dispatching %d worker thread(s) for shard save", num_workers)
+
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        futures = {
+            executor.submit(save_safetensors_shard, shard_path, shard): (shard_index, shard_name)
+            for shard_index, shard_name, shard_path, shard in shard_infos
+        }
+
+        progress = tqdm(total=total_shards, desc="Shard save", unit="shard", leave=False)
+        try:
+            for future in as_completed(futures):
+                shard_index, shard_name = futures[future]
+                future.result()
+                logger.debug("Saved shard %d/%d to %s", shard_index, total_shards, shard_name)
+                progress.update(1)
+        finally:
+            progress.close()
 
     index = {
         "metadata": {"total_size": total_size},
@@ -298,19 +320,21 @@ def save_sharded_safetensors(
     return index_path
 
 
+def save_safetensors_shard(path: Path, shard: dict[str, torch.Tensor]) -> None:
+    save_safetensors_file(shard, str(path))
 
-def load_state_dict_from_path(path: Path) -> Dict[str, torch.Tensor]:
+
+def load_state_dict_from_path(path: Path, *, max_io_workers: int) -> Dict[str, torch.Tensor]:
     if not path.exists():
         raise RuntimeError(f"checkpoint path does not exist: {path}")
     if path.is_dir():
         logger.info("CT scan shows a model directory at %s", path)
-        return load_state_dict_from_directory(path)
+        return load_state_dict_from_directory(path, max_io_workers=max_io_workers)
     logger.info("CT scan shows a single checkpoint file at %s", path)
     return load_state_dict_from_file(path)
 
 
-
-def load_state_dict_from_directory(path: Path) -> Dict[str, torch.Tensor]:
+def load_state_dict_from_directory(path: Path, *, max_io_workers: int) -> Dict[str, torch.Tensor]:
     pt_files = sorted(path.glob("*.pt")) + sorted(path.glob("*.pth")) + sorted(path.glob("*.bin"))
     safetensor_files = sorted(path.glob("*.safetensors"))
     index_file = path / "model.safetensors.index.json"
@@ -335,20 +359,39 @@ def load_state_dict_from_directory(path: Path) -> Dict[str, torch.Tensor]:
 
     logger.info("Found %d checkpoint shard(s) in %s", len(files), path)
 
+    num_workers = choose_num_io_workers(len(files), max_io_workers=max_io_workers)
+    logger.info("Dispatching %d worker thread(s) for shard load", num_workers)
+
     merged: Dict[str, torch.Tensor] = {}
-    shard_bar = tqdm(files, desc=f"Open {path.name}", unit="file", leave=False)
-    for file_path in shard_bar:
-        logger.info("Opening skull fragment %s", file_path.name)
-        shard = load_state_dict_from_file(file_path)
-        logger.info("Recovered %d tensor(s) from %s", len(shard), file_path.name)
-        for key, value in shard.items():
-            if key in merged:
-                raise RuntimeError(f"duplicate tensor key {key!r} while loading directory {path}")
-            merged[key] = value
+
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        futures = {
+            executor.submit(load_state_dict_from_file, file_path): file_path
+            for file_path in files
+        }
+
+        progress = tqdm(total=len(files), desc=f"Open {path.name}", unit="file", leave=False)
+        try:
+            for future in as_completed(futures):
+                file_path = futures[future]
+                shard = future.result()
+                logger.info("Recovered %d tensor(s) from %s", len(shard), file_path.name)
+
+                for key, value in shard.items():
+                    if key in merged:
+                        raise RuntimeError(f"duplicate tensor key {key!r} while loading directory {path}")
+                    merged[key] = value
+
+                progress.update(1)
+        finally:
+            progress.close()
 
     logger.info("Cranial assembly complete for %s: %d tensor(s)", path, len(merged))
     return merged
 
+
+def choose_num_io_workers(num_items: int, max_io_workers: int) -> int:
+    return max(1, min(max_io_workers, num_items))
 
 
 def resolve_safetensor_shards_from_index(index_file: Path, base_dir: Path) -> list[Path]:
@@ -375,7 +418,6 @@ def resolve_safetensor_shards_from_index(index_file: Path, base_dir: Path) -> li
     return shard_paths
 
 
-
 def load_state_dict_from_file(path: Path) -> Dict[str, torch.Tensor]:
     suffix = path.suffix.lower()
     if suffix == ".safetensors":
@@ -391,11 +433,9 @@ def load_state_dict_from_file(path: Path) -> Dict[str, torch.Tensor]:
     return validate_state_dict_mapping(loaded, path)
 
 
-
 def validate_state_dict_mapping(loaded: object, path: Path) -> Dict[str, torch.Tensor]:
     if not isinstance(loaded, dict):
         raise RuntimeError(f"checkpoint at {path} is not a state_dict mapping")
     if not all(isinstance(k, str) and torch.is_tensor(v) for k, v in loaded.items()):
         raise RuntimeError(f"checkpoint at {path} is not a plain tensor state_dict")
     return dict(loaded)
-

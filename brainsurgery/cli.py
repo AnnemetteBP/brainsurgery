@@ -17,7 +17,11 @@ app = typer.Typer(help="Brain surgery CLI.")
 
 
 @app.command()
-def run(plan: Path) -> None:
+def run(
+    plan: Path,
+    shard_size: str = typer.Option("5GB", help="Default shard size for directory outputs"),
+    max_io_workers: int = typer.Option(8, help="Max parallel I/O workers"),
+):
     """Load a plan, execute it, and save the rewritten output checkpoint."""
     logger.info("Scrubbing in with surgical plan %s", plan)
     surgery_plan = load_plan(plan)
@@ -27,7 +31,7 @@ def run(plan: Path) -> None:
         len(surgery_plan.transforms),
         surgery_plan.output.path,
     )
-    provider = InMemoryStateDictProvider(surgery_plan.inputs)
+    provider = InMemoryStateDictProvider(surgery_plan.inputs, max_io_workers=max_io_workers)
 
     for transform_index, transform in enumerate(surgery_plan.transforms, start=1):
         logger.info(
@@ -45,7 +49,7 @@ def run(plan: Path) -> None:
             transform_result.count,
         )
 
-    written_path = provider.save_output(surgery_plan)
+    written_path = provider.save_output(surgery_plan, default_shard_size=shard_size, max_io_workers=max_io_workers)
     typer.echo(f"Wrote output checkpoint to {written_path}")
 
 
