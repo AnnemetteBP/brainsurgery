@@ -1,6 +1,6 @@
 inputs:
-  - src::gpt2
-output: { path: test, shard: 100MB }
+  - src::models/gpt2
+output: { path: models/test, shard: 100MB }
 transforms:
   - copy: { from: ln_f.weight, to: ln_f_copy.weight }
   - move: { from: ^h(.*), to: i\1 }
