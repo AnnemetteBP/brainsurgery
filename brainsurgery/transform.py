@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Protocol, Tuple
 import re
 import torch
 
+from .matching import StructuredPathError, StructuredPathMatcher
+
 if TYPE_CHECKING:
     from .plan import SurgeryPlan
 
@@ -16,10 +18,13 @@ class TransformError(RuntimeError):
     pass
 
 
+Expr = str | list[str]
+
+
 @dataclass(frozen=True)
 class TensorRef:
     model: Optional[str]
-    expr: str
+    expr: Expr
     slice_spec: Optional[str] = None
 
 
@@ -77,6 +82,7 @@ class BaseTransform(ABC):
 
 
 _REGISTRY: Dict[str, BaseTransform] = {}
+_MATCHER = StructuredPathMatcher()
 
 
 def register_transform(transform: BaseTransform) -> None:
@@ -117,9 +123,18 @@ def infer_output_model(plan: SurgeryPlan) -> str:
     return next(iter(destination_models))
 
 
-def parse_model_expr(raw: str, default_model: Optional[str] = None) -> TensorRef:
+def parse_model_expr(raw: object, default_model: Optional[str] = None) -> TensorRef:
+    if isinstance(raw, list):
+        if default_model is None:
+            raise TransformError("missing model alias for structured reference")
+        if not raw:
+            raise TransformError("structured reference must be a non-empty list")
+        if not all(isinstance(item, str) and item for item in raw):
+            raise TransformError("structured reference must be a non-empty list of non-empty strings")
+        return TensorRef(model=default_model, expr=raw, slice_spec=None)
+
     if not isinstance(raw, str) or not raw:
-        raise TransformError("reference must be a non-empty string")
+        raise TransformError("reference must be a non-empty string or a non-empty list of strings")
 
     parts = raw.split("::")
     if len(parts) == 1:
@@ -209,21 +224,28 @@ def must_model(ref: TensorRef) -> str:
     return ref.model
 
 
-def resolve_name_mappings(
+def _resolve_name_mappings_regex(
     *,
     from_ref: TensorRef,
     to_ref: TensorRef,
     provider: StateDictProvider,
     op_name: str,
 ) -> List[ResolvedMapping]:
+    assert isinstance(from_ref.expr, str)
+    assert isinstance(to_ref.expr, str)
+
     src_model = must_model(from_ref)
     dst_model = must_model(to_ref)
 
     src_sd = provider.get_state_dict(src_model)
 
-    src_names = sorted(name for name in src_sd.keys() if re.fullmatch(from_ref.expr, name))
+    try:
+        src_names = sorted(name for name in src_sd.keys() if re.fullmatch(from_ref.expr, name))
+    except re.error as exc:
+        raise TransformError(f"{op_name} invalid source regex {from_ref.expr!r}: {exc}") from exc
+
     if not src_names:
-        raise TransformError(f"{op_name} source matched zero tensors: {src_model}::{from_ref.expr}")
+        raise TransformError(f"{op_name} source matched zero tensors: {src_model}::{from_ref.expr}; available tensors: {sorted(src_sd.keys())}")
 
     src_slice = parse_slice(from_ref.slice_spec) if from_ref.slice_spec else None
     dst_slice = parse_slice(to_ref.slice_spec) if to_ref.slice_spec else None
@@ -232,7 +254,12 @@ def resolve_name_mappings(
     resolved: List[ResolvedMapping] = []
 
     for src_name in src_names:
-        dst_name = re.sub(from_ref.expr, to_ref.expr, src_name)
+        try:
+            dst_name = re.sub(from_ref.expr, to_ref.expr, src_name)
+        except re.error as exc:
+            raise TransformError(
+                f"{op_name} invalid regex rewrite from {from_ref.expr!r} to {to_ref.expr!r}: {exc}"
+            ) from exc
 
         if dst_name in dst_names_seen:
             raise TransformError(f"{op_name} destination collision: {dst_model}::{dst_name}")
@@ -250,6 +277,111 @@ def resolve_name_mappings(
         )
 
     return resolved
+
+
+def _resolve_name_mappings_structured(
+    *,
+    from_ref: TensorRef,
+    to_ref: TensorRef,
+    provider: StateDictProvider,
+    op_name: str,
+) -> List[ResolvedMapping]:
+    assert isinstance(from_ref.expr, list)
+    assert isinstance(to_ref.expr, list)
+
+    src_model = must_model(from_ref)
+    dst_model = must_model(to_ref)
+
+    src_sd = provider.get_state_dict(src_model)
+
+    src_slice = parse_slice(from_ref.slice_spec) if from_ref.slice_spec else None
+    dst_slice = parse_slice(to_ref.slice_spec) if to_ref.slice_spec else None
+
+    matched_any = False
+    dst_names_seen: set[str] = set()
+    resolved: List[ResolvedMapping] = []
+
+    for src_name in sorted(src_sd.keys()):
+        try:
+            match = _MATCHER.match(from_ref.expr, src_name)
+        except StructuredPathError as exc:
+            raise TransformError(f"{op_name} invalid structured source pattern: {exc}") from exc
+
+        if match is None:
+            continue
+
+        matched_any = True
+
+        try:
+            dst_name = _MATCHER.rewrite(to_ref.expr, match)
+        except StructuredPathError as exc:
+            raise TransformError(f"{op_name} invalid structured destination pattern: {exc}") from exc
+
+        if dst_name in dst_names_seen:
+            raise TransformError(f"{op_name} destination collision: {dst_model}::{dst_name}")
+
+        dst_names_seen.add(dst_name)
+        resolved.append(
+            ResolvedMapping(
+                src_model=src_model,
+                src_name=src_name,
+                src_slice=src_slice,
+                dst_model=dst_model,
+                dst_name=dst_name,
+                dst_slice=dst_slice,
+            )
+        )
+
+    if not matched_any:
+        raise TransformError(f"{op_name} source matched zero tensors: {src_model}::{from_ref.expr!r}; available tensors: {sorted(src_sd.keys())}")
+
+    return resolved
+
+
+def resolve_name_mappings(
+    *,
+    from_ref: TensorRef,
+    to_ref: TensorRef,
+    provider: StateDictProvider,
+    op_name: str,
+) -> List[ResolvedMapping]:
+    src_slice = from_ref.slice_spec
+    dst_slice = to_ref.slice_spec
+
+    if src_slice is not None and not isinstance(src_slice, str):
+        raise TransformError(f"{op_name} source slice must be a string")
+    if dst_slice is not None and not isinstance(dst_slice, str):
+        raise TransformError(f"{op_name} destination slice must be a string")
+
+    if isinstance(from_ref.expr, str) and isinstance(to_ref.expr, str):
+        return _resolve_name_mappings_regex(
+            from_ref=from_ref,
+            to_ref=to_ref,
+            provider=provider,
+            op_name=op_name,
+        )
+
+    if isinstance(from_ref.expr, list) and isinstance(to_ref.expr, list):
+        if not from_ref.expr:
+            raise TransformError(f"{op_name} structured source pattern must be non-empty")
+        if not to_ref.expr:
+            raise TransformError(f"{op_name} structured destination pattern must be non-empty")
+        if not all(isinstance(item, str) and item for item in from_ref.expr):
+            raise TransformError(f"{op_name} structured source pattern must be a list of non-empty strings")
+        if not all(isinstance(item, str) and item for item in to_ref.expr):
+            raise TransformError(f"{op_name} structured destination pattern must be a list of non-empty strings")
+
+        return _resolve_name_mappings_structured(
+            from_ref=from_ref,
+            to_ref=to_ref,
+            provider=provider,
+            op_name=op_name,
+        )
+
+    raise TransformError(
+        f"{op_name} requires from/to expressions of the same kind: "
+        "either both strings (regex mode) or both lists (structured mode)"
+    )
 
 
 def require_dest_missing(
@@ -309,6 +441,32 @@ def require_nonempty_string(payload: dict, *, op_name: str, key: str) -> str:
     if not isinstance(value, str) or not value:
         raise TransformError(f"{op_name}.{key} must be a non-empty string")
     return value
+
+
+def require_expr(payload: dict, *, op_name: str, key: str) -> Expr:
+    value = payload.get(key)
+
+    if isinstance(value, str):
+        if not value:
+            raise TransformError(
+                f"{op_name}.{key} must be a non-empty string or a non-empty list of non-empty strings"
+            )
+        return value
+
+    if isinstance(value, list):
+        if not value:
+            raise TransformError(
+                f"{op_name}.{key} must be a non-empty string or a non-empty list of non-empty strings"
+            )
+        if not all(isinstance(item, str) and item for item in value):
+            raise TransformError(
+                f"{op_name}.{key} must be a non-empty string or a non-empty list of non-empty strings"
+            )
+        return value
+
+    raise TransformError(
+        f"{op_name}.{key} must be a non-empty string or a non-empty list of non-empty strings"
+    )
 
 
 def require_numeric(payload: dict, *, op_name: str, key: str) -> float:

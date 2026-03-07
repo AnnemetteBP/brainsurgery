@@ -2,8 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..transform import BaseTransform, StateDictProvider, TransformResult, ensure_mapping_payload, register_transform
 from ..expressions import AssertExpr, AssertTransformError, compile_assert_expr
+from ..transform import (
+    BaseTransform,
+    StateDictProvider,
+    TransformResult,
+    ensure_mapping_payload,
+    register_transform,
+)
 
 
 @dataclass(frozen=True)
@@ -41,4 +47,3 @@ class AssertTransform(BaseTransform):
 
 
 register_transform(AssertTransform())
-

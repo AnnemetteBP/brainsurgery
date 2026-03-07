@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from brainsurgery.model import tqdm
-
 from ..model import tqdm
 from ..transform import (
     BaseTransform,
@@ -14,11 +12,10 @@ from ..transform import (
     TransformError,
     TransformResult,
     ensure_mapping_payload,
-    must_model,
     parse_model_expr,
     parse_slice,
     register_transform,
-    require_nonempty_string,
+    require_expr,
     require_dest_missing,
     resolve_name_mappings,
     select_tensor,
@@ -48,8 +45,8 @@ class CopyTransform(BaseTransform):
             required_keys={"from", "to"},
         )
 
-        raw_from = require_nonempty_string(payload, op_name=self.name, key="from")
-        raw_to = require_nonempty_string(payload, op_name=self.name, key="to")
+        raw_from = require_expr(payload, op_name=self.name, key="from")
+        raw_to = require_expr(payload, op_name=self.name, key="to")
 
         from_ref = parse_model_expr(raw_from, default_model=default_model)
         to_ref = parse_model_expr(raw_to, default_model=default_model)

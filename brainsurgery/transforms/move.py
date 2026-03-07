@@ -14,7 +14,7 @@ from ..transform import (
     parse_model_expr,
     register_transform,
     require_dest_missing,
-    require_nonempty_string,
+    require_expr,
     resolve_name_mappings,
     validate_payload_keys,
 )
@@ -42,8 +42,8 @@ class MoveTransform(BaseTransform):
             required_keys={"from", "to"},
         )
 
-        raw_from = require_nonempty_string(payload, op_name=self.name, key="from")
-        raw_to = require_nonempty_string(payload, op_name=self.name, key="to")
+        raw_from = require_expr(payload, op_name=self.name, key="from")
+        raw_to = require_expr(payload, op_name=self.name, key="to")
 
         from_ref = parse_model_expr(raw_from, default_model=default_model)
         to_ref = parse_model_expr(raw_to, default_model=default_model)
@@ -90,7 +90,7 @@ def resolve_move_mappings(spec: MoveSpec, provider: StateDictProvider) -> List[R
     return mappings
 
 
-def apply_move_mappings(mappings, provider) -> None:
+def apply_move_mappings(mappings: List[ResolvedMapping], provider: StateDictProvider) -> None:
     for item in mappings:
         src_sd = provider.get_state_dict(item.src_model)
         dst_sd = provider.get_state_dict(item.dst_model)

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, List, Protocol
-import re
 
 import torch
 
+from .matching import StructuredPathError, StructuredPathMatcher
 from .transform import (
     StateDictProvider,
     TensorRef,
@@ -26,6 +26,9 @@ class AssertTransformError(TransformError):
 class AssertExpr(Protocol):
     def evaluate(self, provider: StateDictProvider) -> None: ...
     def collect_models(self) -> set[str]: ...
+
+
+_MATCHER = StructuredPathMatcher()
 
 
 @dataclass(frozen=True)
@@ -150,9 +153,7 @@ class NotExpr:
         except AssertTransformError:
             return
 
-        raise AssertTransformError(
-            f"not failed: inner assertion succeeded: {format_expr(self.expr)}"
-        )
+        raise AssertTransformError(f"not failed: inner assertion succeeded: {format_expr(self.expr)}")
 
     def collect_models(self) -> set[str]:
         return self.expr.collect_models()
@@ -274,8 +275,21 @@ def compile_any_expr(payload: Any, default_model: str | None) -> AnyExpr:
 
 
 def compile_tensor_ref_expr(raw: Any, default_model: str | None, op_name: str) -> TensorRef:
-    if not isinstance(raw, str) or not raw:
-        raise AssertTransformError(f"{op_name} must be a non-empty string reference")
+    if isinstance(raw, str):
+        if not raw:
+            raise AssertTransformError(
+                f"{op_name} must be a non-empty string reference or non-empty list of strings"
+            )
+    elif isinstance(raw, list):
+        if not raw or not all(isinstance(item, str) and item for item in raw):
+            raise AssertTransformError(
+                f"{op_name} must be a non-empty string reference or non-empty list of strings"
+            )
+    else:
+        raise AssertTransformError(
+            f"{op_name} must be a non-empty string reference or non-empty list of strings"
+        )
+
     ref = parse_model_expr(raw, default_model=default_model)
     if ref.slice_spec is not None:
         parse_slice(ref.slice_spec)
@@ -319,7 +333,14 @@ def compile_shape(raw: Any) -> tuple[int, ...]:
 def resolve_matches(ref: TensorRef, provider: StateDictProvider) -> List[str]:
     model = must_model(ref)
     sd = provider.get_state_dict(model)
-    return sorted(name for name in sd.keys() if re.fullmatch(ref.expr, name))
+
+    if isinstance(ref.expr, str):
+        return sorted(name for name in sd.keys() if fullmatch_regex(ref.expr, name, ref))
+
+    if isinstance(ref.expr, list):
+        return sorted(name for name in sd.keys() if fullmatch_structured(ref.expr, name, ref))
+
+    raise AssertTransformError(f"invalid tensor reference expression type: {type(ref.expr).__name__}")
 
 
 def resolve_single_tensor(ref: TensorRef, provider: StateDictProvider, op_name: str) -> torch.Tensor:
@@ -337,9 +358,44 @@ def resolve_single_tensor(ref: TensorRef, provider: StateDictProvider, op_name: 
     return select_tensor(tensor, slice_spec)
 
 
+def fullmatch_regex(pattern: str, name: str, ref: TensorRef) -> bool:
+    try:
+        return re_fullmatch(pattern, name)
+    except TransformError:
+        raise
+    except Exception as exc:
+        raise AssertTransformError(f"invalid regex in reference {format_ref(ref)}: {exc}") from exc
+
+
+def re_fullmatch(pattern: str, value: str) -> bool:
+    import re
+
+    try:
+        return re.fullmatch(pattern, value) is not None
+    except re.error as exc:
+        raise AssertTransformError(f"invalid regex {pattern!r}: {exc}") from exc
+
+
+def fullmatch_structured(pattern: list[str], name: str, ref: TensorRef) -> bool:
+    try:
+        return _MATCHER.match(pattern, name) is not None
+    except StructuredPathError as exc:
+        raise AssertTransformError(f"invalid structured reference {format_ref(ref)}: {exc}") from exc
+
+
 def format_ref(ref: TensorRef) -> str:
     model = must_model(ref)
-    return f"{model}::{ref.expr}" if ref.slice_spec is None else f"{model}::{ref.expr}::{ref.slice_spec}"
+    expr = format_ref_expr(ref.expr)
+    if ref.slice_spec is None:
+        return f"{model}::{expr}"
+    return f"{model}::{expr}::{ref.slice_spec}"
+
+
+def format_ref_expr(expr: str | list[str]) -> str:
+    if isinstance(expr, str):
+        return expr
+    return "[" + ", ".join(repr(part) for part in expr) + "]"
+
 
 def format_expr(expr: AssertExpr) -> str:
     if isinstance(expr, ExistsExpr):
