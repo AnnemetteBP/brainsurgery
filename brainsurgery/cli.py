@@ -22,7 +22,7 @@ app = typer.Typer(help="Brain surgery CLI.")
 def run(
     plan: Path,
     shard_size: str = typer.Option("5GB", help="Default shard size for directory outputs"),
-    max_io_workers: int = typer.Option(8, help="Max parallel I/O workers"),
+    num_workers: int = typer.Option(8, help="Max number of parallel I/O workers"),
     provider: str = typer.Option("inmemory", help="State-dict provider: inmemory or arena"),
     arena_root: Path = typer.Option(
         Path(".brainsurgery"),
@@ -49,7 +49,7 @@ def run(
         if provider_name == "inmemory":
             state_dict_provider = InMemoryStateDictProvider(
                 surgery_plan.inputs,
-                max_io_workers=max_io_workers,
+                max_io_workers=num_workers,
             )
         elif provider_name == "arena":
             segment_size_bytes = parse_shard_size(arena_segment_size)
@@ -63,7 +63,7 @@ def run(
             state_dict_provider = ArenaStateDictProvider(
                 surgery_plan.inputs,
                 arena=arena,
-                max_io_workers=max_io_workers,
+                max_io_workers=num_workers,
             )
         else:
             raise typer.BadParameter("provider must be either 'inmemory' or 'arena'")
@@ -90,7 +90,7 @@ def run(
         written_path = state_dict_provider.save_output(
             surgery_plan,
             default_shard_size=shard_size,
-            max_io_workers=max_io_workers,
+            max_io_workers=num_workers,
         )
         typer.echo(f"Wrote output checkpoint to {written_path}")
     finally:
