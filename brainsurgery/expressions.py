@@ -6,7 +6,7 @@ from typing import Any, List, Protocol
 import torch
 
 from .dtypes import parse_torch_dtype
-from .targeting import format_target_ref, resolve_target_names
+from .transforms.unary import format_target_ref, resolve_target_names
 from .transform import (
     StateDictProvider,
     TensorRef,

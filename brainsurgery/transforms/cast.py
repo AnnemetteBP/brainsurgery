@@ -5,8 +5,7 @@ from dataclasses import dataclass
 import torch
 
 from ..dtypes import parse_torch_dtype
-from ..targeting import resolve_target_names
-from .unary import UnarySpec, UnaryTransform
+from .unary import UnarySpec, UnaryTransform, resolve_target_names
 from ..transform import (
     StateDictProvider,
     TensorRef,

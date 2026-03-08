@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from __future__ import annotations
 
 from .binary import BinaryMappingSpec, BinaryMappingTransform
 from ..transform import (
@@ -12,17 +12,15 @@ from ..transform import (
     select_tensor,
 )
 
+
 class AssignTransformError(TransformError):
     pass
 
-@dataclass(frozen=True)
-class AssignSpec(BinaryMappingSpec):
-    pass
 
-class AssignTransform(BinaryMappingTransform[AssignSpec]):
+class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
     name = "assign"
     error_type = AssignTransformError
-    spec_type = AssignSpec
+    spec_type = BinaryMappingSpec
     progress_desc = "Applying assign transforms"
 
     def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
@@ -32,7 +30,9 @@ class AssignTransform(BinaryMappingTransform[AssignSpec]):
             parse_slice(to_ref.slice_spec)
 
     def validate_resolved_mappings(
-        self, mappings: list[ResolvedMapping], provider: StateDictProvider
+        self,
+        mappings: list[ResolvedMapping],
+        provider: StateDictProvider,
     ) -> None:
         require_dest_present(
             mappings=mappings,

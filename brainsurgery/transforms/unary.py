@@ -12,6 +12,9 @@ from ..transform import (
     TransformError,
     TransformResult,
     ensure_mapping_payload,
+    format_tensor_ref,
+    match_expr_names,
+    must_model,
     parse_model_expr,
     require_expr,
     validate_payload_keys,
@@ -24,6 +27,36 @@ class UnarySpec:
 
 
 SpecT = TypeVar("SpecT", bound=UnarySpec)
+
+
+def format_target_ref(ref: TensorRef) -> str:
+    return format_tensor_ref(ref)
+
+
+def resolve_target_names(
+    *,
+    target_ref: TensorRef,
+    provider: StateDictProvider,
+    op_name: str,
+    error_type: type[TransformError],
+) -> list[str]:
+    model = must_model(target_ref)
+    sd = provider.get_state_dict(model)
+
+    try:
+        matches = match_expr_names(
+            expr=target_ref.expr,
+            names=sd.keys(),
+            op_name=op_name,
+            role="target",
+        )
+    except TransformError as exc:
+        raise error_type(str(exc)) from exc
+
+    if not matches:
+        raise error_type(f"{op_name} matched zero tensors: {format_target_ref(target_ref)}")
+
+    return matches
 
 
 class UnaryTransform(BaseTransform, ABC, Generic[SpecT]):

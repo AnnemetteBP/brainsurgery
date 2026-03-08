@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import MutableMapping
+from collections.abc import Iterable, MutableMapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Protocol, Tuple
 
@@ -224,6 +224,93 @@ def must_model(ref: TensorRef) -> str:
     return ref.model
 
 
+def format_ref_expr(expr: Expr) -> str:
+    if isinstance(expr, str):
+        return expr
+    return "[" + ", ".join(repr(part) for part in expr) + "]"
+
+
+def format_tensor_ref(ref: TensorRef) -> str:
+    model = must_model(ref)
+    expr = format_ref_expr(ref.expr)
+    if ref.slice_spec is None:
+        return f"{model}::{expr}"
+    return f"{model}::{expr}::{ref.slice_spec}"
+
+
+def validate_expr_kind(
+    *,
+    expr: Expr,
+    op_name: str,
+    role: str,
+) -> None:
+    if isinstance(expr, str):
+        if not expr:
+            raise TransformError(f"{op_name} {role} regex must be non-empty")
+        return
+
+    if isinstance(expr, list):
+        if not expr:
+            raise TransformError(f"{op_name} structured {role} pattern must be non-empty")
+        if not all(isinstance(item, str) and item for item in expr):
+            raise TransformError(
+                f"{op_name} structured {role} pattern must be a list of non-empty strings"
+            )
+        return
+
+    raise TransformError(f"{op_name} {role} expression has invalid type: {type(expr).__name__}")
+
+
+def match_expr_names(
+    *,
+    expr: Expr,
+    names: Iterable[str],
+    op_name: str,
+    role: str,
+) -> list[str]:
+    validate_expr_kind(expr=expr, op_name=op_name, role=role)
+
+    if isinstance(expr, str):
+        try:
+            return sorted(name for name in names if re.fullmatch(expr, name))
+        except re.error as exc:
+            raise TransformError(f"{op_name} invalid {role} regex {expr!r}: {exc}") from exc
+
+    assert isinstance(expr, list)
+    try:
+        return sorted(name for name in names if _MATCHER.match(expr, name) is not None)
+    except StructuredPathError as exc:
+        raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
+
+
+def match_structured_expr(
+    *,
+    expr: list[str],
+    name: str,
+    op_name: str,
+    role: str,
+):
+    validate_expr_kind(expr=expr, op_name=op_name, role=role)
+    try:
+        return _MATCHER.match(expr, name)
+    except StructuredPathError as exc:
+        raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
+
+
+def rewrite_structured_expr(
+    *,
+    expr: list[str],
+    match,
+    op_name: str,
+    role: str,
+) -> str:
+    validate_expr_kind(expr=expr, op_name=op_name, role=role)
+    try:
+        return _MATCHER.rewrite(expr, match)
+    except StructuredPathError as exc:
+        raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
+
+
 def _resolve_name_mappings_regex(
     *,
     from_ref: TensorRef,
@@ -236,16 +323,19 @@ def _resolve_name_mappings_regex(
 
     src_model = must_model(from_ref)
     dst_model = must_model(to_ref)
-
     src_sd = provider.get_state_dict(src_model)
 
-    try:
-        src_names = sorted(name for name in src_sd.keys() if re.fullmatch(from_ref.expr, name))
-    except re.error as exc:
-        raise TransformError(f"{op_name} invalid source regex {from_ref.expr!r}: {exc}") from exc
-
+    src_names = match_expr_names(
+        expr=from_ref.expr,
+        names=src_sd.keys(),
+        op_name=op_name,
+        role="source",
+    )
     if not src_names:
-        raise TransformError(f"{op_name} source matched zero tensors: {src_model}::{from_ref.expr}; available tensors: {sorted(src_sd.keys())}")
+        raise TransformError(
+            f"{op_name} source matched zero tensors: "
+            f"{format_tensor_ref(from_ref)}; available tensors: {sorted(src_sd.keys())}"
+        )
 
     src_slice = parse_slice(from_ref.slice_spec) if from_ref.slice_spec else None
     dst_slice = parse_slice(to_ref.slice_spec) if to_ref.slice_spec else None
@@ -291,7 +381,6 @@ def _resolve_name_mappings_structured(
 
     src_model = must_model(from_ref)
     dst_model = must_model(to_ref)
-
     src_sd = provider.get_state_dict(src_model)
 
     src_slice = parse_slice(from_ref.slice_spec) if from_ref.slice_spec else None
@@ -302,20 +391,23 @@ def _resolve_name_mappings_structured(
     resolved: List[ResolvedMapping] = []
 
     for src_name in sorted(src_sd.keys()):
-        try:
-            match = _MATCHER.match(from_ref.expr, src_name)
-        except StructuredPathError as exc:
-            raise TransformError(f"{op_name} invalid structured source pattern: {exc}") from exc
-
+        match = match_structured_expr(
+            expr=from_ref.expr,
+            name=src_name,
+            op_name=op_name,
+            role="source",
+        )
         if match is None:
             continue
 
         matched_any = True
 
-        try:
-            dst_name = _MATCHER.rewrite(to_ref.expr, match)
-        except StructuredPathError as exc:
-            raise TransformError(f"{op_name} invalid structured destination pattern: {exc}") from exc
+        dst_name = rewrite_structured_expr(
+            expr=to_ref.expr,
+            match=match,
+            op_name=op_name,
+            role="destination",
+        )
 
         if dst_name in dst_names_seen:
             raise TransformError(f"{op_name} destination collision: {dst_model}::{dst_name}")
@@ -333,7 +425,10 @@ def _resolve_name_mappings_structured(
         )
 
     if not matched_any:
-        raise TransformError(f"{op_name} source matched zero tensors: {src_model}::{from_ref.expr!r}; available tensors: {sorted(src_sd.keys())}")
+        raise TransformError(
+            f"{op_name} source matched zero tensors: "
+            f"{format_tensor_ref(from_ref)}; available tensors: {sorted(src_sd.keys())}"
+        )
 
     return resolved
 
@@ -362,15 +457,6 @@ def resolve_name_mappings(
         )
 
     if isinstance(from_ref.expr, list) and isinstance(to_ref.expr, list):
-        if not from_ref.expr:
-            raise TransformError(f"{op_name} structured source pattern must be non-empty")
-        if not to_ref.expr:
-            raise TransformError(f"{op_name} structured destination pattern must be non-empty")
-        if not all(isinstance(item, str) and item for item in from_ref.expr):
-            raise TransformError(f"{op_name} structured source pattern must be a list of non-empty strings")
-        if not all(isinstance(item, str) and item for item in to_ref.expr):
-            raise TransformError(f"{op_name} structured destination pattern must be a list of non-empty strings")
-
         return _resolve_name_mappings_structured(
             from_ref=from_ref,
             to_ref=to_ref,
