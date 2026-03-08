@@ -206,7 +206,7 @@ def run(
         "Plan loaded: %d input brains, %d transform(s), output path %s",
         len(surgery_plan.inputs),
         len(surgery_plan.transforms),
-        surgery_plan.output.path,
+        surgery_plan.output.path if surgery_plan.output else None,
     )
 
     provider_name = provider.strip().lower()
@@ -253,12 +253,15 @@ def run(
                 transform_result.count,
             )
 
+        if surgery_plan.output is None:
+            logger.info("No output spec provided; skipping checkpoint writing")
+            return
         written_path = state_dict_provider.save_output(
             surgery_plan,
             default_shard_size=shard_size,
             max_io_workers=num_workers,
         )
-        typer.echo(f"Wrote output checkpoint to {written_path}")
+        logger.info(f"Wrote output checkpoint to {written_path}")
     finally:
         state_dict_provider.close()
 

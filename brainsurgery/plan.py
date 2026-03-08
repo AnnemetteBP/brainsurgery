@@ -23,7 +23,7 @@ class OutputSpec:
 @dataclass(frozen=True)
 class SurgeryPlan:
     inputs: Dict[str, Path]
-    output: OutputSpec
+    output: OutputSpec | None
     transforms: List[CompiledTransform]
 
 
@@ -88,16 +88,21 @@ def parse_input_entry(raw: Any) -> tuple[str | None, Path]:
     return None, Path(raw)
 
 
-def parse_output(raw: Any) -> OutputSpec:
+def parse_output(raw: Any) -> OutputSpec | None:
+    if raw is None:
+        return None
+
     if isinstance(raw, str):
         if not raw:
-            raise PlanLoaderError("output must be a non-empty string")
+            return None
         return OutputSpec(path=Path(raw))
 
     if isinstance(raw, dict):
+        if not raw:
+            return None
         return parse_output_mapping(raw)
 
-    raise PlanLoaderError("output must be either a non-empty string or a mapping")
+    raise PlanLoaderError("output must be either empty, a non-empty string, or a mapping")
 
 
 def parse_output_mapping(raw: Dict[str, Any]) -> OutputSpec:
