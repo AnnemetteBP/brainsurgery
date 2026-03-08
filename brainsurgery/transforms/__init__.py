@@ -6,3 +6,5 @@ from . import delete  # noqa: F401
 from . import assert_  # noqa: F401
 from . import cast # noqa: F401
 from . import dump # noqa: F401
+from . import help # noqa: F401
+from . import exit # noqa: F401

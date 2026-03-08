@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, MutableMapping
 from dataclasses import dataclass
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Protocol, Tuple
 
 import re
@@ -28,10 +29,16 @@ class TensorRef:
     slice_spec: Optional[str] = None
 
 
+class TransformControl(Enum):
+    CONTINUE = "continue"
+    EXIT = "exit"
+
+
 @dataclass(frozen=True)
 class TransformResult:
     name: str
     count: int
+    control: TransformControl = TransformControl.CONTINUE
 
 
 @dataclass(frozen=True)

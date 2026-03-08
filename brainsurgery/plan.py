@@ -164,13 +164,13 @@ def parse_transform_entry(
 
     op_name, payload = next(iter(raw.items()))
 
+    if not isinstance(op_name, str) or not op_name:
+        raise PlanLoaderError(f"transform #{index}: operation name must be a non-empty string")
+
     try:
         transform = get_transform(op_name)
     except TransformError as exc:
         raise PlanLoaderError(f"transform #{index}: {exc}") from exc
-
-    if not isinstance(payload, dict):
-        raise PlanLoaderError(f"transform #{index}: payload must be a mapping")
 
     try:
         spec = transform.compile(payload, default_model)

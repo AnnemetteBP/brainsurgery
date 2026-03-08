@@ -35,13 +35,16 @@ class BinaryMappingTransform(BaseTransform, ABC, Generic[SpecT]):
     progress_desc: str | None = None
     progress_unit: str = "tensor"
 
+    allowed_keys = {"from", "to"}
+    required_keys = {"from", "to"}
+
     def compile(self, payload: dict, default_model: str | None) -> SpecT:
         payload = ensure_mapping_payload(payload, self.name)
         validate_payload_keys(
             payload,
             op_name=self.name,
-            allowed_keys={"from", "to"},
-            required_keys={"from", "to"},
+            allowed_keys=self.allowed_keys,
+            required_keys=self.required_keys,
         )
 
         from_ref, to_ref = self.parse_refs(payload, default_model)

@@ -12,23 +12,12 @@ from .arena import ArenaError, SegmentedFileBackedArena
 from .model import parse_shard_size
 from .plan import compile_plan
 from .providers import ArenaStateDictProvider, InMemoryStateDictProvider
-from .transform import apply_transform
+from .transform import TransformControl, apply_transform
 
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger("brainsurgery")
 _ALLOWED_LOG_LEVELS = {"debug", "info", "warning", "error", "critical"}
-
-def configure_logging(log_level: str) -> None:
-    level_name = log_level.strip().lower()
-    if level_name not in _ALLOWED_LOG_LEVELS:
-        raise typer.BadParameter(
-            f"log-level must be one of: {', '.join(sorted(_ALLOWED_LOG_LEVELS))}"
-        )
-
-    level = getattr(logging, level_name.upper())
-    logging.getLogger().setLevel(level)
-    logger.setLevel(level)
 
 app = typer.Typer(help="Brain surgery CLI.")
 
@@ -40,6 +29,20 @@ _PATH_TOKEN_RE = re.compile(
     """,
     re.VERBOSE,
 )
+
+_INTERACTIVE_SPECIAL_TRANSFORMS = {"help", "exit"}
+
+
+def configure_logging(log_level: str) -> None:
+    level_name = log_level.strip().lower()
+    if level_name not in _ALLOWED_LOG_LEVELS:
+        raise typer.BadParameter(
+            f"log-level must be one of: {', '.join(sorted(_ALLOWED_LOG_LEVELS))}"
+        )
+
+    level = getattr(logging, level_name.upper())
+    logging.getLogger().setLevel(level)
+    logger.setLevel(level)
 
 
 def is_yaml_file_arg(token: str) -> bool:
@@ -188,19 +191,31 @@ def load_cli_config(tokens: list[str]) -> dict[str, Any]:
     return merged
 
 
+def _normalize_single_transform_spec(raw: Any) -> dict[str, Any]:
+    if isinstance(raw, dict):
+        if len(raw) != 1:
+            raise ValueError("each transform spec must be a mapping with exactly one key")
+        return raw
+
+    if isinstance(raw, str):
+        name = raw.strip()
+        if not name:
+            raise ValueError("transform name must be a non-empty string")
+        return {name: {}}
+
+    raise ValueError(
+        "transform spec must be either a YAML mapping or a bare transform name"
+    )
+
+
 def normalize_transform_specs(raw: Any) -> list[dict[str, Any]]:
     if raw is None:
         return []
 
-    if isinstance(raw, dict):
-        return [raw]
+    if isinstance(raw, list):
+        return [_normalize_single_transform_spec(item) for item in raw]
 
-    if isinstance(raw, list) and all(isinstance(item, dict) for item in raw):
-        return list(raw)
-
-    raise ValueError(
-        "transform spec must be either a single YAML mapping or a list of YAML mappings"
-    )
+    return [_normalize_single_transform_spec(raw)]
 
 
 def parse_transform_block(block: str) -> list[dict[str, Any]]:
@@ -217,7 +232,7 @@ def prompt_interactive_transform() -> list[dict[str, Any]] | None:
     typer.echo("Interactive mode.")
     typer.echo("Enter one transform as YAML, or a YAML list of transforms.")
     typer.echo("Finish input with an empty line.")
-    typer.echo("Commands: exit, quit, :q, help, :help")
+    typer.echo("Special transforms: help, exit")
     typer.echo("Example: copy: { from: ln_f.weight, to: ln_f_copy.weight }")
 
     while True:
@@ -230,25 +245,16 @@ def prompt_interactive_transform() -> list[dict[str, Any]] | None:
             except EOFError:
                 return None
 
-            stripped = line.strip()
+            if line.strip() == "":
+                if not lines:
+                    continue
 
-            if not lines and stripped in {"exit", "quit", ":q"}:
-                return None
-
-            if not lines and stripped in {"help", ":help", "?"}:
-                typer.echo("Enter YAML for one transform or a list of transforms, then submit an empty line.")
-                typer.echo('Example: scale: { target: ln_f.weight, by: 0.5 }')
-                break
-
-            if stripped == "":
-                if lines:
-                    try:
-                        return parse_transform_block("\n".join(lines))
-                    except ValueError as exc:
-                        logger.error("Interactive transform rejected: %s", exc)
-                        typer.echo("Try again.")
-                        break
-                continue
+                try:
+                    return parse_transform_block("\n".join(lines))
+                except ValueError as exc:
+                    logger.error("Interactive transform rejected: %s", exc)
+                    typer.echo("Try again.")
+                    break
 
             lines.append(line)
             prompt = "... "
@@ -291,12 +297,73 @@ def write_executed_plan_summary(
     destination: Path | None,
 ) -> None:
     summary_doc = build_raw_plan(inputs=inputs, output=output, transforms=transforms)
+
     if destination is None:
         typer.echo(OmegaConf.to_yaml(summary_doc))
-    else:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        OmegaConf.save(config=OmegaConf.create(summary_doc), f=str(destination))
-        logger.info("Executed plan summary written to %s", destination)
+        return
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    OmegaConf.save(config=OmegaConf.create(summary_doc), f=str(destination))
+    logger.info("Executed plan summary written to %s", destination)
+
+
+def execute_transforms(
+    transforms: list[Any],
+    state_dict_provider: Any,
+    *,
+    interactive: bool,
+) -> bool:
+    """
+    Execute transforms in order.
+
+    Returns True if execution should continue.
+    Returns False if a transform requested orderly exit.
+    """
+    total = len(transforms)
+
+    for transform_index, transform in enumerate(transforms, start=1):
+        if interactive:
+            logger.info(
+                "Interactive procedure %d/%d: positioning instruments for %s",
+                transform_index,
+                total,
+                type(transform.spec).__name__,
+            )
+        else:
+            logger.info(
+                "Procedure %d/%d: positioning instruments for %s",
+                transform_index,
+                total,
+                type(transform.spec).__name__,
+            )
+
+        transform_result = apply_transform(transform, state_dict_provider)
+
+        if interactive:
+            logger.info(
+                "Interactive procedure %d/%d complete: %s affected %d site(s)",
+                transform_index,
+                total,
+                transform_result.name,
+                transform_result.count,
+            )
+        else:
+            logger.info(
+                "Procedure %d/%d complete: %s affected %d site(s)",
+                transform_index,
+                total,
+                transform_result.name,
+                transform_result.count,
+            )
+
+        if not transform_result.control == TransformControl.CONTINUE:
+            logger.info(
+                "%s requested orderly exit",
+                transform_result.name,
+            )
+            return False
+
+    return True
 
 
 @app.command()
@@ -345,7 +412,10 @@ def run(
     configure_logging(log_level)
     raw_plan = load_cli_config(config_items or [])
 
-    logger.info("Scrubbing in. Surgical plan assembled from %d config item(s)", len(config_items or []))
+    logger.info(
+        "Scrubbing in. Surgical plan assembled from %d config item(s)",
+        len(config_items or []),
+    )
     surgery_plan = compile_plan(raw_plan)
     logger.info(
         "Surgical plan ready: %d brain(s) prepped, %d procedure(s) scheduled, preservation %s",
@@ -381,27 +451,40 @@ def run(
     except ArenaError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
-    executed_transforms = normalize_transform_specs(raw_plan.get("transforms"))
+    executed_transforms: list[dict[str, Any]] = []
     written_path: str | Path | None = None
 
     try:
-        for transform_index, transform in enumerate(surgery_plan.transforms, start=1):
+        should_continue = True
+
+        for raw_transform, compiled_transform in zip(
+            normalize_transform_specs(raw_plan.get("transforms")),
+            surgery_plan.transforms,
+            strict=False,
+        ):
             logger.info(
                 "Procedure %d/%d: positioning instruments for %s",
-                transform_index,
+                len(executed_transforms) + 1,
                 len(surgery_plan.transforms),
-                type(transform.spec).__name__,
+                type(compiled_transform.spec).__name__,
             )
-            transform_result = apply_transform(transform, state_dict_provider)
+            transform_result = apply_transform(compiled_transform, state_dict_provider)
             logger.info(
                 "Procedure %d/%d complete: %s affected %d site(s)",
-                transform_index,
+                len(executed_transforms) + 1,
                 len(surgery_plan.transforms),
                 transform_result.name,
                 transform_result.count,
             )
 
-        if interactive:
+            executed_transforms.append(raw_transform)
+
+            if not transform_result.control == TransformControl.CONTINUE:
+                logger.info("%s requested orderly exit", transform_result.name)
+                should_continue = False
+                break
+
+        if should_continue and interactive:
             logger.info("Entering interactive mode after configured procedures")
 
             while True:
@@ -422,19 +505,36 @@ def run(
                     logger.error("Could not compile interactive transform(s): %s", exc)
                     continue
 
-                for transform in interactive_plan.transforms:
+                for raw_transform, compiled_transform in zip(
+                    extra_specs,
+                    interactive_plan.transforms,
+                    strict=False,
+                ):
                     logger.info(
-                        "Interactive procedure: positioning instruments for %s",
-                        type(transform.spec).__name__,
+                        "Interactive procedure %d/%d: positioning instruments for %s",
+                        extra_specs.index(raw_transform) + 1,
+                        len(interactive_plan.transforms),
+                        type(compiled_transform.spec).__name__,
                     )
-                    transform_result = apply_transform(transform, state_dict_provider)
+                    transform_result = apply_transform(compiled_transform, state_dict_provider)
                     logger.info(
-                        "Interactive procedure complete: %s affected %d site(s)",
+                        "Interactive procedure %d/%d complete: %s affected %d site(s)",
+                        extra_specs.index(raw_transform) + 1,
+                        len(interactive_plan.transforms),
                         transform_result.name,
                         transform_result.count,
                     )
 
-                executed_transforms.extend(extra_specs)
+                    executed_transforms.append(raw_transform)
+
+                    if transform_result.control == TransformControl.EXIT:
+                        logger.info("%s requested orderly exit", transform_result.name)
+                        should_continue = False
+                        break
+
+                if not should_continue:
+                    logger.info("Leaving interactive mode")
+                    break
 
         if surgery_plan.output is None:
             logger.info("No preservation requested; concluding operation without closure")
