@@ -27,16 +27,14 @@ class AssertTransform(BaseTransform):
         return AssertSpec(expr=compile_assert_expr(payload, default_model))
 
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
-        if not isinstance(spec, AssertSpec):
-            raise AssertTransformError(f"assert received wrong spec type: {type(spec).__name__}")
-        spec.expr.evaluate(provider)
+        typed = self.require_spec(spec)
+        typed.expr.evaluate(provider)
         return TransformResult(name=self.name, count=1)
 
     def infer_output_model(self, spec: object) -> str:
-        if not isinstance(spec, AssertSpec):
-            raise AssertTransformError(f"assert received wrong spec type: {type(spec).__name__}")
+        typed = self.require_spec(spec)
 
-        models = sorted(spec.expr.collect_models())
+        models = sorted(typed.expr.collect_models())
         if not models:
             raise AssertTransformError("assert does not reference any model")
         if len(models) != 1:
@@ -44,6 +42,11 @@ class AssertTransform(BaseTransform):
                 f"assert references multiple models; cannot infer unique output model: {models}"
             )
         return models[0]
+
+    def require_spec(self, spec: object) -> AssertSpec:
+        if not isinstance(spec, AssertSpec):
+            raise AssertTransformError(f"assert received wrong spec type: {type(spec).__name__}")
+        return spec
 
 
 register_transform(AssertTransform())
