@@ -31,27 +31,29 @@ class DumpTransformError(TransformError):
 @dataclass(frozen=True)
 class DumpSpec(UnarySpec):
     format: str
+    verbosity: str
 
 
 class DumpTransform(UnaryTransform[DumpSpec]):
     name = "dump"
     error_type = DumpTransformError
     spec_type = DumpSpec
-    allowed_keys = {"target", "format"}
+    allowed_keys = {"target", "format", "verbosity"}
     required_keys = set()
     progress_desc = "Dumping tensors"
     help_text = (
         "Displays tensors selected by 'target' without modifying them.\n"
         "\n"
         "Targets may be specified by name or pattern. Slices are written after '::', "
-        "for example 'ln_f.weight::[:8]'. Output may be formatted as 'tree' (default), "
-        "'compact', 'json', or 'full'. The 'full' format prints complete tensor contents.\n"
+        "for example 'ln_f.weight::[:8]'. 'format' controls layout: 'tree' (default), "
+        "'compact', or 'json'. 'verbosity' controls content: 'shape', 'stat' (default), "
+        "or 'full'.\n"
         "\n"
         "Examples:\n"
         "  dump: { target: ln_f.weight }\n"
-        "  dump: { target: '.*weight', format: compact }\n"
-        "  dump: { target: 'h.0.attn.c_attn.weight::[:, :10]', format: json }\n"
-        "  dump: { target: 'ln_f.weight::[:8]', format: full }"
+        "  dump: { target: '.*weight', format: compact, verbosity: shape }\n"
+        "  dump: { target: 'h.0.attn.c_attn.weight::[:, :10]', format: json, verbosity: stat }\n"
+        "  dump: { target: 'ln_f.weight::[:8]', format: tree, verbosity: full }"
     )
 
     def compile(self, payload: dict, default_model: str | None) -> DumpSpec:
@@ -85,10 +87,18 @@ class DumpTransform(UnaryTransform[DumpSpec]):
             raise DumpTransformError("dump.format must be a non-empty string")
 
         fmt = raw_format.strip().lower()
-        if fmt not in {"json", "tree", "compact", "full"}:
-            raise DumpTransformError("dump.format must be one of: json, tree, compact, full")
+        if fmt not in {"json", "tree", "compact"}:
+            raise DumpTransformError("dump.format must be one of: json, tree, compact")
 
-        return DumpSpec(target_ref=target_ref, format=fmt)
+        raw_verbosity = payload.get("verbosity", "stat")
+        if not isinstance(raw_verbosity, str) or not raw_verbosity:
+            raise DumpTransformError("dump.verbosity must be a non-empty string")
+
+        verbosity = raw_verbosity.strip().lower()
+        if verbosity not in {"shape", "stat", "full"}:
+            raise DumpTransformError("dump.verbosity must be one of: shape, stat, full")
+
+        return DumpSpec(target_ref=target_ref, format=fmt, verbosity=verbosity)
 
     def resolve_targets(self, spec: DumpSpec, provider: StateDictProvider) -> list[str]:
         return resolve_target_names(
@@ -114,15 +124,12 @@ class DumpTransform(UnaryTransform[DumpSpec]):
             else None
         )
 
-        if typed.format == "full":
-            return self._apply_full(sd, targets, slice_spec)
-
         tree: dict[str, Any] = {}
 
         for name in tqdm(targets, desc=self.progress_desc, unit="tensor"):
             tensor = sd[name]
             view = select_tensor(tensor, slice_spec)
-            insert_into_tree(tree, name.split("."), summarize_tensor(view))
+            insert_into_tree(tree, name.split("."), summarize_tensor(view, verbosity=typed.verbosity))
 
         if typed.format == "json":
             typer.echo(json.dumps(tree, separators=(",", ":"), sort_keys=True))
@@ -133,32 +140,21 @@ class DumpTransform(UnaryTransform[DumpSpec]):
 
         return TransformResult(name=self.name, count=len(targets))
 
-    def _apply_full(
-        self,
-        sd: Any,
-        targets: list[str],
-        slice_spec: Any,
-    ) -> TransformResult:
-        count = 0
 
-        for name in tqdm(targets, desc=self.progress_desc, unit="tensor"):
-            tensor = sd[name]
-            view = select_tensor(tensor, slice_spec)
-
-            typer.echo(name)
-            typer.echo(
-                f"shape={list(view.shape)} dtype={view.dtype} device={view.device}"
-            )
-            typer.echo(view)
-            typer.echo("")
-
-            count += 1
-
-        return TransformResult(name=self.name, count=count)
-
-
-def summarize_tensor(tensor: torch.Tensor) -> dict[str, Any]:
+def summarize_tensor(tensor: torch.Tensor, *, verbosity: str) -> dict[str, Any]:
     t = tensor.detach()
+
+    if verbosity == "shape":
+        return {"shape": list(t.shape)}
+
+    if verbosity == "full":
+        values_tensor = t.cpu()
+        return {
+            "shape": list(t.shape),
+            "dtype": str(t.dtype),
+            "device": str(t.device),
+            "values": values_tensor.tolist(),
+        }
 
     if t.numel() == 0:
         return {
@@ -168,21 +164,27 @@ def summarize_tensor(tensor: torch.Tensor) -> dict[str, Any]:
             "mean": None,
         }
 
-    if not t.is_floating_point():
-        t = t.to(torch.float32)
+    stat_tensor = t
+    if not stat_tensor.is_floating_point():
+        stat_tensor = stat_tensor.to(torch.float32)
 
     return {
         "shape": list(t.shape),
-        "min": float(t.min().item()),
-        "max": float(t.max().item()),
-        "mean": float(t.mean().item()),
+        "min": float(stat_tensor.min().item()),
+        "max": float(stat_tensor.max().item()),
+        "mean": float(stat_tensor.mean().item()),
     }
 
 
 def is_tensor_summary(node: Any) -> bool:
     return (
         isinstance(node, dict)
-        and set(node.keys()) in ({"shape", "min", "max", "mean"}, {"shape"})
+        and set(node.keys())
+        in (
+            {"shape"},
+            {"shape", "min", "max", "mean"},
+            {"shape", "dtype", "device", "values"},
+        )
     )
 
 
@@ -200,10 +202,20 @@ def shape_only(node: Any) -> Any:
 
 
 def format_summary(summary: dict[str, Any], *, compact: bool) -> str:
+    del compact  # layout is handled by the tree renderer, not by summary content
+
     shape = summary["shape"]
 
-    if compact or set(summary.keys()) == {"shape"}:
+    if set(summary.keys()) == {"shape"}:
         return f"shape={shape}"
+
+    if set(summary.keys()) == {"shape", "dtype", "device", "values"}:
+        return (
+            f"shape={shape} "
+            f"dtype={summary['dtype']} "
+            f"device={summary['device']} "
+            f"values={summary['values']!r}"
+        )
 
     min_value = summary["min"]
     max_value = summary["max"]
@@ -297,12 +309,11 @@ def list_group_entries(node: list[Any], *, compact: bool) -> list[tuple[str, Any
 
     start, first_value = present[0]
     prev = start
-    current_value = shape_only(first_value)
-    current_key = canonical_key(current_value)
+    current_value = first_value
+    current_key = canonical_key(first_value)
 
     for index, value in present[1:]:
-        value_shape = shape_only(value)
-        value_key = canonical_key(value_shape)
+        value_key = canonical_key(value)
 
         if index == prev + 1 and value_key == current_key:
             prev = index
@@ -311,7 +322,7 @@ def list_group_entries(node: list[Any], *, compact: bool) -> list[tuple[str, Any
         groups.append((start, prev, current_value))
         start = index
         prev = index
-        current_value = value_shape
+        current_value = value
         current_key = value_key
 
     groups.append((start, prev, current_value))
