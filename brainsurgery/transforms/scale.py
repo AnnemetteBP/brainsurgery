@@ -1,101 +1,114 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
+from .unary import UnarySpec, UnaryTransform
+from ..matching import StructuredPathError, StructuredPathMatcher
 from ..transform import (
-    BaseTransform,
     StateDictProvider,
     TensorRef,
     TransformError,
-    TransformResult,
-    ensure_mapping_payload,
     must_model,
-    parse_model_expr,
     parse_slice,
     register_transform,
-    require_nonempty_string,
     require_numeric,
     select_tensor,
-    validate_payload_keys,
 )
-import re
 
 
 class ScaleTransformError(TransformError):
     pass
 
 
+_MATCHER = StructuredPathMatcher()
+
+
 @dataclass(frozen=True)
-class ScaleSpec:
-    target_ref: TensorRef
+class ScaleSpec(UnarySpec):
     factor: float
 
 
-class ScaleTransform(BaseTransform):
+class ScaleTransform(UnaryTransform[ScaleSpec]):
     name = "scale"
+    error_type = ScaleTransformError
+    spec_type = ScaleSpec
+    allowed_keys = {"target", "by"}
+    required_keys = {"target", "by"}
+    progress_desc = "Applying scale transforms"
 
-    def compile(self, payload: dict, default_model: str | None) -> ScaleSpec:
-        payload = ensure_mapping_payload(payload, self.name)
-        validate_payload_keys(
-            payload,
-            op_name=self.name,
-            allowed_keys={"target", "by"},
-            required_keys={"target", "by"},
-        )
-
-        raw_target = require_nonempty_string(payload, op_name=self.name, key="target")
-        factor = require_numeric(payload, op_name=self.name, key="by")
-
-        target_ref = parse_model_expr(raw_target, default_model=default_model)
+    def validate_target_ref(self, target_ref: TensorRef) -> None:
         if target_ref.slice_spec is not None:
             parse_slice(target_ref.slice_spec)
 
-        assert target_ref.model is not None
+    def build_spec(self, target_ref: TensorRef, payload: dict) -> ScaleSpec:
+        factor = require_numeric(payload, op_name=self.name, key="by")
         return ScaleSpec(target_ref=target_ref, factor=factor)
 
-    def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
-        if not isinstance(spec, ScaleSpec):
-            raise ScaleTransformError(f"scale received wrong spec type: {type(spec).__name__}")
+    def resolve_targets(self, spec: ScaleSpec, provider: StateDictProvider) -> list[str]:
+        model = must_model(spec.target_ref)
+        sd = provider.get_state_dict(model)
 
-        targets = resolve_scale_targets(spec, provider)
-        apply_scale_targets(spec, targets, provider)
-        return TransformResult(name=self.name, count=len(targets))
+        if isinstance(spec.target_ref.expr, str):
+            import re
 
-    def infer_output_model(self, spec: object) -> str:
-        if not isinstance(spec, ScaleSpec):
-            raise ScaleTransformError(f"scale received wrong spec type: {type(spec).__name__}")
+            try:
+                matches = sorted(
+                    name for name in sd.keys() if re.fullmatch(spec.target_ref.expr, name)
+                )
+            except re.error as exc:
+                raise ScaleTransformError(
+                    f"scale invalid target regex {spec.target_ref.expr!r}: {exc}"
+                ) from exc
+        elif isinstance(spec.target_ref.expr, list):
+            try:
+                matches = sorted(
+                    name
+                    for name in sd.keys()
+                    if _MATCHER.match(spec.target_ref.expr, name) is not None
+                )
+            except StructuredPathError as exc:
+                raise ScaleTransformError(
+                    f"scale invalid structured target pattern: {exc}"
+                ) from exc
+        else:
+            raise ScaleTransformError(
+                f"scale target expression has invalid type: "
+                f"{type(spec.target_ref.expr).__name__}"
+            )
 
-        model = spec.target_ref.model
-        if model is None:
-            raise ScaleTransformError("scale output model missing")
-        return model
+        if not matches:
+            raise ScaleTransformError(
+                f"scale matched zero tensors: {format_target_ref(spec.target_ref)}"
+            )
 
+        return matches
 
-def resolve_scale_targets(spec: ScaleSpec, provider: StateDictProvider) -> List[str]:
-    model = must_model(spec.target_ref)
-    sd = provider.get_state_dict(model)
-
-    matches = sorted(name for name in sd.keys() if re.fullmatch(spec.target_ref.expr, name))
-    if not matches:
-        raise ScaleTransformError(f"scale matched zero tensors: {model}::{spec.target_ref.expr}")
-
-    return matches
-
-
-def apply_scale_targets(
-    spec: ScaleSpec,
-    targets: List[str],
-    provider: StateDictProvider,
-) -> None:
-    model = must_model(spec.target_ref)
-    sd = provider.get_state_dict(model)
-    slice_spec = parse_slice(spec.target_ref.slice_spec) if spec.target_ref.slice_spec else None
-
-    for name in targets:
+    def apply_to_target(self, spec: ScaleSpec, name: str, provider: StateDictProvider) -> None:
+        model = must_model(spec.target_ref)
+        sd = provider.get_state_dict(model)
         tensor = sd[name]
+
+        slice_spec = (
+            parse_slice(spec.target_ref.slice_spec)
+            if spec.target_ref.slice_spec is not None
+            else None
+        )
         view = select_tensor(tensor, slice_spec)
         view.mul_(spec.factor)
+
+
+def format_target_ref(ref: TensorRef) -> str:
+    model = must_model(ref)
+    if isinstance(ref.expr, str):
+        expr = ref.expr
+    elif isinstance(ref.expr, list):
+        expr = "[" + ", ".join(repr(part) for part in ref.expr) + "]"
+    else:
+        expr = repr(ref.expr)
+
+    if ref.slice_spec is None:
+        return f"{model}::{expr}"
+    return f"{model}::{expr}::{ref.slice_spec}"
 
 
 register_transform(ScaleTransform())

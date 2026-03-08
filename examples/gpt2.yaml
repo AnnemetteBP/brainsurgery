@@ -2,10 +2,13 @@ inputs:
   - models/gpt2
 output: { path: models/test, shard: 100MB }
 transforms:
+  - dump: { target: ["*all"] }
   - copy: { from: ln_f.weight, to: ln_f_copy.weight }
   - move: { from: ^h(.*), to: i\1 }
   - move: { from: [i, "*rest"], to: [h, "*rest"] }
   - assign: { from: ln_f_copy.weight, to: ln_f.weight }
+  - scale: { target: ln_f_copy.weight, by: 1.0 }
+  - assert: { equal: { left: ln_f.weight, right: ln_f_copy.weight } }
   - scale: { target: ln_f_copy.weight, by: 0.5 }
   - assert: { not: { equal: { left: ln_f.weight, right: ln_f_copy.weight } } }
   - cast: { target: ln_f_copy.weight, to: int64 }

@@ -1,0 +1,99 @@
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Generic, TypeVar
+
+from ..model import tqdm
+from ..transform import (
+    BaseTransform,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    TransformResult,
+    ensure_mapping_payload,
+    parse_model_expr,
+    require_expr,
+    validate_payload_keys,
+)
+
+
+@dataclass(frozen=True)
+class UnarySpec:
+    target_ref: TensorRef
+
+
+SpecT = TypeVar("SpecT", bound=UnarySpec)
+
+
+class UnaryTransform(BaseTransform, ABC, Generic[SpecT]):
+    error_type: type[TransformError] = TransformError
+    spec_type: type[SpecT]
+    progress_desc: str | None = None
+    progress_unit: str = "tensor"
+
+    allowed_keys: set[str] = {"target"}
+    required_keys: set[str] = {"target"}
+    target_key: str = "target"
+
+    def compile(self, payload: dict, default_model: str | None) -> SpecT:
+        payload = ensure_mapping_payload(payload, self.name)
+        validate_payload_keys(
+            payload,
+            op_name=self.name,
+            allowed_keys=self.allowed_keys,
+            required_keys=self.required_keys,
+        )
+
+        raw_target = self.require_target_expr(payload)
+        target_ref = parse_model_expr(raw_target, default_model=default_model)
+
+        self.validate_target_ref(target_ref)
+
+        assert target_ref.model is not None
+        return self.build_spec(target_ref=target_ref, payload=payload)
+
+    def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
+        typed = self.require_spec(spec)
+        targets = self.resolve_targets(typed, provider)
+
+        items = targets
+        if self.progress_desc is not None:
+            items = tqdm(targets, desc=self.progress_desc, unit=self.progress_unit)
+
+        for name in items:
+            self.apply_to_target(typed, name, provider)
+
+        return TransformResult(name=self.name, count=len(targets))
+
+    def infer_output_model(self, spec: object) -> str:
+        typed = self.require_spec(spec)
+        model = typed.target_ref.model
+        if model is None:
+            raise self.error_type(f"{self.name} output model missing")
+        return model
+
+    def require_spec(self, spec: object) -> SpecT:
+        if not isinstance(spec, self.spec_type):
+            raise self.error_type(
+                f"{self.name} received wrong spec type: {type(spec).__name__}"
+            )
+        return spec
+
+    def require_target_expr(self, payload: dict) -> str | list[object]:
+        return require_expr(payload, op_name=self.name, key=self.target_key)
+
+    def build_spec(self, target_ref: TensorRef, payload: dict) -> SpecT:
+        return self.spec_type(target_ref=target_ref)
+
+    @abstractmethod
+    def validate_target_ref(self, target_ref: TensorRef) -> None:
+        ...
+
+    @abstractmethod
+    def resolve_targets(self, spec: SpecT, provider: StateDictProvider) -> list[str]:
+        ...
+
+    @abstractmethod
+    def apply_to_target(self, spec: SpecT, name: str, provider: StateDictProvider) -> None:
+        ...
