@@ -17,6 +17,18 @@ from .transform import apply_transform
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger("brainsurgery")
+_ALLOWED_LOG_LEVELS = {"debug", "info", "warning", "error", "critical"}
+
+def configure_logging(log_level: str) -> None:
+    level_name = log_level.strip().lower()
+    if level_name not in _ALLOWED_LOG_LEVELS:
+        raise typer.BadParameter(
+            f"log-level must be one of: {', '.join(sorted(_ALLOWED_LOG_LEVELS))}"
+        )
+
+    level = getattr(logging, level_name.upper())
+    logging.getLogger().setLevel(level)
+    logger.setLevel(level)
 
 app = typer.Typer(help="Brain surgery CLI.")
 
@@ -196,8 +208,14 @@ def run(
         "1GB",
         help="Arena segment size, e.g. 1GB, 4GB, 512MB",
     ),
+    log_level: str = typer.Option(
+        "info",
+        "--log-level",
+        help="Log level: debug, info, warning, error, critical",
+    ),
 ) -> None:
     """Load a plan, execute it, and save the rewritten output checkpoint."""
+    configure_logging(log_level)
     raw_plan = load_cli_config(config_items or [])
 
     logger.info("Scrubbing in. Surgical plan assembled from %d config item(s)", len(config_items or []))
