@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import torch
 
+from ..dtypes import parse_torch_dtype
 from ..targeting import resolve_target_names
 from .unary import UnarySpec, UnaryTransform
 from ..transform import (
@@ -25,39 +26,6 @@ class CastSpec(UnarySpec):
     dtype: torch.dtype
 
 
-def parse_dtype(raw: str) -> torch.dtype:
-    value = raw.strip().lower()
-
-    aliases = {
-        "float16": torch.float16,
-        "half": torch.float16,
-        "fp16": torch.float16,
-        "bfloat16": torch.bfloat16,
-        "bf16": torch.bfloat16,
-        "float32": torch.float32,
-        "float": torch.float32,
-        "fp32": torch.float32,
-        "float64": torch.float64,
-        "double": torch.float64,
-        "fp64": torch.float64,
-        "uint8": torch.uint8,
-        "int8": torch.int8,
-        "int16": torch.int16,
-        "short": torch.int16,
-        "int32": torch.int32,
-        "int": torch.int32,
-        "int64": torch.int64,
-        "long": torch.int64,
-        "bool": torch.bool,
-    }
-
-    try:
-        return aliases[value]
-    except KeyError as exc:
-        allowed = ", ".join(sorted(aliases))
-        raise CastTransformError(f"unsupported dtype {raw!r}; expected one of: {allowed}") from exc
-
-
 class CastTransform(UnaryTransform[CastSpec]):
     name = "cast"
     error_type = CastTransformError
@@ -72,7 +40,12 @@ class CastTransform(UnaryTransform[CastSpec]):
 
     def build_spec(self, target_ref: TensorRef, payload: dict) -> CastSpec:
         raw_dtype = require_nonempty_string(payload, op_name=self.name, key="to")
-        dtype = parse_dtype(raw_dtype)
+        dtype = parse_torch_dtype(
+            raw_dtype,
+            error_type=CastTransformError,
+            op_name=self.name,
+            field_name="to",
+        )
         return CastSpec(target_ref=target_ref, dtype=dtype)
 
     def resolve_targets(self, spec: CastSpec, provider: StateDictProvider) -> list[str]:
