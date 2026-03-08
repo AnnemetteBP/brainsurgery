@@ -156,13 +156,13 @@ class BaseStateDictProvider:
         if output_format == "torch":
             output_path.parent.mkdir(parents=True, exist_ok=True)
             torch.save(dict(state_dict.items()), output_path)
-            logger.info("Patient stable. Wrote %d tensors to %s", len(state_dict), output_path)
+            logger.info("Patient stable. Preserved %d tensors at %s", len(state_dict), output_path)
             return output_path
 
         if shard_size is None:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             save_safetensors_file(dict(state_dict.items()), str(output_path))
-            logger.info("Patient stable. Wrote %d tensors to %s", len(state_dict), output_path)
+            logger.info("Patient stable. Preserved %d tensors across sharded safetensors in %s", len(state_dict), output_path)
             return output_path
 
         output_dir = resolve_sharded_output_directory(plan.output.path, output_path)
@@ -194,7 +194,7 @@ class InMemoryStateDictProvider(BaseStateDictProvider):
 
             self.state_dicts[model] = sd
             logger.info(
-                "Brain '%s' exposed: %d tensors on the operating table",
+                "Brain '%s' exposed: %d tensors laid out on the operating table",
                 model,
                 len(sd),
             )
@@ -228,7 +228,7 @@ class ArenaStateDictProvider(BaseStateDictProvider):
 
             self.state_dicts[model] = sd
             logger.info(
-                "Brain '%s' exposed in arena: %d tensors on the operating table",
+                "Brain '%s' transferred to surgical arena: %d tensors laid out on the operating table",
                 model,
                 len(sd),
             )

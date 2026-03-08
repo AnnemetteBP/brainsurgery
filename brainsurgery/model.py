@@ -223,7 +223,7 @@ def save_sharded_safetensors(
     total_shards = len(shards)
 
     logger.info(
-        "Segmenting brain into %d safetensor shard(s) with max shard size %d bytes",
+        "Dividing preserved brain into %d safetensor shard(s) with maximum segment size %d bytes",
         total_shards,
         max_shard_size,
     )
@@ -239,7 +239,7 @@ def save_sharded_safetensors(
             weight_map[key] = shard_name
 
     num_workers = choose_num_io_workers(total_shards, max_io_workers=max_io_workers)
-    logger.info("Dispatching %d worker thread(s) for shard save", num_workers)
+    logger.info("Dispatching %d orderly thread(s) for preservation", num_workers)
 
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
         futures = {
@@ -252,7 +252,7 @@ def save_sharded_safetensors(
             for future in as_completed(futures):
                 shard_index, shard_name = futures[future]
                 future.result()
-                logger.debug("Saved shard %d/%d to %s", shard_index, total_shards, shard_name)
+                logger.debug("Preserved shard %d/%d at %s", shard_index, total_shards, shard_name)
                 progress.update(1)
         finally:
             progress.close()
@@ -294,7 +294,7 @@ def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike,
             logger.info("Detected safetensors index at %s", index_file)
             files = resolve_safetensor_shards_from_index(index_file, path)
         else:
-            logger.info("No safetensors index found; loading all safetensors shards")
+            logger.info("No safetensors index found; exposing all safetensors shards")
             files = safetensor_files
     else:
         files = pt_files
@@ -302,10 +302,10 @@ def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike,
     if not files:
         raise RuntimeError(f"no supported checkpoint files found in model directory: {path}")
 
-    logger.info("Found %d checkpoint shard(s) in %s", len(files), path)
+    logger.info("Located %d checkpoint shard(s) in %s", len(files), path)
 
     num_workers = choose_num_io_workers(len(files), max_io_workers=max_io_workers)
-    logger.info("Dispatching %d worker thread(s) for shard load", num_workers)
+    logger.info("Dispatching %d orderly thread(s) for exposure", num_workers)
 
     merge_lock = Lock()
     with ThreadPoolExecutor(max_workers=num_workers) as executor:

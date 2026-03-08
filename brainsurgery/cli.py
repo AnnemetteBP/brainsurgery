@@ -200,10 +200,10 @@ def run(
     """Load a plan, execute it, and save the rewritten output checkpoint."""
     raw_plan = load_cli_config(config_items or [])
 
-    logger.info("Scrubbing in with %d config item(s)", len(config_items or []))
+    logger.info("Scrubbing in. Surgical plan assembled from %d config item(s)", len(config_items or []))
     surgery_plan = compile_plan(raw_plan)
     logger.info(
-        "Plan loaded: %d input brains, %d transform(s), output path %s",
+        "Surgical plan ready: %d brain(s) prepped, %d procedure(s) scheduled, preservation %s",
         len(surgery_plan.inputs),
         len(surgery_plan.transforms),
         surgery_plan.output.path if surgery_plan.output else None,
@@ -239,14 +239,14 @@ def run(
     try:
         for transform_index, transform in enumerate(surgery_plan.transforms, start=1):
             logger.info(
-                "Transform %d/%d: preparing %s",
+                "Procedure %d/%d: positioning instruments for %s",
                 transform_index,
                 len(surgery_plan.transforms),
                 type(transform.spec).__name__,
             )
             transform_result = apply_transform(transform, state_dict_provider)
             logger.info(
-                "Transform %d/%d: %s complete, %d target(s) affected",
+                "Procedure %d/%d complete: %s affected %d site(s)",
                 transform_index,
                 len(surgery_plan.transforms),
                 transform_result.name,
@@ -254,14 +254,14 @@ def run(
             )
 
         if surgery_plan.output is None:
-            logger.info("No output spec provided; skipping checkpoint writing")
+            logger.info("No preservation requested; concluding operation without closure")
             return
         written_path = state_dict_provider.save_output(
             surgery_plan,
             default_shard_size=shard_size,
             max_io_workers=num_workers,
         )
-        logger.info(f"Wrote output checkpoint to {written_path}")
+        logger.info("Operation complete. Brain preserved at %s", written_path)
     finally:
         state_dict_provider.close()
 
