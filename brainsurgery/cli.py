@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import typer
+from omegaconf import OmegaConf
 
 from .arena import ArenaError, SegmentedFileBackedArena
 from .model import parse_shard_size
-from .plan import load_plan
+from .plan import compile_plan
 from .providers import ArenaStateDictProvider, InMemoryStateDictProvider
 from .transform import apply_transform
 
@@ -18,9 +20,48 @@ logger = logging.getLogger("brainsurgery")
 app = typer.Typer(help="Brain surgery CLI.")
 
 
+def is_yaml_file_arg(token: str) -> bool:
+    path = Path(token)
+    return path.suffix.lower() in {".yaml", ".yml"} and path.is_file()
+
+
+def is_yaml_like_arg(token: str) -> bool:
+    return Path(token).suffix.lower() in {".yaml", ".yml"}
+
+
+def load_cli_config(tokens: list[str]) -> dict[str, Any]:
+    cfg = OmegaConf.create()
+
+    for token in tokens:
+        if is_yaml_file_arg(token):
+            cfg = OmegaConf.merge(cfg, OmegaConf.load(token))
+            continue
+
+        if is_yaml_like_arg(token):
+            raise typer.BadParameter(f"YAML file does not exist: {token}")
+
+        try:
+            cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist([token]))
+        except Exception as exc:
+            raise typer.BadParameter(f"Invalid override {token!r}: {exc}") from exc
+
+    data = OmegaConf.to_container(cfg, resolve=True)
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise typer.BadParameter("Final merged config must be a mapping")
+    return data
+
+
 @app.command()
 def run(
-    plan: Path,
+    config_items: list[str] = typer.Argument(
+        None,
+        help=(
+            "Zero or more YAML files and/or OmegaConf-style overrides in any order. "
+            "Existing .yaml/.yml files are loaded and merged; everything else is treated as an override."
+        ),
+    ),
     shard_size: str = typer.Option("5GB", help="Default shard size for directory outputs"),
     num_workers: int = typer.Option(8, help="Max number of parallel I/O workers"),
     provider: str = typer.Option("inmemory", help="State-dict provider: inmemory or arena"),
@@ -34,8 +75,10 @@ def run(
     ),
 ):
     """Load a plan, execute it, and save the rewritten output checkpoint."""
-    logger.info("Scrubbing in with surgical plan %s", plan)
-    surgery_plan = load_plan(plan)
+    raw_plan = load_cli_config(config_items or [])
+
+    logger.info("Scrubbing in with %d config item(s)", len(config_items or []))
+    surgery_plan = compile_plan(raw_plan)
     logger.info(
         "Plan loaded: %d input brains, %d transform(s), output path %s",
         len(surgery_plan.inputs),

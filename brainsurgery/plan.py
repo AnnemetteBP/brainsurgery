@@ -37,6 +37,10 @@ def load_plan(path: str | Path) -> SurgeryPlan:
     except yaml.YAMLError as exc:
         raise PlanLoaderError(f"failed to parse yaml from plan file: {plan_path}") from exc
 
+    return compile_plan(raw)
+
+
+def compile_plan(raw: Any) -> SurgeryPlan:
     if not isinstance(raw, dict):
         raise PlanLoaderError("plan must be a YAML mapping")
 
@@ -71,7 +75,7 @@ def parse_inputs(raw: Any) -> Dict[str, Path]:
     return parsed
 
 
-def parse_input_entry(raw: Any) -> tuple[str, Path]:
+def parse_input_entry(raw: Any) -> tuple[str | None, Path]:
     if not isinstance(raw, str) or not raw:
         raise PlanLoaderError("each inputs entry must be a non-empty string")
 
@@ -79,10 +83,10 @@ def parse_input_entry(raw: Any) -> tuple[str, Path]:
         alias, path_str = raw.split("::", 1)
         if not path_str:
             raise PlanLoaderError(f"input path must not be empty: {raw!r}")
-        return alias, Path(path_str)
+        return alias or None, Path(path_str)
 
-    # bare path → empty alias (resolved later if single input)
     return None, Path(raw)
+
 
 def parse_output(raw: Any) -> OutputSpec:
     if isinstance(raw, str):
