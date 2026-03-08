@@ -2,7 +2,9 @@ inputs:
   - models/gpt2
 output: { path: models/test, shard: 100MB }
 transforms:
-  - dump: { target: ["*all"] }
+  - dump: { target: ["*all"], format: tree }
+  - dump: { target: ["*all"], format: json }
+  - dump: { target: ["*all"], format: compact}
   - copy: { from: ln_f.weight, to: ln_f_copy.weight }
   - move: { from: ^h(.*), to: i\1 }
   - move: { from: [i, "*rest"], to: [h, "*rest"] }

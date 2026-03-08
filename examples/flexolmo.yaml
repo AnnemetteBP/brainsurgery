@@ -4,3 +4,4 @@ output: { path: models/test }
 transforms:
   - assert: { not: { iszero: .* } }  # sanity check that we have non-empty tensors
   - copy: { from: (.*), to: _\1" }
+  - dump: { target: ["*all"], format: compact }
