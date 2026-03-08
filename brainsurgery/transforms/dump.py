@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+import typer
 import torch
 
 from .unary import UnarySpec, UnaryTransform, resolve_target_names
@@ -108,11 +109,11 @@ class DumpTransform(UnaryTransform[DumpSpec]):
             insert_into_tree(tree, name.split("."), summarize_tensor(view))
 
         if typed.format == "json":
-            print(json.dumps(tree, separators=(",", ":"), sort_keys=True))
+            typer.echo(json.dumps(tree, separators=(",", ":"), sort_keys=True))
         elif typed.format == "tree":
-            print(render_tree(tree, compact=False))
+            typer.echo(render_tree(tree, compact=False))
         else:
-            print(render_tree(tree, compact=True))
+            typer.echo(render_tree(tree, compact=True))
 
         return TransformResult(name=self.name, count=len(targets))
 

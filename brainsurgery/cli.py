@@ -188,6 +188,117 @@ def load_cli_config(tokens: list[str]) -> dict[str, Any]:
     return merged
 
 
+def normalize_transform_specs(raw: Any) -> list[dict[str, Any]]:
+    if raw is None:
+        return []
+
+    if isinstance(raw, dict):
+        return [raw]
+
+    if isinstance(raw, list) and all(isinstance(item, dict) for item in raw):
+        return list(raw)
+
+    raise ValueError(
+        "transform spec must be either a single YAML mapping or a list of YAML mappings"
+    )
+
+
+def parse_transform_block(block: str) -> list[dict[str, Any]]:
+    try:
+        loaded = OmegaConf.to_container(OmegaConf.create(block), resolve=True)
+    except Exception as exc:
+        raise ValueError(f"invalid YAML: {exc}") from exc
+
+    return normalize_transform_specs(loaded)
+
+
+def prompt_interactive_transform() -> list[dict[str, Any]] | None:
+    typer.echo("")
+    typer.echo("Interactive mode.")
+    typer.echo("Enter one transform as YAML, or a YAML list of transforms.")
+    typer.echo("Finish input with an empty line.")
+    typer.echo("Commands: exit, quit, :q, help, :help")
+    typer.echo("Example: copy: { from: ln_f.weight, to: ln_f_copy.weight }")
+
+    while True:
+        lines: list[str] = []
+        prompt = "brainsurgery> "
+
+        while True:
+            try:
+                line = input(prompt)
+            except EOFError:
+                return None
+
+            stripped = line.strip()
+
+            if not lines and stripped in {"exit", "quit", ":q"}:
+                return None
+
+            if not lines and stripped in {"help", ":help", "?"}:
+                typer.echo("Enter YAML for one transform or a list of transforms, then submit an empty line.")
+                typer.echo('Example: scale: { target: ln_f.weight, by: 0.5 }')
+                break
+
+            if stripped == "":
+                if lines:
+                    try:
+                        return parse_transform_block("\n".join(lines))
+                    except ValueError as exc:
+                        logger.error("Interactive transform rejected: %s", exc)
+                        typer.echo("Try again.")
+                        break
+                continue
+
+            lines.append(line)
+            prompt = "... "
+
+
+def build_raw_plan(
+    inputs: Any,
+    output: Any,
+    transforms: list[dict[str, Any]],
+) -> dict[str, Any]:
+    raw: dict[str, Any] = {
+        "inputs": inputs,
+        "transforms": transforms,
+    }
+    if output is not None:
+        raw["output"] = output
+    return raw
+
+
+def derive_summary_path(written_path: str | Path | None) -> Path:
+    if written_path is None:
+        return Path("brainsurgery-executed-plan.yaml")
+
+    path = Path(written_path)
+
+    if path.exists() and path.is_dir():
+        return path / "executed-plan.yaml"
+
+    if path.suffix:
+        return path.with_suffix(f"{path.suffix}.executed.yaml")
+
+    return path.parent / f"{path.name}.executed.yaml"
+
+
+def write_executed_plan_summary(
+    *,
+    inputs: Any,
+    output: Any,
+    transforms: list[dict[str, Any]],
+    destination: Path | None,
+) -> None:
+    summary_doc = build_raw_plan(inputs=inputs, output=output, transforms=transforms)
+    if destination is None:
+        typer.echo(OmegaConf.to_yaml(summary_doc))
+    else:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        OmegaConf.save(config=OmegaConf.create(summary_doc), f=str(destination))
+        logger.info("Executed plan summary written to %s", destination)
+
+
 @app.command()
 def run(
     config_items: list[str] = typer.Argument(
@@ -207,6 +318,22 @@ def run(
     arena_segment_size: str = typer.Option(
         "1GB",
         help="Arena segment size, e.g. 1GB, 4GB, 512MB",
+    ),
+    interactive: bool = typer.Option(
+        False,
+        "-i",
+        "--interactive",
+        help="Run configured transforms, then enter an interactive prompt for additional transforms.",
+    ),
+    summarize: bool = typer.Option(
+        True,
+        "-s",
+        "--summarize/--no-summarize",
+        help="Write a YAML summary of the actually executed plan.",
+    ),
+    summarize_path: Path | None = typer.Option(
+        None,
+        help="Path for executed plan summary YAML. If not given, the summary is printed to standard output.",
     ),
     log_level: str = typer.Option(
         "info",
@@ -254,6 +381,9 @@ def run(
     except ArenaError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
+    executed_transforms = normalize_transform_specs(raw_plan.get("transforms"))
+    written_path: str | Path | None = None
+
     try:
         for transform_index, transform in enumerate(surgery_plan.transforms, start=1):
             logger.info(
@@ -271,15 +401,59 @@ def run(
                 transform_result.count,
             )
 
+        if interactive:
+            logger.info("Entering interactive mode after configured procedures")
+
+            while True:
+                extra_specs = prompt_interactive_transform()
+                if extra_specs is None:
+                    logger.info("Interactive session complete")
+                    break
+
+                interactive_raw_plan = build_raw_plan(
+                    inputs=raw_plan.get("inputs", []),
+                    output=raw_plan.get("output"),
+                    transforms=extra_specs,
+                )
+
+                try:
+                    interactive_plan = compile_plan(interactive_raw_plan)
+                except Exception as exc:
+                    logger.error("Could not compile interactive transform(s): %s", exc)
+                    continue
+
+                for transform in interactive_plan.transforms:
+                    logger.info(
+                        "Interactive procedure: positioning instruments for %s",
+                        type(transform.spec).__name__,
+                    )
+                    transform_result = apply_transform(transform, state_dict_provider)
+                    logger.info(
+                        "Interactive procedure complete: %s affected %d site(s)",
+                        transform_result.name,
+                        transform_result.count,
+                    )
+
+                executed_transforms.extend(extra_specs)
+
         if surgery_plan.output is None:
             logger.info("No preservation requested; concluding operation without closure")
-            return
-        written_path = state_dict_provider.save_output(
-            surgery_plan,
-            default_shard_size=shard_size,
-            max_io_workers=num_workers,
-        )
-        logger.info("Operation complete. Brain preserved at %s", written_path)
+        else:
+            written_path = state_dict_provider.save_output(
+                surgery_plan,
+                default_shard_size=shard_size,
+                max_io_workers=num_workers,
+            )
+            logger.info("Operation complete. Brain preserved at %s", written_path)
+
+        if summarize:
+            write_executed_plan_summary(
+                inputs=raw_plan.get("inputs", []),
+                output=raw_plan.get("output"),
+                transforms=executed_transforms,
+                destination=summarize_path,
+            )
+
     finally:
         state_dict_provider.close()
 
