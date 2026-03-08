@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Iterable
 
-from .transform import CompiledTransform, TransformControl, apply_transform
+from .transform import CompiledTransform, TransformControl, TransformError, apply_transform
 
 logger = logging.getLogger("brainsurgery")
 
@@ -23,7 +23,12 @@ def execute_transform_pairs(
             False if a transform requested orderly exit.
 
         executed_raw_transforms:
-            The raw transform specs that actually executed.
+            The raw transform specs that actually executed successfully.
+
+    Behavior:
+        - In non-interactive mode, transform failures are raised.
+        - In interactive mode, transform failures are logged and execution of the
+          current submitted block stops, returning control to the prompt.
     """
     pair_list = list(pairs)
     total = len(pair_list)
@@ -45,7 +50,19 @@ def execute_transform_pairs(
                 type(compiled_transform.spec).__name__,
             )
 
-        transform_result = apply_transform(compiled_transform, state_dict_provider)
+        try:
+            transform_result = apply_transform(compiled_transform, state_dict_provider)
+        except Exception as exc:
+            if not interactive:
+                raise
+
+            logger.error(
+                "Interactive procedure %d/%d failed: %s",
+                transform_index,
+                total,
+                exc,
+            )
+            return True, executed_raw_transforms
 
         if interactive:
             logger.info(
