@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 import torch
 
+from ..targeting import resolve_target_names
 from .unary import UnarySpec, UnaryTransform
-from ..matching import StructuredPathError, StructuredPathMatcher
 from ..transform import (
     StateDictProvider,
     TensorRef,
@@ -18,9 +18,6 @@ from ..transform import (
 
 class CastTransformError(TransformError):
     pass
-
-
-_MATCHER = StructuredPathMatcher()
 
 
 @dataclass(frozen=True)
@@ -79,57 +76,17 @@ class CastTransform(UnaryTransform[CastSpec]):
         return CastSpec(target_ref=target_ref, dtype=dtype)
 
     def resolve_targets(self, spec: CastSpec, provider: StateDictProvider) -> list[str]:
-        model = must_model(spec.target_ref)
-        sd = provider.get_state_dict(model)
-
-        if isinstance(spec.target_ref.expr, str):
-            import re
-
-            try:
-                matches = sorted(
-                    name for name in sd.keys() if re.fullmatch(spec.target_ref.expr, name)
-                )
-            except re.error as exc:
-                raise CastTransformError(
-                    f"cast invalid target regex {spec.target_ref.expr!r}: {exc}"
-                ) from exc
-        elif isinstance(spec.target_ref.expr, list):
-            try:
-                matches = sorted(
-                    name
-                    for name in sd.keys()
-                    if _MATCHER.match(spec.target_ref.expr, name) is not None
-                )
-            except StructuredPathError as exc:
-                raise CastTransformError(f"cast invalid structured target pattern: {exc}") from exc
-        else:
-            raise CastTransformError(
-                f"cast target expression has invalid type: {type(spec.target_ref.expr).__name__}"
-            )
-
-        if not matches:
-            raise CastTransformError(f"cast matched zero tensors: {format_target_ref(spec.target_ref)}")
-
-        return matches
+        return resolve_target_names(
+            target_ref=spec.target_ref,
+            provider=provider,
+            op_name=self.name,
+            error_type=CastTransformError,
+        )
 
     def apply_to_target(self, spec: CastSpec, name: str, provider: StateDictProvider) -> None:
         model = must_model(spec.target_ref)
         sd = provider.get_state_dict(model)
         sd[name] = sd[name].to(dtype=spec.dtype)
-
-
-def format_target_ref(ref: TensorRef) -> str:
-    model = must_model(ref)
-    if isinstance(ref.expr, str):
-        expr = ref.expr
-    elif isinstance(ref.expr, list):
-        expr = "[" + ", ".join(repr(part) for part in ref.expr) + "]"
-    else:
-        expr = repr(ref.expr)
-
-    if ref.slice_spec is None:
-        return f"{model}::{expr}"
-    return f"{model}::{expr}::{ref.slice_spec}"
 
 
 register_transform(CastTransform())
