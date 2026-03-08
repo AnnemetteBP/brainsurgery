@@ -6,15 +6,13 @@ from typing import Any
 
 import typer
 
-from .arena import ArenaError, SegmentedFileBackedArena
 from .config import load_cli_config
-from .execution import execute_transforms
+from .execution import execute_transform_pairs
 from .history import configure_history
 from .interactive import normalize_transform_specs, prompt_interactive_transform
-from .model import parse_shard_size
 from .plan import compile_plan
-from .providers import ArenaStateDictProvider, InMemoryStateDictProvider
-from .summary import write_executed_plan_summary
+from .providers import ProviderCreationError, create_state_dict_provider
+from .summary import build_raw_plan, write_executed_plan_summary
 
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
@@ -34,20 +32,6 @@ def configure_logging(log_level: str) -> None:
     level = getattr(logging, level_name.upper())
     logging.getLogger().setLevel(level)
     logger.setLevel(level)
-
-
-def build_raw_plan(
-    inputs: Any,
-    output: Any,
-    transforms: list[dict[str, Any]],
-) -> dict[str, Any]:
-    raw: dict[str, Any] = {
-        "inputs": inputs,
-        "transforms": transforms,
-    }
-    if output is not None:
-        raw["output"] = output
-    return raw
 
 
 @app.command()
@@ -120,72 +104,32 @@ def run(
         surgery_plan.output.path if surgery_plan.output else None,
     )
 
-    provider_name = provider.strip().lower()
-
     try:
-        if provider_name == "inmemory":
-            state_dict_provider = InMemoryStateDictProvider(
-                surgery_plan.inputs,
-                max_io_workers=num_workers,
-            )
-        elif provider_name == "arena":
-            segment_size_bytes = parse_shard_size(arena_segment_size)
-            if segment_size_bytes is None:
-                raise typer.BadParameter("arena-segment-size must not be 'none'")
-
-            arena = SegmentedFileBackedArena(
-                arena_root,
-                segment_size_bytes=segment_size_bytes,
-            )
-            state_dict_provider = ArenaStateDictProvider(
-                surgery_plan.inputs,
-                arena=arena,
-                max_io_workers=num_workers,
-            )
-        else:
-            raise typer.BadParameter("provider must be either 'inmemory' or 'arena'")
-    except ArenaError as exc:
+        state_dict_provider = create_state_dict_provider(
+            provider=provider,
+            model_paths=surgery_plan.inputs,
+            max_io_workers=num_workers,
+            arena_root=arena_root,
+            arena_segment_size=arena_segment_size,
+        )
+    except ProviderCreationError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
     executed_transforms: list[dict[str, Any]] = []
     written_path: str | Path | None = None
 
     try:
-        should_continue = True
-
-        for transform_index, (raw_transform, compiled_transform) in enumerate(
-            zip(
-                normalize_transform_specs(raw_plan.get("transforms")),
-                surgery_plan.transforms,
-                strict=False,
-            ),
-            start=1,
-        ):
-            logger.info(
-                "Procedure %d/%d: positioning instruments for %s",
-                transform_index,
-                len(surgery_plan.transforms),
-                type(compiled_transform.spec).__name__,
-            )
-            from .transform import apply_transform
-
-            transform_result = apply_transform(compiled_transform, state_dict_provider)
-            logger.info(
-                "Procedure %d/%d complete: %s affected %d site(s)",
-                transform_index,
-                len(surgery_plan.transforms),
-                transform_result.name,
-                transform_result.count,
-            )
-
-            executed_transforms.append(raw_transform)
-
-            from .transform import TransformControl
-
-            if transform_result.control != TransformControl.CONTINUE:
-                logger.info("%s requested orderly exit", transform_result.name)
-                should_continue = False
-                break
+        configured_pairs = zip(
+            normalize_transform_specs(raw_plan.get("transforms")),
+            surgery_plan.transforms,
+            strict=False,
+        )
+        should_continue, newly_executed = execute_transform_pairs(
+            configured_pairs,
+            state_dict_provider,
+            interactive=False,
+        )
+        executed_transforms.extend(newly_executed)
 
         if should_continue and interactive:
             logger.info("Entering interactive mode after configured procedures")
@@ -208,34 +152,17 @@ def run(
                     logger.error("Could not compile interactive transform(s): %s", exc)
                     continue
 
-                for transform_index, (raw_transform, compiled_transform) in enumerate(
-                    zip(extra_specs, interactive_plan.transforms, strict=False),
-                    start=1,
-                ):
-                    logger.info(
-                        "Interactive procedure %d/%d: positioning instruments for %s",
-                        transform_index,
-                        len(interactive_plan.transforms),
-                        type(compiled_transform.spec).__name__,
-                    )
-
-                    from .transform import apply_transform, TransformControl
-
-                    transform_result = apply_transform(compiled_transform, state_dict_provider)
-                    logger.info(
-                        "Interactive procedure %d/%d complete: %s affected %d site(s)",
-                        transform_index,
-                        len(interactive_plan.transforms),
-                        transform_result.name,
-                        transform_result.count,
-                    )
-
-                    executed_transforms.append(raw_transform)
-
-                    if transform_result.control == TransformControl.EXIT:
-                        logger.info("%s requested orderly exit", transform_result.name)
-                        should_continue = False
-                        break
+                interactive_pairs = zip(
+                    extra_specs,
+                    interactive_plan.transforms,
+                    strict=False,
+                )
+                should_continue, newly_executed = execute_transform_pairs(
+                    interactive_pairs,
+                    state_dict_provider,
+                    interactive=True,
+                )
+                executed_transforms.extend(newly_executed)
 
                 if not should_continue:
                     logger.info("Leaving interactive mode")

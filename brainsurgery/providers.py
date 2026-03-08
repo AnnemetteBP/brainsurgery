@@ -11,6 +11,7 @@ from safetensors.torch import save_file as save_safetensors_file
 from .arena import ArenaError, SegmentedFileBackedArena, TensorSlot
 from .model import (
     load_state_dict_from_path,
+    parse_shard_size,
     resolve_output_destination,
     resolve_sharded_output_directory,
     save_sharded_safetensors,
@@ -19,6 +20,10 @@ from .plan import SurgeryPlan
 from .transform import StateDictLike, infer_output_model
 
 logger = logging.getLogger("brainsurgery")
+
+
+class ProviderCreationError(RuntimeError):
+    pass
 
 
 # ============================================================
@@ -162,7 +167,11 @@ class BaseStateDictProvider:
         if shard_size is None:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             save_safetensors_file(dict(state_dict.items()), str(output_path))
-            logger.info("Patient stable. Preserved %d tensors across sharded safetensors in %s", len(state_dict), output_path)
+            logger.info(
+                "Patient stable. Preserved %d tensors across sharded safetensors in %s",
+                len(state_dict),
+                output_path,
+            )
             return output_path
 
         output_dir = resolve_sharded_output_directory(plan.output.path, output_path)
@@ -236,3 +245,40 @@ class ArenaStateDictProvider(BaseStateDictProvider):
         state_dict = self.state_dicts[model]
         assert isinstance(state_dict, ArenaStateDict)
         return state_dict
+
+
+def create_state_dict_provider(
+    *,
+    provider: str,
+    model_paths: Dict[str, Path],
+    max_io_workers: int,
+    arena_root: Path,
+    arena_segment_size: str,
+) -> BaseStateDictProvider:
+    provider_name = provider.strip().lower()
+
+    try:
+        if provider_name == "inmemory":
+            return InMemoryStateDictProvider(
+                model_paths,
+                max_io_workers=max_io_workers,
+            )
+
+        if provider_name == "arena":
+            segment_size_bytes = parse_shard_size(arena_segment_size)
+            if segment_size_bytes is None:
+                raise ProviderCreationError("arena-segment-size must not be 'none'")
+
+            arena = SegmentedFileBackedArena(
+                arena_root,
+                segment_size_bytes=segment_size_bytes,
+            )
+            return ArenaStateDictProvider(
+                model_paths,
+                arena=arena,
+                max_io_workers=max_io_workers,
+            )
+
+        raise ProviderCreationError("provider must be either 'inmemory' or 'arena'")
+    except ArenaError as exc:
+        raise ProviderCreationError(str(exc)) from exc

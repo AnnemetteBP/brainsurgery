@@ -1,38 +1,51 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Iterable
 
-from .transform import TransformControl, apply_transform
+from .transform import CompiledTransform, TransformControl, apply_transform
 
 logger = logging.getLogger("brainsurgery")
 
 
-def execute_transforms(
-    transforms: list[Any],
+def execute_transform_pairs(
+    pairs: Iterable[tuple[dict[str, Any], CompiledTransform]],
     state_dict_provider: Any,
     *,
     interactive: bool,
-) -> bool:
-    total = len(transforms)
+) -> tuple[bool, list[dict[str, Any]]]:
+    """
+    Execute (raw_transform, compiled_transform) pairs in order.
 
-    for transform_index, transform in enumerate(transforms, start=1):
+    Returns:
+        should_continue:
+            True if execution should continue.
+            False if a transform requested orderly exit.
+
+        executed_raw_transforms:
+            The raw transform specs that actually executed.
+    """
+    pair_list = list(pairs)
+    total = len(pair_list)
+    executed_raw_transforms: list[dict[str, Any]] = []
+
+    for transform_index, (raw_transform, compiled_transform) in enumerate(pair_list, start=1):
         if interactive:
             logger.info(
                 "Interactive procedure %d/%d: positioning instruments for %s",
                 transform_index,
                 total,
-                type(transform.spec).__name__,
+                type(compiled_transform.spec).__name__,
             )
         else:
             logger.info(
                 "Procedure %d/%d: positioning instruments for %s",
                 transform_index,
                 total,
-                type(transform.spec).__name__,
+                type(compiled_transform.spec).__name__,
             )
 
-        transform_result = apply_transform(transform, state_dict_provider)
+        transform_result = apply_transform(compiled_transform, state_dict_provider)
 
         if interactive:
             logger.info(
@@ -51,9 +64,10 @@ def execute_transforms(
                 transform_result.count,
             )
 
+        executed_raw_transforms.append(raw_transform)
+
         if transform_result.control != TransformControl.CONTINUE:
             logger.info("%s requested orderly exit", transform_result.name)
-            return False
+            return False, executed_raw_transforms
 
-    return True
-
+    return True, executed_raw_transforms
