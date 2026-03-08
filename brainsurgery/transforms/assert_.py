@@ -25,12 +25,14 @@ class AssertTransform:
         "Checks conditions on tensors using a single assert expression. "
         "The operation fails if the assertion does not hold and does not modify tensors.\n"
         "\n"
-        "Expressions can match tensors by name or pattern and may be nested.\n"
+        "Expressions can match tensors by name or pattern and may include slicing "
+        "(written after '::') and nesting.\n"
         "\n"
         "Examples:\n"
         "  assert: { equal: { left: a.weight, right: b.weight } }\n"
         "  assert: { not: { equal: { left: a.weight, right: b.weight } } }\n"
         "  assert: { dtype: { of: ln_f.weight, is: float32 } }\n"
+        "  assert: { shape: { of: 'ln_f.weight::[:8]', is: [8] } }\n"
         "  assert: { all: [ { exists: '.*weight' }, { dimensions: { of: ln_f.weight, is: 1 } } ] }"
     )
 

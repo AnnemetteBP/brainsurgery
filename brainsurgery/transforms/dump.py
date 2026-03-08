@@ -41,15 +41,17 @@ class DumpTransform(UnaryTransform[DumpSpec]):
     required_keys = set()
     progress_desc = "Dumping tensors"
     help_text = (
-        "Displays summaries of tensors selected by 'target' without modifying them.\n"
+        "Displays tensors selected by 'target' without modifying them.\n"
         "\n"
-        "Targets may be specified by name or pattern and support slicing. Output is "
-        "shown in one of three formats: 'tree' (default), 'compact', or 'json'.\n"
+        "Targets may be specified by name or pattern. Slices are written after '::', "
+        "for example 'ln_f.weight::[:8]'. Output may be formatted as 'tree' (default), "
+        "'compact', 'json', or 'full'. The 'full' format prints complete tensor contents.\n"
         "\n"
         "Examples:\n"
         "  dump: { target: ln_f.weight }\n"
         "  dump: { target: '.*weight', format: compact }\n"
-        "  dump: { target: h.0.attn.c_attn.weight[:, :10], format: json }"
+        "  dump: { target: 'h.0.attn.c_attn.weight::[:, :10]', format: json }\n"
+        "  dump: { target: 'ln_f.weight::[:8]', format: full }"
     )
 
     def compile(self, payload: dict, default_model: str | None) -> DumpSpec:
@@ -83,8 +85,8 @@ class DumpTransform(UnaryTransform[DumpSpec]):
             raise DumpTransformError("dump.format must be a non-empty string")
 
         fmt = raw_format.strip().lower()
-        if fmt not in {"json", "tree", "compact"}:
-            raise DumpTransformError("dump.format must be one of: json, tree, compact")
+        if fmt not in {"json", "tree", "compact", "full"}:
+            raise DumpTransformError("dump.format must be one of: json, tree, compact, full")
 
         return DumpSpec(target_ref=target_ref, format=fmt)
 
@@ -112,6 +114,9 @@ class DumpTransform(UnaryTransform[DumpSpec]):
             else None
         )
 
+        if typed.format == "full":
+            return self._apply_full(sd, targets, slice_spec)
+
         tree: dict[str, Any] = {}
 
         for name in tqdm(targets, desc=self.progress_desc, unit="tensor"):
@@ -127,6 +132,29 @@ class DumpTransform(UnaryTransform[DumpSpec]):
             typer.echo(render_tree(tree, compact=True))
 
         return TransformResult(name=self.name, count=len(targets))
+
+    def _apply_full(
+        self,
+        sd: Any,
+        targets: list[str],
+        slice_spec: Any,
+    ) -> TransformResult:
+        count = 0
+
+        for name in tqdm(targets, desc=self.progress_desc, unit="tensor"):
+            tensor = sd[name]
+            view = select_tensor(tensor, slice_spec)
+
+            typer.echo(name)
+            typer.echo(
+                f"shape={list(view.shape)} dtype={view.dtype} device={view.device}"
+            )
+            typer.echo(view)
+            typer.echo("")
+
+            count += 1
+
+        return TransformResult(name=self.name, count=count)
 
 
 def summarize_tensor(tensor: torch.Tensor) -> dict[str, Any]:

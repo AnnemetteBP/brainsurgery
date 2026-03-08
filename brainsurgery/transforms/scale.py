@@ -34,13 +34,13 @@ class ScaleTransform(UnaryTransform[ScaleSpec]):
     help_text = (
         "Scales tensors in-place by a numeric factor.\n"
         "\n"
-        "Targets may be specified by name or pattern and may include slicing. "
-        "The selected tensor (or slice) is multiplied by 'by'.\n"
+        "Targets may be specified by name or pattern and may include slicing "
+        "(written after '::'). The selected tensor (or slice) is multiplied by 'by'.\n"
         "\n"
         "Examples:\n"
         "  scale: { target: ln_f.weight, by: 0.5 }\n"
         "  scale: { target: '.*bias', by: -1 }\n"
-        "  scale: { target: h.0.attn.c_attn.weight[:, :10], by: 2.0 }"
+        "  scale: { target: 'h.0.attn.c_attn.weight::[:, :10]', by: 2.0 }"
     )
 
     def validate_target_ref(self, target_ref: TensorRef) -> None:

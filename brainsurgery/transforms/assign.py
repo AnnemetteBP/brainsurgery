@@ -30,7 +30,7 @@ class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
         "\n"
         "Examples:\n"
         "  assign: { from: a.weight, to: b.weight }\n"
-        "  assign: { from: a.weight[:, :10], to: b.weight[:, :10] }"
+        "  assign: { from: 'a.weight::[:, :10]', to: 'b.weight::[:, :10]' }"
     )
 
     def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
