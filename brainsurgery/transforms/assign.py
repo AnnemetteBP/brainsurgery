@@ -22,6 +22,16 @@ class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
     error_type = AssignTransformError
     spec_type = BinaryMappingSpec
     progress_desc = "Applying assign transforms"
+    help_text = (
+        "Copies tensor values from 'from' into 'to'. The destination tensor must "
+        "already exist. Source and destination (after slicing) must have identical shapes.\n"
+        "\n"
+        "Both references support slicing.\n"
+        "\n"
+        "Examples:\n"
+        "  assign: { from: a.weight, to: b.weight }\n"
+        "  assign: { from: a.weight[:, :10], to: b.weight[:, :10] }"
+    )
 
     def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
         if from_ref.slice_spec is not None:

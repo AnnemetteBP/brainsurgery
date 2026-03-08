@@ -32,6 +32,16 @@ class CastTransform(UnaryTransform[CastSpec]):
     allowed_keys = {"target", "to"}
     required_keys = {"target", "to"}
     progress_desc = "Applying cast transforms"
+    help_text = (
+        "Casts one or more tensors to a different dtype.\n"
+        "\n"
+        "The 'target' selects tensors by name or pattern. The entire tensor is cast; "
+        "slicing is not supported.\n"
+        "\n"
+        "Examples:\n"
+        "  cast: { target: ln_f.weight, to: float16 }\n"
+        "  cast: { target: '.*weight', to: bfloat16 }"
+    )
 
     def validate_target_ref(self, target_ref: TensorRef) -> None:
         if target_ref.slice_spec is not None:

@@ -20,6 +20,16 @@ class MoveTransform(BinaryMappingTransform[BinaryMappingSpec]):
     error_type = MoveTransformError
     spec_type = BinaryMappingSpec
     progress_desc = "Applying move transforms"
+    help_text = (
+        "Moves tensors from one name to another without copying.\n"
+        "\n"
+        "Both source ('from') and destination ('to') must refer to whole tensors "
+        "(slicing is not allowed). Destination names must not already exist.\n"
+        "\n"
+        "Examples:\n"
+        "  move: { from: ln_f.weight, to: ln_f_copy.weight }\n"
+        "  move: { from: model::h.0.attn.c_proj.weight, to: model::proj.weight }"
+    )
 
     def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
         if from_ref.slice_spec is not None:

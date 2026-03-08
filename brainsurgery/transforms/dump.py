@@ -40,6 +40,17 @@ class DumpTransform(UnaryTransform[DumpSpec]):
     allowed_keys = {"target", "format"}
     required_keys = set()
     progress_desc = "Dumping tensors"
+    help_text = (
+        "Displays summaries of tensors selected by 'target' without modifying them.\n"
+        "\n"
+        "Targets may be specified by name or pattern and support slicing. Output is "
+        "shown in one of three formats: 'tree' (default), 'compact', or 'json'.\n"
+        "\n"
+        "Examples:\n"
+        "  dump: { target: ln_f.weight }\n"
+        "  dump: { target: '.*weight', format: compact }\n"
+        "  dump: { target: h.0.attn.c_attn.weight[:, :10], format: json }"
+    )
 
     def compile(self, payload: dict, default_model: str | None) -> DumpSpec:
         payload = ensure_mapping_payload(payload, self.name)

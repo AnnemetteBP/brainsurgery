@@ -19,6 +19,16 @@ class DeleteTransform(UnaryTransform[UnarySpec]):
     error_type = DeleteTransformError
     spec_type = UnarySpec
     progress_desc = "Applying delete transforms"
+    help_text = (
+        "Deletes one or more tensors selected by 'target'.\n"
+        "\n"
+        "Targets may be specified by name or pattern. The entire tensor is removed; "
+        "slicing is not supported.\n"
+        "\n"
+        "Examples:\n"
+        "  delete: { target: ln_f_copy.weight }\n"
+        "  delete: { target: '.*_backup' }"
+    )
 
     def validate_target_ref(self, target_ref: TensorRef) -> None:
         if target_ref.slice_spec is not None:

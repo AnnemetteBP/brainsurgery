@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Protocol
+from typing import Any, Callable, List, Protocol
 
 import torch
 
@@ -27,6 +27,57 @@ class AssertTransformError(TransformError):
 class AssertExpr(Protocol):
     def evaluate(self, provider: StateDictProvider) -> None: ...
     def collect_models(self) -> set[str]: ...
+
+
+@dataclass(frozen=True)
+class AssertExprHelp:
+    name: str
+    payload_kind: str
+    allowed_keys: set[str] | None = None
+    required_keys: set[str] | None = None
+    description: str | None = None
+
+
+AssertExprCompiler = Callable[[Any, str | None], AssertExpr]
+
+_ASSERT_EXPR_COMPILERS: dict[str, AssertExprCompiler] = {}
+_ASSERT_EXPR_HELP: dict[str, AssertExprHelp] = {}
+
+
+def register_assert_expr(
+    name: str,
+    *,
+    payload_kind: str,
+    allowed_keys: set[str] | None = None,
+    required_keys: set[str] | None = None,
+    description: str | None = None,
+) -> Callable[[AssertExprCompiler], AssertExprCompiler]:
+    def decorator(fn: AssertExprCompiler) -> AssertExprCompiler:
+        _ASSERT_EXPR_COMPILERS[name] = fn
+        _ASSERT_EXPR_HELP[name] = AssertExprHelp(
+            name=name,
+            payload_kind=payload_kind,
+            allowed_keys=None if allowed_keys is None else set(allowed_keys),
+            required_keys=None if required_keys is None else set(required_keys),
+            description=description,
+        )
+        return fn
+
+    return decorator
+
+
+def get_assert_expr_names() -> list[str]:
+    return sorted(_ASSERT_EXPR_COMPILERS)
+
+
+def get_assert_expr_help(name: str | None = None) -> dict[str, AssertExprHelp] | AssertExprHelp:
+    if name is None:
+        return dict(_ASSERT_EXPR_HELP)
+
+    try:
+        return _ASSERT_EXPR_HELP[name]
+    except KeyError as exc:
+        raise AssertTransformError(f"unknown assert op: {name!r}") from exc
 
 
 @dataclass(frozen=True)
@@ -193,28 +244,38 @@ def compile_assert_expr(raw: Any, default_model: str | None) -> AssertExpr:
 
     op, payload = next(iter(raw.items()))
 
-    compilers = {
-        "exists": lambda p: ExistsExpr(ref=compile_tensor_ref_expr(p, default_model, "exists")),
-        "count": lambda p: compile_count_expr(p, default_model),
-        "dtype": lambda p: compile_dtype_expr(p, default_model),
-        "shape": lambda p: compile_shape_expr(p, default_model),
-        "dimensions": lambda p: compile_dimensions_expr(p, default_model),
-        "iszero": lambda p: IsZeroExpr(ref=compile_tensor_ref_expr(p, default_model, "iszero")),
-        "equal": lambda p: compile_equal_expr(p, default_model),
-        "not": lambda p: NotExpr(expr=compile_assert_expr(p, default_model)),
-        "all": lambda p: compile_all_expr(p, default_model),
-        "any": lambda p: compile_any_expr(p, default_model),
-    }
-
     try:
-        return compilers[op](payload)
+        compiler = _ASSERT_EXPR_COMPILERS[op]
     except KeyError as exc:
         raise AssertTransformError(f"unknown assert op: {op!r}") from exc
 
+    return compiler(payload, default_model)
 
+
+@register_assert_expr(
+    "exists",
+    payload_kind="tensor-ref",
+    description="Succeeds if the reference matches at least one tensor.",
+)
+def compile_exists_expr(payload: Any, default_model: str | None) -> AssertExpr:
+    return ExistsExpr(ref=compile_tensor_ref_expr(payload, default_model, "exists"))
+
+
+@register_assert_expr(
+    "count",
+    payload_kind="mapping",
+    allowed_keys={"of", "is"},
+    required_keys={"of", "is"},
+    description="Succeeds if the reference matches exactly the given number of tensors.",
+)
 def compile_count_expr(payload: Any, default_model: str | None) -> CountExpr:
     payload = ensure_mapping_payload(payload, "count")
-    validate_payload_keys(payload, op_name="count", allowed_keys={"of", "is"}, required_keys={"of", "is"})
+    validate_payload_keys(
+        payload,
+        op_name="count",
+        allowed_keys={"of", "is"},
+        required_keys={"of", "is"},
+    )
     ref = compile_tensor_ref_expr(payload["of"], default_model, "count.of")
     is_value = payload["is"]
     if not isinstance(is_value, int):
@@ -222,9 +283,21 @@ def compile_count_expr(payload: Any, default_model: str | None) -> CountExpr:
     return CountExpr(ref=ref, is_value=is_value)
 
 
+@register_assert_expr(
+    "dtype",
+    payload_kind="mapping",
+    allowed_keys={"of", "is"},
+    required_keys={"of", "is"},
+    description="Succeeds if the tensor has the given dtype.",
+)
 def compile_dtype_expr(payload: Any, default_model: str | None) -> DtypeExpr:
     payload = ensure_mapping_payload(payload, "dtype")
-    validate_payload_keys(payload, op_name="dtype", allowed_keys={"of", "is"}, required_keys={"of", "is"})
+    validate_payload_keys(
+        payload,
+        op_name="dtype",
+        allowed_keys={"of", "is"},
+        required_keys={"of", "is"},
+    )
     ref = compile_tensor_ref_expr(payload["of"], default_model, "dtype.of")
 
     raw_dtype = payload["is"]
@@ -242,16 +315,40 @@ def compile_dtype_expr(payload: Any, default_model: str | None) -> DtypeExpr:
     )
 
 
+@register_assert_expr(
+    "shape",
+    payload_kind="mapping",
+    allowed_keys={"of", "is"},
+    required_keys={"of", "is"},
+    description="Succeeds if the tensor has the given shape.",
+)
 def compile_shape_expr(payload: Any, default_model: str | None) -> ShapeExpr:
     payload = ensure_mapping_payload(payload, "shape")
-    validate_payload_keys(payload, op_name="shape", allowed_keys={"of", "is"}, required_keys={"of", "is"})
+    validate_payload_keys(
+        payload,
+        op_name="shape",
+        allowed_keys={"of", "is"},
+        required_keys={"of", "is"},
+    )
     ref = compile_tensor_ref_expr(payload["of"], default_model, "shape.of")
     return ShapeExpr(ref=ref, is_value=compile_shape(payload["is"]))
 
 
+@register_assert_expr(
+    "dimensions",
+    payload_kind="mapping",
+    allowed_keys={"of", "is"},
+    required_keys={"of", "is"},
+    description="Succeeds if the tensor has the given number of dimensions.",
+)
 def compile_dimensions_expr(payload: Any, default_model: str | None) -> DimensionsExpr:
     payload = ensure_mapping_payload(payload, "dimensions")
-    validate_payload_keys(payload, op_name="dimensions", allowed_keys={"of", "is"}, required_keys={"of", "is"})
+    validate_payload_keys(
+        payload,
+        op_name="dimensions",
+        allowed_keys={"of", "is"},
+        required_keys={"of", "is"},
+    )
     ref = compile_tensor_ref_expr(payload["of"], default_model, "dimensions.of")
     is_value = payload["is"]
     if not isinstance(is_value, int):
@@ -259,20 +356,60 @@ def compile_dimensions_expr(payload: Any, default_model: str | None) -> Dimensio
     return DimensionsExpr(ref=ref, is_value=is_value)
 
 
+@register_assert_expr(
+    "iszero",
+    payload_kind="tensor-ref",
+    description="Succeeds if the selected tensor is all zeros.",
+)
+def compile_iszero_expr(payload: Any, default_model: str | None) -> AssertExpr:
+    return IsZeroExpr(ref=compile_tensor_ref_expr(payload, default_model, "iszero"))
+
+
+@register_assert_expr(
+    "equal",
+    payload_kind="mapping",
+    allowed_keys={"left", "right"},
+    required_keys={"left", "right"},
+    description="Succeeds if two tensors have the same shape, dtype, and values.",
+)
 def compile_equal_expr(payload: Any, default_model: str | None) -> EqualExpr:
     payload = ensure_mapping_payload(payload, "equal")
-    validate_payload_keys(payload, op_name="equal", allowed_keys={"left", "right"}, required_keys={"left", "right"})
+    validate_payload_keys(
+        payload,
+        op_name="equal",
+        allowed_keys={"left", "right"},
+        required_keys={"left", "right"},
+    )
     left = compile_tensor_ref_expr(payload["left"], default_model, "equal.left")
     right = compile_tensor_ref_expr(payload["right"], default_model, "equal.right")
     return EqualExpr(left=left, right=right)
 
 
+@register_assert_expr(
+    "not",
+    payload_kind="assert-expr",
+    description="Succeeds if the inner assertion fails.",
+)
+def compile_not_expr(payload: Any, default_model: str | None) -> AssertExpr:
+    return NotExpr(expr=compile_assert_expr(payload, default_model))
+
+
+@register_assert_expr(
+    "all",
+    payload_kind="list[assert-expr]",
+    description="Succeeds if all inner assertions succeed.",
+)
 def compile_all_expr(payload: Any, default_model: str | None) -> AllExpr:
     if not isinstance(payload, list) or not payload:
         raise AssertTransformError("all must be a non-empty list")
     return AllExpr(exprs=[compile_assert_expr(item, default_model) for item in payload])
 
 
+@register_assert_expr(
+    "any",
+    payload_kind="list[assert-expr]",
+    description="Succeeds if any inner assertion succeeds.",
+)
 def compile_any_expr(payload: Any, default_model: str | None) -> AnyExpr:
     if not isinstance(payload, list) or not payload:
         raise AssertTransformError("any must be a non-empty list")
@@ -329,7 +466,9 @@ def resolve_single_tensor(ref: TensorRef, provider: StateDictProvider, op_name: 
     if len(matches) == 0:
         raise AssertTransformError(f"{op_name} failed: {format_ref(ref)} matched zero tensors")
     if len(matches) != 1:
-        raise AssertTransformError(f"{op_name} failed: {format_ref(ref)} matched {len(matches)} tensors, expected 1")
+        raise AssertTransformError(
+            f"{op_name} failed: {format_ref(ref)} matched {len(matches)} tensors, expected 1"
+        )
 
     tensor = sd[matches[0]]
     slice_spec = parse_slice(ref.slice_spec) if ref.slice_spec else None

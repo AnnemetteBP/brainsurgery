@@ -25,6 +25,15 @@ class ExitTransform:
     name = "exit"
     error_type = ExitTransformError
     spec_type = ExitSpec
+    help_text = (
+        "Exits the current execution loop.\n"
+        "\n"
+        "In interactive mode, returns to the caller and stops further transforms. "
+        "Does not modify tensors and takes no arguments.\n"
+        "\n"
+        "Examples:\n"
+        "  exit"
+    )
 
     def compile(self, payload: Any, default_model: str | None) -> ExitSpec:
         del default_model

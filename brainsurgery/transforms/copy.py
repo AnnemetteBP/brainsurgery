@@ -22,6 +22,17 @@ class CopyTransform(BinaryMappingTransform[BinaryMappingSpec]):
     error_type = CopyTransformError
     spec_type = BinaryMappingSpec
     progress_desc = "Applying copy transforms"
+    help_text = (
+        "Copies tensors from 'from' to new names in 'to'. The destination must not "
+        "already exist.\n"
+        "\n"
+        "The source reference supports slicing; the destination must not be sliced. "
+        "Copied tensors are cloned and independent of the source.\n"
+        "\n"
+        "Examples:\n"
+        "  copy: { from: ln_f.weight, to: ln_f_copy.weight }\n"
+        "  copy: { from: a.weight[:, :10], to: b.partial_weight }"
+    )
 
     def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
         if from_ref.slice_spec is not None:
