@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import Any
 
@@ -69,7 +68,7 @@ class DumpTransform(UnaryTransform[DumpSpec]):
             view = select_tensor(tensor, slice_spec)
             insert_into_tree(tree, name.split("."), summarize_tensor(view))
 
-        print(json.dumps(tree, indent=2, sort_keys=True))
+        print(render_tree(tree))
         return TransformResult(name=self.name, count=len(targets))
 
 
@@ -93,6 +92,79 @@ def summarize_tensor(tensor: torch.Tensor) -> dict[str, Any]:
         "max": float(t.max().item()),
         "mean": float(t.mean().item()),
     }
+
+
+def is_tensor_summary(node: Any) -> bool:
+    return (
+        isinstance(node, dict)
+        and set(node.keys()) == {"shape", "min", "max", "mean"}
+    )
+
+
+def format_summary(summary: dict[str, Any]) -> str:
+    shape = summary["shape"]
+    min_value = summary["min"]
+    max_value = summary["max"]
+    mean_value = summary["mean"]
+
+    if min_value is None:
+        return f"shape={shape} min=None max=None mean=None"
+
+    return (
+        f"shape={shape} "
+        f"min={min_value:.6g} "
+        f"max={max_value:.6g} "
+        f"mean={mean_value:.6g}"
+    )
+
+
+def render_tree(tree: dict[str, Any]) -> str:
+    lines: list[str] = []
+
+    items = list(tree.items())
+    for index, (key, value) in enumerate(items):
+        is_last = index == len(items) - 1
+        lines.extend(render_node(key, value, prefix="", is_last=is_last))
+
+    return "\n".join(lines)
+
+
+def render_node(name: str, node: Any, prefix: str, is_last: bool) -> list[str]:
+    branch = "└── " if is_last else "├── "
+    child_prefix = prefix + ("    " if is_last else "│   ")
+
+    if is_tensor_summary(node):
+        return [f"{prefix}{branch}{name}  {format_summary(node)}"]
+
+    lines = [f"{prefix}{branch}{name}"]
+
+    if isinstance(node, dict):
+        items = list(node.items())
+        for index, (child_name, child_node) in enumerate(items):
+            lines.extend(
+                render_node(
+                    str(child_name),
+                    child_node,
+                    prefix=child_prefix,
+                    is_last=index == len(items) - 1,
+                )
+            )
+        return lines
+
+    if isinstance(node, list):
+        visible_items = [(i, child) for i, child in enumerate(node) if child is not None]
+        for index, (child_idx, child_node) in enumerate(visible_items):
+            lines.extend(
+                render_node(
+                    f"[{child_idx}]",
+                    child_node,
+                    prefix=child_prefix,
+                    is_last=index == len(visible_items) - 1,
+                )
+            )
+        return lines
+
+    return [f"{prefix}{branch}{name}  {node!r}"]
 
 
 def insert_into_tree(tree: dict[str, Any], parts: list[str], leaf: Any) -> None:
