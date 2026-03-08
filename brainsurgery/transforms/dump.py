@@ -82,7 +82,7 @@ class DumpTransform(UnaryTransform[DumpSpec]):
             parse_slice(target_ref.slice_spec)
 
     def build_spec(self, target_ref: TensorRef, payload: dict) -> DumpSpec:
-        raw_format = payload.get("format", "tree")
+        raw_format = payload.get("format", "compact")
         if not isinstance(raw_format, str) or not raw_format:
             raise DumpTransformError("dump.format must be a non-empty string")
 
@@ -90,7 +90,7 @@ class DumpTransform(UnaryTransform[DumpSpec]):
         if fmt not in {"json", "tree", "compact"}:
             raise DumpTransformError("dump.format must be one of: json, tree, compact")
 
-        raw_verbosity = payload.get("verbosity", "stat")
+        raw_verbosity = payload.get("verbosity", "shape")
         if not isinstance(raw_verbosity, str) or not raw_verbosity:
             raise DumpTransformError("dump.verbosity must be a non-empty string")
 
