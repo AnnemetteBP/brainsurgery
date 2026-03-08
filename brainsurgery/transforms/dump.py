@@ -7,6 +7,7 @@ from typing import Any
 import torch
 
 from .unary import UnarySpec, UnaryTransform, resolve_target_names
+from ..model import tqdm
 from ..transform import (
     StateDictProvider,
     TensorRef,
@@ -35,7 +36,7 @@ class DumpTransform(UnaryTransform[DumpSpec]):
     spec_type = DumpSpec
     allowed_keys = {"target", "format"}
     required_keys = {"target"}
-    progress_desc = None
+    progress_desc = "Dumping tensors"
 
     def validate_target_ref(self, target_ref: TensorRef) -> None:
         if target_ref.slice_spec is not None:
@@ -78,7 +79,7 @@ class DumpTransform(UnaryTransform[DumpSpec]):
 
         tree: dict[str, Any] = {}
 
-        for name in targets:
+        for name in tqdm(targets, desc=self.progress_desc, unit="tensor"):
             tensor = sd[name]
             view = select_tensor(tensor, slice_spec)
             insert_into_tree(tree, name.split("."), summarize_tensor(view))
