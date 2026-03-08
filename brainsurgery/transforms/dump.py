@@ -13,11 +13,13 @@ from ..transform import (
     TensorRef,
     TransformError,
     TransformResult,
+    ensure_mapping_payload,
     must_model,
+    parse_model_expr,
     parse_slice,
     register_transform,
-    require_nonempty_string,
     select_tensor,
+    validate_payload_keys,
 )
 
 
@@ -35,8 +37,29 @@ class DumpTransform(UnaryTransform[DumpSpec]):
     error_type = DumpTransformError
     spec_type = DumpSpec
     allowed_keys = {"target", "format"}
-    required_keys = {"target"}
+    required_keys = set()
     progress_desc = "Dumping tensors"
+
+    def compile(self, payload: dict, default_model: str | None) -> DumpSpec:
+        payload = ensure_mapping_payload(payload, self.name)
+        validate_payload_keys(
+            payload,
+            op_name=self.name,
+            allowed_keys=self.allowed_keys,
+            required_keys=self.required_keys,
+        )
+
+        if "target" not in payload:
+            payload = dict(payload)
+            payload["target"] = ".*"
+
+        raw_target = self.require_target_expr(payload)
+        target_ref = parse_model_expr(raw_target, default_model=default_model)
+
+        self.validate_target_ref(target_ref)
+
+        assert target_ref.model is not None
+        return self.build_spec(target_ref=target_ref, payload=payload)
 
     def validate_target_ref(self, target_ref: TensorRef) -> None:
         if target_ref.slice_spec is not None:
@@ -121,6 +144,7 @@ def is_tensor_summary(node: Any) -> bool:
         isinstance(node, dict)
         and set(node.keys()) in ({"shape", "min", "max", "mean"}, {"shape"})
     )
+
 
 def shape_only(node: Any) -> Any:
     if is_tensor_summary(node):
