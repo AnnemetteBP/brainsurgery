@@ -371,41 +371,51 @@ def run(
     config_items: list[str] = typer.Argument(
         None,
         help=(
-            "Zero or more YAML files and/or overrides in any order. Existing .yaml/.yml "
-            "files are loaded and merged; everything else is treated as an override."
+            "YAML plan fragments and/or key=value overrides. YAML files are loaded and "
+            "deep-merged in order; overrides are applied last. Typically used to define "
+            "inputs, transforms, and output."
         ),
     ),
-    shard_size: str = typer.Option("5GB", help="Default shard size for directory outputs"),
-    num_workers: int = typer.Option(8, help="Max number of parallel I/O workers"),
-    provider: str = typer.Option("inmemory", help="State-dict provider: inmemory or arena"),
+    shard_size: str = typer.Option(
+        "5GB",
+        help="Default shard size when writing directory outputs (e.g. safetensors shards). Ignored for single-file outputs.",
+    ),
+    num_workers: int = typer.Option(
+        8,
+        help="Maximum parallel workers for loading and saving tensors. Higher values improve I/O throughput but increase memory pressure.",
+    ),
+    provider: str = typer.Option(
+        "inmemory",
+        help="State-dict backend. 'inmemory' loads tensors into RAM; 'arena' memory-maps tensors to disk for large models.",
+    ),
     arena_root: Path = typer.Option(
         Path(".brainsurgery"),
-        help="Arena directory when using the arena provider",
+        help="Directory for arena storage when using --provider arena (memory-mapped tensor backing).",
     ),
     arena_segment_size: str = typer.Option(
         "1GB",
-        help="Arena segment size, e.g. 1GB, 4GB, 512MB",
+        help="Segment size for arena storage (e.g. 1GB). Larger segments reduce fragmentation but use more disk.",
     ),
     interactive: bool = typer.Option(
         False,
         "-i",
         "--interactive",
-        help="Run configured transforms, then enter an interactive prompt for additional transforms.",
+        help="Run configured transforms, then enter an interactive prompt to execute additional transforms incrementally.",
     ),
     summarize: bool = typer.Option(
         True,
         "-s",
         "--summarize/--no-summarize",
-        help="Write a YAML summary of the actually executed plan.",
+        help="Write a YAML summary of the transforms actually executed (after overrides and interactive edits).",
     ),
     summarize_path: Path | None = typer.Option(
         None,
-        help="Path for executed plan summary YAML. If not given, the summary is printed to standard output.",
+        help="Destination for the executed-plan summary. Defaults to stdout if not set.",
     ),
     log_level: str = typer.Option(
         "info",
         "--log-level",
-        help="Log level: debug, info, warning, error, critical",
+        help="Logging verbosity (debug, info, warning, error, critical).",
     ),
 ) -> None:
     """Load a plan, execute it, and save the rewritten output checkpoint."""
