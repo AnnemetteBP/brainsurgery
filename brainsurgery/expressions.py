@@ -5,7 +5,8 @@ from typing import Any, List, Protocol
 
 import torch
 
-from .matching import StructuredPathError, StructuredPathMatcher
+from .dtypes import parse_torch_dtype
+from .targeting import format_target_ref, resolve_target_names
 from .transform import (
     StateDictProvider,
     TensorRef,
@@ -28,20 +29,17 @@ class AssertExpr(Protocol):
     def collect_models(self) -> set[str]: ...
 
 
-_MATCHER = StructuredPathMatcher()
-
-
 @dataclass(frozen=True)
 class ExistsExpr:
     ref: TensorRef
 
     def evaluate(self, provider: StateDictProvider) -> None:
-        matches = resolve_matches(self.ref, provider)
+        matches = resolve_matches(self.ref, provider, op_name="exists")
         if not matches:
             raise AssertTransformError(f"exists failed: {format_ref(self.ref)} matched zero tensors")
 
     def collect_models(self) -> set[str]:
-        return {must_model(self.ref)}
+        return collect_ref_models(self.ref)
 
 
 @dataclass(frozen=True)
@@ -50,14 +48,14 @@ class CountExpr:
     is_value: int
 
     def evaluate(self, provider: StateDictProvider) -> None:
-        matches = resolve_matches(self.ref, provider)
+        matches = resolve_matches(self.ref, provider, op_name="count.of")
         if len(matches) != self.is_value:
             raise AssertTransformError(
                 f"count failed: {format_ref(self.ref)} matched {len(matches)} tensors, expected {self.is_value}"
             )
 
     def collect_models(self) -> set[str]:
-        return {must_model(self.ref)}
+        return collect_ref_models(self.ref)
 
 
 @dataclass(frozen=True)
@@ -66,14 +64,14 @@ class DtypeExpr:
     is_value: torch.dtype
 
     def evaluate(self, provider: StateDictProvider) -> None:
-        tensor = resolve_single_tensor(self.ref, provider, op_name="dtype")
+        tensor = resolve_single_tensor(self.ref, provider, op_name="dtype.of")
         if tensor.dtype != self.is_value:
             raise AssertTransformError(
                 f"dtype failed: {format_ref(self.ref)} has dtype {tensor.dtype}, expected {self.is_value}"
             )
 
     def collect_models(self) -> set[str]:
-        return {must_model(self.ref)}
+        return collect_ref_models(self.ref)
 
 
 @dataclass(frozen=True)
@@ -82,14 +80,14 @@ class ShapeExpr:
     is_value: tuple[int, ...]
 
     def evaluate(self, provider: StateDictProvider) -> None:
-        tensor = resolve_single_tensor(self.ref, provider, op_name="shape")
+        tensor = resolve_single_tensor(self.ref, provider, op_name="shape.of")
         if tuple(tensor.shape) != self.is_value:
             raise AssertTransformError(
                 f"shape failed: {format_ref(self.ref)} has shape {tuple(tensor.shape)}, expected {self.is_value}"
             )
 
     def collect_models(self) -> set[str]:
-        return {must_model(self.ref)}
+        return collect_ref_models(self.ref)
 
 
 @dataclass(frozen=True)
@@ -98,14 +96,14 @@ class DimensionsExpr:
     is_value: int
 
     def evaluate(self, provider: StateDictProvider) -> None:
-        tensor = resolve_single_tensor(self.ref, provider, op_name="dimensions")
+        tensor = resolve_single_tensor(self.ref, provider, op_name="dimensions.of")
         if len(tensor.shape) != self.is_value:
             raise AssertTransformError(
                 f"dimensions failed: {format_ref(self.ref)} has {len(tensor.shape)} dims, expected {self.is_value}"
             )
 
     def collect_models(self) -> set[str]:
-        return {must_model(self.ref)}
+        return collect_ref_models(self.ref)
 
 
 @dataclass(frozen=True)
@@ -118,7 +116,7 @@ class IsZeroExpr:
             raise AssertTransformError(f"iszero failed: {format_ref(self.ref)} is not all zeros")
 
     def collect_models(self) -> set[str]:
-        return {must_model(self.ref)}
+        return collect_ref_models(self.ref)
 
 
 @dataclass(frozen=True)
@@ -168,10 +166,7 @@ class AllExpr:
             expr.evaluate(provider)
 
     def collect_models(self) -> set[str]:
-        models: set[str] = set()
-        for expr in self.exprs:
-            models.update(expr.collect_models())
-        return models
+        return collect_expr_models(self.exprs)
 
 
 @dataclass(frozen=True)
@@ -189,10 +184,7 @@ class AnyExpr:
         raise AssertTransformError("any failed: all alternatives failed:\n- " + "\n- ".join(errors))
 
     def collect_models(self) -> set[str]:
-        models: set[str] = set()
-        for expr in self.exprs:
-            models.update(expr.collect_models())
-        return models
+        return collect_expr_models(self.exprs)
 
 
 def compile_assert_expr(raw: Any, default_model: str | None) -> AssertExpr:
@@ -234,7 +226,20 @@ def compile_dtype_expr(payload: Any, default_model: str | None) -> DtypeExpr:
     payload = ensure_mapping_payload(payload, "dtype")
     validate_payload_keys(payload, op_name="dtype", allowed_keys={"of", "is"}, required_keys={"of", "is"})
     ref = compile_tensor_ref_expr(payload["of"], default_model, "dtype.of")
-    return DtypeExpr(ref=ref, is_value=compile_torch_dtype(payload["is"]))
+
+    raw_dtype = payload["is"]
+    if not isinstance(raw_dtype, str) or not raw_dtype:
+        raise AssertTransformError("dtype.is must be a non-empty string")
+
+    return DtypeExpr(
+        ref=ref,
+        is_value=parse_torch_dtype(
+            raw_dtype,
+            error_type=AssertTransformError,
+            op_name="dtype",
+            field_name="is",
+        ),
+    )
 
 
 def compile_shape_expr(payload: Any, default_model: str | None) -> ShapeExpr:
@@ -296,57 +301,30 @@ def compile_tensor_ref_expr(raw: Any, default_model: str | None, op_name: str) -
     return ref
 
 
-def compile_torch_dtype(raw: Any) -> torch.dtype:
-    if not isinstance(raw, str) or not raw:
-        raise AssertTransformError("dtype.is must be a non-empty string")
-
-    mapping = {
-        "float16": torch.float16,
-        "half": torch.float16,
-        "bfloat16": torch.bfloat16,
-        "float32": torch.float32,
-        "float": torch.float32,
-        "float64": torch.float64,
-        "double": torch.float64,
-        "uint8": torch.uint8,
-        "int8": torch.int8,
-        "int16": torch.int16,
-        "short": torch.int16,
-        "int32": torch.int32,
-        "int": torch.int32,
-        "int64": torch.int64,
-        "long": torch.int64,
-        "bool": torch.bool,
-    }
-    try:
-        return mapping[raw]
-    except KeyError as exc:
-        raise AssertTransformError(f"unsupported dtype: {raw!r}") from exc
-
-
 def compile_shape(raw: Any) -> tuple[int, ...]:
     if not isinstance(raw, list) or not all(isinstance(x, int) for x in raw):
         raise AssertTransformError("shape.is must be a list of integers")
     return tuple(raw)
 
 
-def resolve_matches(ref: TensorRef, provider: StateDictProvider) -> List[str]:
-    model = must_model(ref)
-    sd = provider.get_state_dict(model)
-
-    if isinstance(ref.expr, str):
-        return sorted(name for name in sd.keys() if fullmatch_regex(ref.expr, name, ref))
-
-    if isinstance(ref.expr, list):
-        return sorted(name for name in sd.keys() if fullmatch_structured(ref.expr, name, ref))
-
-    raise AssertTransformError(f"invalid tensor reference expression type: {type(ref.expr).__name__}")
+def resolve_matches(
+    ref: TensorRef,
+    provider: StateDictProvider,
+    *,
+    op_name: str,
+) -> List[str]:
+    return resolve_target_names(
+        target_ref=ref,
+        provider=provider,
+        op_name=op_name,
+        error_type=AssertTransformError,
+    )
 
 
 def resolve_single_tensor(ref: TensorRef, provider: StateDictProvider, op_name: str) -> torch.Tensor:
     model = must_model(ref)
     sd = provider.get_state_dict(model)
-    matches = resolve_matches(ref, provider)
+    matches = resolve_matches(ref, provider, op_name=op_name)
 
     if len(matches) == 0:
         raise AssertTransformError(f"{op_name} failed: {format_ref(ref)} matched zero tensors")
@@ -358,76 +336,40 @@ def resolve_single_tensor(ref: TensorRef, provider: StateDictProvider, op_name: 
     return select_tensor(tensor, slice_spec)
 
 
-def fullmatch_regex(pattern: str, name: str, ref: TensorRef) -> bool:
-    try:
-        return re_fullmatch(pattern, name)
-    except TransformError:
-        raise
-    except Exception as exc:
-        raise AssertTransformError(f"invalid regex in reference {format_ref(ref)}: {exc}") from exc
+def collect_ref_models(ref: TensorRef) -> set[str]:
+    return {must_model(ref)}
 
 
-def re_fullmatch(pattern: str, value: str) -> bool:
-    import re
-
-    try:
-        return re.fullmatch(pattern, value) is not None
-    except re.error as exc:
-        raise AssertTransformError(f"invalid regex {pattern!r}: {exc}") from exc
-
-
-def fullmatch_structured(pattern: list[str], name: str, ref: TensorRef) -> bool:
-    try:
-        return _MATCHER.match(pattern, name) is not None
-    except StructuredPathError as exc:
-        raise AssertTransformError(f"invalid structured reference {format_ref(ref)}: {exc}") from exc
+def collect_expr_models(exprs: list[AssertExpr]) -> set[str]:
+    models: set[str] = set()
+    for expr in exprs:
+        models.update(expr.collect_models())
+    return models
 
 
 def format_ref(ref: TensorRef) -> str:
-    model = must_model(ref)
-    expr = format_ref_expr(ref.expr)
-    if ref.slice_spec is None:
-        return f"{model}::{expr}"
-    return f"{model}::{expr}::{ref.slice_spec}"
-
-
-def format_ref_expr(expr: str | list[str]) -> str:
-    if isinstance(expr, str):
-        return expr
-    return "[" + ", ".join(repr(part) for part in expr) + "]"
+    return format_target_ref(ref)
 
 
 def format_expr(expr: AssertExpr) -> str:
     if isinstance(expr, ExistsExpr):
         return f"exists({format_ref(expr.ref)})"
-
     if isinstance(expr, CountExpr):
         return f"count({format_ref(expr.ref)}) == {expr.is_value}"
-
     if isinstance(expr, DtypeExpr):
         return f"dtype({format_ref(expr.ref)}) == {expr.is_value}"
-
     if isinstance(expr, ShapeExpr):
         return f"shape({format_ref(expr.ref)}) == {expr.is_value}"
-
     if isinstance(expr, DimensionsExpr):
         return f"dimensions({format_ref(expr.ref)}) == {expr.is_value}"
-
     if isinstance(expr, IsZeroExpr):
         return f"iszero({format_ref(expr.ref)})"
-
     if isinstance(expr, EqualExpr):
         return f"equal({format_ref(expr.left)}, {format_ref(expr.right)})"
-
     if isinstance(expr, NotExpr):
         return f"not({format_expr(expr.expr)})"
-
     if isinstance(expr, AllExpr):
-        inner = ", ".join(format_expr(e) for e in expr.exprs)
-        return f"all({inner})"
-
+        return f"all({', '.join(format_expr(e) for e in expr.exprs)})"
     if isinstance(expr, AnyExpr):
-        inner = ", ".join(format_expr(e) for e in expr.exprs)
-        return f"any({inner})"
-
+        return f"any({', '.join(format_expr(e) for e in expr.exprs)})"
     return repr(expr)
