@@ -28,7 +28,9 @@ class MoveTransform(BinaryMappingTransform[BinaryMappingSpec]):
             raise MoveTransformError("move destination must not be sliced")
 
     def validate_resolved_mappings(
-        self, mappings: list[ResolvedMapping], provider: StateDictProvider
+        self,
+        mappings: list[ResolvedMapping],
+        provider: StateDictProvider,
     ) -> None:
         require_dest_missing(
             mappings=mappings,

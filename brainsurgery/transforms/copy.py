@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from .binary import BinaryMappingSpec, BinaryMappingTransform
 from ..transform import (
     ResolvedMapping,
@@ -19,15 +17,10 @@ class CopyTransformError(TransformError):
     pass
 
 
-@dataclass(frozen=True)
-class CopySpec(BinaryMappingSpec):
-    pass
-
-
-class CopyTransform(BinaryMappingTransform[CopySpec]):
+class CopyTransform(BinaryMappingTransform[BinaryMappingSpec]):
     name = "copy"
     error_type = CopyTransformError
-    spec_type = CopySpec
+    spec_type = BinaryMappingSpec
     progress_desc = "Applying copy transforms"
 
     def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
@@ -37,7 +30,9 @@ class CopyTransform(BinaryMappingTransform[CopySpec]):
             raise CopyTransformError("copy destination must not be sliced")
 
     def validate_resolved_mappings(
-        self, mappings: list[ResolvedMapping], provider: StateDictProvider
+        self,
+        mappings: list[ResolvedMapping],
+        provider: StateDictProvider,
     ) -> None:
         require_dest_missing(
             mappings=mappings,
