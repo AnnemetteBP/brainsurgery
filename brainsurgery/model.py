@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import nullcontext
 from pathlib import Path
 from threading import Lock
@@ -15,6 +14,7 @@ from safetensors.torch import save_file as save_safetensors_file
 
 from .plan import OutputSpec
 from .transform import StateDictLike
+from .workers import choose_num_io_workers, run_threadpool_tasks_with_progress
 
 try:
     from tqdm import tqdm
@@ -242,21 +242,31 @@ def save_sharded_safetensors(
     num_workers = choose_num_io_workers(total_shards, max_io_workers=max_io_workers)
     logger.info("Dispatching %d orderly thread(s) for preservation", num_workers)
 
-    with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        futures = {
-            executor.submit(save_safetensors_shard, shard_path, shard): (shard_index, shard_name)
-            for shard_index, shard_name, shard_path, shard in shard_infos
-        }
+    def save_one_shard(
+        item: tuple[int, str, Path, dict[str, torch.Tensor]],
+    ) -> tuple[int, str]:
+        shard_index, shard_name, shard_path, shard = item
+        save_safetensors_shard(shard_path, shard)
+        return shard_index, shard_name
 
-        progress = tqdm(total=total_shards, desc="Shard save", unit="shard", leave=False)
-        try:
-            for future in as_completed(futures):
-                shard_index, shard_name = futures[future]
-                future.result()
-                logger.debug("Preserved shard %d/%d at %s", shard_index, total_shards, shard_name)
-                progress.update(1)
-        finally:
-            progress.close()
+    def on_shard_saved(
+        item: tuple[int, str, Path, dict[str, torch.Tensor]],
+        result: tuple[int, str],
+    ) -> None:
+        del item
+        shard_index, shard_name = result
+        logger.debug("Preserved shard %d/%d at %s", shard_index, total_shards, shard_name)
+
+    run_threadpool_tasks_with_progress(
+        items=shard_infos,
+        worker=save_one_shard,
+        num_workers=num_workers,
+        total=total_shards,
+        progress_desc="Shard save",
+        progress_unit="shard",
+        progress_factory=tqdm,
+        on_result=on_shard_saved,
+    )
 
     index = {
         "metadata": {"total_size": total_size},
@@ -309,25 +319,20 @@ def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike,
     logger.info("Dispatching %d orderly thread(s) for exposure", num_workers)
 
     merge_lock = Lock()
-    with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        futures = {
-            executor.submit(load_state_dict_from_file, file_path, global_state_dict, merge_lock): file_path
-            for file_path in files
-        }
+    def load_one_file(file_path: Path) -> None:
+        load_state_dict_from_file(file_path, global_state_dict, merge_lock)
 
-        progress = tqdm(total=len(files), desc=f"Open {path.name}", unit="file", leave=False)
-        try:
-            for future in as_completed(futures):
-                future.result()  # propagate exceptions
-                progress.update(1)
-        finally:
-            progress.close()
+    run_threadpool_tasks_with_progress(
+        items=files,
+        worker=load_one_file,
+        num_workers=num_workers,
+        total=len(files),
+        progress_desc=f"Open {path.name}",
+        progress_unit="file",
+        progress_factory=tqdm,
+    )
 
     logger.info("Cranial assembly complete for %s: %d tensor(s)", path, len(global_state_dict))
-
-
-def choose_num_io_workers(num_items: int, max_io_workers: int) -> int:
-    return max(1, min(max_io_workers, num_items))
 
 
 def resolve_safetensor_shards_from_index(index_file: Path, base_dir: Path) -> list[Path]:

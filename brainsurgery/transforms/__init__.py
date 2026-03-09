@@ -1,10 +1,9 @@
-from . import copy  # noqa: F401
-from . import move  # noqa: F401
-from . import assign  # noqa: F401
-from . import scale  # noqa: F401
-from . import delete  # noqa: F401
-from . import assert_  # noqa: F401
-from . import cast # noqa: F401
-from . import dump # noqa: F401
-from . import help # noqa: F401
-from . import exit # noqa: F401
+from importlib import import_module
+from pkgutil import iter_modules
+
+
+for module_info in iter_modules(__path__):  # type: ignore[name-defined]
+    module_name = module_info.name
+    if module_name.startswith("_"):
+        continue
+    import_module(f"{__name__}.{module_name}")
