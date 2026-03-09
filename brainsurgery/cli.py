@@ -141,8 +141,15 @@ def run(
                     logger.info("Interactive session complete")
                     break
 
+                interactive_inputs = raw_plan.get("inputs", [])
+                list_aliases = getattr(state_dict_provider, "list_model_aliases", None)
+                if callable(list_aliases):
+                    aliases = sorted(list_aliases())
+                    if aliases:
+                        interactive_inputs = [f"{alias}::/dev/null" for alias in aliases]
+
                 interactive_raw_plan = build_raw_plan(
-                    inputs=raw_plan.get("inputs", []),
+                    inputs=interactive_inputs,
                     output=raw_plan.get("output"),
                     transforms=extra_specs,
                 )

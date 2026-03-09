@@ -153,8 +153,17 @@ def parse_transforms(raw: Any, inputs: Dict[str, Path]) -> List[CompiledTransfor
         default_model = next(iter(inputs.keys()))
 
     parsed: List[CompiledTransform] = []
+    known_models = set(inputs.keys())
     for idx, item in enumerate(raw):
-        parsed.append(parse_transform_entry(item, idx, inputs, default_model))
+        compiled = parse_transform_entry(item, idx, known_models, default_model)
+        parsed.append(compiled)
+
+        try:
+            output_model = compiled.transform.infer_output_model(compiled.spec)
+        except TransformError:
+            output_model = None
+        if output_model:
+            known_models.add(output_model)
 
     return parsed
 
@@ -162,7 +171,7 @@ def parse_transforms(raw: Any, inputs: Dict[str, Path]) -> List[CompiledTransfor
 def parse_transform_entry(
     raw: Any,
     index: int,
-    inputs: Dict[str, Path],
+    known_models: set[str],
     default_model: Optional[str],
 ) -> CompiledTransform:
     if not isinstance(raw, dict) or len(raw) != 1:
@@ -183,18 +192,18 @@ def parse_transform_entry(
     except TransformError as exc:
         raise PlanLoaderError(f"transform #{index}: {exc}") from exc
 
-    validate_model_aliases(spec, inputs, index)
+    validate_model_aliases(spec, known_models, index)
 
     return CompiledTransform(transform=transform, spec=spec)
 
 
-def validate_model_aliases(spec: object, inputs: Dict[str, Path], index: int) -> None:
+def validate_model_aliases(spec: object, known_models: set[str], index: int) -> None:
     if not isinstance(spec, ModelCollectingSpec):
         raise PlanLoaderError(
             f"transform #{index}: internal error: spec type {type(spec).__name__} "
             "does not expose collect_models()"
         )
 
-    unknown = sorted(model for model in spec.collect_models() if model not in inputs)
+    unknown = sorted(model for model in spec.collect_models() if model not in known_models)
     if unknown:
         raise PlanLoaderError(f"transform #{index}: unknown model alias: {unknown[0]!r}")
