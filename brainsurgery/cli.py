@@ -136,7 +136,7 @@ def run(
             logger.info("Entering interactive mode after configured procedures")
 
             while True:
-                extra_specs = prompt_interactive_transform()
+                extra_specs = prompt_interactive_transform(state_dict_provider=state_dict_provider)
                 if extra_specs is None:
                     logger.info("Interactive session complete")
                     break

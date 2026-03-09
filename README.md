@@ -107,6 +107,7 @@ Interactive mode (`-i`):
 - Then opens prompt for additional YAML transform blocks.
 - On failure in an interactive block, logs error, stops only that submitted block, and returns to prompt.
 - `exit` transform cleanly stops the execution loop.
+- Interactive prompt uses a richer UI and supports tab completion for command names, payload keys, model aliases, and loaded tensor names.
 
 Interactive prompt accepts:
 - a single transform mapping, or
