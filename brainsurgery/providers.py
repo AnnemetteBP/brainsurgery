@@ -31,61 +31,9 @@ class ProviderCreationError(RuntimeError):
 # ============================================================
 
 
-class InMemoryStateDict(StateDictLike):
-    def __init__(self):
-        self._data: Dict[str, torch.Tensor] = {}
-
-    def __getitem__(self, key: str) -> torch.Tensor:
-        return self._data[key]
-
-    def __setitem__(self, key: str, value: torch.Tensor) -> None:
-        if not torch.is_tensor(value):
-            raise ArenaError(f"value for key {key!r} is not a tensor")
-        self._data[key] = value
-
-    def __delitem__(self, key: str) -> None:
-        del self._data[key]
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._data)
-
-    def __len__(self) -> int:
-        return len(self._data)
-
-    def slot(self, key: str) -> torch.Tensor:
-        return self._data[key]
-
-    def bind_slot(self, key: str, slot: torch.Tensor) -> None:
-        if not torch.is_tensor(slot):
-            raise ArenaError(f"slot for key {key!r} is not a tensor")
-        self._data[key] = slot
-
-    def keys(self):
-        return self._data.keys()
-
-    def items(self):
-        return self._data.items()
-
-    def values(self):
-        return self._data.values()
-
-
-class ArenaStateDict(StateDictLike):
-    def __init__(self, arena: SegmentedFileBackedArena):
-        self._arena = arena
-        self._slots: Dict[str, TensorSlot] = {}
-
-    def __getitem__(self, key: str) -> torch.Tensor:
-        try:
-            slot = self._slots[key]
-        except KeyError as exc:
-            raise KeyError(key) from exc
-        return self._arena.tensor_from_slot(slot)
-
-    def __setitem__(self, key: str, value: torch.Tensor) -> None:
-        if not torch.is_tensor(value):
-            raise ArenaError(f"value for key {key!r} is not a tensor")
-        self._slots[key] = self._arena.store_tensor(value)
+class SlotBackedStateDict(StateDictLike):
+    def __init__(self) -> None:
+        self._slots: Dict[str, object] = {}
 
     def __delitem__(self, key: str) -> None:
         del self._slots[key]
@@ -95,17 +43,6 @@ class ArenaStateDict(StateDictLike):
 
     def __len__(self) -> int:
         return len(self._slots)
-
-    def slot(self, key: str) -> TensorSlot:
-        try:
-            return self._slots[key]
-        except KeyError as exc:
-            raise KeyError(key) from exc
-
-    def bind_slot(self, key: str, slot: TensorSlot) -> None:
-        if not isinstance(slot, TensorSlot):
-            raise ArenaError(f"slot for key {key!r} is not a TensorSlot")
-        self._slots[key] = slot
 
     def keys(self):
         return self._slots.keys()
@@ -117,6 +54,61 @@ class ArenaStateDict(StateDictLike):
     def values(self):
         for key in self._slots:
             yield self[key]
+
+
+class InMemoryStateDict(SlotBackedStateDict):
+    def __init__(self):
+        super().__init__()
+
+    def __getitem__(self, key: str) -> torch.Tensor:
+        value = self._slots[key]
+        assert isinstance(value, torch.Tensor)
+        return value
+
+    def __setitem__(self, key: str, value: torch.Tensor) -> None:
+        if not torch.is_tensor(value):
+            raise ArenaError(f"value for key {key!r} is not a tensor")
+        self._slots[key] = value
+
+    def slot(self, key: str) -> torch.Tensor:
+        value = self._slots[key]
+        assert isinstance(value, torch.Tensor)
+        return value
+
+    def bind_slot(self, key: str, slot: torch.Tensor) -> None:
+        if not torch.is_tensor(slot):
+            raise ArenaError(f"slot for key {key!r} is not a tensor")
+        self._slots[key] = slot
+
+
+class ArenaStateDict(SlotBackedStateDict):
+    def __init__(self, arena: SegmentedFileBackedArena):
+        super().__init__()
+        self._arena = arena
+
+    def __getitem__(self, key: str) -> torch.Tensor:
+        try:
+            slot = self._slots[key]
+        except KeyError as exc:
+            raise KeyError(key) from exc
+        assert isinstance(slot, TensorSlot)
+        return self._arena.tensor_from_slot(slot)
+
+    def __setitem__(self, key: str, value: torch.Tensor) -> None:
+        if not torch.is_tensor(value):
+            raise ArenaError(f"value for key {key!r} is not a tensor")
+        self._slots[key] = self._arena.store_tensor(value)
+
+    def slot(self, key: str) -> TensorSlot:
+        try:
+            return self._slots[key]
+        except KeyError as exc:
+            raise KeyError(key) from exc
+
+    def bind_slot(self, key: str, slot: TensorSlot) -> None:
+        if not isinstance(slot, TensorSlot):
+            raise ArenaError(f"slot for key {key!r} is not a TensorSlot")
+        self._slots[key] = slot
 
 
 # ============================================================
