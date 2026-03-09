@@ -26,6 +26,9 @@ from ..transform import (
 class UnarySpec:
     target_ref: TensorRef
 
+    def collect_models(self) -> set[str]:
+        return {must_model(self.target_ref)}
+
 
 SpecT = TypeVar("SpecT", bound=UnarySpec)
 

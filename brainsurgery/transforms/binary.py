@@ -14,6 +14,7 @@ from ..transform import (
     TransformError,
     TransformResult,
     ensure_mapping_payload,
+    must_model,
     parse_model_expr,
     require_dest_missing,
     require_dest_present,
@@ -27,6 +28,9 @@ from ..transform import (
 class BinaryMappingSpec:
     from_ref: TensorRef
     to_ref: TensorRef
+
+    def collect_models(self) -> set[str]:
+        return {must_model(self.from_ref), must_model(self.to_ref)}
 
 
 SpecT = TypeVar("SpecT", bound=BinaryMappingSpec)

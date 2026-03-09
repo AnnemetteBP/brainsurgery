@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Protocol, runtime_checkable
 
 import yaml
 
@@ -25,6 +25,12 @@ class SurgeryPlan:
     inputs: Dict[str, Path]
     output: OutputSpec | None
     transforms: List[CompiledTransform]
+
+
+@runtime_checkable
+class ModelCollectingSpec(Protocol):
+    def collect_models(self) -> set[str]:
+        ...
 
 
 def load_plan(path: str | Path) -> SurgeryPlan:
@@ -183,32 +189,12 @@ def parse_transform_entry(
 
 
 def validate_model_aliases(spec: object, inputs: Dict[str, Path], index: int) -> None:
-    for attr in ("from_ref", "to_ref", "target_ref", "ref", "left", "right"):
-        validate_ref_model(getattr(spec, attr, None), inputs, index)
+    if not isinstance(spec, ModelCollectingSpec):
+        raise PlanLoaderError(
+            f"transform #{index}: internal error: spec type {type(spec).__name__} "
+            "does not expose collect_models()"
+        )
 
-    expr = getattr(spec, "expr", None)
-    if expr is not None:
-        validate_expr_models(expr, inputs, index)
-
-
-def validate_ref_model(ref: object, inputs: Dict[str, Path], index: int) -> None:
-    if ref is None:
-        return
-
-    model = getattr(ref, "model", None)
-    if model is not None and model not in inputs:
-        raise PlanLoaderError(f"transform #{index}: unknown model alias: {model!r}")
-
-
-def validate_expr_models(expr: object, inputs: Dict[str, Path], index: int) -> None:
-    for attr in ("ref", "left", "right"):
-        validate_ref_model(getattr(expr, attr, None), inputs, index)
-
-    child = getattr(expr, "expr", None)
-    if child is not None:
-        validate_expr_models(child, inputs, index)
-
-    children = getattr(expr, "exprs", None)
-    if children is not None:
-        for child_expr in children:
-            validate_expr_models(child_expr, inputs, index)
+    unknown = sorted(model for model in spec.collect_models() if model not in inputs)
+    if unknown:
+        raise PlanLoaderError(f"transform #{index}: unknown model alias: {unknown[0]!r}")

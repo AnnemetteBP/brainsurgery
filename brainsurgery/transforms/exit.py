@@ -5,6 +5,7 @@ from typing import Any
 
 from ..transform import (
     StateDictProvider,
+    TypedTransform,
     TransformControl,
     TransformError,
     TransformResult,
@@ -18,10 +19,11 @@ class ExitTransformError(TransformError):
 
 @dataclass(frozen=True)
 class ExitSpec:
-    pass
+    def collect_models(self) -> set[str]:
+        return set()
 
 
-class ExitTransform:
+class ExitTransform(TypedTransform[ExitSpec]):
     name = "exit"
     error_type = ExitTransformError
     spec_type = ExitSpec
@@ -49,16 +51,17 @@ class ExitTransform:
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
         del provider
 
-        if not isinstance(spec, ExitSpec):
-            raise self.error_type(
-                f"{self.name} expected {self.spec_type.__name__}, got {type(spec).__name__}"
-            )
+        self.require_spec(spec)
 
         return TransformResult(
             name=self.name,
             count=0,
             control=TransformControl.EXIT,
         )
+
+    def infer_output_model(self, spec: object) -> str:
+        del spec
+        raise ExitTransformError("exit does not infer an output model")
 
 
 register_transform(ExitTransform())

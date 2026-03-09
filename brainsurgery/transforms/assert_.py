@@ -6,6 +6,7 @@ from typing import Any
 from ..expressions import AssertExpr, AssertTransformError, compile_assert_expr
 from ..transform import (
     StateDictProvider,
+    TypedTransform,
     TransformResult,
     ensure_mapping_payload,
     register_transform,
@@ -16,8 +17,11 @@ from ..transform import (
 class AssertSpec:
     expr: AssertExpr
 
+    def collect_models(self) -> set[str]:
+        return self.expr.collect_models()
 
-class AssertTransform:
+
+class AssertTransform(TypedTransform[AssertSpec]):
     name = "assert"
     error_type = AssertTransformError
     spec_type = AssertSpec
@@ -42,21 +46,12 @@ class AssertTransform:
         return AssertSpec(expr=expr)
 
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
-        if not isinstance(spec, AssertSpec):
-            raise self.error_type(
-                f"{self.name} expected {self.__class__.__name__}, got {type(spec).__name__}"
-            )
-
-        spec.expr.evaluate(provider)
+        typed = self.require_spec(spec)
+        typed.expr.evaluate(provider)
         return TransformResult(name=self.name, count=1)
 
     def infer_output_model(self, spec: object) -> str:
-        if not isinstance(spec, AssertSpec):
-            raise self.error_type(
-                f"{self.name} expected {AssertSpec.__name__}, got {type(spec).__name__}"
-            )
-
-        models = spec.expr.collect_models()
+        models = self.require_spec(spec).collect_models()
         if len(models) != 1:
             raise self.error_type(
                 f"{self.name} must refer to exactly one model to infer output, got {sorted(models)}"

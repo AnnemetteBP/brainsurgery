@@ -8,6 +8,7 @@ import typer
 from ..expressions import get_assert_expr_help, get_assert_expr_names
 from ..transform import (
     StateDictProvider,
+    TypedTransform,
     TransformControl,
     TransformError,
     TransformResult,
@@ -26,8 +27,11 @@ class HelpSpec:
     command: str | None = None
     subcommand: str | None = None
 
+    def collect_models(self) -> set[str]:
+        return set()
 
-class HelpTransform:
+
+class HelpTransform(TypedTransform[HelpSpec]):
     name = "help"
     error_type = HelpTransformError
     spec_type = HelpSpec
@@ -84,30 +88,31 @@ class HelpTransform:
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
         del provider
 
-        if not isinstance(spec, HelpSpec):
-            raise self.error_type(
-                f"{self.name} expected {self.spec_type.__name__}, got {type(spec).__name__}"
-            )
+        typed = self.require_spec(spec)
 
-        if spec.command is None:
+        if typed.command is None:
             self._print_all_commands()
-        elif spec.command == "assert":
-            if spec.subcommand is None:
+        elif typed.command == "assert":
+            if typed.subcommand is None:
                 self._print_assert_help()
             else:
-                self._print_assert_expr_help(spec.subcommand)
+                self._print_assert_expr_help(typed.subcommand)
         else:
-            if spec.subcommand is not None:
+            if typed.subcommand is not None:
                 raise HelpTransformError(
-                    f"command {spec.command!r} does not support subcommand help"
+                    f"command {typed.command!r} does not support subcommand help"
                 )
-            self._print_command_help(spec.command)
+            self._print_command_help(typed.command)
 
         return TransformResult(
             name=self.name,
             count=0,
             control=TransformControl.CONTINUE,
         )
+
+    def infer_output_model(self, spec: object) -> str:
+        del spec
+        raise HelpTransformError("help does not infer an output model")
 
     def _print_all_commands(self) -> None:
         typer.echo("Available commands:")

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable, MutableMapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Protocol, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Protocol, Tuple, TypeVar
 
 import re
 import torch
@@ -86,6 +86,21 @@ class BaseTransform(ABC):
     @abstractmethod
     def infer_output_model(self, spec: object) -> str:
         raise NotImplementedError
+
+
+SpecT = TypeVar("SpecT")
+
+
+class TypedTransform(BaseTransform, ABC, Generic[SpecT]):
+    error_type: type[TransformError] = TransformError
+    spec_type: type[SpecT]
+
+    def require_spec(self, spec: object) -> SpecT:
+        if not isinstance(spec, self.spec_type):
+            raise self.error_type(
+                f"{self.name} expected {self.spec_type.__name__}, got {type(spec).__name__}"
+            )
+        return spec
 
 
 _REGISTRY: Dict[str, BaseTransform] = {}
