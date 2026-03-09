@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import torch
+
 from .unary import UnarySpec, UnaryTransform
 from ..transform import (
     StateDictProvider,
@@ -60,6 +62,42 @@ class ScaleTransform(UnaryTransform[ScaleSpec]):
         )
         view = select_tensor(tensor, slice_spec)
         view.mul_(spec.factor)
+
+
+def _unit_test_scale_compile_rejects_non_numeric_factor() -> None:
+    try:
+        ScaleTransform().compile({"target": "x", "by": "nan?!"}, default_model="model")
+    except TransformError as exc:
+        assert "scale.by must be numeric" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected scale numeric validation error")
+
+
+def _unit_test_scale_compile_accepts_numeric_string_factor() -> None:
+    spec = ScaleTransform().compile({"target": "x", "by": "2.5"}, default_model="model")
+    assert spec.factor == 2.5
+
+
+def _unit_test_scale_apply_with_slice() -> None:
+    class _Provider:
+        def __init__(self) -> None:
+            self._state_dict = {"x": torch.tensor([1.0, 2.0, 3.0, 4.0])}
+
+        def get_state_dict(self, model: str):
+            assert model == "model"
+            return self._state_dict
+
+    provider = _Provider()
+    spec = ScaleSpec(target_ref=TensorRef(model="model", expr="x", slice_spec="[1:3]"), factor=10.0)
+    ScaleTransform().apply_to_target(spec, "x", provider)
+    assert provider._state_dict["x"].tolist() == [1.0, 20.0, 30.0, 4.0]
+
+
+__unit_tests__ = [
+    _unit_test_scale_compile_rejects_non_numeric_factor,
+    _unit_test_scale_compile_accepts_numeric_string_factor,
+    _unit_test_scale_apply_with_slice,
+]
 
 
 register_transform(ScaleTransform())
