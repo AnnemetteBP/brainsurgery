@@ -171,7 +171,7 @@ class BaseStateDictProvider:
         if plan.output is None:
             raise ProviderError("save_output requires plan.output")
 
-        output_model = infer_output_model(plan)
+        output_model = infer_output_model(plan, self)
         state_dict = self.get_state_dict(output_model)
 
         output_path, output_format, shard_size = resolve_output_destination(

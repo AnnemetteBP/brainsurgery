@@ -5,14 +5,18 @@ from dataclasses import dataclass
 import torch
 
 from ..dtypes import parse_torch_dtype
-from .unary import UnarySpec, UnaryTransform
+from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..transform import (
+    ResolvedMapping,
     StateDictProvider,
     TensorRef,
     TransformError,
-    must_model,
+    ensure_mapping_payload,
+    parse_slice,
     register_transform,
     require_nonempty_string,
+    select_tensor,
+    validate_payload_keys,
 )
 
 
@@ -21,63 +25,111 @@ class CastTransformError(TransformError):
 
 
 @dataclass(frozen=True)
-class CastSpec(UnarySpec):
+class CastSpec(BinaryMappingSpec):
     dtype: torch.dtype
 
 
-class CastTransform(UnaryTransform[CastSpec]):
+class CastTransform(BinaryMappingTransform[CastSpec]):
     name = "cast"
     error_type = CastTransformError
     spec_type = CastSpec
-    allowed_keys = {"target", "to"}
-    required_keys = {"target", "to"}
+    destination_policy = DestinationPolicy.MUST_NOT_EXIST
+    allowed_keys = {"from", "to", "dtype"}
+    required_keys = {"from", "to", "dtype"}
     progress_desc = "Applying cast transforms"
     help_text = (
-        "Casts one or more tensors to a different dtype.\n"
+        "Casts one or more source tensors to a different dtype and writes to new destinations.\n"
         "\n"
-        "The 'target' selects tensors by name or pattern. The entire tensor is cast; "
-        "slicing is not supported.\n"
+        "The source ('from') may be specified by name or pattern and may include slicing. "
+        "Destination tensors ('to') must not already exist and must not be sliced.\n"
         "\n"
         "Examples:\n"
-        "  cast: { target: ln_f.weight, to: float16 }\n"
-        "  cast: { target: '.*weight', to: bfloat16 }"
+        "  cast: { from: ln_f.weight, to: ln_f_fp16.weight, dtype: float16 }\n"
+        "  cast: { from: '.*weight', to: 'fp16.\\\\g<0>', dtype: bfloat16 }"
     )
 
-    def build_spec(self, target_ref: TensorRef, payload: dict) -> CastSpec:
-        raw_dtype = require_nonempty_string(payload, op_name=self.name, key="to")
+    def __init__(self) -> None:
+        super().__init__()
+        self._active_dtype: torch.dtype | None = None
+
+    def compile(self, payload: dict, default_model: str | None) -> CastSpec:
+        payload = ensure_mapping_payload(payload, self.name)
+        validate_payload_keys(
+            payload,
+            op_name=self.name,
+            allowed_keys=self.allowed_keys,
+            required_keys=self.required_keys,
+        )
+        from_ref, to_ref = self.parse_refs(payload, default_model)
+        self.validate_refs(from_ref, to_ref)
+
+        raw_dtype = require_nonempty_string(payload, op_name=self.name, key="dtype")
         dtype = parse_torch_dtype(
             raw_dtype,
             error_type=CastTransformError,
             op_name=self.name,
-            field_name="to",
+            field_name="dtype",
         )
-        return CastSpec(target_ref=target_ref, dtype=dtype)
+        return CastSpec(from_ref=from_ref, to_ref=to_ref, dtype=dtype)
 
-    def apply_to_target(self, spec: CastSpec, name: str, provider: StateDictProvider) -> None:
-        model = must_model(spec.target_ref)
-        sd = provider.get_state_dict(model)
-        sd[name] = sd[name].to(dtype=spec.dtype)
+    def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
+        if from_ref.slice_spec is not None:
+            parse_slice(from_ref.slice_spec)
+        if to_ref.slice_spec is not None:
+            raise CastTransformError("cast destination must not be sliced")
+
+    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
+        if self._active_dtype is None:
+            raise CastTransformError("cast internal error: missing active dtype during apply")
+
+        src_sd = provider.get_state_dict(item.src_model)
+        dst_sd = provider.get_state_dict(item.dst_model)
+        src_view = select_tensor(src_sd[item.src_name], item.src_slice)
+        dst_sd[item.dst_name] = src_view.to(dtype=self._active_dtype)
+
+    def apply(self, spec: object, provider: StateDictProvider):
+        typed = self.require_spec(spec)
+        self._active_dtype = typed.dtype
+        try:
+            return super().apply(spec, provider)
+        finally:
+            self._active_dtype = None
 
 
 def _unit_test_cast_compile_rejects_unknown_dtype() -> None:
     try:
-        CastTransform().compile({"target": "x", "to": "not_a_dtype"}, default_model="model")
+        CastTransform().compile(
+            {"from": "x", "to": "y", "dtype": "not_a_dtype"},
+            default_model="model",
+        )
     except CastTransformError as exc:
-        assert "cast.to" in str(exc)
+        assert "cast.dtype" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("expected cast dtype parse error")
 
 
-def _unit_test_cast_compile_requires_to_key() -> None:
+def _unit_test_cast_compile_requires_dtype_key() -> None:
     try:
-        CastTransform().compile({"target": "x"}, default_model="model")
+        CastTransform().compile({"from": "x", "to": "y"}, default_model="model")
     except TransformError as exc:
-        assert "cast.to is required" in str(exc)
+        assert "cast.dtype is required" in str(exc)
     else:  # pragma: no cover
-        raise AssertionError("expected missing to key error")
+        raise AssertionError("expected missing dtype key error")
 
 
-def _unit_test_cast_apply_changes_dtype() -> None:
+def _unit_test_cast_compile_rejects_sliced_destination() -> None:
+    try:
+        CastTransform().compile(
+            {"from": "x", "to": "y::[:]", "dtype": "float16"},
+            default_model="model",
+        )
+    except CastTransformError as exc:
+        assert "destination must not be sliced" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected sliced destination error")
+
+
+def _unit_test_cast_apply_creates_new_tensor_with_new_dtype() -> None:
     class _Provider:
         def __init__(self) -> None:
             self._state_dict = {"x": torch.ones((2,), dtype=torch.float32)}
@@ -87,15 +139,40 @@ def _unit_test_cast_apply_changes_dtype() -> None:
             return self._state_dict
 
     provider = _Provider()
-    spec = CastSpec(target_ref=TensorRef(model="model", expr="x"), dtype=torch.float16)
-    CastTransform().apply_to_target(spec, "x", provider)
-    assert provider._state_dict["x"].dtype == torch.float16
+    spec = CastTransform().compile(
+        {"from": "x", "to": "y", "dtype": "float16"},
+        default_model="model",
+    )
+    CastTransform().apply(spec, provider)
+    assert provider._state_dict["x"].dtype == torch.float32
+    assert provider._state_dict["y"].dtype == torch.float16
+
+
+def _unit_test_cast_apply_honors_source_slice() -> None:
+    class _Provider:
+        def __init__(self) -> None:
+            self._state_dict = {"x": torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)}
+
+        def get_state_dict(self, model: str):
+            assert model == "model"
+            return self._state_dict
+
+    provider = _Provider()
+    spec = CastTransform().compile(
+        {"from": "x::[1:3]", "to": "y", "dtype": "float16"},
+        default_model="model",
+    )
+    CastTransform().apply(spec, provider)
+    assert provider._state_dict["y"].tolist() == [2.0, 3.0]
+    assert provider._state_dict["y"].dtype == torch.float16
 
 
 __unit_tests__ = [
     _unit_test_cast_compile_rejects_unknown_dtype,
-    _unit_test_cast_compile_requires_to_key,
-    _unit_test_cast_apply_changes_dtype,
+    _unit_test_cast_compile_requires_dtype_key,
+    _unit_test_cast_compile_rejects_sliced_destination,
+    _unit_test_cast_apply_creates_new_tensor_with_new_dtype,
+    _unit_test_cast_apply_honors_source_slice,
 ]
 
 

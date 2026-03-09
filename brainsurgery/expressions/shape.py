@@ -11,8 +11,8 @@ from ..expression import (
     compile_tensor_ref_expr,
     format_ref,
     register_assert_expr,
+    resolve_tensors,
     require_mapping_assert_payload,
-    resolve_single_tensor,
 )
 from ..expression import AssertTransformError
 from ..transform import StateDictProvider, TensorRef
@@ -24,11 +24,11 @@ class ShapeExpr:
     is_value: tuple[int, ...]
 
     def evaluate(self, provider: StateDictProvider) -> None:
-        tensor = resolve_single_tensor(self.ref, provider, op_name="shape.of")
-        if tuple(tensor.shape) != self.is_value:
-            raise AssertTransformError(
-                f"shape failed: {format_ref(self.ref)} has shape {tuple(tensor.shape)}, expected {self.is_value}"
-            )
+        for ref, tensor in resolve_tensors(self.ref, provider, op_name="shape.of"):
+            if tuple(tensor.shape) != self.is_value:
+                raise AssertTransformError(
+                    f"shape failed: {format_ref(ref)} has shape {tuple(tensor.shape)}, expected {self.is_value}"
+                )
 
     def collect_models(self) -> set[str]:
         return collect_ref_models(self.ref)
@@ -84,8 +84,23 @@ def _unit_test_shape_evaluate_mismatch() -> None:
         raise AssertionError("expected shape mismatch")
 
 
+def _unit_test_shape_evaluate_pattern_checks_all_matches() -> None:
+    class _Provider:
+        def get_state_dict(self, model: str):
+            assert model == "model"
+            return {"x0": torch.ones((2, 3)), "x1": torch.ones((2, 4))}
+
+    try:
+        ShapeExpr(ref=TensorRef(model="model", expr="x.*"), is_value=(2, 3)).evaluate(_Provider())
+    except AssertTransformError as exc:
+        assert "model::x1" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected shape mismatch on one matched tensor")
+
+
 __unit_tests__ = [
     _unit_test_shape_compile_rejects_non_integer_shape,
     _unit_test_shape_evaluate_success,
     _unit_test_shape_evaluate_mismatch,
+    _unit_test_shape_evaluate_pattern_checks_all_matches,
 ]

@@ -7,6 +7,7 @@ import torch
 
 from .transforms.unary import format_target_ref, resolve_target_names
 from .transform import (
+    ResolvedMapping,
     StateDictProvider,
     TensorRef,
     TransformError,
@@ -14,6 +15,8 @@ from .transform import (
     must_model,
     parse_model_expr,
     parse_slice,
+    require_dest_present,
+    resolve_name_mappings,
     select_tensor,
     validate_payload_keys,
 )
@@ -167,6 +170,66 @@ def resolve_single_tensor(ref: TensorRef, provider: StateDictProvider, op_name: 
     tensor = sd[matches[0]]
     slice_spec = parse_slice(ref.slice_spec) if ref.slice_spec else None
     return select_tensor(tensor, slice_spec)
+
+
+def resolve_tensors(
+    ref: TensorRef,
+    provider: StateDictProvider,
+    *,
+    op_name: str,
+) -> list[tuple[TensorRef, torch.Tensor]]:
+    model = must_model(ref)
+    sd = provider.get_state_dict(model)
+    matches = resolve_matches(ref, provider, op_name=op_name)
+    slice_spec = parse_slice(ref.slice_spec) if ref.slice_spec else None
+    resolved: list[tuple[TensorRef, torch.Tensor]] = []
+
+    for name in matches:
+        resolved_ref = TensorRef(model=model, expr=name, slice_spec=ref.slice_spec)
+        resolved.append((resolved_ref, select_tensor(sd[name], slice_spec)))
+
+    return resolved
+
+
+def resolve_tensor_mappings(
+    from_ref: TensorRef,
+    to_ref: TensorRef,
+    provider: StateDictProvider,
+    *,
+    op_name: str,
+) -> list[tuple[TensorRef, torch.Tensor, TensorRef, torch.Tensor]]:
+    try:
+        mappings = resolve_name_mappings(
+            from_ref=from_ref,
+            to_ref=to_ref,
+            provider=provider,
+            op_name=op_name,
+        )
+        require_dest_present(mappings=mappings, provider=provider, op_name=op_name)
+    except TransformError as exc:
+        raise AssertTransformError(str(exc)) from exc
+
+    resolved: list[tuple[TensorRef, torch.Tensor, TensorRef, torch.Tensor]] = []
+    for item in mappings:
+        resolved.append(_resolve_mapping_tensors(item, from_ref=from_ref, to_ref=to_ref, provider=provider))
+    return resolved
+
+
+def _resolve_mapping_tensors(
+    item: ResolvedMapping,
+    *,
+    from_ref: TensorRef,
+    to_ref: TensorRef,
+    provider: StateDictProvider,
+) -> tuple[TensorRef, torch.Tensor, TensorRef, torch.Tensor]:
+    src_sd = provider.get_state_dict(item.src_model)
+    dst_sd = provider.get_state_dict(item.dst_model)
+
+    left_ref = TensorRef(model=item.src_model, expr=item.src_name, slice_spec=from_ref.slice_spec)
+    right_ref = TensorRef(model=item.dst_model, expr=item.dst_name, slice_spec=to_ref.slice_spec)
+    left = select_tensor(src_sd[item.src_name], item.src_slice)
+    right = select_tensor(dst_sd[item.dst_name], item.dst_slice)
+    return left_ref, left, right_ref, right
 
 
 def collect_ref_models(ref: TensorRef) -> set[str]:

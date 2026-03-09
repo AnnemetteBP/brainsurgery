@@ -9,9 +9,65 @@ transforms:
   - move: { from: ^h(.*), to: i\1 }
   - move: { from: [i, "*rest"], to: [h, "*rest"] }
   - assign: { from: ln_f_copy.weight, to: ln_f.weight }
-  - scale: { target: ln_f_copy.weight, by: 1.0 }
-  - assert: { equal: { left: ln_f.weight, right: ln_f_copy.weight } }
-  - scale: { target: ln_f_copy.weight, by: 0.5 }
-  - assert: { not: { equal: { left: ln_f.weight, right: ln_f_copy.weight } } }
-  - cast: { target: ln_f_copy.weight, to: int64 }
+  - scale: { from: ln_f_copy.weight, to: ln_f_scaled_equal.weight, by: 1.0 }
+  - assert: { equal: { left: ln_f.weight, right: ln_f_scaled_equal.weight } }
+  - scale: { from: ln_f_copy.weight, to: ln_f_scaled_half.weight, by: 0.5 }
+  - assert: { not: { equal: { left: ln_f.weight, right: ln_f_scaled_half.weight } } }
+  - copy: { from: "ln_f_copy.weight::[:8]", to: demo.x }
+  - copy: { from: "ln_f_copy.weight::[:8]", to: demo.y }
+  - scale_: { target: demo.y, by: 2.0 }
+  - copy: { from: demo.x, to: demo.sum }
+  - copy: { from: demo.x, to: demo.diff }
+  - copy: { from: demo.x, to: demo.prod }
+  - add: { from_a: demo.x, from_b: demo.x, to: demo.sum }
+  - assert: { equal: { left: demo.sum, right: demo.y } }
+  - subtract: { from_a: demo.sum, from_b: demo.x, to: demo.diff }
+  - assert: { equal: { left: demo.diff, right: demo.x } }
+  - multiply: { from_a: demo.x, from_b: demo.x, to: demo.prod }
+  - add_: { from: demo.x, to: demo.diff }
+  - assert: { equal: { left: demo.diff, right: demo.y } }
+  - subtract_: { from: demo.x, to: demo.diff }
+  - assert: { equal: { left: demo.diff, right: demo.x } }
+  - copy: { from: "h.0.attn.c_proj.weight::[:4,:4]", to: demo.matrix.weight }
+  - phlora_: { target: demo.matrix.weight, rank: 2 }
+  - copy: { from: demo.matrix.weight, to: demo.matrix.split_source.weight }
+  - phlora: { target: demo.matrix.split_source.weight, target_a: demo.matrix.a.weight, target_b: demo.matrix.b.weight, rank: 2 }
+  - assert: { shape: { of: demo.matrix.weight, is: [4, 4] } }
+  - assert: { shape: { of: demo.matrix.a.weight, is: [2, 4] } }
+  - assert: { shape: { of: demo.matrix.b.weight, is: [4, 2] } }
+  - assert: { not: { iszero: demo.matrix.a.weight } }
+  - assert: { not: { iszero: demo.matrix.b.weight } }
+  - assert: { not: { iszero: demo.matrix.weight } }
+  - copy: { from: "h.0.attn.c_proj.weight::[:1,:1]", to: demo.scalar.source.weight }
+  - copy: { from: demo.scalar.source.weight, to: demo.scalar.phlora_inplace.weight }
+  - phlora_: { target: demo.scalar.phlora_inplace.weight, rank: 1 }
+  - phlora: { target: demo.scalar.source.weight, target_a: demo.scalar.a.weight, target_b: demo.scalar.b.weight, rank: 1 }
+  - assert: { shape: { of: demo.scalar.a.weight, is: [1, 1] } }
+  - assert: { shape: { of: demo.scalar.b.weight, is: [1, 1] } }
+  - copy: { from: demo.scalar.phlora_inplace.weight, to: demo.scalar.reconstructed.weight }
+  - multiply: { from_a: demo.scalar.b.weight, from_b: demo.scalar.a.weight, to: demo.scalar.reconstructed.weight }
+  - assert: { equal: { left: demo.scalar.reconstructed.weight, right: demo.scalar.phlora_inplace.weight, eps: 1e-6 } }
+  - save: { path: /tmp/brainsurgery_demo_x.safetensors, target: demo.x }
+  - load: { path: /tmp/brainsurgery_demo_x.safetensors, to: demo.x_loaded, format: safetensors }
+  - assert: { equal: { left: demo.x_loaded, right: demo.x } }
+  - cast_: { target: ln_f_copy.weight, to: int64 }
   - delete: { target: ln_f_copy.weight }
+  - delete: { target: ln_f_scaled_equal.weight }
+  - delete: { target: ln_f_scaled_half.weight }
+  - delete: { target: demo.x }
+  - delete: { target: demo.y }
+  - delete: { target: demo.sum }
+  - delete: { target: demo.diff }
+  - delete: { target: demo.prod }
+  - delete: { target: demo.matrix.weight }
+  - delete: { target: demo.matrix.a.weight }
+  - delete: { target: demo.matrix.b.weight }
+  - delete: { target: demo.scalar.a.weight }
+  - delete: { target: demo.scalar.b.weight }
+  - delete: { target: demo.scalar.phlora_inplace.weight }
+  - delete: { target: demo.scalar.reconstructed.weight }
+  - delete: { target: demo.x_loaded }
+  - load: { path: models/gpt2, alias: orig }
+  - assert: { equal: { left: '(.+)', right: 'orig::\1' } }
+  - assert: { equal: { left: 'orig::(.+)', right: '\1' } }
+  - delete: { target: 'orig::(.+)' }
