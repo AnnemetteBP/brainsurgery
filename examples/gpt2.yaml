@@ -28,7 +28,7 @@ transforms:
   - assert: { equal: { left: demo.diff, right: demo.y } }
   - subtract_: { from: demo.x, to: demo.diff }
   - assert: { equal: { left: demo.diff, right: demo.x } }
-  - copy: { from: "lm_head.weight::[:64,:]", to: demo.lm_head.sample }
+  - copy: { from: "wte.weight::[:64,:]", to: demo.lm_head.sample }
   - copy: { from: "demo.lm_head.sample::[:32,:]", to: demo.lm_head.part0 }
   - copy: { from: "demo.lm_head.sample::[32:,:]", to: demo.lm_head.part1 }
   - concat: { from: [demo.lm_head.part0, demo.lm_head.part1], to: demo.lm_head.rebuilt, dim: 0 }

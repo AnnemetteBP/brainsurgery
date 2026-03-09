@@ -1,0 +1,138 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import torch
+
+from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
+from ..transform import (
+    ResolvedMapping,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    ensure_mapping_payload,
+    parse_slice,
+    register_transform,
+    require_numeric,
+    select_tensor,
+    validate_payload_keys,
+)
+
+
+class ClampTransformError(TransformError):
+    pass
+
+
+@dataclass(frozen=True)
+class ClampSpec(BinaryMappingSpec):
+    min_value: float | None
+    max_value: float | None
+
+
+class ClampTransform(BinaryMappingTransform[ClampSpec]):
+    name = "clamp"
+    error_type = ClampTransformError
+    spec_type = ClampSpec
+    destination_policy = DestinationPolicy.MUST_NOT_EXIST
+    allowed_keys = {"from", "to", "min", "max"}
+    required_keys = {"from", "to"}
+    progress_desc = "Applying clamp transforms"
+    help_text = (
+        "Clamps source tensors into new destination tensors.\n"
+        "\n"
+        "Source references may be sliced. Destination tensors must not exist and "
+        "must not be sliced. At least one of 'min' or 'max' is required.\n"
+        "\n"
+        "Example:\n"
+        "  clamp: { from: x, to: x_clamped, min: -1.0, max: 1.0 }"
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._active_min: float | None = None
+        self._active_max: float | None = None
+
+    def compile(self, payload: dict, default_model: str | None) -> ClampSpec:
+        payload = ensure_mapping_payload(payload, self.name)
+        validate_payload_keys(
+            payload,
+            op_name=self.name,
+            allowed_keys=self.allowed_keys,
+            required_keys=self.required_keys,
+        )
+        from_ref, to_ref = self.parse_refs(payload, default_model)
+        self.validate_refs(from_ref, to_ref)
+        min_value, max_value = _parse_bounds(payload, self.name, ClampTransformError)
+        return ClampSpec(from_ref=from_ref, to_ref=to_ref, min_value=min_value, max_value=max_value)
+
+    def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
+        if from_ref.slice_spec is not None:
+            parse_slice(from_ref.slice_spec)
+        if to_ref.slice_spec is not None:
+            raise ClampTransformError("clamp destination must not be sliced")
+
+    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
+        src_sd = provider.get_state_dict(item.src_model)
+        dst_sd = provider.get_state_dict(item.dst_model)
+        src_view = select_tensor(src_sd[item.src_name], item.src_slice)
+        dst_sd[item.dst_name] = src_view.clamp(min=self._active_min, max=self._active_max).clone()
+
+    def apply(self, spec: object, provider: StateDictProvider):
+        typed = self.require_spec(spec)
+        self._active_min = typed.min_value
+        self._active_max = typed.max_value
+        try:
+            return super().apply(spec, provider)
+        finally:
+            self._active_min = None
+            self._active_max = None
+
+
+def _parse_bounds(
+    payload: dict,
+    op_name: str,
+    error_type: type[TransformError],
+) -> tuple[float | None, float | None]:
+    min_value = require_numeric(payload, op_name=op_name, key="min") if "min" in payload else None
+    max_value = require_numeric(payload, op_name=op_name, key="max") if "max" in payload else None
+    if min_value is None and max_value is None:
+        raise error_type(f"{op_name} requires at least one of: min, max")
+    if min_value is not None and max_value is not None and min_value > max_value:
+        raise error_type(f"{op_name}.min must be <= {op_name}.max")
+    return min_value, max_value
+
+
+def _unit_test_clamp_compile_requires_bound() -> None:
+    try:
+        ClampTransform().compile({"from": "x", "to": "y"}, default_model="m")
+    except ClampTransformError as exc:
+        assert "at least one of: min, max" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected clamp min/max validation error")
+
+
+def _unit_test_clamp_apply_success() -> None:
+    class _Provider:
+        def __init__(self) -> None:
+            self._state_dict = {"x": torch.tensor([-2.0, 0.0, 3.0])}
+
+        def get_state_dict(self, model: str):
+            assert model == "m"
+            return self._state_dict
+
+    provider = _Provider()
+    spec = ClampTransform().compile(
+        {"from": "x", "to": "y", "min": -1.0, "max": 1.0},
+        default_model="m",
+    )
+    ClampTransform().apply(spec, provider)
+    assert provider._state_dict["y"].tolist() == [-1.0, 0.0, 1.0]
+
+
+__unit_tests__ = [
+    _unit_test_clamp_compile_requires_bound,
+    _unit_test_clamp_apply_success,
+]
+
+
+register_transform(ClampTransform())
