@@ -7,7 +7,7 @@ from typing import Any
 import typer
 import torch
 
-from .unary import UnarySpec, UnaryTransform, resolve_target_names
+from .unary import UnarySpec, UnaryTransform
 from ..model import tqdm
 from ..transform import (
     StateDictProvider,
@@ -40,6 +40,7 @@ class DumpTransform(UnaryTransform[DumpSpec]):
     spec_type = DumpSpec
     allowed_keys = {"target", "format", "verbosity"}
     required_keys = set()
+    slice_policy = "allow"
     progress_desc = "Dumping tensors"
     help_text = (
         "Displays tensors selected by 'target' without modifying them.\n"
@@ -77,10 +78,6 @@ class DumpTransform(UnaryTransform[DumpSpec]):
         assert target_ref.model is not None
         return self.build_spec(target_ref=target_ref, payload=payload)
 
-    def validate_target_ref(self, target_ref: TensorRef) -> None:
-        if target_ref.slice_spec is not None:
-            parse_slice(target_ref.slice_spec)
-
     def build_spec(self, target_ref: TensorRef, payload: dict) -> DumpSpec:
         raw_format = payload.get("format", "compact")
         if not isinstance(raw_format, str) or not raw_format:
@@ -99,14 +96,6 @@ class DumpTransform(UnaryTransform[DumpSpec]):
             raise DumpTransformError("dump.verbosity must be one of: shape, stat, full")
 
         return DumpSpec(target_ref=target_ref, format=fmt, verbosity=verbosity)
-
-    def resolve_targets(self, spec: DumpSpec, provider: StateDictProvider) -> list[str]:
-        return resolve_target_names(
-            target_ref=spec.target_ref,
-            provider=provider,
-            op_name=self.name,
-            error_type=DumpTransformError,
-        )
 
     def apply_to_target(self, spec: DumpSpec, name: str, provider: StateDictProvider) -> None:
         raise AssertionError("DumpTransform overrides apply() and does not use apply_to_target()")

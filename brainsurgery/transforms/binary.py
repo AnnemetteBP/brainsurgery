@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum
 from typing import Generic, Iterable, TypeVar
 
 from ..model import tqdm
@@ -14,6 +15,8 @@ from ..transform import (
     TransformResult,
     ensure_mapping_payload,
     parse_model_expr,
+    require_dest_missing,
+    require_dest_present,
     require_expr,
     resolve_name_mappings,
     validate_payload_keys,
@@ -29,11 +32,18 @@ class BinaryMappingSpec:
 SpecT = TypeVar("SpecT", bound=BinaryMappingSpec)
 
 
+class DestinationPolicy(Enum):
+    ANY = "any"
+    MUST_EXIST = "must_exist"
+    MUST_NOT_EXIST = "must_not_exist"
+
+
 class BinaryMappingTransform(BaseTransform, ABC, Generic[SpecT]):
     error_type: type[TransformError] = TransformError
     spec_type: type[SpecT]
     progress_desc: str | None = None
     progress_unit: str = "tensor"
+    destination_policy: DestinationPolicy = DestinationPolicy.ANY
 
     allowed_keys = {"from", "to"}
     required_keys = {"from", "to"}
@@ -119,7 +129,20 @@ class BinaryMappingTransform(BaseTransform, ABC, Generic[SpecT]):
         mappings: list[ResolvedMapping],
         provider: StateDictProvider,
     ) -> None:
-        pass
+        if self.destination_policy is DestinationPolicy.MUST_EXIST:
+            require_dest_present(
+                mappings=mappings,
+                provider=provider,
+                op_name=self.name,
+            )
+            return
+
+        if self.destination_policy is DestinationPolicy.MUST_NOT_EXIST:
+            require_dest_missing(
+                mappings=mappings,
+                provider=provider,
+                op_name=self.name,
+            )
 
     @abstractmethod
     def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:

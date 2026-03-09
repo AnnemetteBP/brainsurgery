@@ -252,6 +252,23 @@ def compile_assert_expr(raw: Any, default_model: str | None) -> AssertExpr:
     return compiler(payload, default_model)
 
 
+def require_mapping_assert_payload(
+    payload: Any,
+    *,
+    op_name: str,
+    allowed_keys: set[str],
+    required_keys: set[str],
+) -> dict[str, Any]:
+    mapping = ensure_mapping_payload(payload, op_name)
+    validate_payload_keys(
+        mapping,
+        op_name=op_name,
+        allowed_keys=allowed_keys,
+        required_keys=required_keys,
+    )
+    return mapping
+
+
 @register_assert_expr(
     "exists",
     payload_kind="tensor-ref",
@@ -269,8 +286,7 @@ def compile_exists_expr(payload: Any, default_model: str | None) -> AssertExpr:
     description="Succeeds if the reference matches exactly the given number of tensors.",
 )
 def compile_count_expr(payload: Any, default_model: str | None) -> CountExpr:
-    payload = ensure_mapping_payload(payload, "count")
-    validate_payload_keys(
+    payload = require_mapping_assert_payload(
         payload,
         op_name="count",
         allowed_keys={"of", "is"},
@@ -291,8 +307,7 @@ def compile_count_expr(payload: Any, default_model: str | None) -> CountExpr:
     description="Succeeds if the tensor has the given dtype.",
 )
 def compile_dtype_expr(payload: Any, default_model: str | None) -> DtypeExpr:
-    payload = ensure_mapping_payload(payload, "dtype")
-    validate_payload_keys(
+    payload = require_mapping_assert_payload(
         payload,
         op_name="dtype",
         allowed_keys={"of", "is"},
@@ -323,8 +338,7 @@ def compile_dtype_expr(payload: Any, default_model: str | None) -> DtypeExpr:
     description="Succeeds if the tensor has the given shape.",
 )
 def compile_shape_expr(payload: Any, default_model: str | None) -> ShapeExpr:
-    payload = ensure_mapping_payload(payload, "shape")
-    validate_payload_keys(
+    payload = require_mapping_assert_payload(
         payload,
         op_name="shape",
         allowed_keys={"of", "is"},
@@ -342,8 +356,7 @@ def compile_shape_expr(payload: Any, default_model: str | None) -> ShapeExpr:
     description="Succeeds if the tensor has the given number of dimensions.",
 )
 def compile_dimensions_expr(payload: Any, default_model: str | None) -> DimensionsExpr:
-    payload = ensure_mapping_payload(payload, "dimensions")
-    validate_payload_keys(
+    payload = require_mapping_assert_payload(
         payload,
         op_name="dimensions",
         allowed_keys={"of", "is"},
@@ -373,8 +386,7 @@ def compile_iszero_expr(payload: Any, default_model: str | None) -> AssertExpr:
     description="Succeeds if two tensors have the same shape, dtype, and values.",
 )
 def compile_equal_expr(payload: Any, default_model: str | None) -> EqualExpr:
-    payload = ensure_mapping_payload(payload, "equal")
-    validate_payload_keys(
+    payload = require_mapping_assert_payload(
         payload,
         op_name="equal",
         allowed_keys={"left", "right"},

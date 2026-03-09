@@ -353,7 +353,7 @@ def resolve_safetensor_shards_from_index(index_file: Path, base_dir: Path) -> li
     return shard_paths
 
 
-def load_state_dict_from_file(path: Path, global_state_dict: StateDictLike, merge_lock: Lock) -> None:
+def load_state_dict_from_file(path: Path, global_state_dict: StateDictLike, merge_lock: Lock | None) -> None:
     suffix = path.suffix.lower()
     if suffix == ".safetensors":
         logger.info("Using safetensors instruments on %s", path)

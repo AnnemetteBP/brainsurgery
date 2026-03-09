@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import Generic, Literal, TypeVar
 
 from ..model import tqdm
 from ..transform import (
@@ -16,6 +16,7 @@ from ..transform import (
     match_expr_names,
     must_model,
     parse_model_expr,
+    parse_slice,
     require_expr,
     validate_payload_keys,
 )
@@ -68,6 +69,7 @@ class UnaryTransform(BaseTransform, ABC, Generic[SpecT]):
     allowed_keys: set[str] = {"target"}
     required_keys: set[str] = {"target"}
     target_key: str = "target"
+    slice_policy: Literal["allow", "forbid"] = "forbid"
 
     def compile(self, payload: dict, default_model: str | None) -> SpecT:
         payload = ensure_mapping_payload(payload, self.name)
@@ -119,13 +121,22 @@ class UnaryTransform(BaseTransform, ABC, Generic[SpecT]):
     def build_spec(self, target_ref: TensorRef, payload: dict) -> SpecT:
         return self.spec_type(target_ref=target_ref)
 
-    @abstractmethod
     def validate_target_ref(self, target_ref: TensorRef) -> None:
-        ...
+        if target_ref.slice_spec is None:
+            return
 
-    @abstractmethod
+        if self.slice_policy == "forbid":
+            raise self.error_type(f"{self.name} target must not be sliced")
+
+        parse_slice(target_ref.slice_spec)
+
     def resolve_targets(self, spec: SpecT, provider: StateDictProvider) -> list[str]:
-        ...
+        return resolve_target_names(
+            target_ref=spec.target_ref,
+            provider=provider,
+            op_name=self.name,
+            error_type=self.error_type,
+        )
 
     @abstractmethod
     def apply_to_target(self, spec: SpecT, name: str, provider: StateDictProvider) -> None:
