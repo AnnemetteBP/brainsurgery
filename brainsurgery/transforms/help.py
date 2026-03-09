@@ -7,11 +7,12 @@ import typer
 
 from ..expressions import get_assert_expr_help, get_assert_expr_names
 from ..transform import (
-    _REGISTRY,
     StateDictProvider,
     TransformControl,
     TransformError,
     TransformResult,
+    get_transform,
+    list_transforms,
     register_transform,
 )
 
@@ -110,16 +111,17 @@ class HelpTransform:
 
     def _print_all_commands(self) -> None:
         typer.echo("Available commands:")
-        for name in sorted(_REGISTRY):
+        for name in list_transforms():
             typer.echo(f"  {name}")
         typer.echo("")
         typer.echo("For help on a specific command, run: help: <command>")
         typer.echo("For help on a specific assert expression, run: help: { assert: <expr> }")
 
     def _print_command_help(self, command_name: str) -> None:
-        transform = _REGISTRY.get(command_name)
-        if transform is None:
-            raise HelpTransformError(f"unknown command: {command_name}")
+        try:
+            transform = get_transform(command_name)
+        except TransformError as exc:
+            raise HelpTransformError(f"unknown command: {command_name}") from exc
 
         allowed_keys = getattr(transform, "allowed_keys", None)
         required_keys = getattr(transform, "required_keys", None)
@@ -160,7 +162,10 @@ class HelpTransform:
             typer.echo("All allowed keys: none")
 
     def _print_assert_help(self) -> None:
-        transform = _REGISTRY.get("assert")
+        try:
+            transform = get_transform("assert")
+        except TransformError:
+            transform = None
 
         typer.echo("Command: assert")
         if transform is not None:

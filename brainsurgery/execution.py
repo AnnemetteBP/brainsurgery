@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Iterable
 
-from .transform import CompiledTransform, TransformControl, TransformError, apply_transform
+from .transform import CompiledTransform, TransformControl, apply_transform
 
 logger = logging.getLogger("brainsurgery")
 
@@ -32,23 +32,17 @@ def execute_transform_pairs(
     """
     pair_list = list(pairs)
     total = len(pair_list)
+    procedure_label = "Interactive procedure" if interactive else "Procedure"
     executed_raw_transforms: list[dict[str, Any]] = []
 
     for transform_index, (raw_transform, compiled_transform) in enumerate(pair_list, start=1):
-        if interactive:
-            logger.info(
-                "Interactive procedure %d/%d: positioning instruments for %s",
-                transform_index,
-                total,
-                type(compiled_transform.spec).__name__,
-            )
-        else:
-            logger.info(
-                "Procedure %d/%d: positioning instruments for %s",
-                transform_index,
-                total,
-                type(compiled_transform.spec).__name__,
-            )
+        logger.info(
+            "%s %d/%d: positioning instruments for %s",
+            procedure_label,
+            transform_index,
+            total,
+            type(compiled_transform.spec).__name__,
+        )
 
         try:
             transform_result = apply_transform(compiled_transform, state_dict_provider)
@@ -57,29 +51,22 @@ def execute_transform_pairs(
                 raise
 
             logger.error(
-                "Interactive procedure %d/%d failed: %s",
+                "%s %d/%d failed: %s",
+                procedure_label,
                 transform_index,
                 total,
                 exc,
             )
             return True, executed_raw_transforms
 
-        if interactive:
-            logger.info(
-                "Interactive procedure %d/%d complete: %s affected %d site(s)",
-                transform_index,
-                total,
-                transform_result.name,
-                transform_result.count,
-            )
-        else:
-            logger.info(
-                "Procedure %d/%d complete: %s affected %d site(s)",
-                transform_index,
-                total,
-                transform_result.name,
-                transform_result.count,
-            )
+        logger.info(
+            "%s %d/%d complete: %s affected %d site(s)",
+            procedure_label,
+            transform_index,
+            total,
+            transform_result.name,
+            transform_result.count,
+        )
 
         executed_raw_transforms.append(raw_transform)
 

@@ -4,6 +4,7 @@ import json
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import nullcontext
 from pathlib import Path
 from threading import Lock
 from typing import Dict, Literal, TypeVar
@@ -279,7 +280,7 @@ def load_state_dict_from_path(path: Path, global_state_dict: StateDictLike, *, m
     logger.info("CT scan shows a single checkpoint file at %s", path)
     return load_state_dict_from_file(path, global_state_dict)
 
-def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike, *, max_io_workers: int) -> Dict[str, torch.Tensor]:
+def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike, *, max_io_workers: int) -> None:
     pt_files = sorted(path.glob("*.pt")) + sorted(path.glob("*.pth")) + sorted(path.glob("*.bin"))
     safetensor_files = sorted(path.glob("*.safetensors"))
     index_file = path / "model.safetensors.index.json"
@@ -353,7 +354,11 @@ def resolve_safetensor_shards_from_index(index_file: Path, base_dir: Path) -> li
     return shard_paths
 
 
-def load_state_dict_from_file(path: Path, global_state_dict: StateDictLike, merge_lock: Lock | None) -> None:
+def load_state_dict_from_file(
+    path: Path,
+    global_state_dict: StateDictLike,
+    merge_lock: Lock | None = None,
+) -> None:
     suffix = path.suffix.lower()
     if suffix == ".safetensors":
         logger.info("Using safetensors instruments on %s", path)
@@ -366,7 +371,8 @@ def load_state_dict_from_file(path: Path, global_state_dict: StateDictLike, merg
             loaded = loaded["state_dict"]
     loaded = validate_state_dict_mapping(loaded, path)
     for key, tensor in loaded.items():
-        with merge_lock:
+        lock_context = merge_lock if merge_lock is not None else nullcontext()
+        with lock_context:
             if key in global_state_dict:
                 raise RuntimeError(f"duplicate tensor key {key!r} while loading file {path}")
             global_state_dict[key] = tensor

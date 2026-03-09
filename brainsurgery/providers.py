@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Dict
+from typing import Callable, Dict
 
 import torch
 from safetensors.torch import save_file as save_safetensors_file
@@ -133,6 +133,25 @@ class BaseStateDictProvider:
     def get_state_dict(self, model: str) -> StateDictLike:
         raise NotImplementedError
 
+    def _get_or_load_state_dict(
+        self,
+        model: str,
+        *,
+        create_state_dict: Callable[[], StateDictLike],
+        loaded_log_message: str,
+    ) -> StateDictLike:
+        if model not in self.state_dicts:
+            path = self.model_paths[model]
+            logger.info("Opening cranium for brain '%s' at %s", model, path)
+
+            sd = create_state_dict()
+            load_state_dict_from_path(path, sd, max_io_workers=self.max_io_workers)
+
+            self.state_dicts[model] = sd
+            logger.info(loaded_log_message, model, len(sd))
+
+        return self.state_dicts[model]
+
     def close(self) -> None:
         pass
 
@@ -194,21 +213,11 @@ class InMemoryStateDictProvider(BaseStateDictProvider):
         super().__init__(model_paths, max_io_workers=max_io_workers)
 
     def get_state_dict(self, model: str) -> InMemoryStateDict:
-        if model not in self.state_dicts:
-            path = self.model_paths[model]
-            logger.info("Opening cranium for brain '%s' at %s", model, path)
-
-            sd = InMemoryStateDict()
-            load_state_dict_from_path(path, sd, max_io_workers=self.max_io_workers)
-
-            self.state_dicts[model] = sd
-            logger.info(
-                "Brain '%s' exposed: %d tensors laid out on the operating table",
-                model,
-                len(sd),
-            )
-
-        state_dict = self.state_dicts[model]
+        state_dict = self._get_or_load_state_dict(
+            model,
+            create_state_dict=InMemoryStateDict,
+            loaded_log_message="Brain '%s' exposed: %d tensors laid out on the operating table",
+        )
         assert isinstance(state_dict, InMemoryStateDict)
         return state_dict
 
@@ -228,21 +237,13 @@ class ArenaStateDictProvider(BaseStateDictProvider):
         self.arena.close()
 
     def get_state_dict(self, model: str) -> ArenaStateDict:
-        if model not in self.state_dicts:
-            path = self.model_paths[model]
-            logger.info("Opening cranium for brain '%s' at %s", model, path)
-
-            sd = ArenaStateDict(self.arena)
-            load_state_dict_from_path(path, sd, max_io_workers=self.max_io_workers)
-
-            self.state_dicts[model] = sd
-            logger.info(
-                "Brain '%s' transferred to surgical arena: %d tensors laid out on the operating table",
-                model,
-                len(sd),
-            )
-
-        state_dict = self.state_dicts[model]
+        state_dict = self._get_or_load_state_dict(
+            model,
+            create_state_dict=lambda: ArenaStateDict(self.arena),
+            loaded_log_message=(
+                "Brain '%s' transferred to surgical arena: %d tensors laid out on the operating table"
+            ),
+        )
         assert isinstance(state_dict, ArenaStateDict)
         return state_dict
 
