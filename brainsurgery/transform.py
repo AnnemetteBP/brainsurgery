@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Protocol, 
 import re
 import torch
 
-from .matching import StructuredPathError, StructuredPathMatcher
+from .matching import MatchError, StructuredPathMatcher
 
 if TYPE_CHECKING:
     from .plan import SurgeryPlan
@@ -301,7 +301,7 @@ def match_expr_names(
     assert isinstance(expr, list)
     try:
         return sorted(name for name in names if _MATCHER.match(expr, name) is not None)
-    except StructuredPathError as exc:
+    except MatchError as exc:
         raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
 
 
@@ -315,7 +315,7 @@ def match_structured_expr(
     validate_expr_kind(expr=expr, op_name=op_name, role=role)
     try:
         return _MATCHER.match(expr, name)
-    except StructuredPathError as exc:
+    except MatchError as exc:
         raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
 
 
@@ -329,7 +329,7 @@ def rewrite_structured_expr(
     validate_expr_kind(expr=expr, op_name=op_name, role=role)
     try:
         return _MATCHER.rewrite(expr, match)
-    except StructuredPathError as exc:
+    except MatchError as exc:
         raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
 
 

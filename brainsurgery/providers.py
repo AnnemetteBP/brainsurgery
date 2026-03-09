@@ -8,7 +8,7 @@ from typing import Callable, Dict
 import torch
 from safetensors.torch import save_file as save_safetensors_file
 
-from .arena import ArenaError, SegmentedFileBackedArena, TensorSlot
+from .arena import ProviderError, SegmentedFileBackedArena, TensorSlot
 from .model import (
     load_state_dict_from_path,
     parse_shard_size,
@@ -20,10 +20,6 @@ from .plan import SurgeryPlan
 from .transform import StateDictLike, infer_output_model
 
 logger = logging.getLogger("brainsurgery")
-
-
-class ProviderCreationError(RuntimeError):
-    pass
 
 
 # ============================================================
@@ -67,7 +63,7 @@ class InMemoryStateDict(SlotBackedStateDict):
 
     def __setitem__(self, key: str, value: torch.Tensor) -> None:
         if not torch.is_tensor(value):
-            raise ArenaError(f"value for key {key!r} is not a tensor")
+            raise ProviderError(f"value for key {key!r} is not a tensor")
         self._slots[key] = value
 
     def slot(self, key: str) -> torch.Tensor:
@@ -77,7 +73,7 @@ class InMemoryStateDict(SlotBackedStateDict):
 
     def bind_slot(self, key: str, slot: torch.Tensor) -> None:
         if not torch.is_tensor(slot):
-            raise ArenaError(f"slot for key {key!r} is not a tensor")
+            raise ProviderError(f"slot for key {key!r} is not a tensor")
         self._slots[key] = slot
 
 
@@ -96,7 +92,7 @@ class ArenaStateDict(SlotBackedStateDict):
 
     def __setitem__(self, key: str, value: torch.Tensor) -> None:
         if not torch.is_tensor(value):
-            raise ArenaError(f"value for key {key!r} is not a tensor")
+            raise ProviderError(f"value for key {key!r} is not a tensor")
         self._slots[key] = self._arena.store_tensor(value)
 
     def slot(self, key: str) -> TensorSlot:
@@ -107,7 +103,7 @@ class ArenaStateDict(SlotBackedStateDict):
 
     def bind_slot(self, key: str, slot: TensorSlot) -> None:
         if not isinstance(slot, TensorSlot):
-            raise ArenaError(f"slot for key {key!r} is not a TensorSlot")
+            raise ProviderError(f"slot for key {key!r} is not a TensorSlot")
         self._slots[key] = slot
 
 
@@ -250,28 +246,25 @@ def create_state_dict_provider(
 ) -> BaseStateDictProvider:
     provider_name = provider.strip().lower()
 
-    try:
-        if provider_name == "inmemory":
-            return InMemoryStateDictProvider(
-                model_paths,
-                max_io_workers=max_io_workers,
-            )
+    if provider_name == "inmemory":
+        return InMemoryStateDictProvider(
+            model_paths,
+            max_io_workers=max_io_workers,
+        )
 
-        if provider_name == "arena":
-            segment_size_bytes = parse_shard_size(arena_segment_size)
-            if segment_size_bytes is None:
-                raise ProviderCreationError("arena-segment-size must not be 'none'")
+    if provider_name == "arena":
+        segment_size_bytes = parse_shard_size(arena_segment_size)
+        if segment_size_bytes is None:
+            raise ProviderError("arena-segment-size must not be 'none'")
 
-            arena = SegmentedFileBackedArena(
-                arena_root,
-                segment_size_bytes=segment_size_bytes,
-            )
-            return ArenaStateDictProvider(
-                model_paths,
-                arena=arena,
-                max_io_workers=max_io_workers,
-            )
+        arena = SegmentedFileBackedArena(
+            arena_root,
+            segment_size_bytes=segment_size_bytes,
+        )
+        return ArenaStateDictProvider(
+            model_paths,
+            arena=arena,
+            max_io_workers=max_io_workers,
+        )
 
-        raise ProviderCreationError("provider must be either 'inmemory' or 'arena'")
-    except ArenaError as exc:
-        raise ProviderCreationError(str(exc)) from exc
+    raise ProviderError("provider must be either 'inmemory' or 'arena'")

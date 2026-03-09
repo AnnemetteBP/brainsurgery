@@ -11,7 +11,8 @@ from .execution import execute_transform_pairs
 from .history import configure_history
 from .interactive import normalize_transform_specs, prompt_interactive_transform
 from .plan import compile_plan
-from .providers import ProviderCreationError, create_state_dict_provider
+from .providers import create_state_dict_provider
+from .arena import ProviderError
 from .summary import build_raw_plan, write_executed_plan_summary
 
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
@@ -112,7 +113,7 @@ def run(
             arena_root=arena_root,
             arena_segment_size=arena_segment_size,
         )
-    except ProviderCreationError as exc:
+    except ProviderError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
     executed_transforms: list[dict[str, Any]] = []

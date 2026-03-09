@@ -5,7 +5,7 @@ import re
 from typing import Optional
 
 
-class StructuredPathError(RuntimeError):
+class MatchError(RuntimeError):
     pass
 
 
@@ -77,7 +77,7 @@ class StructuredPathMatcher:
 
     def _validate_capture_name(self, name: str, *, token: str) -> None:
         if not _IDENT_RE.fullmatch(name):
-            raise StructuredPathError(f"invalid capture name {name!r} in token: {token!r}")
+            raise MatchError(f"invalid capture name {name!r} in token: {token!r}")
 
     def _bind_scalar(self, env: dict[str, object], name: str, value: str) -> bool:
         existing = env.get(name)
@@ -108,13 +108,13 @@ class StructuredPathMatcher:
             return [], body
 
         if left == "":
-            raise StructuredPathError(f"invalid regex token: {token!r}")
+            raise MatchError(f"invalid regex token: {token!r}")
         if right == "":
-            raise StructuredPathError(f"missing regex body in token: {token!r}")
+            raise MatchError(f"missing regex body in token: {token!r}")
 
         names = left.split(",")
         if any(name == "" for name in names):
-            raise StructuredPathError(f"invalid regex binding list in token: {token!r}")
+            raise MatchError(f"invalid regex binding list in token: {token!r}")
 
         for name in names:
             self._validate_capture_name(name, token=token)
@@ -127,10 +127,10 @@ class StructuredPathMatcher:
         try:
             rx = re.compile(pattern)
         except re.error as exc:
-            raise StructuredPathError(f"invalid structured regex in token {token!r}: {exc}") from exc
+            raise MatchError(f"invalid structured regex in token {token!r}: {exc}") from exc
 
         if rx.groupindex:
-            raise StructuredPathError(f"named groups are not allowed in structured regex token: {token!r}")
+            raise MatchError(f"named groups are not allowed in structured regex token: {token!r}")
 
         m = rx.fullmatch(segment)
         if m is None:
@@ -147,16 +147,16 @@ class StructuredPathMatcher:
             elif ngroups == 1:
                 captured = m.group(1)
                 if captured is None:
-                    raise StructuredPathError(f"structured regex token {token!r} captured None")
+                    raise MatchError(f"structured regex token {token!r} captured None")
                 value = captured
             else:
-                raise StructuredPathError(
+                raise MatchError(
                     f"regex token {token!r} binds 1 variable but regex has {ngroups} capturing groups"
                 )
             return self._bind_scalar(env, names[0], value)
 
         if ngroups != len(names):
-            raise StructuredPathError(
+            raise MatchError(
                 f"regex token {token!r} binds {len(names)} variables but regex has {ngroups} capturing groups"
             )
 
@@ -164,7 +164,7 @@ class StructuredPathMatcher:
         for i, name in enumerate(names, start=1):
             captured = m.group(i)
             if captured is None:
-                raise StructuredPathError(f"structured regex token {token!r} captured None")
+                raise MatchError(f"structured regex token {token!r} captured None")
             if not self._bind_scalar(env2, name, captured):
                 return False
 
@@ -226,10 +226,10 @@ class StructuredPathMatcher:
         def repl(match: re.Match[str]) -> str:
             name = match.group(1)
             if name not in env:
-                raise StructuredPathError(f"unknown interpolation variable: {name}")
+                raise MatchError(f"unknown interpolation variable: {name}")
             value = env[name]
             if not isinstance(value, str):
-                raise StructuredPathError(
+                raise MatchError(
                     f"cannot interpolate non-scalar variable {name!r} into segment {template!r}"
                 )
             return value
@@ -243,17 +243,17 @@ class StructuredPathMatcher:
             if self._is_variadic_capture_token(token):
                 name = token[1:]
                 if name not in env:
-                    raise StructuredPathError(f"unknown variadic variable in output pattern: {name}")
+                    raise MatchError(f"unknown variadic variable in output pattern: {name}")
                 value = env[name]
                 if not isinstance(value, list):
-                    raise StructuredPathError(f"output variable {name!r} is not variadic")
+                    raise MatchError(f"output variable {name!r} is not variadic")
                 if not all(isinstance(part, str) for part in value):
-                    raise StructuredPathError(f"output variadic variable {name!r} contains non-string segments")
+                    raise MatchError(f"output variadic variable {name!r} contains non-string segments")
                 out.extend(value)
                 continue
 
             if self._is_regex_token(token):
-                raise StructuredPathError(f"regex token not allowed in structured output pattern: {token!r}")
+                raise MatchError(f"regex token not allowed in structured output pattern: {token!r}")
 
             out.append(self._interpolate_segment(token, env))
 

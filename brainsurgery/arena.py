@@ -10,7 +10,7 @@ import numpy as np
 import torch
 
 
-class ArenaError(RuntimeError):
+class ProviderError(RuntimeError):
     pass
 
 
@@ -26,7 +26,7 @@ class TensorSlot:
 class ArenaSegment:
     def __init__(self, path: Path, size_bytes: int):
         if size_bytes <= 0:
-            raise ArenaError("segment size must be positive")
+            raise ProviderError("segment size must be positive")
 
         self.path = path
         self.size_bytes = size_bytes
@@ -59,9 +59,9 @@ class SegmentedFileBackedArena:
         alignment: int = 64,
     ):
         if segment_size_bytes <= 0:
-            raise ArenaError("segment_size_bytes must be positive")
+            raise ProviderError("segment_size_bytes must be positive")
         if alignment <= 0:
-            raise ArenaError("alignment must be positive")
+            raise ProviderError("alignment must be positive")
 
         root.mkdir(parents=True, exist_ok=True)
         self._tempdir = TemporaryDirectory(prefix=f"arena-{getpid()}-", dir=root, delete=True)
@@ -93,11 +93,11 @@ class SegmentedFileBackedArena:
 
     def allocate(self, nbytes: int) -> tuple[int, int]:
         if nbytes < 0:
-            raise ArenaError("cannot allocate negative bytes")
+            raise ProviderError("cannot allocate negative bytes")
         if nbytes == 0:
-            raise ArenaError("zero-byte tensors are not supported in arena v1")
+            raise ProviderError("zero-byte tensors are not supported in arena v1")
         if nbytes > self.segment_size_bytes:
-            raise ArenaError(
+            raise ProviderError(
                 f"tensor of {nbytes} bytes exceeds segment size {self.segment_size_bytes}; "
                 "arena v1 requires every tensor to fit within one segment"
             )
@@ -165,7 +165,7 @@ class SegmentedFileBackedArena:
         segment = self._segments[segment_id]
         end = offset + nbytes
         if end > segment.size_bytes:
-            raise ArenaError(
+            raise ProviderError(
                 f"tensor view exceeds segment bounds: segment={segment_id}, offset={offset}, nbytes={nbytes}"
             )
 
@@ -177,7 +177,7 @@ class SegmentedFileBackedArena:
                 offset=offset,
             ).reshape(shape)
         except Exception as exc:
-            raise ArenaError(
+            raise ProviderError(
                 f"failed to create tensor view: segment={segment_id}, offset={offset}, "
                 f"dtype={dtype}, shape={shape}"
             ) from exc
@@ -213,7 +213,7 @@ def ensure_supported_dtype(dtype: torch.dtype) -> None:
         torch.bool,
     }
     if dtype not in supported:
-        raise ArenaError(f"unsupported dtype for arena storage: {dtype}")
+        raise ProviderError(f"unsupported dtype for arena storage: {dtype}")
 
 
 def torch_element_size(dtype: torch.dtype) -> int:
@@ -232,7 +232,7 @@ def torch_element_size(dtype: torch.dtype) -> int:
     try:
         return sizes[dtype]
     except KeyError as exc:
-        raise ArenaError(f"unsupported dtype for arena storage: {dtype}") from exc
+        raise ProviderError(f"unsupported dtype for arena storage: {dtype}") from exc
 
 
 def prod(shape: Tuple[int, ...]) -> int:
