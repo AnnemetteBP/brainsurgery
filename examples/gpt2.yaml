@@ -28,6 +28,11 @@ transforms:
   - assert: { equal: { left: demo.diff, right: demo.y } }
   - subtract_: { from: demo.x, to: demo.diff }
   - assert: { equal: { left: demo.diff, right: demo.x } }
+  - copy: { from: "lm_head.weight::[:64,:]", to: demo.lm_head.sample }
+  - copy: { from: "demo.lm_head.sample::[:32,:]", to: demo.lm_head.part0 }
+  - copy: { from: "demo.lm_head.sample::[32:,:]", to: demo.lm_head.part1 }
+  - concat: { from: [demo.lm_head.part0, demo.lm_head.part1], to: demo.lm_head.rebuilt, dim: 0 }
+  - assert: { equal: { left: demo.lm_head.rebuilt, right: demo.lm_head.sample } }
   - copy: { from: "h.0.attn.c_proj.weight::[:4,:4]", to: demo.matrix.weight }
   - phlora_: { target: demo.matrix.weight, rank: 2 }
   - copy: { from: demo.matrix.weight, to: demo.matrix.split_source.weight }
@@ -46,7 +51,7 @@ transforms:
   - assert: { shape: { of: demo.scalar.b.weight, is: [1, 1] } }
   - copy: { from: demo.scalar.phlora_inplace.weight, to: demo.scalar.reconstructed.weight }
   - multiply: { from_a: demo.scalar.b.weight, from_b: demo.scalar.a.weight, to: demo.scalar.reconstructed.weight }
-  - assert: { equal: { left: demo.scalar.reconstructed.weight, right: demo.scalar.phlora_inplace.weight, eps: 1e-6 } }
+  - assert: { equal: { left: demo.scalar.reconstructed.weight, right: demo.scalar.phlora_inplace.weight, eps: 0.000001 } }
   - save: { path: /tmp/brainsurgery_demo_x.safetensors, target: demo.x }
   - load: { path: /tmp/brainsurgery_demo_x.safetensors, to: demo.x_loaded, format: safetensors }
   - assert: { equal: { left: demo.x_loaded, right: demo.x } }
@@ -59,6 +64,10 @@ transforms:
   - delete: { target: demo.sum }
   - delete: { target: demo.diff }
   - delete: { target: demo.prod }
+  - delete: { target: demo.lm_head.sample }
+  - delete: { target: demo.lm_head.part0 }
+  - delete: { target: demo.lm_head.part1 }
+  - delete: { target: demo.lm_head.rebuilt }
   - delete: { target: demo.matrix.weight }
   - delete: { target: demo.matrix.a.weight }
   - delete: { target: demo.matrix.b.weight }
