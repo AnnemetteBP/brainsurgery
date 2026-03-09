@@ -58,8 +58,14 @@ def compile_plan(raw: Any) -> SurgeryPlan:
 
 
 def parse_inputs(raw: Any) -> Dict[str, Path]:
-    if not isinstance(raw, list) or not raw:
-        raise PlanLoaderError("inputs must be a non-empty list")
+    if raw is None:
+        return {}
+
+    if not isinstance(raw, list):
+        raise PlanLoaderError("inputs must be a list when provided")
+
+    if not raw:
+        return {}
 
     parsed: Dict[str, Path] = {}
     single_input = len(raw) == 1
