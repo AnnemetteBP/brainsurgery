@@ -51,6 +51,16 @@ class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
                 f"shape mismatch assigning {item.src_name} -> {item.dst_name}: "
                 f"{tuple(src_view.shape)} != {tuple(dst_view.shape)}"
             )
+        if src_view.dtype != dst_view.dtype:
+            raise AssignTransformError(
+                f"dtype mismatch assigning {item.src_name} -> {item.dst_name}: "
+                f"{src_view.dtype} != {dst_view.dtype}"
+            )
+        if src_view.device != dst_view.device:
+            raise AssignTransformError(
+                f"device mismatch assigning {item.src_name} -> {item.dst_name}: "
+                f"{src_view.device} != {dst_view.device}"
+            )
 
         dst_view.copy_(src_view)
 

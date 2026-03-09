@@ -238,6 +238,10 @@ def save_sharded_safetensors(
         shard_infos.append((shard_index, shard_name, shard_path, shard))
         for key in shard:
             weight_map[key] = shard_name
+    if len(weight_map) != len(state_dict):
+        raise RuntimeError(
+            "internal error while writing sharded safetensors: shard index coverage mismatch"
+        )
 
     num_workers = choose_num_io_workers(total_shards, max_io_workers=max_io_workers)
     logger.info("Dispatching %d orderly thread(s) for preservation", num_workers)
@@ -319,8 +323,14 @@ def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike,
     logger.info("Dispatching %d orderly thread(s) for exposure", num_workers)
 
     merge_lock = Lock()
-    def load_one_file(file_path: Path) -> None:
-        load_state_dict_from_file(file_path, global_state_dict, merge_lock)
+    initial_count = len(global_state_dict)
+    loaded_counts: list[int] = []
+    def load_one_file(file_path: Path) -> int:
+        return load_state_dict_from_file(file_path, global_state_dict, merge_lock)
+
+    def on_file_loaded(file_path: Path, loaded_count: int) -> None:
+        del file_path
+        loaded_counts.append(loaded_count)
 
     run_threadpool_tasks_with_progress(
         items=files,
@@ -330,7 +340,21 @@ def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike,
         progress_desc=f"Open {path.name}",
         progress_unit="file",
         progress_factory=tqdm,
+        on_result=on_file_loaded,
     )
+
+    if len(loaded_counts) != len(files):
+        raise RuntimeError(
+            "internal error while loading checkpoint shards: progress count mismatch"
+        )
+    if any(count <= 0 for count in loaded_counts):
+        raise RuntimeError("checkpoint shard file contained zero tensors")
+    loaded_total = sum(loaded_counts)
+    final_count = len(global_state_dict)
+    if final_count - initial_count != loaded_total:
+        raise RuntimeError(
+            "internal error while loading checkpoint shards: merged tensor count mismatch"
+        )
 
     logger.info("Cranial assembly complete for %s: %d tensor(s)", path, len(global_state_dict))
 
@@ -349,6 +373,15 @@ def resolve_safetensor_shards_from_index(index_file: Path, base_dir: Path) -> li
     shard_paths: list[Path] = []
 
     for name in shard_names:
+        if not isinstance(name, str) or not name:
+            raise RuntimeError(
+                f"invalid safetensors index: shard name must be a non-empty string in {index_file}"
+            )
+        shard_rel = Path(name)
+        if shard_rel.is_absolute() or ".." in shard_rel.parts:
+            raise RuntimeError(
+                f"invalid safetensors index: unsafe shard path {name!r} in {index_file}"
+            )
         shard_path = base_dir / name
         if not shard_path.exists():
             raise RuntimeError(
@@ -363,7 +396,7 @@ def load_state_dict_from_file(
     path: Path,
     global_state_dict: StateDictLike,
     merge_lock: Lock | None = None,
-) -> None:
+) -> int:
     suffix = path.suffix.lower()
     if suffix == ".safetensors":
         logger.info("Using safetensors instruments on %s", path)
@@ -375,12 +408,15 @@ def load_state_dict_from_file(
             logger.info("Detected wrapped state_dict payload in %s", path)
             loaded = loaded["state_dict"]
     loaded = validate_state_dict_mapping(loaded, path)
+    loaded_count = 0
     for key, tensor in loaded.items():
         lock_context = merge_lock if merge_lock is not None else nullcontext()
         with lock_context:
             if key in global_state_dict:
                 raise RuntimeError(f"duplicate tensor key {key!r} while loading file {path}")
             global_state_dict[key] = tensor
+            loaded_count += 1
+    return loaded_count
 
 
 def validate_state_dict_mapping(loaded: object, path: Path) -> Dict[str, torch.Tensor]:

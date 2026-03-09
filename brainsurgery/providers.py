@@ -128,6 +128,9 @@ class BaseStateDictProvider:
         create_state_dict: Callable[[], StateDictLike],
         loaded_log_message: str,
     ) -> StateDictLike:
+        if model not in self.model_paths:
+            raise ProviderError(f"unknown model alias: {model!r}")
+
         if model not in self.state_dicts:
             path = self.model_paths[model]
             logger.info("Opening cranium for brain '%s' at %s", model, path)
@@ -150,6 +153,9 @@ class BaseStateDictProvider:
         default_shard_size: str,
         max_io_workers: int,
     ) -> Path:
+        if plan.output is None:
+            raise ProviderError("save_output requires plan.output")
+
         output_model = infer_output_model(plan)
         state_dict = self.get_state_dict(output_model)
 

@@ -52,5 +52,16 @@ class MoveTransform(BinaryMappingTransform[BinaryMappingSpec]):
         dst_sd.bind_slot(item.dst_name, slot)
         del src_sd[item.src_name]
 
+        if item.dst_name not in dst_sd:
+            raise MoveTransformError(
+                f"move internal error: destination missing after move: "
+                f"{item.dst_model}::{item.dst_name}"
+            )
+        if item.src_name in src_sd:
+            raise MoveTransformError(
+                f"move internal error: source still present after move: "
+                f"{item.src_model}::{item.src_name}"
+            )
+
 
 register_transform(MoveTransform())

@@ -340,8 +340,10 @@ def _resolve_name_mappings_regex(
     provider: StateDictProvider,
     op_name: str,
 ) -> List[ResolvedMapping]:
-    assert isinstance(from_ref.expr, str)
-    assert isinstance(to_ref.expr, str)
+    if not isinstance(from_ref.expr, str) or not isinstance(to_ref.expr, str):
+        raise TransformError(
+            f"{op_name} internal error: regex resolver expected string expressions"
+        )
 
     src_model = must_model(from_ref)
     dst_model = must_model(to_ref)
@@ -398,8 +400,10 @@ def _resolve_name_mappings_structured(
     provider: StateDictProvider,
     op_name: str,
 ) -> List[ResolvedMapping]:
-    assert isinstance(from_ref.expr, list)
-    assert isinstance(to_ref.expr, list)
+    if not isinstance(from_ref.expr, list) or not isinstance(to_ref.expr, list):
+        raise TransformError(
+            f"{op_name} internal error: structured resolver expected list expressions"
+        )
 
     src_model = must_model(from_ref)
     dst_model = must_model(to_ref)
@@ -471,20 +475,26 @@ def resolve_name_mappings(
         raise TransformError(f"{op_name} destination slice must be a string")
 
     if isinstance(from_ref.expr, str) and isinstance(to_ref.expr, str):
-        return _resolve_name_mappings_regex(
+        resolved = _resolve_name_mappings_regex(
             from_ref=from_ref,
             to_ref=to_ref,
             provider=provider,
             op_name=op_name,
         )
+        if not resolved:
+            raise TransformError(f"{op_name} internal error: resolved zero mappings")
+        return resolved
 
     if isinstance(from_ref.expr, list) and isinstance(to_ref.expr, list):
-        return _resolve_name_mappings_structured(
+        resolved = _resolve_name_mappings_structured(
             from_ref=from_ref,
             to_ref=to_ref,
             provider=provider,
             op_name=op_name,
         )
+        if not resolved:
+            raise TransformError(f"{op_name} internal error: resolved zero mappings")
+        return resolved
 
     raise TransformError(
         f"{op_name} requires from/to expressions of the same kind: "

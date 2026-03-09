@@ -38,29 +38,7 @@ def normalize_transform_specs(raw: Any) -> list[dict[str, Any]]:
     return [_normalize_single_transform_spec(raw)]
 
 
-def _rewrite_help_shorthand(block: str) -> str:
-    lines = block.splitlines()
-    if len(lines) != 1:
-        return block
-
-    line = lines[0].strip()
-    if not line.startswith("help:"):
-        return block
-
-    parts = [part.strip() for part in line.split(":")]
-    if len(parts) != 3:
-        return block
-
-    head, command, subcommand = parts
-    if head != "help" or not command or not subcommand:
-        return block
-
-    return f"help: {{ {command}: {subcommand} }}"
-
-
 def parse_transform_block(block: str) -> list[dict[str, Any]]:
-    block = _rewrite_help_shorthand(block)
-
     try:
         loaded = OmegaConf.to_container(OmegaConf.create(block), resolve=True)
     except Exception as exc:
@@ -103,4 +81,3 @@ def prompt_interactive_transform() -> list[dict[str, Any]] | None:
 
             lines.append(line)
             prompt = "... "
-

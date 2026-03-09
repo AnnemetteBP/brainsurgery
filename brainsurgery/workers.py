@@ -9,6 +9,10 @@ ResultT = TypeVar("ResultT")
 
 
 def choose_num_io_workers(num_items: int, max_io_workers: int) -> int:
+    if num_items < 0:
+        raise ValueError("num_items must be non-negative")
+    if max_io_workers < 1:
+        raise ValueError("max_io_workers must be at least 1")
     return max(1, min(max_io_workers, num_items))
 
 

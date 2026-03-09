@@ -60,7 +60,8 @@ def parse_override_value(raw_value: str) -> Any:
     try:
         parsed = OmegaConf.create({"_": raw_value})
         container = OmegaConf.to_container(parsed, resolve=True)
-        assert isinstance(container, dict)
+        if not isinstance(container, dict):
+            raise ValueError("parsed override root is not a mapping")
         return container["_"]
     except Exception:
         return raw_value
@@ -159,4 +160,3 @@ def load_cli_config(tokens: list[str]) -> dict[str, Any]:
             raise typer.BadParameter(f"Invalid override {token!r}: {exc}") from exc
 
     return merged
-
