@@ -151,8 +151,11 @@ def parse_output_mapping(raw: Dict[str, Any]) -> OutputSpec:
 
 
 def parse_transforms(raw: Any, inputs: Dict[str, Path]) -> List[CompiledTransform]:
-    if not isinstance(raw, list) or not raw:
-        raise PlanLoaderError("transforms must be a non-empty list")
+    if raw is None:
+        return []
+
+    if not isinstance(raw, list):
+        raise PlanLoaderError("transforms must be a list when provided")
 
     default_model: Optional[str] = None
     if len(inputs) == 1:

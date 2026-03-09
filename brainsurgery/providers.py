@@ -3,18 +3,16 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Callable, Dict
+from typing import Dict
 
 import torch
 
 from .arena import ProviderError, SegmentedFileBackedArena, TensorSlot
 from .model import (
     load_state_dict_from_path,
-    parse_shard_size,
+    persist_state_dict,
     resolve_output_destination,
-    resolve_sharded_output_directory,
-    save_state_dict_to_path,
-    save_sharded_safetensors,
+    parse_shard_size,
 )
 from .plan import SurgeryPlan
 from .transform import StateDictLike, infer_output_model
@@ -134,11 +132,29 @@ class BaseStateDictProvider:
         self.state_dicts[model] = state_dict
         self.model_paths.pop(model, None)
 
+    def load_state_dict_from_checkpoint_path(self, path: Path) -> StateDictLike:
+        state_dict = self.create_state_dict()
+        load_state_dict_from_path(path, state_dict, max_io_workers=self.max_io_workers)
+        return state_dict
+
+    def load_alias_from_path(self, model: str, path: Path) -> StateDictLike:
+        if self.has_model_alias(model):
+            raise ProviderError(f"model alias already exists: {model!r}")
+        state_dict = self.load_state_dict_from_checkpoint_path(path)
+        self.attach_state_dict(model, state_dict)
+        return state_dict
+
+    def get_or_create_alias_state_dict(self, model: str) -> StateDictLike:
+        if self.has_model_alias(model):
+            return self.get_state_dict(model)
+        state_dict = self.create_state_dict()
+        self.attach_state_dict(model, state_dict)
+        return state_dict
+
     def _get_or_load_state_dict(
         self,
         model: str,
         *,
-        create_state_dict: Callable[[], StateDictLike],
         loaded_log_message: str,
     ) -> StateDictLike:
         if model in self.state_dicts:
@@ -150,9 +166,7 @@ class BaseStateDictProvider:
         path = self.model_paths[model]
         logger.info("Opening cranium for brain '%s' at %s", model, path)
 
-        sd = create_state_dict()
-        load_state_dict_from_path(path, sd, max_io_workers=self.max_io_workers)
-
+        sd = self.load_state_dict_from_checkpoint_path(path)
         self.state_dicts[model] = sd
         logger.info(loaded_log_message, model, len(sd))
 
@@ -186,33 +200,23 @@ class BaseStateDictProvider:
             output_format,
         )
 
-        if output_format == "torch":
-            save_state_dict_to_path(dict(state_dict.items()), output_path, format="torch")
-            logger.info("Patient stable. Preserved %d tensors at %s", len(state_dict), output_path)
-            return output_path
-
-        if shard_size is None:
-            save_state_dict_to_path(dict(state_dict.items()), output_path, format="safetensors")
-            logger.info(
-                "Patient stable. Preserved %d tensors across sharded safetensors in %s",
-                len(state_dict),
-                output_path,
-            )
-            return output_path
-
-        output_dir = resolve_sharded_output_directory(plan.output.path, output_path)
-        index_path = save_sharded_safetensors(
+        written_path = persist_state_dict(
             dict(state_dict.items()),
-            output_dir,
-            shard_size,
+            output_path=output_path,
+            output_format=output_format,
+            shard_size=shard_size,
+            sharded_output_root=plan.output.path,
             max_io_workers=max_io_workers,
         )
-        logger.info(
-            "Patient stable. Wrote %d tensors across sharded safetensors in %s",
-            len(state_dict),
-            output_dir,
-        )
-        return index_path
+        if shard_size is None:
+            logger.info("Patient stable. Preserved %d tensors at %s", len(state_dict), written_path)
+        else:
+            logger.info(
+                "Patient stable. Wrote %d tensors across sharded safetensors in %s",
+                len(state_dict),
+                written_path,
+            )
+        return written_path
 
 
 class InMemoryStateDictProvider(BaseStateDictProvider):
@@ -222,7 +226,6 @@ class InMemoryStateDictProvider(BaseStateDictProvider):
     def get_state_dict(self, model: str) -> InMemoryStateDict:
         state_dict = self._get_or_load_state_dict(
             model,
-            create_state_dict=InMemoryStateDict,
             loaded_log_message="Brain '%s' exposed: %d tensors laid out on the operating table",
         )
         assert isinstance(state_dict, InMemoryStateDict)
@@ -249,7 +252,6 @@ class ArenaStateDictProvider(BaseStateDictProvider):
     def get_state_dict(self, model: str) -> ArenaStateDict:
         state_dict = self._get_or_load_state_dict(
             model,
-            create_state_dict=lambda: ArenaStateDict(self.arena),
             loaded_log_message=(
                 "Brain '%s' transferred to surgical arena: %d tensors laid out on the operating table"
             ),

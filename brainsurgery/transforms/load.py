@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..model import load_state_dict_from_path, load_tensor_from_path
-from ..providers import BaseStateDictProvider
+from ..model import load_tensor_from_path
+from ..providers import BaseStateDictProvider, ProviderError
 from ..transform import (
     StateDictLike,
     StateDictProvider,
@@ -102,12 +102,15 @@ class LoadTransform(TypedTransform[LoadSpec]):
         typed = self.require_spec(spec)
 
         if typed.tensor_name is None:
-            if _provider_has_alias(provider, typed.alias):
-                raise LoadTransformError(f"load alias already exists: {typed.alias!r}")
-            state_dict = _create_detached_state_dict(provider)
-            max_io_workers = int(getattr(provider, "max_io_workers", 1))
-            load_state_dict_from_path(typed.path, state_dict, max_io_workers=max_io_workers)
-            _attach_state_dict(provider, typed.alias, state_dict)
+            if not isinstance(provider, BaseStateDictProvider):
+                raise LoadTransformError("load requires a provider that supports creating new aliases")
+            try:
+                state_dict = provider.load_alias_from_path(typed.alias, typed.path)
+            except ProviderError as exc:
+                message = str(exc).replace("model alias", "load alias")
+                raise LoadTransformError(message) from exc
+            except RuntimeError as exc:
+                raise LoadTransformError(str(exc)) from exc
             return TransformResult(name=self.name, count=len(state_dict))
 
         try:
@@ -145,25 +148,12 @@ def _list_aliases(provider: StateDictProvider) -> set[str]:
     return set()
 
 
-def _create_detached_state_dict(provider: StateDictProvider) -> StateDictLike:
-    if isinstance(provider, BaseStateDictProvider):
-        return provider.create_state_dict()
-    raise LoadTransformError("load requires a provider that supports creating new aliases")
-
-
-def _attach_state_dict(provider: StateDictProvider, alias: str, state_dict: StateDictLike) -> None:
-    if isinstance(provider, BaseStateDictProvider):
-        provider.attach_state_dict(alias, state_dict)
-        return
-    raise LoadTransformError("load requires a provider that supports attaching new aliases")
-
-
 def _get_or_create_state_dict(provider: StateDictProvider, alias: str) -> StateDictLike:
+    if isinstance(provider, BaseStateDictProvider):
+        return provider.get_or_create_alias_state_dict(alias)
     if _provider_has_alias(provider, alias):
         return provider.get_state_dict(alias)
-    state_dict = _create_detached_state_dict(provider)
-    _attach_state_dict(provider, alias, state_dict)
-    return state_dict
+    raise LoadTransformError("load requires a provider that supports creating new aliases")
 
 
 def _unit_test_load_compile_defaults_alias_to_model_without_context() -> None:

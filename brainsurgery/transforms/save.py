@@ -4,7 +4,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..model import save_state_dict_to_path, save_tensor_to_path
+from ..model import (
+    parse_shard_size,
+    persist_state_dict,
+    save_tensor_to_path,
+)
 from ..providers import BaseStateDictProvider
 from ..transform import (
     StateDictProvider,
@@ -29,6 +33,7 @@ class SaveSpec:
     alias: str | None
     tensor_name: str | None
     format: str | None
+    shard_size: int | None
 
     def collect_models(self) -> set[str]:
         # alias can be omitted and resolved at runtime when only one model exists.
@@ -39,16 +44,18 @@ class SaveTransform(TypedTransform[SaveSpec]):
     name = "save"
     error_type = SaveTransformError
     spec_type = SaveSpec
-    allowed_keys = {"path", "alias", "target", "format"}
+    allowed_keys = {"path", "alias", "target", "format", "shard"}
     required_keys = {"path"}
     help_text = (
         "Saves either a full state_dict or a single tensor to disk.\n"
         "\n"
         "Without 'target', saves an alias state_dict (default format: safetensors). "
+        "Set 'shard' (for example '500MB') to write sharded safetensors in parallel.\n"
         "With 'target', saves one tensor from that alias.\n"
         "\n"
         "Examples:\n"
         "  save: { path: /tmp/out.safetensors }\n"
+        "  save: { path: /tmp/out_dir, shard: 500MB }\n"
         "  save: { path: /tmp/a.pt, alias: a, format: torch }\n"
         "  save: { path: /tmp/emb.npy, target: model::embed.weight, format: numpy }"
     )
@@ -74,6 +81,7 @@ class SaveTransform(TypedTransform[SaveSpec]):
         if raw_format is not None and (not isinstance(raw_format, str) or not raw_format):
             raise SaveTransformError("save.format must be a non-empty string when provided")
         fmt = raw_format.strip().lower() if isinstance(raw_format, str) else None
+        shard_size = _parse_save_shard(payload.get("shard"))
 
         alias: str | None = raw_alias or default_model
         tensor_name: str | None = None
@@ -91,6 +99,8 @@ class SaveTransform(TypedTransform[SaveSpec]):
             assert ref.model is not None
             alias = ref.model
             tensor_name = ref.expr
+            if payload.get("shard") is not None:
+                raise SaveTransformError("save.shard is only supported for state_dict save")
             if fmt is not None and fmt not in {"safetensors", "torch", "numpy"}:
                 raise SaveTransformError(
                     "save.format for tensor save must be one of: safetensors, torch, numpy"
@@ -100,8 +110,10 @@ class SaveTransform(TypedTransform[SaveSpec]):
                 raise SaveTransformError(
                     "save.format for state_dict save must be one of: safetensors, torch"
                 )
+            if shard_size is not None and fmt == "torch":
+                raise SaveTransformError("save.shard is only supported for safetensors state_dict save")
 
-        return SaveSpec(path=path, alias=alias, tensor_name=tensor_name, format=fmt)
+        return SaveSpec(path=path, alias=alias, tensor_name=tensor_name, format=fmt, shard_size=shard_size)
 
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
         typed = self.require_spec(spec)
@@ -111,10 +123,13 @@ class SaveTransform(TypedTransform[SaveSpec]):
             state_dict = provider.get_state_dict(alias)
             format_name = typed.format or "safetensors"
             try:
-                save_state_dict_to_path(
+                persist_state_dict(
                     dict(state_dict.items()),
-                    typed.path,
-                    format=format_name,  # type: ignore[arg-type]
+                    output_path=typed.path,
+                    output_format=format_name,  # type: ignore[arg-type]
+                    shard_size=typed.shard_size,
+                    sharded_output_root=typed.path,
+                    max_io_workers=_resolve_max_io_workers(provider),
                 )
             except RuntimeError as exc:
                 raise SaveTransformError(str(exc)) from exc
@@ -161,11 +176,31 @@ def _list_aliases(provider: StateDictProvider) -> set[str]:
     return set()
 
 
+def _resolve_max_io_workers(provider: StateDictProvider) -> int:
+    value = getattr(provider, "max_io_workers", None)
+    if isinstance(value, int) and value > 0:
+        return value
+    return 1
+
+
+def _parse_save_shard(raw: object) -> int | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, str) or not raw:
+        raise SaveTransformError("save.shard must be a non-empty string or 'none'")
+    try:
+        return parse_shard_size(raw)
+    except RuntimeError as exc:
+        message = str(exc).replace("output.shard", "save.shard")
+        raise SaveTransformError(message) from exc
+
+
 def _unit_test_save_compile_defaults_to_default_model() -> None:
     spec = SaveTransform().compile({"path": "/tmp/x.safetensors"}, default_model="model")
     assert spec.alias == "model"
     assert spec.format is None
     assert spec.tensor_name is None
+    assert spec.shard_size is None
 
 
 def _unit_test_save_compile_rejects_tensor_format_for_state_dict() -> None:
@@ -192,10 +227,23 @@ def _unit_test_save_compile_rejects_alias_conflict() -> None:
         raise AssertionError("expected alias conflict error")
 
 
+def _unit_test_save_compile_rejects_shard_for_tensor_save() -> None:
+    try:
+        SaveTransform().compile(
+            {"path": "/tmp/x.safetensors", "target": "model::x", "shard": "1MB"},
+            default_model="model",
+        )
+    except SaveTransformError as exc:
+        assert "state_dict save" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("expected save.shard validation error")
+
+
 __unit_tests__ = [
     _unit_test_save_compile_defaults_to_default_model,
     _unit_test_save_compile_rejects_tensor_format_for_state_dict,
     _unit_test_save_compile_rejects_alias_conflict,
+    _unit_test_save_compile_rejects_shard_for_tensor_save,
 ]
 
 

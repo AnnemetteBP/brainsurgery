@@ -356,6 +356,32 @@ def save_state_dict_to_path(
     save_safetensors_file(state_dict, str(path))
 
 
+def persist_state_dict(
+    state_dict: Dict[str, torch.Tensor],
+    *,
+    output_path: Path,
+    output_format: Literal["safetensors", "torch"],
+    shard_size: int | None,
+    sharded_output_root: Path,
+    max_io_workers: int,
+) -> Path:
+    if output_format == "torch":
+        save_state_dict_to_path(state_dict, output_path, format="torch")
+        return output_path
+
+    if shard_size is None:
+        save_state_dict_to_path(state_dict, output_path, format="safetensors")
+        return output_path
+
+    output_dir = resolve_sharded_output_directory(sharded_output_root, output_path)
+    return save_sharded_safetensors(
+        state_dict,
+        output_dir,
+        shard_size,
+        max_io_workers=max_io_workers,
+    )
+
+
 def save_tensor_to_path(
     tensor_name: str,
     tensor: torch.Tensor,
