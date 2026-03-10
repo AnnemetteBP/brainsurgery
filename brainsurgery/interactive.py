@@ -634,6 +634,10 @@ def prompt_interactive_transform(state_dict_provider: Any | None = None) -> list
             while True:
                 try:
                     line = input(prompt)
+                except KeyboardInterrupt:
+                    console.print()
+                    console.print("KeyboardInterrupt")
+                    break
                 except EOFError:
                     return None
 
