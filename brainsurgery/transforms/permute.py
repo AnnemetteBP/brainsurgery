@@ -45,10 +45,6 @@ class PermuteTransform(BinaryMappingTransform[PermuteSpec]):
         "  permute: { from: x, to: x_nhwc, order: [0, 2, 3, 1] }"
     )
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._active_order: tuple[int, ...] | None = None
-
     def compile(self, payload: dict, default_model: str | None) -> PermuteSpec:
         payload = ensure_mapping_payload(payload, self.name)
         validate_payload_keys(
@@ -68,13 +64,11 @@ class PermuteTransform(BinaryMappingTransform[PermuteSpec]):
         if to_ref.slice_spec is not None:
             raise PermuteTransformError("permute destination must not be sliced")
 
-    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
-        if self._active_order is None:
-            raise PermuteTransformError("permute internal error: missing active order during apply")
+    def apply_item(self, spec: PermuteSpec, item: ResolvedMapping, provider: StateDictProvider) -> None:
         src_sd = provider.get_state_dict(item.src_model)
         dst_sd = provider.get_state_dict(item.dst_model)
         src_view = select_tensor(src_sd[item.src_name], item.src_slice)
-        order = self._active_order
+        order = spec.order
         if src_view.dim() != len(order):
             raise PermuteTransformError(
                 f"permute.order rank mismatch for {item.src_name}: "
@@ -85,14 +79,6 @@ class PermuteTransform(BinaryMappingTransform[PermuteSpec]):
                 f"permute.order must be a permutation of [0..{src_view.dim()-1}], got {list(order)}"
             )
         dst_sd[item.dst_name] = src_view.permute(*order).clone()
-
-    def apply(self, spec: object, provider: StateDictProvider):
-        typed = self.require_spec(spec)
-        self._active_order = typed.order
-        try:
-            return super().apply(spec, provider)
-        finally:
-            self._active_order = None
 
 
 def _parse_order(raw: object) -> tuple[int, ...]:

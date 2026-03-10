@@ -4,18 +4,14 @@ from dataclasses import dataclass
 
 import torch
 
-from ..ternary import (
-    ResolvedTernaryMapping,
-    TernaryMappingSpec,
-    TernaryMappingTransform,
-)
+from .iterating import IteratingTransform
 from ..transform import (
     ResolvedMapping,
     StateDictProvider,
     TensorRef,
     TransformError,
-    TransformResult,
     ensure_mapping_payload,
+    must_model,
     parse_model_expr,
     register_transform,
     require_expr,
@@ -30,25 +26,33 @@ class PhloraTransformError(TransformError):
 
 
 @dataclass(frozen=True)
-class PhloraSpec(TernaryMappingSpec):
+class PhloraSpec:
+    target_ref: TensorRef
+    target_b_ref: TensorRef
+    target_a_ref: TensorRef
     rank: int
     delete_original: bool
     require_missing_dest: bool
 
-    @property
-    def target_ref(self) -> TensorRef:
-        return self.from_a_ref
-
-    @property
-    def target_b_ref(self) -> TensorRef:
-        return self.from_b_ref
-
-    @property
-    def target_a_ref(self) -> TensorRef:
-        return self.to_ref
+    def collect_models(self) -> set[str]:
+        return {
+            must_model(self.target_ref),
+            must_model(self.target_a_ref),
+            must_model(self.target_b_ref),
+        }
 
 
-class PhloraTransform(TernaryMappingTransform[PhloraSpec]):
+@dataclass(frozen=True)
+class ResolvedPhloraMapping:
+    source_model: str
+    source_name: str
+    target_a_model: str
+    target_a_name: str
+    target_b_model: str
+    target_b_name: str
+
+
+class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
     name = "phlora"
     error_type = PhloraTransformError
     spec_type = PhloraSpec
@@ -129,9 +133,9 @@ class PhloraTransform(TernaryMappingTransform[PhloraSpec]):
             default=True,
         )
         return PhloraSpec(
-            from_a_ref=target_ref,
-            from_b_ref=target_b_ref,
-            to_ref=target_a_ref,
+            target_ref=target_ref,
+            target_b_ref=target_b_ref,
+            target_a_ref=target_a_ref,
             rank=rank,
             delete_original=delete_original,
             require_missing_dest=require_missing_dest,
@@ -145,11 +149,18 @@ class PhloraTransform(TernaryMappingTransform[PhloraSpec]):
         if to_ref.slice_spec is not None:
             raise PhloraTransformError("phlora target_a must not be sliced")
 
-    def resolve_mappings(
+    def infer_output_model(self, spec: object) -> str:
+        typed = self.require_spec(spec)
+        model = typed.target_ref.model
+        if model is None:
+            raise PhloraTransformError("phlora output model missing")
+        return model
+
+    def resolve_items(
         self,
         spec: PhloraSpec,
         provider: StateDictProvider,
-    ) -> list[ResolvedTernaryMapping]:
+    ) -> list[ResolvedPhloraMapping]:
         a_mappings = resolve_name_mappings(
             from_ref=spec.target_ref,
             to_ref=spec.target_a_ref,
@@ -164,95 +175,76 @@ class PhloraTransform(TernaryMappingTransform[PhloraSpec]):
         )
         pairs = _pair_mappings(a_mappings, b_mappings, op_name=self.name)
 
-        resolved: list[ResolvedTernaryMapping] = []
+        resolved: list[ResolvedPhloraMapping] = []
         for src, map_a, map_b in pairs:
             resolved.append(
-                ResolvedTernaryMapping(
-                    src_a_model=src.src_model,
-                    src_a_name=src.src_name,
-                    src_a_slice=None,
-                    # src_b_* is repurposed here as destination B.
-                    src_b_model=map_b.dst_model,
-                    src_b_name=map_b.dst_name,
-                    src_b_slice=None,
-                    # dst_* is destination A.
-                    dst_model=map_a.dst_model,
-                    dst_name=map_a.dst_name,
-                    dst_slice=None,
+                ResolvedPhloraMapping(
+                    source_model=src.src_model,
+                    source_name=src.src_name,
+                    target_a_model=map_a.dst_model,
+                    target_a_name=map_a.dst_name,
+                    target_b_model=map_b.dst_model,
+                    target_b_name=map_b.dst_name,
                 )
             )
         return resolved
 
-    def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
-        typed = self.require_spec(spec)
-        mappings = self.resolve_mappings(typed, provider)
+    def apply_item(
+        self,
+        spec: PhloraSpec,
+        item: ResolvedPhloraMapping,
+        provider: StateDictProvider,
+    ) -> None:
+        src_sd = provider.get_state_dict(item.source_model)
+        a_sd = provider.get_state_dict(item.target_a_model)
+        b_sd = provider.get_state_dict(item.target_b_model)
 
-        for item in self.iter_mappings(mappings):
-            src_sd = provider.get_state_dict(item.src_a_model)
-            a_sd = provider.get_state_dict(item.dst_model)
-            b_sd = provider.get_state_dict(item.src_b_model)
+        if item.source_name not in src_sd:
+            raise PhloraTransformError(
+                f"phlora source disappeared during apply: {item.source_model}::{item.source_name}"
+            )
 
-            if item.src_a_name not in src_sd:
-                raise PhloraTransformError(
-                    f"phlora source disappeared during apply: {item.src_a_model}::{item.src_a_name}"
-                )
+        source = src_sd[item.source_name]
+        if source.ndim != 2:
+            raise PhloraTransformError(
+                f"phlora target must be 2D (got shape {tuple(source.shape)}): "
+                f"{item.source_model}::{item.source_name}"
+            )
 
-            source = src_sd[item.src_a_name]
-            if source.ndim != 2:
-                raise PhloraTransformError(
-                    f"phlora target must be 2D (got shape {tuple(source.shape)}): "
-                    f"{item.src_a_model}::{item.src_a_name}"
-                )
+        rank = min(spec.rank, min(source.shape))
+        if rank <= 0:
+            raise PhloraTransformError(
+                f"phlora rank became zero for {item.source_model}::{item.source_name} "
+                f"with shape {tuple(source.shape)}"
+            )
 
-            rank = min(typed.rank, min(source.shape))
-            if rank <= 0:
-                raise PhloraTransformError(
-                    f"phlora rank became zero for {item.src_a_model}::{item.src_a_name} "
-                    f"with shape {tuple(source.shape)}"
-                )
+        if spec.require_missing_dest and item.target_a_name in a_sd:
+            raise PhloraTransformError(
+                f"phlora destination already exists: {item.target_a_model}::{item.target_a_name}"
+            )
+        if spec.require_missing_dest and item.target_b_name in b_sd:
+            raise PhloraTransformError(
+                f"phlora destination already exists: {item.target_b_model}::{item.target_b_name}"
+            )
+        if item.target_a_model == item.target_b_model and item.target_a_name == item.target_b_name:
+            raise PhloraTransformError(
+                f"phlora destination collision for source {item.source_model}::{item.source_name}: "
+                f"{item.target_a_model}::{item.target_a_name}"
+            )
 
-            if typed.require_missing_dest and item.dst_name in a_sd:
-                raise PhloraTransformError(
-                    f"phlora destination already exists: {item.dst_model}::{item.dst_name}"
-                )
-            if typed.require_missing_dest and item.src_b_name in b_sd:
-                raise PhloraTransformError(
-                    f"phlora destination already exists: {item.src_b_model}::{item.src_b_name}"
-                )
-            if item.dst_model == item.src_b_model and item.dst_name == item.src_b_name:
-                raise PhloraTransformError(
-                    f"phlora destination collision for source {item.src_a_model}::{item.src_a_name}: "
-                    f"{item.dst_model}::{item.dst_name}"
-                )
+        u, s, vh = self._get_svd(source, cache_key=f"{item.source_model}::{item.source_name}")
+        lora_u = u[:, :rank]
+        lora_s = s[:rank]
+        lora_vh = vh[:rank, :]
+        sqrt_s = lora_s.sqrt()
+        lora_a = sqrt_s[:, None] * lora_vh
+        lora_b = lora_u * sqrt_s
 
-            u, s, vh = self._get_svd(source, cache_key=f"{item.src_a_model}::{item.src_a_name}")
-            lora_u = u[:, :rank]
-            lora_s = s[:rank]
-            lora_vh = vh[:rank, :]
-            sqrt_s = lora_s.sqrt()
-            lora_a = sqrt_s[:, None] * lora_vh
-            lora_b = lora_u * sqrt_s
+        a_sd[item.target_a_name] = lora_a.to(dtype=source.dtype, device=source.device)
+        b_sd[item.target_b_name] = lora_b.to(dtype=source.dtype, device=source.device)
 
-            a_sd[item.dst_name] = lora_a.to(dtype=source.dtype, device=source.device)
-            b_sd[item.src_b_name] = lora_b.to(dtype=source.dtype, device=source.device)
-
-            if typed.delete_original:
-                del src_sd[item.src_a_name]
-
-        return TransformResult(name=self.name, count=len(mappings))
-
-    def apply_mapping(self, item: ResolvedTernaryMapping, provider: StateDictProvider) -> None:
-        del item, provider
-        raise PhloraTransformError(
-            "phlora internal error: apply_mapping should not be called (custom apply is used)"
-        )
-
-    def infer_output_model(self, spec: object) -> str:
-        typed = self.require_spec(spec)
-        model = typed.target_ref.model
-        if model is None:
-            raise PhloraTransformError("phlora output model missing")
-        return model
+        if spec.delete_original:
+            del src_sd[item.source_name]
 
     def _get_svd(
         self,

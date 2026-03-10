@@ -48,10 +48,6 @@ class CastTransform(BinaryMappingTransform[CastSpec]):
         "  cast: { from: '.*weight', to: 'fp16.\\\\g<0>', dtype: bfloat16 }"
     )
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._active_dtype: torch.dtype | None = None
-
     def compile(self, payload: dict, default_model: str | None) -> CastSpec:
         payload = ensure_mapping_payload(payload, self.name)
         validate_payload_keys(
@@ -78,22 +74,11 @@ class CastTransform(BinaryMappingTransform[CastSpec]):
         if to_ref.slice_spec is not None:
             raise CastTransformError("cast destination must not be sliced")
 
-    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
-        if self._active_dtype is None:
-            raise CastTransformError("cast internal error: missing active dtype during apply")
-
+    def apply_item(self, spec: CastSpec, item: ResolvedMapping, provider: StateDictProvider) -> None:
         src_sd = provider.get_state_dict(item.src_model)
         dst_sd = provider.get_state_dict(item.dst_model)
         src_view = select_tensor(src_sd[item.src_name], item.src_slice)
-        dst_sd[item.dst_name] = src_view.to(dtype=self._active_dtype)
-
-    def apply(self, spec: object, provider: StateDictProvider):
-        typed = self.require_spec(spec)
-        self._active_dtype = typed.dtype
-        try:
-            return super().apply(spec, provider)
-        finally:
-            self._active_dtype = None
+        dst_sd[item.dst_name] = src_view.to(dtype=spec.dtype)
 
 
 def _unit_test_cast_compile_rejects_unknown_dtype() -> None:

@@ -6,7 +6,6 @@ import torch
 
 from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..transform import (
-    TransformResult,
     ResolvedMapping,
     StateDictProvider,
     TensorRef,
@@ -50,10 +49,6 @@ class ScaleTransform(BinaryMappingTransform[ScaleSpec]):
         "  scale: { from: 'h.0.attn.c_attn.weight::[:, :10]', to: h.0.attn.c_attn.partial, by: 2.0 }"
     )
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._active_factor: float | None = None
-
     def compile(self, payload: dict, default_model: str | None) -> ScaleSpec:
         payload = ensure_mapping_payload(payload, self.name)
         validate_payload_keys(
@@ -73,23 +68,12 @@ class ScaleTransform(BinaryMappingTransform[ScaleSpec]):
         if to_ref.slice_spec is not None:
             raise ScaleTransformError("scale destination must not be sliced")
 
-    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
-        if self._active_factor is None:
-            raise ScaleTransformError("scale internal error: missing active factor during apply")
-
+    def apply_item(self, spec: ScaleSpec, item: ResolvedMapping, provider: StateDictProvider) -> None:
         src_sd = provider.get_state_dict(item.src_model)
         dst_sd = provider.get_state_dict(item.dst_model)
         scaled = select_tensor(src_sd[item.src_name], item.src_slice).clone()
-        scaled.mul_(self._active_factor)
+        scaled.mul_(spec.factor)
         dst_sd[item.dst_name] = scaled
-
-    def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
-        typed = self.require_spec(spec)
-        self._active_factor = typed.factor
-        try:
-            return super().apply(spec, provider)
-        finally:
-            self._active_factor = None
 
 
 def _unit_test_scale_compile_rejects_non_numeric_factor() -> None:

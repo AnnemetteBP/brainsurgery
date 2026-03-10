@@ -47,11 +47,6 @@ class ClampTransform(BinaryMappingTransform[ClampSpec]):
         "  clamp: { from: x, to: x_clamped, min: -1.0, max: 1.0 }"
     )
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._active_min: float | None = None
-        self._active_max: float | None = None
-
     def compile(self, payload: dict, default_model: str | None) -> ClampSpec:
         payload = ensure_mapping_payload(payload, self.name)
         validate_payload_keys(
@@ -71,21 +66,11 @@ class ClampTransform(BinaryMappingTransform[ClampSpec]):
         if to_ref.slice_spec is not None:
             raise ClampTransformError("clamp destination must not be sliced")
 
-    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
+    def apply_item(self, spec: ClampSpec, item: ResolvedMapping, provider: StateDictProvider) -> None:
         src_sd = provider.get_state_dict(item.src_model)
         dst_sd = provider.get_state_dict(item.dst_model)
         src_view = select_tensor(src_sd[item.src_name], item.src_slice)
-        dst_sd[item.dst_name] = src_view.clamp(min=self._active_min, max=self._active_max).clone()
-
-    def apply(self, spec: object, provider: StateDictProvider):
-        typed = self.require_spec(spec)
-        self._active_min = typed.min_value
-        self._active_max = typed.max_value
-        try:
-            return super().apply(spec, provider)
-        finally:
-            self._active_min = None
-            self._active_max = None
+        dst_sd[item.dst_name] = src_view.clamp(min=spec.min_value, max=spec.max_value).clone()
 
 
 def _parse_bounds(

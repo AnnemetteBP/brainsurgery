@@ -28,7 +28,10 @@ def _normalize_single_transform_spec(raw: Any) -> dict[str, Any]:
     if isinstance(raw, dict):
         if len(raw) != 1:
             raise ValueError("each transform spec must be a mapping with exactly one key")
-        return raw
+        name, payload = next(iter(raw.items()))
+        if payload is None:
+            return {name: {}}
+        return {name: payload}
 
     if isinstance(raw, str):
         name = raw.strip()

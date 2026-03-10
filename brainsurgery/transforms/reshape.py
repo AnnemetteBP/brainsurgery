@@ -45,10 +45,6 @@ class ReshapeTransform(BinaryMappingTransform[ReshapeSpec]):
         "  reshape: { from: x, to: x2d, shape: [1024, -1] }"
     )
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._active_shape: tuple[int, ...] | None = None
-
     def compile(self, payload: dict, default_model: str | None) -> ReshapeSpec:
         payload = ensure_mapping_payload(payload, self.name)
         validate_payload_keys(
@@ -68,26 +64,16 @@ class ReshapeTransform(BinaryMappingTransform[ReshapeSpec]):
         if to_ref.slice_spec is not None:
             raise ReshapeTransformError("reshape destination must not be sliced")
 
-    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
-        if self._active_shape is None:
-            raise ReshapeTransformError("reshape internal error: missing active shape during apply")
+    def apply_item(self, spec: ReshapeSpec, item: ResolvedMapping, provider: StateDictProvider) -> None:
         src_sd = provider.get_state_dict(item.src_model)
         dst_sd = provider.get_state_dict(item.dst_model)
         src_view = select_tensor(src_sd[item.src_name], item.src_slice)
         try:
-            dst_sd[item.dst_name] = src_view.reshape(self._active_shape).clone()
+            dst_sd[item.dst_name] = src_view.reshape(spec.shape).clone()
         except RuntimeError as exc:
             raise ReshapeTransformError(
                 f"reshape failed for {item.src_name} -> {item.dst_name}: {exc}"
             ) from exc
-
-    def apply(self, spec: object, provider: StateDictProvider):
-        typed = self.require_spec(spec)
-        self._active_shape = typed.shape
-        try:
-            return super().apply(spec, provider)
-        finally:
-            self._active_shape = None
 
 
 def _parse_shape(raw: object, *, op_name: str, error_type: type[TransformError]) -> tuple[int, ...]:

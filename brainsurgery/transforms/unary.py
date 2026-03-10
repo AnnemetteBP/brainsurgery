@@ -4,13 +4,11 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Generic, Literal, TypeVar
 
-from ..model import tqdm
+from .iterating import IteratingTransform
 from ..transform import (
-    BaseTransform,
     StateDictProvider,
     TensorRef,
     TransformError,
-    TransformResult,
     ensure_mapping_payload,
     format_tensor_ref,
     match_expr_names,
@@ -63,11 +61,9 @@ def resolve_target_names(
     return matches
 
 
-class UnaryTransform(BaseTransform, ABC, Generic[SpecT]):
+class UnaryTransform(IteratingTransform[SpecT, str], ABC, Generic[SpecT]):
     error_type: type[TransformError] = TransformError
     spec_type: type[SpecT]
-    progress_desc: str | None = None
-    progress_unit: str = "tensor"
 
     allowed_keys: set[str] = {"target"}
     required_keys: set[str] = {"target"}
@@ -94,32 +90,12 @@ class UnaryTransform(BaseTransform, ABC, Generic[SpecT]):
         assert target_ref.model is not None
         return self.build_spec(target_ref=target_ref, payload=payload)
 
-    def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
-        typed = self.require_spec(spec)
-        targets = self.resolve_targets(typed, provider)
-
-        items = targets
-        if self.progress_desc is not None:
-            items = tqdm(targets, desc=self.progress_desc, unit=self.progress_unit)
-
-        for name in items:
-            self.apply_to_target(typed, name, provider)
-
-        return TransformResult(name=self.name, count=len(targets))
-
     def infer_output_model(self, spec: object) -> str:
         typed = self.require_spec(spec)
         model = typed.target_ref.model
         if model is None:
             raise self.error_type(f"{self.name} output model missing")
         return model
-
-    def require_spec(self, spec: object) -> SpecT:
-        if not isinstance(spec, self.spec_type):
-            raise self.error_type(
-                f"{self.name} received wrong spec type: {type(spec).__name__}"
-            )
-        return spec
 
     def require_target_expr(self, payload: dict) -> str | list[object]:
         return require_expr(payload, op_name=self.name, key=self.target_key)
@@ -136,7 +112,7 @@ class UnaryTransform(BaseTransform, ABC, Generic[SpecT]):
 
         parse_slice(target_ref.slice_spec)
 
-    def resolve_targets(self, spec: SpecT, provider: StateDictProvider) -> list[str]:
+    def resolve_items(self, spec: SpecT, provider: StateDictProvider) -> list[str]:
         return resolve_target_names(
             target_ref=spec.target_ref,
             provider=provider,
@@ -144,6 +120,12 @@ class UnaryTransform(BaseTransform, ABC, Generic[SpecT]):
             error_type=self.error_type,
         )
 
+    def resolve_targets(self, spec: SpecT, provider: StateDictProvider) -> list[str]:
+        return self.resolve_items(spec, provider)
+
     @abstractmethod
     def apply_to_target(self, spec: SpecT, name: str, provider: StateDictProvider) -> None:
         ...
+
+    def apply_item(self, spec: SpecT, item: str, provider: StateDictProvider) -> None:
+        self.apply_to_target(spec, item, provider)

@@ -79,10 +79,6 @@ class FillTransform(BinaryMappingTransform[FillSpec]):
         "  fill: { from: x, to: x_zeros, mode: constant, value: 0 }"
     )
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._active_config: FillConfig | None = None
-
     def compile(self, payload: dict, default_model: str | None) -> FillSpec:
         payload = ensure_mapping_payload(payload, self.name)
         validate_payload_keys(
@@ -102,21 +98,11 @@ class FillTransform(BinaryMappingTransform[FillSpec]):
         if to_ref.slice_spec is not None:
             raise FillTransformError("fill destination must not be sliced")
 
-    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
-        if self._active_config is None:
-            raise FillTransformError("fill internal error: missing active config during apply")
+    def apply_item(self, spec: FillSpec, item: ResolvedMapping, provider: StateDictProvider) -> None:
         src_sd = provider.get_state_dict(item.src_model)
         dst_sd = provider.get_state_dict(item.dst_model)
         template = select_tensor(src_sd[item.src_name], item.src_slice)
-        dst_sd[item.dst_name] = build_filled_tensor_like(template, self._active_config, FillTransformError)
-
-    def apply(self, spec: object, provider: StateDictProvider):
-        typed = self.require_spec(spec)
-        self._active_config = typed.config
-        try:
-            return super().apply(spec, provider)
-        finally:
-            self._active_config = None
+        dst_sd[item.dst_name] = build_filled_tensor_like(template, spec.config, FillTransformError)
 
 
 def parse_fill_config(
