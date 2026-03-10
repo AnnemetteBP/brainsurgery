@@ -164,6 +164,10 @@ class SaveTransform(TypedTransform[SaveSpec]):
             raise SaveTransformError("save cannot infer output model without explicit alias")
         return typed.alias
 
+    def contributes_output_model(self, spec: object) -> bool:
+        del spec
+        return False
+
 
 def _resolve_max_io_workers(provider: StateDictProvider) -> int:
     value = getattr(provider, "max_io_workers", None)

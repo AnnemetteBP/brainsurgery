@@ -114,6 +114,10 @@ class HelpTransform(TypedTransform[HelpSpec]):
         del spec
         raise HelpTransformError("help does not infer an output model")
 
+    def contributes_output_model(self, spec: object) -> bool:
+        del spec
+        return False
+
     def completion_payload_start_candidates(self, prefix_text: str) -> list[str] | None:
         candidates = [name for name in list_transforms() if name.startswith(prefix_text)]
         if not prefix_text:

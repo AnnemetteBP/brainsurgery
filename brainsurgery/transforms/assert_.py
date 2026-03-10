@@ -69,5 +69,9 @@ class AssertTransform(TypedTransform[AssertSpec]):
 
         return next(iter(models))
 
+    def contributes_output_model(self, spec: object) -> bool:
+        del spec
+        return False
+
 
 register_transform(AssertTransform())

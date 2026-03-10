@@ -2,8 +2,8 @@ inputs:
   - models/gpt2
 output: { path: models/test, shard: 100MB }
 transforms:
-  # - help: diff  # Example only: does not infer an output model for this runnable plan.
-  # - prefixes: { mode: list }  # Example only: does not infer an output model for this runnable plan.
+  - help: diff
+  - prefixes: { mode: list }
   # - exit: {}  # Example only: would stop execution here.
   - dump: { target: ["*all"], format: tree }
   - dump: { target: ["*all"], format: json }

@@ -64,6 +64,10 @@ class ExitTransform(TypedTransform[ExitSpec]):
         del spec
         raise ExitTransformError("exit does not infer an output model")
 
+    def contributes_output_model(self, spec: object) -> bool:
+        del spec
+        return False
+
 
 
 

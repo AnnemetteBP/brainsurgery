@@ -60,6 +60,10 @@ class BaseTransform(ABC):
     def infer_output_model(self, spec: object) -> str:
         raise NotImplementedError
 
+    def contributes_output_model(self, spec: object) -> bool:
+        del spec
+        return True
+
     def completion_reference_keys(self) -> list[str]:
         return []
 
@@ -134,6 +138,8 @@ def infer_output_model(
     destination_models = set()
 
     for compiled in plan.transforms:
+        if not compiled.transform.contributes_output_model(compiled.spec):
+            continue
         inferred_model = _infer_transform_output_model(compiled, provider)
         if provider is not None and not _has_any_tensor(provider, inferred_model):
             continue

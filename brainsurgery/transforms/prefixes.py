@@ -156,6 +156,10 @@ class PrefixesTransform(TypedTransform[PrefixesSpec]):
             return typed.dest_alias
         raise PrefixesTransformError("prefixes does not infer an output model in this mode")
 
+    def contributes_output_model(self, spec: object) -> bool:
+        typed = self.require_spec(spec)
+        return typed.mode in {"add", "rename"}
+
     def completion_key_candidates(self, before_cursor: str, prefix_text: str) -> list[str] | None:
         used_keys = set(re.findall(r"([A-Za-z_][A-Za-z0-9_]*)\s*:", before_cursor))
         mode = _prefixes_mode(before_cursor)

@@ -96,6 +96,10 @@ class DumpTransform(UnaryTransform[DumpSpec]):
     def apply_to_target(self, spec: DumpSpec, name: str, provider: StateDictProvider) -> None:
         raise AssertionError("DumpTransform overrides apply() and does not use apply_to_target()")
 
+    def contributes_output_model(self, spec: object) -> bool:
+        del spec
+        return False
+
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
         typed = self.require_spec(spec)
 
