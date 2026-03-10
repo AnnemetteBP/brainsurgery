@@ -2,11 +2,8 @@ from __future__ import annotations
 
 from .unary import UnarySpec, UnaryTransform
 from ..refs import TensorRef, must_model
-from ..transform import (
-    StateDictProvider,
-    TransformError,
-    register_transform,
-)
+from ..transform import register_transform
+from ..transform_types import StateDictProvider, TransformError
 
 
 class DeleteTransformError(TransformError):

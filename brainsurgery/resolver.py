@@ -6,7 +6,7 @@ import torch
 
 from .mappings import ResolvedMapping, require_dest_present, resolve_name_mappings
 from .refs import TensorRef, format_tensor_ref, must_model, parse_slice, select_tensor
-from .transform import StateDictProvider, TransformError
+from .transform_types import StateDictProvider, TransformError
 
 
 def resolve_target_names(

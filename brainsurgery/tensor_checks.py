@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch
 
-from .transform import TransformError
+from .transform_types import TransformError
 
 
 def require_same_shape_dtype_device(

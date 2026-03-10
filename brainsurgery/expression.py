@@ -13,7 +13,8 @@ from .resolver import (
 )
 from .mappings import match_expr_names
 from .refs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
-from .transform import StateDictProvider, TransformError, ensure_mapping_payload, validate_payload_keys
+from .transform import ensure_mapping_payload, validate_payload_keys
+from .transform_types import StateDictProvider, TransformError
 
 
 class AssertTransformError(TransformError):

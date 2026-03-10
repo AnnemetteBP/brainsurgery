@@ -7,7 +7,6 @@ import typer
 
 from ..expressions import get_assert_expr_help, get_assert_expr_names
 from ..transform import (
-    StateDictProvider,
     TypedTransform,
     TransformControl,
     TransformError,
@@ -16,6 +15,7 @@ from ..transform import (
     list_transforms,
     register_transform,
 )
+from ..transform_types import StateDictProvider
 
 
 class HelpTransformError(TransformError):

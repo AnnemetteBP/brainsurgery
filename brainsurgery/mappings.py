@@ -15,7 +15,7 @@ from .refs import (
     parse_slice,
     validate_expr_kind,
 )
-from .transform import StateDictProvider, TransformError
+from .transform_types import StateDictProvider, TransformError
 
 
 @dataclass(frozen=True)

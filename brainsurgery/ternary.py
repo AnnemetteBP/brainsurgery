@@ -9,7 +9,8 @@ import re
 from .transforms.iterating import DestinationPolicy, IteratingTransform
 from .mappings import match_expr_names, match_structured_expr, rewrite_structured_expr
 from .refs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
-from .transform import StateDictProvider, TransformError, ensure_mapping_payload, require_expr, validate_payload_keys
+from .transform import ensure_mapping_payload, require_expr, validate_payload_keys
+from .transform_types import StateDictProvider, TransformError
 
 
 @dataclass(frozen=True)

@@ -6,7 +6,8 @@ from typing import Any, Dict, List, Literal, Optional, Protocol, runtime_checkab
 
 import yaml
 
-from .transform import CompiledTransform, TransformError, get_transform
+from .transform import CompiledTransform, get_transform
+from .transform_types import TransformError
 
 
 class PlanLoaderError(RuntimeError):

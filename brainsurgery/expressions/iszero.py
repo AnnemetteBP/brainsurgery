@@ -16,7 +16,7 @@ from ..expression import (
     resolve_tensors,
 )
 from ..refs import TensorRef
-from ..transform import StateDictProvider
+from ..transform_types import StateDictProvider
 
 
 @dataclass(frozen=True)

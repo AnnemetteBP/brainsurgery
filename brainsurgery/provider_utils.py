@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from .providers import BaseStateDictProvider
-from .transform import StateDictLike, StateDictProvider, TransformError
+from .transform_types import StateDictLike, StateDictProvider, TransformError
 
 
 def iter_alias_mappings(provider: StateDictProvider) -> list[tuple[str, dict[str, object]]]:

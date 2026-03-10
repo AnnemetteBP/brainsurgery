@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch
 
-from .transform import TransformError
+from .transform_types import TransformError
 
 
 _DTYPE_ALIASES: dict[str, torch.dtype] = {
@@ -44,4 +44,3 @@ def parse_torch_dtype(
         raise error_type(
             f"{op_name}.{field_name} unsupported dtype {raw!r}; expected one of: {allowed}"
         ) from exc
-

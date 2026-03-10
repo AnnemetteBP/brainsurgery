@@ -8,11 +8,10 @@ from ..dtypes import parse_torch_dtype
 from ..refs import TensorRef, must_model
 from .unary import UnarySpec, UnaryTransform
 from ..transform import (
-    StateDictProvider,
-    TransformError,
     register_transform,
     require_nonempty_string,
 )
+from ..transform_types import StateDictProvider, TransformError
 
 
 class CastInPlaceTransformError(TransformError):

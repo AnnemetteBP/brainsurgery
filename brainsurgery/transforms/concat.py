@@ -9,13 +9,13 @@ from ..mappings import match_expr_names
 from ..refs import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
 from ..transform import (
     BaseTransform,
-    StateDictProvider,
     TransformError,
     TransformResult,
     ensure_mapping_payload,
     register_transform,
     validate_payload_keys,
 )
+from ..transform_types import StateDictProvider
 
 
 class ConcatTransformError(TransformError):

@@ -15,7 +15,8 @@ from .model import (
     parse_shard_size,
 )
 from .plan import SurgeryPlan
-from .transform import StateDictLike, infer_output_model
+from .transform import infer_output_model
+from .transform_types import StateDictLike
 
 logger = logging.getLogger("brainsurgery")
 

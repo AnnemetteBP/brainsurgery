@@ -15,7 +15,7 @@ from ..expression import (
     require_mapping_assert_payload,
 )
 from ..refs import TensorRef
-from ..transform import StateDictProvider
+from ..transform_types import StateDictProvider
 
 
 @dataclass(frozen=True)

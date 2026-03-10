@@ -5,11 +5,8 @@ import torch
 from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..mappings import ResolvedMapping
 from ..refs import TensorRef, parse_slice, select_tensor
-from ..transform import (
-    StateDictProvider,
-    TransformError,
-    register_transform,
-)
+from ..transform import register_transform
+from ..transform_types import StateDictProvider, TransformError
 
 
 class CopyTransformError(TransformError):

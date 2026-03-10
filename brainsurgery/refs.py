@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 import torch
 
-from .transform import TransformError
+from .transform_types import TransformError
 
 
 Expr = str | list[str]

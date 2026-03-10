@@ -8,10 +8,9 @@ from .fill import FillConfig, build_filled_tensor_like, parse_fill_config
 from .unary import UnarySpec, UnaryTransform
 from ..refs import TensorRef, must_model, parse_slice, select_tensor
 from ..transform import (
-    StateDictProvider,
-    TransformError,
     register_transform,
 )
+from ..transform_types import StateDictProvider, TransformError
 
 
 class FillInPlaceTransformError(TransformError):

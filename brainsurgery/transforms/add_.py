@@ -6,7 +6,8 @@ from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..mappings import ResolvedMapping
 from ..refs import TensorRef, parse_slice, select_tensor
 from ..tensor_checks import require_same_shape_dtype_device
-from ..transform import StateDictProvider, TransformError, register_transform
+from ..transform import register_transform
+from ..transform_types import StateDictProvider, TransformError
 
 
 class AddInPlaceTransformError(TransformError):

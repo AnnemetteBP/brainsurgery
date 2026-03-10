@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..expression import AssertExpr, AssertTransformError, compile_assert_expr, register_assert_expr
-from ..transform import StateDictProvider
+from ..transform_types import StateDictProvider
 
 
 @dataclass(frozen=True)

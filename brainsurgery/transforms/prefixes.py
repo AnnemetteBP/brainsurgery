@@ -14,7 +14,6 @@ from ..provider_utils import (
     new_empty_state_dict,
 )
 from ..transform import (
-    StateDictProvider,
     TypedTransform,
     TransformError,
     TransformResult,
@@ -23,6 +22,7 @@ from ..transform import (
     require_nonempty_string,
     validate_payload_keys,
 )
+from ..transform_types import StateDictProvider
 
 
 class PrefixesTransformError(TransformError):
@@ -36,8 +36,8 @@ PrefixesMode = Literal["list", "add", "remove", "rename"]
 class PrefixesSpec:
     mode: PrefixesMode
     alias: str | None = None
-    from_alias: str | None = None
-    to_alias: str | None = None
+    source_alias: str | None = None
+    dest_alias: str | None = None
 
     def collect_models(self) -> set[str]:
         return set()
@@ -109,8 +109,8 @@ class PrefixesTransform(TypedTransform[PrefixesSpec]):
             _require_only_keys(payload, allowed={"mode", "from", "to"})
             return PrefixesSpec(
                 mode="rename",
-                from_alias=require_nonempty_string(payload, op_name=self.name, key="from"),
-                to_alias=require_nonempty_string(payload, op_name=self.name, key="to"),
+                source_alias=require_nonempty_string(payload, op_name=self.name, key="from"),
+                dest_alias=require_nonempty_string(payload, op_name=self.name, key="to"),
             )
 
         raise PrefixesTransformError("prefixes.mode must be one of: list, add, remove, rename")
@@ -139,9 +139,9 @@ class PrefixesTransform(TypedTransform[PrefixesSpec]):
             return TransformResult(name=self.name, count=1)
 
         if typed.mode == "rename":
-            assert typed.from_alias is not None
-            assert typed.to_alias is not None
-            _rename_alias(provider, source=typed.from_alias, dest=typed.to_alias)
+            assert typed.source_alias is not None
+            assert typed.dest_alias is not None
+            _rename_alias(provider, source=typed.source_alias, dest=typed.dest_alias)
             return TransformResult(name=self.name, count=1)
 
         raise PrefixesTransformError(f"unsupported prefixes mode: {typed.mode}")
@@ -152,8 +152,8 @@ class PrefixesTransform(TypedTransform[PrefixesSpec]):
             assert typed.alias is not None
             return typed.alias
         if typed.mode == "rename":
-            assert typed.to_alias is not None
-            return typed.to_alias
+            assert typed.dest_alias is not None
+            return typed.dest_alias
         raise PrefixesTransformError("prefixes does not infer an output model in this mode")
 
     def completion_key_candidates(self, before_cursor: str, prefix_text: str) -> list[str] | None:
@@ -263,12 +263,6 @@ def _rename_alias(provider: StateDictProvider, *, source: str, dest: str) -> Non
     _, mapping, value = _find_alias_mapping(provider, source)
     del mapping[source]
     mapping[dest] = value
-
-
-
-
-
-
 
 
 

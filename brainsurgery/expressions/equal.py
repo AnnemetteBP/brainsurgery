@@ -15,7 +15,7 @@ from ..expression import (
 )
 from ..refs import TensorRef, must_model
 from ..tensor_checks import require_same_shape_dtype_device
-from ..transform import StateDictProvider
+from ..transform_types import StateDictProvider
 
 
 @dataclass(frozen=True)

@@ -8,10 +8,9 @@ from .unary import UnarySpec, UnaryTransform
 from .clamp import _parse_bounds
 from ..refs import TensorRef, must_model, parse_slice, select_tensor
 from ..transform import (
-    StateDictProvider,
-    TransformError,
     register_transform,
 )
+from ..transform_types import StateDictProvider, TransformError
 
 
 class ClampInPlaceTransformError(TransformError):

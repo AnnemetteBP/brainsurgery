@@ -7,14 +7,13 @@ from ..mappings import ResolvedMapping, resolve_name_mappings
 from ..phlora import PhloraSvdCache, compute_phlora_factors, require_positive_rank
 from ..refs import TensorRef, must_model, parse_model_expr
 from ..transform import (
-    StateDictProvider,
-    TransformError,
     ensure_mapping_payload,
     register_transform,
     require_expr,
     require_numeric,
     validate_payload_keys,
 )
+from ..transform_types import StateDictProvider, TransformError
 
 
 class PhloraTransformError(TransformError):
@@ -23,18 +22,18 @@ class PhloraTransformError(TransformError):
 
 @dataclass(frozen=True)
 class PhloraSpec:
-    target_ref: TensorRef
-    target_b_ref: TensorRef
-    target_a_ref: TensorRef
+    source_ref: TensorRef
+    factor_b_ref: TensorRef
+    factor_a_ref: TensorRef
     rank: int
-    delete_original: bool
-    require_missing_dest: bool
+    delete_source: bool
+    require_missing_outputs: bool
 
     def collect_models(self) -> set[str]:
         return {
-            must_model(self.target_ref),
-            must_model(self.target_a_ref),
-            must_model(self.target_b_ref),
+            must_model(self.source_ref),
+            must_model(self.factor_a_ref),
+            must_model(self.factor_b_ref),
         }
 
 
@@ -42,10 +41,10 @@ class PhloraSpec:
 class ResolvedPhloraMapping:
     source_model: str
     source_name: str
-    target_a_model: str
-    target_a_name: str
-    target_b_model: str
-    target_b_name: str
+    factor_a_model: str
+    factor_a_name: str
+    factor_b_model: str
+    factor_b_name: str
 
 
 class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
@@ -99,21 +98,21 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
             required_keys=self.required_keys,
         )
 
-        target_ref = parse_model_expr(
+        source_ref = parse_model_expr(
             require_expr(payload, op_name=self.name, key="target"),
             default_model=default_model,
         )
-        target_model_default = target_ref.model if target_ref.model is not None else default_model
-        target_a_ref = parse_model_expr(
+        source_model_default = source_ref.model if source_ref.model is not None else default_model
+        factor_a_ref = parse_model_expr(
             require_expr(payload, op_name=self.name, key="target_a"),
-            default_model=target_model_default,
+            default_model=source_model_default,
         )
-        target_b_ref = parse_model_expr(
+        factor_b_ref = parse_model_expr(
             require_expr(payload, op_name=self.name, key="target_b"),
-            default_model=target_model_default,
+            default_model=source_model_default,
         )
 
-        self.validate_refs(target_ref, target_b_ref, target_a_ref)
+        self.validate_refs(source_ref, factor_b_ref, factor_a_ref)
 
         rank = require_positive_rank(
             require_numeric(payload, op_name=self.name, key="rank"),
@@ -121,25 +120,25 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
             op_name=self.name,
             key="rank",
         )
-        delete_original = _require_boolean(
+        delete_source = _require_boolean(
             payload,
             op_name=self.name,
             key="delete_original",
             default=True,
         )
-        require_missing_dest = _require_boolean(
+        require_missing_outputs = _require_boolean(
             payload,
             op_name=self.name,
             key="require_missing_dest",
             default=True,
         )
         return PhloraSpec(
-            target_ref=target_ref,
-            target_b_ref=target_b_ref,
-            target_a_ref=target_a_ref,
+            source_ref=source_ref,
+            factor_b_ref=factor_b_ref,
+            factor_a_ref=factor_a_ref,
             rank=rank,
-            delete_original=delete_original,
-            require_missing_dest=require_missing_dest,
+            delete_source=delete_source,
+            require_missing_outputs=require_missing_outputs,
         )
 
     def validate_refs(self, from_a_ref: TensorRef, from_b_ref: TensorRef, to_ref: TensorRef) -> None:
@@ -152,7 +151,7 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
 
     def infer_output_model(self, spec: object) -> str:
         typed = self.require_spec(spec)
-        model = typed.target_ref.model
+        model = typed.source_ref.model
         if model is None:
             raise PhloraTransformError("phlora output model missing")
         return model
@@ -162,30 +161,30 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
         spec: PhloraSpec,
         provider: StateDictProvider,
     ) -> list[ResolvedPhloraMapping]:
-        a_mappings = resolve_name_mappings(
-            from_ref=spec.target_ref,
-            to_ref=spec.target_a_ref,
+        factor_a_mappings = resolve_name_mappings(
+            from_ref=spec.source_ref,
+            to_ref=spec.factor_a_ref,
             provider=provider,
             op_name=self.name,
         )
-        b_mappings = resolve_name_mappings(
-            from_ref=spec.target_ref,
-            to_ref=spec.target_b_ref,
+        factor_b_mappings = resolve_name_mappings(
+            from_ref=spec.source_ref,
+            to_ref=spec.factor_b_ref,
             provider=provider,
             op_name=self.name,
         )
-        pairs = _pair_mappings(a_mappings, b_mappings, op_name=self.name)
+        pairs = _pair_mappings(factor_a_mappings, factor_b_mappings, op_name=self.name)
 
         resolved: list[ResolvedPhloraMapping] = []
-        for src, map_a, map_b in pairs:
+        for source_item, factor_a_item, factor_b_item in pairs:
             resolved.append(
                 ResolvedPhloraMapping(
-                    source_model=src.src_model,
-                    source_name=src.src_name,
-                    target_a_model=map_a.dst_model,
-                    target_a_name=map_a.dst_name,
-                    target_b_model=map_b.dst_model,
-                    target_b_name=map_b.dst_name,
+                    source_model=source_item.src_model,
+                    source_name=source_item.src_name,
+                    factor_a_model=factor_a_item.dst_model,
+                    factor_a_name=factor_a_item.dst_name,
+                    factor_b_model=factor_b_item.dst_model,
+                    factor_b_name=factor_b_item.dst_name,
                 )
             )
         return resolved
@@ -197,8 +196,8 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
         provider: StateDictProvider,
     ) -> None:
         src_sd = provider.get_state_dict(item.source_model)
-        a_sd = provider.get_state_dict(item.target_a_model)
-        b_sd = provider.get_state_dict(item.target_b_model)
+        factor_a_sd = provider.get_state_dict(item.factor_a_model)
+        factor_b_sd = provider.get_state_dict(item.factor_b_model)
 
         if item.source_name not in src_sd:
             raise PhloraTransformError(
@@ -207,18 +206,18 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
 
         source = src_sd[item.source_name]
 
-        if spec.require_missing_dest and item.target_a_name in a_sd:
+        if spec.require_missing_outputs and item.factor_a_name in factor_a_sd:
             raise PhloraTransformError(
-                f"phlora destination already exists: {item.target_a_model}::{item.target_a_name}"
+                f"phlora destination already exists: {item.factor_a_model}::{item.factor_a_name}"
             )
-        if spec.require_missing_dest and item.target_b_name in b_sd:
+        if spec.require_missing_outputs and item.factor_b_name in factor_b_sd:
             raise PhloraTransformError(
-                f"phlora destination already exists: {item.target_b_model}::{item.target_b_name}"
+                f"phlora destination already exists: {item.factor_b_model}::{item.factor_b_name}"
             )
-        if item.target_a_model == item.target_b_model and item.target_a_name == item.target_b_name:
+        if item.factor_a_model == item.factor_b_model and item.factor_a_name == item.factor_b_name:
             raise PhloraTransformError(
                 f"phlora destination collision for source {item.source_model}::{item.source_name}: "
-                f"{item.target_a_model}::{item.target_a_name}"
+                f"{item.factor_a_model}::{item.factor_a_name}"
             )
 
         lora_a, lora_b = compute_phlora_factors(
@@ -231,28 +230,30 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
             tensor_name=f"{item.source_model}::{item.source_name}",
         )
 
-        a_sd[item.target_a_name] = lora_a.to(dtype=source.dtype, device=source.device)
-        b_sd[item.target_b_name] = lora_b.to(dtype=source.dtype, device=source.device)
+        factor_a_sd[item.factor_a_name] = lora_a.to(dtype=source.dtype, device=source.device)
+        factor_b_sd[item.factor_b_name] = lora_b.to(dtype=source.dtype, device=source.device)
 
-        if spec.delete_original:
+        if spec.delete_source:
             del src_sd[item.source_name]
 
 
 def _pair_mappings(
-    a_mappings: list[ResolvedMapping],
-    b_mappings: list[ResolvedMapping],
+    factor_a_mappings: list[ResolvedMapping],
+    factor_b_mappings: list[ResolvedMapping],
     *,
     op_name: str,
 ) -> list[tuple[ResolvedMapping, ResolvedMapping, ResolvedMapping]]:
-    a_by_src = {(m.src_model, m.src_name): m for m in a_mappings}
-    b_by_src = {(m.src_model, m.src_name): m for m in b_mappings}
-    if set(a_by_src.keys()) != set(b_by_src.keys()):
+    factor_a_by_source = {(m.src_model, m.src_name): m for m in factor_a_mappings}
+    factor_b_by_source = {(m.src_model, m.src_name): m for m in factor_b_mappings}
+    if set(factor_a_by_source.keys()) != set(factor_b_by_source.keys()):
         raise PhloraTransformError(f"{op_name} target_a/target_b mappings do not match source set")
     pairs: list[tuple[ResolvedMapping, ResolvedMapping, ResolvedMapping]] = []
-    for key in sorted(a_by_src.keys()):
-        src = a_by_src[key]
-        pairs.append((src, a_by_src[key], b_by_src[key]))
+    for key in sorted(factor_a_by_source.keys()):
+        source_item = factor_a_by_source[key]
+        pairs.append((source_item, factor_a_by_source[key], factor_b_by_source[key]))
     return pairs
+
+
 def _require_boolean(payload: dict, *, op_name: str, key: str, default: bool) -> bool:
     if key not in payload:
         return default
@@ -260,12 +261,6 @@ def _require_boolean(payload: dict, *, op_name: str, key: str, default: bool) ->
     if not isinstance(value, bool):
         raise PhloraTransformError(f"{op_name}.{key} must be a boolean when provided")
     return value
-
-
-
-
-
-
 
 
 

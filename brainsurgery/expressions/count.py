@@ -13,7 +13,7 @@ from ..expression import (
     resolve_matches,
 )
 from ..refs import TensorRef
-from ..transform import StateDictProvider
+from ..transform_types import StateDictProvider
 
 
 @dataclass(frozen=True)

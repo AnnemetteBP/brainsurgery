@@ -1,19 +1,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import MutableMapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, Generic, List, Protocol, TypeVar
+from typing import TYPE_CHECKING, Dict, Generic, List, TypeVar
 
-import torch
+from .transform_types import StateDictLike, StateDictProvider, TransformError
 
 if TYPE_CHECKING:
     from .plan import SurgeryPlan
-
-
-class TransformError(RuntimeError):
-    pass
 
 
 from .refs import (
@@ -43,27 +38,10 @@ class TransformResult:
     name: str
     count: int
     control: TransformControl = TransformControl.CONTINUE
-
-
 @dataclass(frozen=True)
 class CompiledTransform:
     transform: "BaseTransform"
     spec: object
-
-
-class StateDictLike(MutableMapping[str, torch.Tensor]):
-    @abstractmethod
-    def slot(self, key: str) -> Any:
-        raise NotImplementedError
-
-    @abstractmethod
-    def bind_slot(self, key: str, slot: Any) -> None:
-        raise NotImplementedError
-
-
-class StateDictProvider(Protocol):
-    def get_state_dict(self, model: str) -> StateDictLike:
-        ...
 
 
 class BaseTransform(ABC):

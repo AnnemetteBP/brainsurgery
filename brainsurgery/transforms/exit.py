@@ -4,13 +4,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..transform import (
-    StateDictProvider,
     TypedTransform,
     TransformControl,
     TransformError,
     TransformResult,
     register_transform,
 )
+from ..transform_types import StateDictProvider
 
 
 class ExitTransformError(TransformError):

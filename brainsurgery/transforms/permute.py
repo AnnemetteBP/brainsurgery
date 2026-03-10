@@ -7,7 +7,8 @@ import torch
 from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..mappings import ResolvedMapping
 from ..refs import TensorRef, parse_slice, select_tensor
-from ..transform import StateDictProvider, TransformError, ensure_mapping_payload, register_transform, validate_payload_keys
+from ..transform import ensure_mapping_payload, register_transform, validate_payload_keys
+from ..transform_types import StateDictProvider, TransformError
 
 
 class PermuteTransformError(TransformError):
