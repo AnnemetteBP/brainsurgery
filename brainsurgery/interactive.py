@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import re
+import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -10,11 +12,25 @@ from omegaconf import OmegaConf
 from rich.console import Console
 from rich.panel import Panel
 
+from .expressions import get_assert_expr_names
 from .history import add_history_entry
 from .transform import get_transform, list_transforms
 
 logger = logging.getLogger("brainsurgery")
 console = Console()
+_REFERENCE_VALUE_KEYS = {
+    "from",
+    "to",
+    "target",
+    "left",
+    "right",
+    "from_a",
+    "from_b",
+    "target_a",
+    "target_b",
+    "of",
+}
+_NO_PAYLOAD_TRANSFORMS = {"exit", "prefixes"}
 
 try:
     import readline
@@ -63,12 +79,10 @@ def _collect_completion_candidates(state_dict_provider: Any | None) -> list[str]
     commands = list_transforms()
     candidates: set[str] = set()
     for command in commands:
-        transform = get_transform(command)
-        required_keys = set(getattr(transform, "required_keys", set()) or set())
-        if required_keys:
-            candidates.add(f"{command}:")
-        else:
+        if command in _NO_PAYLOAD_TRANSFORMS:
             candidates.add(command)
+        else:
+            candidates.add(f"{command}: ")
     return sorted(candidate for candidate in candidates if candidate)
 
 
@@ -143,7 +157,7 @@ def _collect_payload_candidates(
     active_transform: str | None,
     state_dict_provider: Any | None,
 ) -> list[str]:
-    candidates: set[str] = {"{ ", "}", "[ ", "]", ", ", ": "}
+    candidates: set[str] = {"{ ", "}", "[ ", "]", ", "}
 
     if active_transform:
         try:
@@ -166,6 +180,331 @@ def _collect_payload_candidates(
             candidates.add(f"{alias}::{name}")
 
     return sorted(candidate for candidate in candidates if candidate)
+
+
+def _payload_context(before_cursor: str) -> str:
+    trimmed = before_cursor.rstrip()
+    if not trimmed:
+        return "key"
+    if trimmed.endswith("{") or trimmed.endswith(","):
+        return "key"
+
+    last_colon = trimmed.rfind(":")
+    last_struct_sep = max(trimmed.rfind("{"), trimmed.rfind(","))
+    if last_colon > last_struct_sep:
+        return "value"
+    return "any"
+
+
+def _current_value_key(before_cursor: str) -> str | None:
+    match = re.search(r"([A-Za-z_][A-Za-z0-9_]*)\s*:\s*[^,{}[\]]*$", before_cursor)
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def _current_value_fragment(before_cursor: str) -> str | None:
+    match = re.search(r"[A-Za-z_][A-Za-z0-9_]*\s*:\s*([^,{}[\]]*)$", before_cursor)
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def _is_committed_value_fragment(raw_fragment: str) -> bool:
+    if not raw_fragment:
+        return False
+    return raw_fragment.endswith(" ") and bool(raw_fragment.strip())
+
+
+def _is_transform_payload_start(
+    *,
+    line_buffer: str,
+    begidx: int,
+    active_transform: str | None,
+    endidx: int | None = None,
+) -> bool:
+    if active_transform is None:
+        return False
+    if endidx is None:
+        endidx = begidx
+    if endidx < 0:
+        endidx = 0
+    if endidx > len(line_buffer):
+        endidx = len(line_buffer)
+    before = line_buffer[:endidx].strip()
+    return before in {f"{active_transform}:", f"{active_transform}: "}
+
+
+def _match_payload_candidates(
+    *,
+    text: str,
+    line_buffer: str,
+    begidx: int,
+    endidx: int | None = None,
+    payload_candidates: list[str],
+    active_transform: str | None = None,
+    model_aliases: list[str] | None = None,
+) -> list[str]:
+    def _dedupe_preserve_order(items: list[str]) -> list[str]:
+        seen: set[str] = set()
+        out: list[str] = []
+        for item in items:
+            if item in seen:
+                continue
+            seen.add(item)
+            out.append(item)
+        return out
+
+    def _used_keys(before_cursor: str) -> set[str]:
+        return set(re.findall(r"([A-Za-z_][A-Za-z0-9_]*)\s*:", before_cursor))
+
+    def _remaining_key_candidates(before_cursor: str) -> list[str]:
+        used_keys = _used_keys(before_cursor)
+        remaining = [
+            candidate
+            for candidate in payload_candidates
+            if candidate.endswith(": ") and candidate[:-2] not in used_keys
+        ]
+        if not remaining:
+            return ["}"]
+        return [f", {candidate}" for candidate in remaining] + ["}"]
+
+    def _reference_candidates(prefix_text: str, value_key: str | None) -> list[str]:
+        ref_candidates = [
+            candidate
+            for candidate in payload_candidates
+            if (
+                not candidate.endswith(": ")
+                and candidate not in {"{ ", "}", "[ ", "]", ", "}
+            )
+        ]
+        # Prefer alias:: over bare alias in reference contexts.
+        ref_candidates = [
+            candidate for candidate in ref_candidates if not (f"{candidate}::" in ref_candidates)
+        ]
+        ref_matches = [candidate for candidate in ref_candidates if candidate.startswith(prefix_text)]
+        if (
+            active_transform == "copy"
+            and value_key == "from"
+            and prefix_text
+            and prefix_text in ref_candidates
+        ):
+            ref_matches.append(f"{prefix_text}, to: ")
+        return _dedupe_preserve_order(ref_matches)
+
+    def _help_command_values(prefix_text: str) -> list[str]:
+        return [name for name in list_transforms() if name.startswith(prefix_text)]
+
+    def _help_command_key_candidates(prefix_text: str) -> list[str]:
+        candidate = "assert: "
+        if candidate.startswith(prefix_text):
+            return [candidate]
+        return []
+
+    def _help_assert_expr_values(prefix_text: str) -> list[str]:
+        return [name for name in get_assert_expr_names() if name.startswith(prefix_text)]
+
+    def _prefixes_mode(before_cursor: str) -> str | None:
+        match = re.search(r"\bmode\s*:\s*([A-Za-z_][A-Za-z0-9_]*)", before_cursor)
+        if match is None:
+            return None
+        return match.group(1).lower()
+
+    def _prefixes_key_candidates(before_cursor: str, prefix_text: str) -> list[str]:
+        used_keys = _used_keys(before_cursor)
+        mode = _prefixes_mode(before_cursor)
+        if mode is None:
+            options = ["mode: "]
+        elif mode == "list":
+            options = []
+        elif mode in {"add", "remove"}:
+            options = ["alias: "]
+        elif mode == "rename":
+            options = ["from: ", "to: "]
+        else:
+            options = ["mode: "]
+        filtered = [
+            candidate
+            for candidate in options
+            if candidate[:-2] not in used_keys and candidate.startswith(prefix_text)
+        ]
+        if filtered:
+            return filtered
+        return ["}"] if not options or all(opt[:-2] in used_keys for opt in options) else []
+
+    def _prefixes_value_candidates(value_key: str | None, prefix_text: str) -> list[str]:
+        if value_key == "mode":
+            return [
+                mode
+                for mode in ("list", "add", "remove", "rename")
+                if mode.startswith(prefix_text)
+            ]
+        if value_key in {"alias", "from", "to"}:
+            aliases = sorted(model_aliases or [])
+            return [alias for alias in aliases if alias.startswith(prefix_text)]
+        return []
+
+    raw_text = text
+    prefix = text
+    if endidx is None:
+        endidx = begidx + len(text)
+    if endidx < 0:
+        endidx = 0
+    if endidx > len(line_buffer):
+        endidx = len(line_buffer)
+    before_cursor = line_buffer[:endidx]
+    ctx = _payload_context(before_cursor)
+    if ctx == "key":
+        if "," in prefix:
+            prefix = prefix.rsplit(",", 1)[-1]
+        if "{" in prefix:
+            prefix = prefix.rsplit("{", 1)[-1]
+        if "}" in prefix:
+            prefix = prefix.rsplit("}", 1)[-1]
+        prefix = prefix.lstrip()
+    if _is_transform_payload_start(
+        line_buffer=line_buffer,
+        begidx=begidx,
+        active_transform=active_transform,
+        endidx=endidx,
+    ):
+        if active_transform == "help":
+            command_values = _help_command_values(prefix)
+            if not prefix:
+                return command_values + ["{ "]
+            return command_values
+        if not prefix:
+            return ["{ "]
+        return [candidate for candidate in ["{ "] if candidate.startswith(prefix)]
+
+    value_key = _current_value_key(before_cursor)
+    raw_value_fragment = _current_value_fragment(before_cursor) or ""
+    if active_transform == "help":
+        if ctx == "value" and value_key == "help":
+            if _is_committed_value_fragment(raw_value_fragment):
+                return ["}"]
+            return _help_command_values(prefix)
+        if ctx == "value" and value_key == "assert":
+            if _is_committed_value_fragment(raw_value_fragment):
+                return ["}"]
+            return _help_assert_expr_values(prefix)
+        if ctx == "key":
+            key_candidates = _help_command_key_candidates(prefix)
+            if raw_text.rstrip().endswith("{"):
+                return [f"{raw_text} {candidate}" for candidate in key_candidates]
+            if before_cursor.rstrip().endswith(",") and not before_cursor.endswith(", "):
+                if raw_text.rstrip().endswith(","):
+                    return [f"{raw_text} {candidate}" for candidate in key_candidates]
+                return [f" {candidate}" for candidate in key_candidates]
+            return key_candidates
+
+    if active_transform == "prefixes":
+        if ctx == "value":
+            if _is_committed_value_fragment(raw_value_fragment):
+                # After committing a value, offer structural next steps.
+                return _prefixes_key_candidates(before_cursor, prefix_text="")
+            return _prefixes_value_candidates(value_key, prefix)
+        if ctx == "key":
+            key_candidates = _prefixes_key_candidates(before_cursor, prefix)
+            if raw_text.rstrip().endswith("{"):
+                return [f"{raw_text} {candidate}" for candidate in key_candidates if candidate != "}"]
+            if before_cursor.rstrip().endswith(",") and not before_cursor.endswith(", "):
+                if raw_text.rstrip().endswith(","):
+                    return [
+                        f"{raw_text} {candidate}" for candidate in key_candidates if candidate != "}"
+                    ] + (["}"] if "}" in key_candidates else [])
+                return [f" {candidate}" for candidate in key_candidates if candidate != "}"] + (
+                    ["}"] if "}" in key_candidates else []
+                )
+            return key_candidates
+
+    if not prefix:
+        if ctx == "key":
+            used_keys = _used_keys(before_cursor)
+            key_candidates = [
+                candidate
+                for candidate in payload_candidates
+                if (
+                    candidate.endswith(": ")
+                    and candidate[:-2] not in used_keys
+                )
+            ]
+            if before_cursor.rstrip().endswith(",") and not before_cursor.endswith(", "):
+                if raw_text.rstrip().endswith(","):
+                    return [f"{raw_text} {candidate}" for candidate in key_candidates]
+                return [f" {candidate}" for candidate in key_candidates]
+            return key_candidates
+        if ctx == "value":
+            if _is_committed_value_fragment(raw_value_fragment):
+                return _remaining_key_candidates(before_cursor)
+            if value_key in _REFERENCE_VALUE_KEYS:
+                return _reference_candidates("", value_key)
+            return [candidate for candidate in payload_candidates if candidate in {"{ ", "[ ", "]", "}"}]
+        return payload_candidates
+
+    if "::" in prefix:
+        value_key = _current_value_key(before_cursor)
+        if ctx == "value" and value_key in _REFERENCE_VALUE_KEYS:
+            return _reference_candidates(prefix, value_key)
+        return [candidate for candidate in payload_candidates if "::" in candidate and candidate.startswith(prefix)]
+
+    if prefix[0] in "{[]},:":
+        return [candidate for candidate in payload_candidates if candidate.startswith(prefix)]
+
+    if prefix.endswith(":") or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*:?", prefix):
+        if ctx == "key":
+            used_keys = _used_keys(before_cursor)
+            key_candidates = [
+                candidate
+                for candidate in payload_candidates
+                if (
+                    candidate.endswith(": ")
+                    and candidate.startswith(prefix)
+                    and candidate[:-2] not in used_keys
+                )
+            ]
+            if before_cursor.rstrip().endswith(",") and not before_cursor.endswith(", "):
+                if raw_text.rstrip().endswith(","):
+                    return [f"{raw_text} {candidate}" for candidate in key_candidates]
+                return [f" {candidate}" for candidate in key_candidates]
+            return key_candidates
+
+    if ctx == "value":
+        value_key = _current_value_key(before_cursor)
+        raw_value_fragment = _current_value_fragment(before_cursor) or ""
+        if _is_committed_value_fragment(raw_value_fragment):
+            return [candidate for candidate in _remaining_key_candidates(before_cursor) if candidate.startswith(prefix)]
+        if value_key in _REFERENCE_VALUE_KEYS:
+            return _reference_candidates(prefix, value_key)
+        return [
+            candidate
+            for candidate in payload_candidates
+            if not candidate.endswith(": ") and candidate.startswith(prefix)
+        ]
+
+    return [candidate for candidate in payload_candidates if candidate.startswith(prefix)]
+
+
+def _render_completion_preview(matches: list[str], limit: int = 16) -> str:
+    if not matches:
+        return ""
+    shown = matches[:limit]
+    remaining = len(matches) - len(shown)
+    suffix = f" (+{remaining} more)" if remaining > 0 else ""
+    return "  ".join(shown) + suffix
+
+
+def _completion_display_hook(substitution: str, matches: list[str], longest_match_length: int) -> None:
+    del substitution, longest_match_length
+    preview = _render_completion_preview(matches)
+    if not preview:
+        return
+    sys.stdout.write(f"\nCompletions: {preview}\n")
+    try:
+        if readline is not None:
+            readline.redisplay()
+    except Exception:
+        pass
 
 
 def _is_top_level_completion_position(line_buffer: str, begidx: int) -> bool:
@@ -194,6 +533,8 @@ def _interactive_completion(
 
     previous_completer = readline.get_completer()
     previous_delims = readline.get_completer_delims()
+    get_display_hook = getattr(readline, "get_completion_display_matches_hook", None)
+    previous_display_hook = get_display_hook() if callable(get_display_hook) else None
     matches: list[str] = []
 
     def completer(text: str, state: int) -> str | None:
@@ -202,33 +543,73 @@ def _interactive_completion(
             try:
                 line_buffer = readline.get_line_buffer()
                 begidx = readline.get_begidx()
+                get_endidx = getattr(readline, "get_endidx", None)
+                if callable(get_endidx):
+                    endidx = get_endidx()
+                else:
+                    endidx = begidx + len(text)
             except Exception:
                 line_buffer = ""
                 begidx = 0
+                endidx = 0
 
             if _is_top_level_completion_position(line_buffer, begidx):
                 matches = [
                     candidate for candidate in top_level_candidates if candidate.startswith(text)
                 ]
+                if not matches and ":" in line_buffer:
+                    active_transform = _infer_active_transform(lines, line_buffer)
+                    payload_candidates = _collect_payload_candidates(
+                        active_transform=active_transform,
+                        state_dict_provider=state_dict_provider,
+                    )
+                    matches = _match_payload_candidates(
+                        text=text,
+                        line_buffer=line_buffer,
+                        begidx=begidx,
+                        endidx=endidx,
+                        payload_candidates=payload_candidates,
+                        active_transform=active_transform,
+                        model_aliases=sorted(_list_model_aliases(state_dict_provider)),
+                    )
             else:
                 active_transform = _infer_active_transform(lines, line_buffer)
                 payload_candidates = _collect_payload_candidates(
                     active_transform=active_transform,
                     state_dict_provider=state_dict_provider,
                 )
-                matches = [candidate for candidate in payload_candidates if candidate.startswith(text)]
+                matches = _match_payload_candidates(
+                    text=text,
+                    line_buffer=line_buffer,
+                    begidx=begidx,
+                    endidx=endidx,
+                    payload_candidates=payload_candidates,
+                    active_transform=active_transform,
+                    model_aliases=sorted(_list_model_aliases(state_dict_provider)),
+                )
         if state < len(matches):
             return matches[state]
         return None
 
     try:
-        readline.parse_and_bind("tab: complete")
+        readline.parse_and_bind("tab: menu-complete")
+    except Exception:
+        try:
+            readline.parse_and_bind("tab: complete")
+        except Exception:
+            pass
+
+    try:
+        readline.parse_and_bind('"\\e[Z": menu-complete-backward')
     except Exception:
         pass
 
     try:
         readline.set_completer_delims(" \t\n")
         readline.set_completer(completer)
+        set_display_hook = getattr(readline, "set_completion_display_matches_hook", None)
+        if callable(set_display_hook):
+            set_display_hook(_completion_display_hook)
     except Exception:
         logger.debug("Could not configure readline completion", exc_info=True)
 
@@ -238,6 +619,9 @@ def _interactive_completion(
         try:
             readline.set_completer(previous_completer)
             readline.set_completer_delims(previous_delims)
+            set_display_hook = getattr(readline, "set_completion_display_matches_hook", None)
+            if callable(set_display_hook):
+                set_display_hook(previous_display_hook)
         except Exception:
             logger.debug("Could not restore readline completion", exc_info=True)
 

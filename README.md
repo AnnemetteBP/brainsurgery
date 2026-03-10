@@ -115,6 +115,7 @@ Interactive prompt accepts:
 
 Special transforms:
 - `help`
+- `prefixes`
 - `exit`
 
 History is stored in `~/.brainsurgery_history`.
@@ -123,6 +124,9 @@ History is stored in `~/.brainsurgery_history`.
 All registered transforms:
 
 - `help`: show command/assert help (`help`, `help: copy`, `help: assert`, `help: { assert: equal }`).
+- `prefixes`: list or manage model prefixes (`alias::`):
+  `mode=list` (default), `mode=add` with `alias`, `mode=remove` with `alias`,
+  `mode=rename` with `from` + `to`.
 - `exit`: stop current execution loop.
 - `dump`: print tensor summaries (`format`: `json|tree|compact`, `verbosity`: `shape|stat|full`).
 - `assert`: evaluate assertion expressions; does not modify tensors.
