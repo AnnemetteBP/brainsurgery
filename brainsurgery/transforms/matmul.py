@@ -8,13 +8,11 @@ from ..ternary import (
     TernaryMappingSpec,
     TernaryMappingTransform,
 )
+from ..refs import TensorRef, parse_slice, select_tensor
 from ..transform import (
     StateDictProvider,
-    TensorRef,
     TransformError,
-    parse_slice,
     register_transform,
-    select_tensor,
 )
 
 

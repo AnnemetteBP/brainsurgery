@@ -13,8 +13,9 @@ from ..expression import (
     resolve_tensor_mappings,
     require_mapping_assert_payload,
 )
+from ..refs import TensorRef, must_model
 from ..tensor_checks import require_same_shape_dtype_device
-from ..transform import StateDictProvider, TensorRef, must_model
+from ..transform import StateDictProvider
 
 
 @dataclass(frozen=True)

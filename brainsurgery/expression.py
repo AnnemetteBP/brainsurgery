@@ -11,18 +11,9 @@ from .resolver import (
     resolve_tensor_mappings as resolve_tensor_mappings_generic,
     resolve_tensors as resolve_tensors_generic,
 )
-from .transform import (
-    StateDictProvider,
-    TensorRef,
-    TransformError,
-    ensure_mapping_payload,
-    format_tensor_ref,
-    must_model,
-    match_expr_names,
-    parse_model_expr,
-    parse_slice,
-    validate_payload_keys,
-)
+from .mappings import match_expr_names
+from .refs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
+from .transform import StateDictProvider, TransformError, ensure_mapping_payload, validate_payload_keys
 
 
 class AssertTransformError(TransformError):

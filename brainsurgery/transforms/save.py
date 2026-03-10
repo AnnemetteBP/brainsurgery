@@ -10,13 +10,13 @@ from ..model import (
     save_tensor_to_path,
 )
 from ..provider_utils import resolve_single_model_alias
+from ..refs import parse_model_expr
 from ..transform import (
     StateDictProvider,
     TypedTransform,
     TransformError,
     TransformResult,
     ensure_mapping_payload,
-    parse_model_expr,
     register_transform,
     require_nonempty_string,
     validate_payload_keys,

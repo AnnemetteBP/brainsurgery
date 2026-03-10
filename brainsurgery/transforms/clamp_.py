@@ -6,14 +6,11 @@ import torch
 
 from .unary import UnarySpec, UnaryTransform
 from .clamp import _parse_bounds
+from ..refs import TensorRef, must_model, parse_slice, select_tensor
 from ..transform import (
     StateDictProvider,
-    TensorRef,
     TransformError,
-    must_model,
-    parse_slice,
     register_transform,
-    select_tensor,
 )
 
 

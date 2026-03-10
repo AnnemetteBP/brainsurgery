@@ -12,7 +12,8 @@ from ..expression import (
     register_assert_expr,
     resolve_matches,
 )
-from ..transform import StateDictProvider, TensorRef
+from ..refs import TensorRef
+from ..transform import StateDictProvider
 
 
 @dataclass(frozen=True)

@@ -5,18 +5,15 @@ from dataclasses import dataclass
 import torch
 
 from .iterating import IteratingTransform
+from ..mappings import ResolvedMapping, resolve_name_mappings
+from ..refs import TensorRef, must_model, parse_model_expr
 from ..transform import (
-    ResolvedMapping,
     StateDictProvider,
-    TensorRef,
     TransformError,
     ensure_mapping_payload,
-    must_model,
-    parse_model_expr,
     register_transform,
     require_expr,
     require_numeric,
-    resolve_name_mappings,
     validate_payload_keys,
 )
 

@@ -7,13 +7,13 @@ from typing import Any
 from ..model import load_tensor_from_path
 from ..provider_utils import get_or_create_alias_state_dict
 from ..providers import BaseStateDictProvider, ProviderError
+from ..refs import parse_model_expr
 from ..transform import (
     StateDictProvider,
     TypedTransform,
     TransformError,
     TransformResult,
     ensure_mapping_payload,
-    parse_model_expr,
     register_transform,
     require_nonempty_string,
     validate_payload_keys,

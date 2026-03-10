@@ -5,12 +5,11 @@ from dataclasses import dataclass
 import torch
 
 from ..dtypes import parse_torch_dtype
+from ..refs import TensorRef, must_model
 from .unary import UnarySpec, UnaryTransform
 from ..transform import (
     StateDictProvider,
-    TensorRef,
     TransformError,
-    must_model,
     register_transform,
     require_nonempty_string,
 )

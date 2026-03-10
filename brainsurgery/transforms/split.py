@@ -5,19 +5,15 @@ from typing import Any
 
 import torch
 
+from ..mappings import match_expr_names
+from ..refs import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
 from ..transform import (
     BaseTransform,
     StateDictProvider,
-    TensorRef,
     TransformError,
     TransformResult,
     ensure_mapping_payload,
-    match_expr_names,
-    must_model,
-    parse_model_expr,
-    parse_slice,
     register_transform,
-    select_tensor,
     validate_payload_keys,
 )
 

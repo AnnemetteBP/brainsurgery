@@ -2,23 +2,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Generic, Iterable, TypeVar
+from typing import Generic, TypeVar
 
 from .iterating import DestinationPolicy, IteratingTransform
-from ..transform import (
-    ResolvedMapping,
-    StateDictProvider,
-    TensorRef,
-    TransformError,
-    ensure_mapping_payload,
-    must_model,
-    parse_model_expr,
-    require_dest_missing,
-    require_dest_present,
-    require_expr,
-    resolve_name_mappings,
-    validate_payload_keys,
-)
+from ..mappings import ResolvedMapping, require_dest_missing, require_dest_present, resolve_name_mappings
+from ..refs import TensorRef, must_model, parse_model_expr
+from ..transform import StateDictProvider, TransformError, ensure_mapping_payload, require_expr, validate_payload_keys
 
 
 @dataclass(frozen=True)

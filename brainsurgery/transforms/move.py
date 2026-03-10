@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
+from ..mappings import ResolvedMapping
+from ..refs import TensorRef
 from ..transform import (
-    ResolvedMapping,
     StateDictProvider,
-    TensorRef,
     TransformError,
     register_transform,
 )

@@ -6,18 +6,9 @@ import torch
 
 from ..dtypes import parse_torch_dtype
 from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
-from ..transform import (
-    ResolvedMapping,
-    StateDictProvider,
-    TensorRef,
-    TransformError,
-    ensure_mapping_payload,
-    parse_slice,
-    register_transform,
-    require_nonempty_string,
-    select_tensor,
-    validate_payload_keys,
-)
+from ..mappings import ResolvedMapping
+from ..refs import TensorRef, parse_slice, select_tensor
+from ..transform import StateDictProvider, TransformError, ensure_mapping_payload, register_transform, require_nonempty_string, validate_payload_keys
 
 
 class CastTransformError(TransformError):

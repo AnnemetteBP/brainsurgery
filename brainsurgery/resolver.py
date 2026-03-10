@@ -4,18 +4,9 @@ from typing import Any, Callable
 
 import torch
 
-from .transform import (
-    ResolvedMapping,
-    StateDictProvider,
-    TensorRef,
-    TransformError,
-    format_tensor_ref,
-    must_model,
-    parse_slice,
-    require_dest_present,
-    resolve_name_mappings,
-    select_tensor,
-)
+from .mappings import ResolvedMapping, require_dest_present, resolve_name_mappings
+from .refs import TensorRef, format_tensor_ref, must_model, parse_slice, select_tensor
+from .transform import StateDictProvider, TransformError
 
 
 def resolve_target_names(

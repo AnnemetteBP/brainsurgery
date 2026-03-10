@@ -3,15 +3,13 @@ from __future__ import annotations
 import torch
 
 from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
+from ..mappings import ResolvedMapping
+from ..refs import TensorRef, parse_slice, select_tensor
 from ..tensor_checks import require_same_shape_dtype_device
 from ..transform import (
-    ResolvedMapping,
     StateDictProvider,
-    TensorRef,
     TransformError,
-    parse_slice,
     register_transform,
-    select_tensor,
 )
 
 

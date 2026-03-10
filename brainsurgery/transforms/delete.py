@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from .unary import UnarySpec, UnaryTransform
+from ..refs import TensorRef, must_model
 from ..transform import (
     StateDictProvider,
-    TensorRef,
     TransformError,
-    must_model,
     register_transform,
 )
 
