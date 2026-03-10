@@ -2,6 +2,9 @@ inputs:
   - models/gpt2
 output: { path: models/test, shard: 100MB }
 transforms:
+  # - help: diff  # Example only: does not infer an output model for this runnable plan.
+  # - prefixes: { mode: list }  # Example only: does not infer an output model for this runnable plan.
+  # - exit: {}  # Example only: would stop execution here.
   - dump: { target: ["*all"], format: tree }
   - dump: { target: ["*all"], format: json }
   - dump: { target: ["*all"], format: compact}
@@ -28,6 +31,18 @@ transforms:
   - assert: { equal: { left: demo.diff, right: demo.y } }
   - subtract_: { from: demo.x, to: demo.diff }
   - assert: { equal: { left: demo.diff, right: demo.x } }
+  - fill: { from: demo.x, to: demo.filled, mode: constant, value: 1.0 }
+  - fill_: { target: demo.filled, mode: tensor, values: [0, 1, 2, 3, 4, 5, 6, 7] }
+  - clamp: { from: demo.filled, to: demo.clamped, min: 2.0, max: 5.0 }
+  - clamp_: { target: demo.clamped, min: 3.0, max: 4.0 }
+  - cast: { from: demo.clamped, to: demo.clamped_cast, dtype: float16 }
+  - cast_: { target: demo.clamped_cast, to: float32 }
+  - split: { from: demo.clamped, to: [demo.clamped_left, demo.clamped_right], sizes: [4, 4] }
+  - reshape: { from: demo.clamped, to: demo.clamped_2d, shape: [2, 4] }
+  - reshape_: { target: demo.clamped_2d, shape: [4, 2] }
+  - permute: { from: demo.clamped_2d, to: demo.clamped_perm, order: [1, 0] }
+  - matmul: { from_a: demo.clamped_2d, from_b: demo.clamped_perm, to: demo.matmul }
+  - diff: { left: "demo.clamped::[:4]", right: "demo.clamped::[4:]" }
   - copy: { from: "wte.weight::[:64,:]", to: demo.lm_head.sample }
   - copy: { from: "demo.lm_head.sample::[:32,:]", to: demo.lm_head.part0 }
   - copy: { from: "demo.lm_head.sample::[32:,:]", to: demo.lm_head.part1 }
@@ -64,6 +79,14 @@ transforms:
   - delete: { target: demo.sum }
   - delete: { target: demo.diff }
   - delete: { target: demo.prod }
+  - delete: { target: demo.filled }
+  - delete: { target: demo.clamped }
+  - delete: { target: demo.clamped_cast }
+  - delete: { target: demo.clamped_left }
+  - delete: { target: demo.clamped_right }
+  - delete: { target: demo.clamped_2d }
+  - delete: { target: demo.clamped_perm }
+  - delete: { target: demo.matmul }
   - delete: { target: demo.lm_head.sample }
   - delete: { target: demo.lm_head.part0 }
   - delete: { target: demo.lm_head.part1 }

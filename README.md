@@ -129,6 +129,7 @@ All registered transforms:
   `mode=rename` with `from` + `to`.
 - `exit`: stop current execution loop.
 - `dump`: print tensor summaries (`format`: `json|tree|compact`, `verbosity`: `shape|stat|full`).
+- `diff`: compare two tensor sets by name, reporting missing-on-left, missing-on-right, and differing tensors (`mode=refs` with `left`/`right`, or `mode=aliases` with `left_alias`/`right_alias`; optional `eps`).
 - `assert`: evaluate assertion expressions; does not modify tensors.
 - `load`: load full state_dict (`path`, optional `alias`) or single tensor (`path` + `to`, optional `format`).
 - `save`: save full state_dict (`path`, optional `alias`, `format`, `shard`) or single tensor (`target`).
