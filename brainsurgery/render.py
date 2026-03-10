@@ -6,7 +6,12 @@ from typing import Any
 import torch
 
 
-def summarize_tensor(tensor: torch.Tensor, *, verbosity: str) -> dict[str, Any]:
+def summarize_tensor(
+    tensor: torch.Tensor,
+    *,
+    verbosity: str,
+    access_counts: dict[str, int] | None = None,
+) -> dict[str, Any]:
     t = tensor.detach()
 
     if verbosity == "shape":
@@ -14,31 +19,43 @@ def summarize_tensor(tensor: torch.Tensor, *, verbosity: str) -> dict[str, Any]:
 
     if verbosity == "full":
         values_tensor = t.cpu()
-        return {
+        summary = {
             "shape": list(t.shape),
             "dtype": str(t.dtype),
             "device": str(t.device),
             "values": values_tensor.tolist(),
         }
+        if access_counts is not None:
+            summary["reads"] = access_counts["reads"]
+            summary["writes"] = access_counts["writes"]
+        return summary
 
     if t.numel() == 0:
-        return {
+        summary = {
             "shape": list(t.shape),
             "min": None,
             "max": None,
             "mean": None,
         }
+        if access_counts is not None:
+            summary["reads"] = access_counts["reads"]
+            summary["writes"] = access_counts["writes"]
+        return summary
 
     stat_tensor = t
     if not stat_tensor.is_floating_point():
         stat_tensor = stat_tensor.to(torch.float32)
 
-    return {
+    summary = {
         "shape": list(t.shape),
         "min": float(stat_tensor.min().item()),
         "max": float(stat_tensor.max().item()),
         "mean": float(stat_tensor.mean().item()),
     }
+    if access_counts is not None:
+        summary["reads"] = access_counts["reads"]
+        summary["writes"] = access_counts["writes"]
+    return summary
 
 
 def is_tensor_summary(node: Any) -> bool:
@@ -48,7 +65,9 @@ def is_tensor_summary(node: Any) -> bool:
         in (
             {"shape"},
             {"shape", "min", "max", "mean"},
+            {"shape", "min", "max", "mean", "reads", "writes"},
             {"shape", "dtype", "device", "values"},
+            {"shape", "dtype", "device", "values", "reads", "writes"},
         )
     )
 
@@ -74,27 +93,36 @@ def format_summary(summary: dict[str, Any], *, compact: bool) -> str:
     if set(summary.keys()) == {"shape"}:
         return f"shape={shape}"
 
-    if set(summary.keys()) == {"shape", "dtype", "device", "values"}:
-        return (
+    if {"dtype", "device", "values"}.issubset(summary.keys()):
+        rendered = (
             f"shape={shape} "
             f"dtype={summary['dtype']} "
             f"device={summary['device']} "
             f"values={summary['values']!r}"
         )
+        if "reads" in summary and "writes" in summary:
+            rendered += f" reads={summary['reads']} writes={summary['writes']}"
+        return rendered
 
     min_value = summary["min"]
     max_value = summary["max"]
     mean_value = summary["mean"]
 
     if min_value is None:
-        return f"shape={shape} min=None max=None mean=None"
+        rendered = f"shape={shape} min=None max=None mean=None"
+        if "reads" in summary and "writes" in summary:
+            rendered += f" reads={summary['reads']} writes={summary['writes']}"
+        return rendered
 
-    return (
+    rendered = (
         f"shape={shape} "
         f"min={min_value:.6g} "
         f"max={max_value:.6g} "
         f"mean={mean_value:.6g}"
     )
+    if "reads" in summary and "writes" in summary:
+        rendered += f" reads={summary['reads']} writes={summary['writes']}"
+    return rendered
 
 
 def render_tree(tree: dict[str, Any], *, compact: bool) -> str:

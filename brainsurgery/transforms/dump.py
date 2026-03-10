@@ -118,7 +118,12 @@ class DumpTransform(UnaryTransform[DumpSpec]):
         for name in tqdm(targets, desc=self.progress_desc, unit="tensor"):
             tensor = sd[name]
             view = select_tensor(tensor, slice_spec)
-            insert_into_tree(tree, name.split("."), summarize_tensor(view, verbosity=typed.verbosity))
+            access_counts = _maybe_get_access_counts(sd, name, verbosity=typed.verbosity)
+            insert_into_tree(
+                tree,
+                name.split("."),
+                summarize_tensor(view, verbosity=typed.verbosity, access_counts=access_counts),
+            )
 
         if typed.format == "json":
             typer.echo(json.dumps(tree, separators=(",", ":"), sort_keys=True))
@@ -175,6 +180,20 @@ def insert_into_tree(tree: dict[str, Any], parts: list[str], leaf: Any) -> None:
             raise DumpTransformError("invalid tree structure while building dump")
 
         node = child
+
+
+def _maybe_get_access_counts(
+    state_dict: Any,
+    key: str,
+    *,
+    verbosity: str,
+) -> dict[str, int] | None:
+    if verbosity not in {"stat", "full"}:
+        return None
+    access_counts = getattr(state_dict, "access_counts", None)
+    if not callable(access_counts):
+        return None
+    return access_counts(key)
 
 
 

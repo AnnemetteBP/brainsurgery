@@ -10,7 +10,7 @@ from ..refs import TensorRef, must_model, parse_slice, select_tensor
 from ..transform import (
     register_transform,
 )
-from ..transform_types import StateDictProvider, TransformError
+from ..transform_types import StateDictProvider, TransformError, note_tensor_write
 
 
 class ClampInPlaceTransformError(TransformError):
@@ -54,6 +54,7 @@ class ClampInPlaceTransform(UnaryTransform[ClampInPlaceSpec]):
         )
         view = select_tensor(sd[name], slice_spec)
         view.clamp_(min=spec.min_value, max=spec.max_value)
+        note_tensor_write(sd, name)
 
 
 

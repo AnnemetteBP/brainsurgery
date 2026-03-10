@@ -7,7 +7,7 @@ from ..mappings import ResolvedMapping
 from ..refs import TensorRef, parse_slice, select_tensor
 from ..tensor_checks import require_same_shape_dtype_device
 from ..transform import register_transform
-from ..transform_types import StateDictProvider, TransformError
+from ..transform_types import StateDictProvider, TransformError, note_tensor_write
 
 
 class AssignTransformError(TransformError):
@@ -53,6 +53,7 @@ class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
         )
 
         dst_view.copy_(src_view)
+        note_tensor_write(dst_sd, item.dst_name)
 
 
 

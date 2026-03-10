@@ -11,7 +11,7 @@ from ..ternary import (
 from ..refs import TensorRef, parse_slice, select_tensor
 from ..tensor_checks import require_same_shape_dtype_device3
 from ..transform import register_transform
-from ..transform_types import StateDictProvider, TransformError
+from ..transform_types import StateDictProvider, TransformError, note_tensor_write
 
 
 class AddTransformError(TransformError):
@@ -64,6 +64,7 @@ class AddTransform(TernaryMappingTransform[TernaryMappingSpec]):
             symbol="+",
         )
         dst_view.copy_(src_a_view + src_b_view)
+        note_tensor_write(dst_sd, item.dst_name)
 
 
 register_transform(AddTransform())

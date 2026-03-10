@@ -10,7 +10,7 @@ from ..refs import TensorRef, must_model, parse_slice, select_tensor
 from ..transform import (
     register_transform,
 )
-from ..transform_types import StateDictProvider, TransformError
+from ..transform_types import StateDictProvider, TransformError, note_tensor_write
 
 
 class FillInPlaceTransformError(TransformError):
@@ -70,6 +70,7 @@ class FillInPlaceTransform(UnaryTransform[FillInPlaceSpec]):
         view = select_tensor(sd[name], slice_spec)
         filled = build_filled_tensor_like(view, spec.config, FillInPlaceTransformError)
         view.copy_(filled)
+        note_tensor_write(sd, name)
 
 
 

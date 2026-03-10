@@ -15,6 +15,7 @@ from ..transform import (
     TransformError,
     register_transform,
 )
+from ..transform_types import note_tensor_write
 
 
 class MultiplyTransformError(TransformError):
@@ -66,6 +67,7 @@ class MultiplyTransform(TernaryMappingTransform[TernaryMappingSpec]):
             symbol="*",
         )
         dst_view.copy_(src_a_view * src_b_view)
+        note_tensor_write(dst_sd, item.dst_name)
 
 
 

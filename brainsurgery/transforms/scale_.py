@@ -12,6 +12,7 @@ from ..transform import (
     register_transform,
     require_numeric,
 )
+from ..transform_types import note_tensor_write
 
 
 class ScaleInPlaceTransformError(TransformError):
@@ -59,6 +60,7 @@ class ScaleInPlaceTransform(UnaryTransform[ScaleInPlaceSpec]):
         )
         view = select_tensor(tensor, slice_spec)
         view.mul_(spec.factor)
+        note_tensor_write(sd, name)
 
 
 
