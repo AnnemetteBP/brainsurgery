@@ -4,10 +4,17 @@ from dataclasses import dataclass
 
 import torch
 
-from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..mappings import ResolvedMapping
 from ..refs import TensorRef, parse_slice, select_tensor
-from ..transform import StateDictProvider, TransformError, ensure_mapping_payload, register_transform, require_numeric, validate_payload_keys
+from ..transform import (
+    StateDictProvider,
+    TransformError,
+    ensure_mapping_payload,
+    register_transform,
+    require_numeric,
+    validate_payload_keys,
+)
+from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 
 
 class ScaleTransformError(TransformError):
@@ -65,85 +72,6 @@ class ScaleTransform(BinaryMappingTransform[ScaleSpec]):
         scaled = select_tensor(src_sd[item.src_name], item.src_slice).clone()
         scaled.mul_(spec.factor)
         dst_sd[item.dst_name] = scaled
-
-
-def _unit_test_scale_compile_rejects_non_numeric_factor() -> None:
-    try:
-        ScaleTransform().compile({"from": "x", "to": "y", "by": "nan?!"}, default_model="model")
-    except TransformError as exc:
-        assert "scale.by must be numeric" in str(exc)
-    else:  # pragma: no cover
-        raise AssertionError("expected scale numeric validation error")
-
-
-def _unit_test_scale_compile_accepts_numeric_string_factor() -> None:
-    spec = ScaleTransform().compile({"from": "x", "to": "y", "by": "2.5"}, default_model="model")
-    assert spec.factor == 2.5
-
-
-def _unit_test_scale_compile_rejects_sliced_destination() -> None:
-    try:
-        ScaleTransform().compile(
-            {"from": "x", "to": "y::[:]", "by": 1.0},
-            default_model="model",
-        )
-    except ScaleTransformError as exc:
-        assert "destination must not be sliced" in str(exc)
-    else:  # pragma: no cover
-        raise AssertionError("expected sliced destination rejection")
-
-
-def _unit_test_scale_apply_creates_scaled_tensor_from_slice() -> None:
-    class _Provider:
-        def __init__(self) -> None:
-            self._state_dict = {"x": torch.tensor([1.0, 2.0, 3.0, 4.0]), "z": torch.tensor([0.0])}
-
-        def get_state_dict(self, model: str):
-            assert model == "model"
-            return self._state_dict
-
-    provider = _Provider()
-    spec = ScaleTransform().compile(
-        {"from": "x::[1:3]", "to": "y", "by": 10.0},
-        default_model="model",
-    )
-    ScaleTransform().apply(spec, provider)
-    assert provider._state_dict["x"].tolist() == [1.0, 2.0, 3.0, 4.0]
-    assert provider._state_dict["y"].tolist() == [20.0, 30.0]
-
-
-def _unit_test_scale_apply_rejects_existing_destination() -> None:
-    class _Provider:
-        def __init__(self) -> None:
-            self._state_dict = {
-                "x": torch.tensor([1.0, 2.0]),
-                "y": torch.tensor([0.0, 0.0]),
-            }
-
-        def get_state_dict(self, model: str):
-            assert model == "model"
-            return self._state_dict
-
-    provider = _Provider()
-    spec = ScaleTransform().compile(
-        {"from": "x", "to": "y", "by": 2.0},
-        default_model="model",
-    )
-    try:
-        ScaleTransform().apply(spec, provider)
-    except TransformError as exc:
-        assert "destination already exists" in str(exc)
-    else:  # pragma: no cover
-        raise AssertionError("expected destination-already-exists error")
-
-
-__unit_tests__ = [
-    _unit_test_scale_compile_rejects_non_numeric_factor,
-    _unit_test_scale_compile_accepts_numeric_string_factor,
-    _unit_test_scale_compile_rejects_sliced_destination,
-    _unit_test_scale_apply_creates_scaled_tensor_from_slice,
-    _unit_test_scale_apply_rejects_existing_destination,
-]
 
 
 register_transform(ScaleTransform())

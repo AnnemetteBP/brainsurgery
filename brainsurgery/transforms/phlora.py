@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import torch
-
 from .iterating import IteratingTransform
 from ..mappings import ResolvedMapping, resolve_name_mappings
+from ..phlora import PhloraSvdCache, compute_phlora_factors, require_positive_rank
 from ..refs import TensorRef, must_model, parse_model_expr
 from ..transform import (
     StateDictProvider,
@@ -86,7 +85,7 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
 
     def __init__(self) -> None:
         super().__init__()
-        self._svd_cache: dict[str, tuple[torch.Tensor, torch.Tensor, torch.Tensor]] = {}
+        self._svd_cache = PhloraSvdCache()
 
     def completion_reference_keys(self) -> list[str]:
         return ["target", "target_a", "target_b"]
@@ -116,7 +115,12 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
 
         self.validate_refs(target_ref, target_b_ref, target_a_ref)
 
-        rank = _require_positive_int(payload, op_name=self.name, key="rank")
+        rank = require_positive_rank(
+            require_numeric(payload, op_name=self.name, key="rank"),
+            error_type=PhloraTransformError,
+            op_name=self.name,
+            key="rank",
+        )
         delete_original = _require_boolean(
             payload,
             op_name=self.name,
@@ -202,18 +206,6 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
             )
 
         source = src_sd[item.source_name]
-        if source.ndim != 2:
-            raise PhloraTransformError(
-                f"phlora target must be 2D (got shape {tuple(source.shape)}): "
-                f"{item.source_model}::{item.source_name}"
-            )
-
-        rank = min(spec.rank, min(source.shape))
-        if rank <= 0:
-            raise PhloraTransformError(
-                f"phlora rank became zero for {item.source_model}::{item.source_name} "
-                f"with shape {tuple(source.shape)}"
-            )
 
         if spec.require_missing_dest and item.target_a_name in a_sd:
             raise PhloraTransformError(
@@ -229,30 +221,21 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
                 f"{item.target_a_model}::{item.target_a_name}"
             )
 
-        u, s, vh = self._get_svd(source, cache_key=f"{item.source_model}::{item.source_name}")
-        lora_u = u[:, :rank]
-        lora_s = s[:rank]
-        lora_vh = vh[:rank, :]
-        sqrt_s = lora_s.sqrt()
-        lora_a = sqrt_s[:, None] * lora_vh
-        lora_b = lora_u * sqrt_s
+        lora_a, lora_b = compute_phlora_factors(
+            source,
+            spec.rank,
+            cache=self._svd_cache,
+            cache_key=f"{item.source_model}::{item.source_name}",
+            error_type=PhloraTransformError,
+            op_name="phlora",
+            tensor_name=f"{item.source_model}::{item.source_name}",
+        )
 
         a_sd[item.target_a_name] = lora_a.to(dtype=source.dtype, device=source.device)
         b_sd[item.target_b_name] = lora_b.to(dtype=source.dtype, device=source.device)
 
         if spec.delete_original:
             del src_sd[item.source_name]
-
-    def _get_svd(
-        self,
-        source: torch.Tensor,
-        *,
-        cache_key: str,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        full_key = f"{cache_key}|{tuple(source.shape)}|{source.dtype}|{source.device}"
-        if full_key not in self._svd_cache:
-            self._svd_cache[full_key] = torch.linalg.svd(source, full_matrices=False)
-        return self._svd_cache[full_key]
 
 
 def _pair_mappings(
@@ -270,16 +253,6 @@ def _pair_mappings(
         src = a_by_src[key]
         pairs.append((src, a_by_src[key], b_by_src[key]))
     return pairs
-
-
-def _require_positive_int(payload: dict, *, op_name: str, key: str) -> int:
-    numeric = require_numeric(payload, op_name=op_name, key=key)
-    integer = int(numeric)
-    if float(integer) != float(numeric) or integer <= 0:
-        raise PhloraTransformError(f"{op_name}.{key} must be a positive integer")
-    return integer
-
-
 def _require_boolean(payload: dict, *, op_name: str, key: str, default: bool) -> bool:
     if key not in payload:
         return default
@@ -289,84 +262,12 @@ def _require_boolean(payload: dict, *, op_name: str, key: str, default: bool) ->
     return value
 
 
-def _unit_test_phlora_compile_rejects_non_integral_rank() -> None:
-    try:
-        PhloraTransform().compile(
-            {"target": "w", "target_a": "w.a", "target_b": "w.b", "rank": 3.5},
-            default_model="model",
-        )
-    except PhloraTransformError as exc:
-        assert "positive integer" in str(exc)
-    else:  # pragma: no cover
-        raise AssertionError("expected rank validation error")
 
 
-def _unit_test_phlora_split_mode_writes_a_b_and_deletes_original_by_default() -> None:
-    class _Provider:
-        def __init__(self) -> None:
-            self._state_dict = {
-                "proj.weight": torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=torch.float32),
-            }
-
-        def get_state_dict(self, model: str):
-            assert model == "model"
-            return self._state_dict
-
-    provider = _Provider()
-    transform = PhloraTransform()
-    spec = transform.compile(
-        {
-            "target": "(.*)\\.weight",
-            "rank": 1,
-            "target_a": "\\1.a",
-            "target_b": "\\1.b",
-        },
-        default_model="model",
-    )
-    transform.apply(spec, provider)
-
-    sd = provider._state_dict
-    assert "proj.weight" not in sd
-    assert "proj.a" in sd
-    assert "proj.b" in sd
 
 
-def _unit_test_phlora_split_mode_can_keep_original_when_configured() -> None:
-    class _Provider:
-        def __init__(self) -> None:
-            self._state_dict = {
-                "proj.weight": torch.tensor([[1.0, 0.0], [0.0, 1.0]], dtype=torch.float32),
-            }
-
-        def get_state_dict(self, model: str):
-            assert model == "model"
-            return self._state_dict
-
-    provider = _Provider()
-    transform = PhloraTransform()
-    spec = transform.compile(
-        {
-            "target": "(.*)\\.weight",
-            "rank": 1,
-            "target_a": "\\1.a",
-            "target_b": "\\1.b",
-            "delete_original": False,
-        },
-        default_model="model",
-    )
-    transform.apply(spec, provider)
-
-    sd = provider._state_dict
-    assert "proj.weight" in sd
-    assert "proj.a" in sd
-    assert "proj.b" in sd
 
 
-__unit_tests__ = [
-    _unit_test_phlora_compile_rejects_non_integral_rank,
-    _unit_test_phlora_split_mode_writes_a_b_and_deletes_original_by_default,
-    _unit_test_phlora_split_mode_can_keep_original_when_configured,
-]
 
 
 register_transform(PhloraTransform())

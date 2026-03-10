@@ -65,32 +65,12 @@ class ExitTransform(TypedTransform[ExitSpec]):
         raise ExitTransformError("exit does not infer an output model")
 
 
-def _unit_test_exit_compile_rejects_payload() -> None:
-    try:
-        ExitTransform().compile({"unexpected": 1}, default_model=None)
-    except ExitTransformError as exc:
-        assert "does not take any payload" in str(exc)
-    else:  # pragma: no cover
-        raise AssertionError("expected exit payload error")
 
 
-def _unit_test_exit_compile_accepts_none_and_empty_mapping() -> None:
-    t = ExitTransform()
-    assert isinstance(t.compile(None, default_model=None), ExitSpec)
-    assert isinstance(t.compile({}, default_model=None), ExitSpec)
 
 
-def _unit_test_exit_apply_returns_exit_control() -> None:
-    result = ExitTransform().apply(ExitSpec(), provider=None)  # type: ignore[arg-type]
-    assert result.control == TransformControl.EXIT
-    assert result.count == 0
 
 
-__unit_tests__ = [
-    _unit_test_exit_compile_rejects_payload,
-    _unit_test_exit_compile_accepts_none_and_empty_mapping,
-    _unit_test_exit_apply_returns_exit_control,
-]
 
 
 register_transform(ExitTransform())

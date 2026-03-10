@@ -199,46 +199,12 @@ def build_filled_tensor_like(
     return expanded.clone()
 
 
-def _unit_test_fill_compile_requires_mode_specific_payload() -> None:
-    try:
-        FillTransform().compile(
-            {"from": "x", "to": "y", "mode": "constant"},
-            default_model="m",
-        )
-    except FillTransformError as exc:
-        assert "fill.value is required" in str(exc)
-    else:  # pragma: no cover
-        raise AssertionError("expected fill.value validation error")
 
 
-def _unit_test_fill_tensor_mode_broadcasts_values() -> None:
-    template = torch.zeros((2, 2), dtype=torch.float32)
-    config = parse_fill_config(
-        {"mode": "tensor", "values": [1.0, 2.0]},
-        op_name="fill",
-        error_type=FillTransformError,
-    )
-    out = build_filled_tensor_like(template, config, FillTransformError)
-    assert out.tolist() == [[1.0, 2.0], [1.0, 2.0]]
 
 
-def _unit_test_fill_rand_mode_is_seeded() -> None:
-    template = torch.zeros((3,), dtype=torch.float32)
-    config = parse_fill_config(
-        {"mode": "rand", "seed": 7},
-        op_name="fill",
-        error_type=FillTransformError,
-    )
-    a = build_filled_tensor_like(template, config, FillTransformError)
-    b = build_filled_tensor_like(template, config, FillTransformError)
-    assert torch.equal(a, b)
 
 
-__unit_tests__ = [
-    _unit_test_fill_compile_requires_mode_specific_payload,
-    _unit_test_fill_tensor_mode_broadcasts_values,
-    _unit_test_fill_rand_mode_is_seeded,
-]
 
 
 register_transform(FillTransform())

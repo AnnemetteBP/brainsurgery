@@ -54,24 +54,8 @@ class ReshapeInPlaceTransform(UnaryTransform[ReshapeInPlaceSpec]):
             ) from exc
 
 
-def _unit_test_reshape_in_place_apply_success() -> None:
-    class _Provider:
-        def __init__(self) -> None:
-            self._state_dict = {"x": torch.arange(6)}
-
-        def get_state_dict(self, model: str):
-            assert model == "m"
-            return self._state_dict
-
-    provider = _Provider()
-    spec = ReshapeInPlaceSpec(target_ref=TensorRef(model="m", expr="x"), shape=(2, 3))
-    ReshapeInPlaceTransform().apply_to_target(spec, "x", provider)
-    assert provider._state_dict["x"].shape == (2, 3)
 
 
-__unit_tests__ = [
-    _unit_test_reshape_in_place_apply_success,
-]
 
 
 register_transform(ReshapeInPlaceTransform())

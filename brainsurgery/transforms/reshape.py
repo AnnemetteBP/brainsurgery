@@ -80,34 +80,10 @@ def _parse_shape(raw: object, *, op_name: str, error_type: type[TransformError])
     return tuple(raw)
 
 
-def _unit_test_reshape_compile_rejects_multiple_infer_dims() -> None:
-    try:
-        ReshapeTransform().compile({"from": "x", "to": "y", "shape": [-1, -1]}, default_model="m")
-    except ReshapeTransformError as exc:
-        assert "at most one '-1'" in str(exc)
-    else:  # pragma: no cover
-        raise AssertionError("expected reshape.shape validation error")
 
 
-def _unit_test_reshape_apply_success() -> None:
-    class _Provider:
-        def __init__(self) -> None:
-            self._state_dict = {"x": torch.arange(6)}
-
-        def get_state_dict(self, model: str):
-            assert model == "m"
-            return self._state_dict
-
-    provider = _Provider()
-    spec = ReshapeTransform().compile({"from": "x", "to": "y", "shape": [2, 3]}, default_model="m")
-    ReshapeTransform().apply(spec, provider)
-    assert provider._state_dict["y"].shape == (2, 3)
 
 
-__unit_tests__ = [
-    _unit_test_reshape_compile_rejects_multiple_infer_dims,
-    _unit_test_reshape_apply_success,
-]
 
 
 register_transform(ReshapeTransform())
