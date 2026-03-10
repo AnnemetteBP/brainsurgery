@@ -465,6 +465,27 @@ def _completion_display_hook(substitution: str, matches: list[str], longest_matc
         pass
 
 
+def _configure_readline_completion_bindings() -> None:
+    if readline is None:
+        return
+
+    commands = [
+        "set show-all-if-ambiguous on",
+        "set show-all-if-unmodified on",
+        "set completion-query-items 200",
+        "set page-completions off",
+        "set menu-complete-display-prefix on",
+        "tab: menu-complete",
+        '"\\e[Z": menu-complete-backward',
+    ]
+
+    for command in commands:
+        try:
+            readline.parse_and_bind(command)
+        except Exception:
+            logger.debug("Could not apply readline command %r", command, exc_info=True)
+
+
 def _is_top_level_completion_position(line_buffer: str, begidx: int) -> bool:
     if begidx > len(line_buffer):
         return False
@@ -491,8 +512,6 @@ def _interactive_completion(
 
     previous_completer = readline.get_completer()
     previous_delims = readline.get_completer_delims()
-    get_display_hook = getattr(readline, "get_completion_display_matches_hook", None)
-    previous_display_hook = get_display_hook() if callable(get_display_hook) else None
     matches: list[str] = []
 
     def completer(text: str, state: int) -> str | None:
@@ -549,25 +568,11 @@ def _interactive_completion(
             return matches[state]
         return None
 
-    try:
-        readline.parse_and_bind("tab: menu-complete")
-    except Exception:
-        try:
-            readline.parse_and_bind("tab: complete")
-        except Exception:
-            pass
-
-    try:
-        readline.parse_and_bind('"\\e[Z": menu-complete-backward')
-    except Exception:
-        pass
+    _configure_readline_completion_bindings()
 
     try:
         readline.set_completer_delims(" \t\n")
         readline.set_completer(completer)
-        set_display_hook = getattr(readline, "set_completion_display_matches_hook", None)
-        if callable(set_display_hook):
-            set_display_hook(_completion_display_hook)
     except Exception:
         logger.debug("Could not configure readline completion", exc_info=True)
 
@@ -577,9 +582,6 @@ def _interactive_completion(
         try:
             readline.set_completer(previous_completer)
             readline.set_completer_delims(previous_delims)
-            set_display_hook = getattr(readline, "set_completion_display_matches_hook", None)
-            if callable(set_display_hook):
-                set_display_hook(previous_display_hook)
         except Exception:
             logger.debug("Could not restore readline completion", exc_info=True)
 
