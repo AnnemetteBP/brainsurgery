@@ -11,6 +11,7 @@ from .execution import execute_transform_pairs
 from .history import configure_history
 from .interactive import normalize_transform_specs, prompt_interactive_transform
 from .plan import compile_plan
+from .provider_utils import list_model_aliases
 from .providers import create_state_dict_provider
 from .arena import ProviderError
 from .summary import build_raw_plan, write_executed_plan_summary
@@ -142,11 +143,9 @@ def run(
                     break
 
                 interactive_inputs = raw_plan.get("inputs", [])
-                list_aliases = getattr(state_dict_provider, "list_model_aliases", None)
-                if callable(list_aliases):
-                    aliases = sorted(list_aliases())
-                    if aliases:
-                        interactive_inputs = [f"{alias}::/dev/null" for alias in aliases]
+                aliases = sorted(list_model_aliases(state_dict_provider))
+                if aliases:
+                    interactive_inputs = [f"{alias}::/dev/null" for alias in aliases]
 
                 interactive_raw_plan = build_raw_plan(
                     inputs=interactive_inputs,

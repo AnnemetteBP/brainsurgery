@@ -13,6 +13,7 @@ from ..expression import (
     resolve_tensor_mappings,
     require_mapping_assert_payload,
 )
+from ..tensor_checks import require_same_shape_dtype_device
 from ..transform import StateDictProvider, TensorRef, must_model
 
 
@@ -25,21 +26,14 @@ class EqualExpr:
     def evaluate(self, provider: StateDictProvider) -> None:
         mappings = resolve_tensor_mappings(self.left, self.right, provider, op_name="equal")
         for left_ref, left, right_ref, right in mappings:
-            if left.shape != right.shape:
-                raise AssertTransformError(
-                    f"equal failed: shape mismatch {tuple(left.shape)} != {tuple(right.shape)} "
-                    f"for {format_ref(left_ref)} vs {format_ref(right_ref)}"
-                )
-            if left.dtype != right.dtype:
-                raise AssertTransformError(
-                    f"equal failed: dtype mismatch {left.dtype} != {right.dtype} "
-                    f"for {format_ref(left_ref)} vs {format_ref(right_ref)}"
-                )
-            if left.device != right.device:
-                raise AssertTransformError(
-                    f"equal failed: device mismatch {left.device} != {right.device} "
-                    f"for {format_ref(left_ref)} vs {format_ref(right_ref)}"
-                )
+            require_same_shape_dtype_device(
+                left,
+                right,
+                error_type=AssertTransformError,
+                op_name="comparing",
+                left_name=format_ref(left_ref),
+                right_name=format_ref(right_ref),
+            )
 
             if self.eps is None:
                 is_equal = torch.equal(left, right)

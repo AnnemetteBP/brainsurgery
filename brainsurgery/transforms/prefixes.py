@@ -6,6 +6,13 @@ from typing import Any, Literal
 
 import typer
 
+from ..provider_utils import (
+    find_alias_mapping,
+    get_or_create_alias_state_dict,
+    iter_alias_mappings,
+    list_model_aliases,
+    new_empty_state_dict,
+)
 from ..transform import (
     StateDictProvider,
     TypedTransform,
@@ -112,7 +119,7 @@ class PrefixesTransform(TypedTransform[PrefixesSpec]):
         typed = self.require_spec(spec)
 
         if typed.mode == "list":
-            aliases = sorted(_list_aliases(provider))
+            aliases = sorted(list_model_aliases(provider))
             if aliases:
                 typer.echo("Available model prefixes:")
                 for alias in aliases:
@@ -205,43 +212,31 @@ def _prefixes_mode(before_cursor: str) -> str | None:
 
 
 def _list_aliases(provider: StateDictProvider) -> set[str]:
-    list_aliases = getattr(provider, "list_model_aliases", None)
-    if callable(list_aliases):
-        aliases = list_aliases()
-        if isinstance(aliases, set):
-            return aliases
-        return set(aliases)
-
-    aliases: set[str] = set()
-    for _, mapping in _iter_alias_mappings(provider):
-        aliases.update(mapping.keys())
-    return aliases
+    return list_model_aliases(provider)
 
 
 def _iter_alias_mappings(provider: StateDictProvider) -> list[tuple[str, dict[str, object]]]:
-    mappings: list[tuple[str, dict[str, object]]] = []
-    for attr_name in ("model_paths", "state_dicts", "_state_dicts"):
-        value = getattr(provider, attr_name, None)
-        if isinstance(value, dict):
-            mappings.append((attr_name, value))
-    return mappings
+    return iter_alias_mappings(provider)
 
 
 def _find_alias_mapping(provider: StateDictProvider, alias: str) -> tuple[str, dict[str, object], object]:
-    for attr_name, mapping in _iter_alias_mappings(provider):
-        if alias in mapping:
-            return attr_name, mapping, mapping[alias]
-    raise PrefixesTransformError(f"unknown model prefix: {alias!r}")
+    return find_alias_mapping(provider, alias, error_type=PrefixesTransformError)
 
 
 def _create_empty_alias(provider: StateDictProvider, alias: str) -> None:
     if alias in _list_aliases(provider):
         raise PrefixesTransformError(f"model prefix already exists: {alias!r}")
 
-    get_or_create = getattr(provider, "get_or_create_alias_state_dict", None)
-    if callable(get_or_create):
-        get_or_create(alias)
+    try:
+        get_or_create_alias_state_dict(
+            provider,
+            alias,
+            error_type=PrefixesTransformError,
+            op_name="prefixes add",
+        )
         return
+    except PrefixesTransformError:
+        pass
 
     mappings = _iter_alias_mappings(provider)
     if not mappings:
@@ -252,14 +247,7 @@ def _create_empty_alias(provider: StateDictProvider, alias: str) -> None:
 
 
 def _new_empty_state_dict(mappings: list[tuple[str, dict[str, object]]]) -> object:
-    for _, mapping in mappings:
-        for value in mapping.values():
-            state_dict_type = type(value)
-            try:
-                return state_dict_type()
-            except Exception:
-                continue
-    return {}
+    return new_empty_state_dict(mappings)
 
 
 def _delete_alias(provider: StateDictProvider, alias: str) -> None:

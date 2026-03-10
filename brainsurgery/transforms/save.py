@@ -9,7 +9,7 @@ from ..model import (
     persist_state_dict,
     save_tensor_to_path,
 )
-from ..providers import BaseStateDictProvider
+from ..provider_utils import resolve_single_model_alias
 from ..transform import (
     StateDictProvider,
     TypedTransform,
@@ -120,7 +120,11 @@ class SaveTransform(TypedTransform[SaveSpec]):
 
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
         typed = self.require_spec(spec)
-        alias = typed.alias or _resolve_single_alias(provider)
+        alias = typed.alias or resolve_single_model_alias(
+            provider,
+            error_type=SaveTransformError,
+            op_name=self.name,
+        )
 
         if typed.tensor_name is None:
             state_dict = provider.get_state_dict(alias)
@@ -159,24 +163,6 @@ class SaveTransform(TypedTransform[SaveSpec]):
         if typed.alias is None:
             raise SaveTransformError("save cannot infer output model without explicit alias")
         return typed.alias
-
-def _resolve_single_alias(provider: StateDictProvider) -> str:
-    aliases = _list_aliases(provider)
-    if len(aliases) != 1:
-        raise SaveTransformError("save.alias is required when more than one model alias is available")
-    return next(iter(aliases))
-
-
-def _list_aliases(provider: StateDictProvider) -> set[str]:
-    if isinstance(provider, BaseStateDictProvider):
-        return provider.list_model_aliases()
-    state_dicts = getattr(provider, "state_dicts", None)
-    if isinstance(state_dicts, dict):
-        return set(state_dicts.keys())
-    shadow_state_dicts = getattr(provider, "_state_dicts", None)
-    if isinstance(shadow_state_dicts, dict):
-        return set(shadow_state_dicts.keys())
-    return set()
 
 
 def _resolve_max_io_workers(provider: StateDictProvider) -> int:

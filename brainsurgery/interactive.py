@@ -13,6 +13,10 @@ from rich.console import Console
 from rich.panel import Panel
 
 from .history import add_history_entry
+from .provider_utils import (
+    list_loaded_tensor_names as list_loaded_tensor_names_from_provider,
+    list_model_aliases as list_model_aliases_from_provider,
+)
 from .transform import get_transform, list_transforms
 
 logger = logging.getLogger("brainsurgery")
@@ -77,44 +81,19 @@ def _collect_completion_candidates(state_dict_provider: Any | None) -> list[str]
 
 
 def _list_model_aliases(state_dict_provider: Any | None) -> set[str]:
-    if state_dict_provider is None:
+    try:
+        return list_model_aliases_from_provider(state_dict_provider)
+    except Exception:
+        logger.debug("Could not list model aliases for completion", exc_info=True)
         return set()
-
-    list_aliases = getattr(state_dict_provider, "list_model_aliases", None)
-    if callable(list_aliases):
-        try:
-            return set(str(alias) for alias in list_aliases())
-        except Exception:
-            logger.debug("Could not list model aliases for completion", exc_info=True)
-
-    aliases: set[str] = set()
-    model_paths = getattr(state_dict_provider, "model_paths", None)
-    if isinstance(model_paths, dict):
-        aliases.update(str(alias) for alias in model_paths.keys())
-    state_dicts = getattr(state_dict_provider, "state_dicts", None)
-    if isinstance(state_dicts, dict):
-        aliases.update(str(alias) for alias in state_dicts.keys())
-    return aliases
 
 
 def _list_loaded_tensor_names(state_dict_provider: Any | None) -> dict[str, set[str]]:
-    if state_dict_provider is None:
+    try:
+        return list_loaded_tensor_names_from_provider(state_dict_provider)
+    except Exception:
+        logger.debug("Could not list tensor names for completion", exc_info=True)
         return {}
-
-    state_dicts = getattr(state_dict_provider, "state_dicts", None)
-    if not isinstance(state_dicts, dict):
-        return {}
-
-    loaded: dict[str, set[str]] = {}
-    for alias, state_dict in state_dicts.items():
-        keys = getattr(state_dict, "keys", None)
-        if not callable(keys):
-            continue
-        try:
-            loaded[str(alias)] = {str(name) for name in keys()}
-        except Exception:
-            logger.debug("Could not list tensor names for alias %s", alias, exc_info=True)
-    return loaded
 
 
 def _extract_transform_name(line: str) -> str | None:

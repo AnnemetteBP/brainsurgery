@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any
 
 from ..model import load_tensor_from_path
+from ..provider_utils import get_or_create_alias_state_dict
 from ..providers import BaseStateDictProvider, ProviderError
 from ..transform import (
-    StateDictLike,
     StateDictProvider,
     TypedTransform,
     TransformError,
@@ -120,7 +120,12 @@ class LoadTransform(TypedTransform[LoadSpec]):
             tensor = load_tensor_from_path(typed.path, format=typed.format)  # type: ignore[arg-type]
         except RuntimeError as exc:
             raise LoadTransformError(str(exc)) from exc
-        state_dict = _get_or_create_state_dict(provider, typed.alias)
+        state_dict = get_or_create_alias_state_dict(
+            provider,
+            typed.alias,
+            error_type=LoadTransformError,
+            op_name=self.name,
+        )
         if typed.tensor_name in state_dict:
             raise LoadTransformError(
                 f"load destination already exists: {typed.alias}::{typed.tensor_name}"
@@ -130,33 +135,6 @@ class LoadTransform(TypedTransform[LoadSpec]):
 
     def infer_output_model(self, spec: object) -> str:
         return self.require_spec(spec).alias
-
-
-def _provider_has_alias(provider: StateDictProvider, alias: str) -> bool:
-    if isinstance(provider, BaseStateDictProvider):
-        return provider.has_model_alias(alias)
-    aliases = _list_aliases(provider)
-    return alias in aliases
-
-
-def _list_aliases(provider: StateDictProvider) -> set[str]:
-    if isinstance(provider, BaseStateDictProvider):
-        return provider.list_model_aliases()
-    state_dicts = getattr(provider, "state_dicts", None)
-    if isinstance(state_dicts, dict):
-        return set(state_dicts.keys())
-    shadow_state_dicts = getattr(provider, "_state_dicts", None)
-    if isinstance(shadow_state_dicts, dict):
-        return set(shadow_state_dicts.keys())
-    return set()
-
-
-def _get_or_create_state_dict(provider: StateDictProvider, alias: str) -> StateDictLike:
-    if isinstance(provider, BaseStateDictProvider):
-        return provider.get_or_create_alias_state_dict(alias)
-    if _provider_has_alias(provider, alias):
-        return provider.get_state_dict(alias)
-    raise LoadTransformError("load requires a provider that supports creating new aliases")
 
 
 def _unit_test_load_compile_defaults_alias_to_model_without_context() -> None:

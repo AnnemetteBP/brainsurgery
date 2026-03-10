@@ -3,6 +3,7 @@ from __future__ import annotations
 import torch
 
 from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
+from ..tensor_checks import require_same_shape_dtype_device
 from ..transform import (
     ResolvedMapping,
     StateDictProvider,
@@ -47,22 +48,14 @@ class SubtractInPlaceTransform(BinaryMappingTransform[BinaryMappingSpec]):
 
         src_view = select_tensor(src_sd[item.src_name], item.src_slice)
         dst_view = select_tensor(dst_sd[item.dst_name], item.dst_slice)
-
-        if src_view.shape != dst_view.shape:
-            raise SubtractInPlaceTransformError(
-                f"shape mismatch subtracting {item.src_name} -> {item.dst_name}: "
-                f"{tuple(src_view.shape)} != {tuple(dst_view.shape)}"
-            )
-        if src_view.dtype != dst_view.dtype:
-            raise SubtractInPlaceTransformError(
-                f"dtype mismatch subtracting {item.src_name} -> {item.dst_name}: "
-                f"{src_view.dtype} != {dst_view.dtype}"
-            )
-        if src_view.device != dst_view.device:
-            raise SubtractInPlaceTransformError(
-                f"device mismatch subtracting {item.src_name} -> {item.dst_name}: "
-                f"{src_view.device} != {dst_view.device}"
-            )
+        require_same_shape_dtype_device(
+            src_view,
+            dst_view,
+            error_type=SubtractInPlaceTransformError,
+            op_name="subtracting",
+            left_name=item.src_name,
+            right_name=item.dst_name,
+        )
 
         dst_view.sub_(src_view)
 

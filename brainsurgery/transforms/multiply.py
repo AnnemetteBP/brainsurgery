@@ -8,6 +8,7 @@ from ..ternary import (
     TernaryMappingSpec,
     TernaryMappingTransform,
 )
+from ..tensor_checks import require_same_shape_dtype_device3
 from ..transform import (
     StateDictProvider,
     TensorRef,
@@ -55,31 +56,18 @@ class MultiplyTransform(TernaryMappingTransform[TernaryMappingSpec]):
         src_b_view = select_tensor(src_b_sd[item.src_b_name], item.src_b_slice)
         dst_view = select_tensor(dst_sd[item.dst_name], item.dst_slice)
 
-        self._validate_compatibility(item, src_a_view, src_b_view, dst_view)
+        require_same_shape_dtype_device3(
+            src_a_view,
+            src_b_view,
+            dst_view,
+            error_type=MultiplyTransformError,
+            op_name="multiplying",
+            first_name=item.src_a_name,
+            second_name=item.src_b_name,
+            dest_name=item.dst_name,
+            symbol="*",
+        )
         dst_view.copy_(src_a_view * src_b_view)
-
-    def _validate_compatibility(
-        self,
-        item: ResolvedTernaryMapping,
-        src_a_view: torch.Tensor,
-        src_b_view: torch.Tensor,
-        dst_view: torch.Tensor,
-    ) -> None:
-        if src_a_view.shape != src_b_view.shape or src_a_view.shape != dst_view.shape:
-            raise MultiplyTransformError(
-                f"shape mismatch multiplying {item.src_a_name} * {item.src_b_name} -> {item.dst_name}: "
-                f"{tuple(src_a_view.shape)} * {tuple(src_b_view.shape)} -> {tuple(dst_view.shape)}"
-            )
-        if src_a_view.dtype != src_b_view.dtype or src_a_view.dtype != dst_view.dtype:
-            raise MultiplyTransformError(
-                f"dtype mismatch multiplying {item.src_a_name} * {item.src_b_name} -> {item.dst_name}: "
-                f"{src_a_view.dtype} * {src_b_view.dtype} -> {dst_view.dtype}"
-            )
-        if src_a_view.device != src_b_view.device or src_a_view.device != dst_view.device:
-            raise MultiplyTransformError(
-                f"device mismatch multiplying {item.src_a_name} * {item.src_b_name} -> {item.dst_name}: "
-                f"{src_a_view.device} * {src_b_view.device} -> {dst_view.device}"
-            )
 
 
 def _unit_test_multiply_apply_success() -> None:

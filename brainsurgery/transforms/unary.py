@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Generic, Literal, TypeVar
 
 from .iterating import IteratingTransform
+from ..resolver import resolve_target_names as resolve_target_names_generic
 from ..transform import (
     StateDictProvider,
     TensorRef,
@@ -42,23 +43,13 @@ def resolve_target_names(
     op_name: str,
     error_type: type[TransformError],
 ) -> list[str]:
-    model = must_model(target_ref)
-    sd = provider.get_state_dict(model)
-
-    try:
-        matches = match_expr_names(
-            expr=target_ref.expr,
-            names=sd.keys(),
-            op_name=op_name,
-            role="target",
-        )
-    except TransformError as exc:
-        raise error_type(str(exc)) from exc
-
-    if not matches:
-        raise error_type(f"{op_name} matched zero tensors: {format_target_ref(target_ref)}")
-
-    return matches
+    return resolve_target_names_generic(
+        target_ref=target_ref,
+        provider=provider,
+        op_name=op_name,
+        match_names=match_expr_names,
+        error_type=error_type,
+    )
 
 
 class UnaryTransform(IteratingTransform[SpecT, str], ABC, Generic[SpecT]):
