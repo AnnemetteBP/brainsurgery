@@ -37,6 +37,9 @@ class AssertTransform(TypedTransform[AssertSpec]):
         "  assert: { not: { equal: { left: a.weight, right: b.weight } } }\n"
         "  assert: { dtype: { of: ln_f.weight, is: float32 } }\n"
         "  assert: { shape: { of: 'ln_f.weight::[:8]', is: [8] } }\n"
+        "  assert: { reads: { of: 'model::.*', ge: 1 } }\n"
+        "  assert: { writes: { of: ln_f.weight, lt: 2 } }\n"
+        "  assert: { dimensions: { of: '.*weight', ge: 2 } }\n"
         "  assert: { all: [ { exists: '.*weight' }, { dimensions: { of: ln_f.weight, is: 1 } } ] }"
     )
 

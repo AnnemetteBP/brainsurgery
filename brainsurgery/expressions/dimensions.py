@@ -16,18 +16,20 @@ from ..expression import (
 )
 from ..refs import TensorRef
 from ..transform_types import StateDictProvider
+from .scalar_compare import ScalarComparison, parse_scalar_comparison
 
 
 @dataclass(frozen=True)
 class DimensionsExpr:
     ref: TensorRef
-    is_value: int
+    comparison: ScalarComparison
 
     def evaluate(self, provider: StateDictProvider) -> None:
         for ref, tensor in resolve_tensors(self.ref, provider, op_name="dimensions.of"):
-            if len(tensor.shape) != self.is_value:
+            actual = len(tensor.shape)
+            if not self.comparison.matches(actual):
                 raise AssertTransformError(
-                    f"dimensions failed: {format_ref(ref)} has {len(tensor.shape)} dims, expected {self.is_value}"
+                    f"dimensions failed: {format_ref(ref)} has {actual} dims, expected {self.comparison.describe()}"
                 )
 
     def collect_models(self) -> set[str]:
@@ -37,19 +39,17 @@ class DimensionsExpr:
 @register_assert_expr(
     "dimensions",
     payload_kind="mapping",
-    allowed_keys={"of", "is"},
-    required_keys={"of", "is"},
-    description="Succeeds if the tensor has the given number of dimensions.",
+    allowed_keys={"of", "is", "ge", "gt", "le", "lt"},
+    required_keys={"of"},
+    description="Succeeds if the tensor rank satisfies the requested comparison(s).",
 )
 def compile_dimensions_expr(payload: Any, default_model: str | None) -> DimensionsExpr:
     payload = require_mapping_assert_payload(
         payload,
         op_name="dimensions",
-        allowed_keys={"of", "is"},
-        required_keys={"of", "is"},
+        allowed_keys={"of", "is", "ge", "gt", "le", "lt"},
+        required_keys={"of"},
     )
     ref = compile_tensor_ref_expr(payload["of"], default_model, "dimensions.of")
-    is_value = payload["is"]
-    if not isinstance(is_value, int):
-        raise AssertTransformError("dimensions.is must be an integer")
-    return DimensionsExpr(ref=ref, is_value=is_value)
+    comparison = parse_scalar_comparison(payload, op_name="dimensions")
+    return DimensionsExpr(ref=ref, comparison=comparison)

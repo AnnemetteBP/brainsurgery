@@ -174,10 +174,12 @@ Supported operators:
 - `exists`: reference matches at least one tensor.
 - `count`: exact number of matches (`of`, `is`).
 - `shape`: tensor shape check (`of`, `is` list of ints).
-- `dimensions`: rank check (`of`, `is` int).
+- `dimensions`: rank comparison (`of`, any of `is|ge|gt|le|lt`).
 - `dtype`: dtype check (`of`, `is` dtype string).
 - `equal`: pairwise equality between mapped tensors (`left`, `right`, optional `eps`).
 - `iszero`: all-zero check (`of`, optional `eps`).
+- `reads`: access-count comparison for instrumented backends (`of`, any of `is|ge|gt|le|lt`; `at_least`/`at_most` accepted as compatibility aliases).
+- `writes`: access-count comparison for instrumented backends (`of`, any of `is|ge|gt|le|lt`; `at_least`/`at_most` accepted as compatibility aliases).
 - `all`: all nested assertions succeed.
 - `any`: at least one nested assertion succeeds.
 - `not`: nested assertion fails.
