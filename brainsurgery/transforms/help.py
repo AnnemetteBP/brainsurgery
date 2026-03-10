@@ -114,6 +114,37 @@ class HelpTransform(TypedTransform[HelpSpec]):
         del spec
         raise HelpTransformError("help does not infer an output model")
 
+    def completion_payload_start_candidates(self, prefix_text: str) -> list[str] | None:
+        candidates = [name for name in list_transforms() if name.startswith(prefix_text)]
+        if not prefix_text:
+            return candidates + ["{ "]
+        return candidates
+
+    def completion_key_candidates(self, before_cursor: str, prefix_text: str) -> list[str] | None:
+        del before_cursor
+        candidate = "assert: "
+        if candidate.startswith(prefix_text):
+            return [candidate]
+        return []
+
+    def completion_value_candidates(
+        self,
+        value_key: str | None,
+        prefix_text: str,
+        model_aliases: list[str],
+    ) -> list[str] | None:
+        del model_aliases
+        if value_key == "help":
+            return [name for name in list_transforms() if name.startswith(prefix_text)]
+        if value_key == "assert":
+            return [name for name in get_assert_expr_names() if name.startswith(prefix_text)]
+        return None
+
+    def completion_committed_next_candidates(self, value_key: str | None) -> list[str] | None:
+        if value_key in {"help", "assert"}:
+            return ["}"]
+        return None
+
     def _print_all_commands(self) -> None:
         typer.echo("Available commands:")
         for name in list_transforms():

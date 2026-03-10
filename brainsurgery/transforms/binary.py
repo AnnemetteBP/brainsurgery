@@ -52,6 +52,9 @@ class BinaryMappingTransform(BaseTransform, ABC, Generic[SpecT]):
     allowed_keys = {"from", "to"}
     required_keys = {"from", "to"}
 
+    def completion_reference_keys(self) -> list[str]:
+        return ["from", "to"]
+
     def compile(self, payload: dict, default_model: str | None) -> SpecT:
         payload = ensure_mapping_payload(payload, self.name)
         validate_payload_keys(

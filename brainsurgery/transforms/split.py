@@ -6,6 +6,7 @@ from typing import Any
 import torch
 
 from ..transform import (
+    BaseTransform,
     StateDictProvider,
     TensorRef,
     TransformError,
@@ -38,7 +39,7 @@ class SplitSpec:
         return models
 
 
-class SplitTransform:
+class SplitTransform(BaseTransform):
     name = "split"
     error_type = SplitTransformError
     spec_type = SplitSpec
@@ -53,6 +54,9 @@ class SplitTransform:
         "Example:\n"
         "  split: { from: x, to: [x0, x1], sizes: [32, 32], dim: 0 }"
     )
+
+    def completion_reference_keys(self) -> list[str]:
+        return ["from", "to"]
 
     def compile(self, payload: Any, default_model: str | None) -> SplitSpec:
         payload = ensure_mapping_payload(payload, self.name)

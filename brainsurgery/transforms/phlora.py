@@ -87,6 +87,9 @@ class PhloraTransform(TernaryMappingTransform[PhloraSpec]):
         super().__init__()
         self._svd_cache: dict[str, tuple[torch.Tensor, torch.Tensor, torch.Tensor]] = {}
 
+    def completion_reference_keys(self) -> list[str]:
+        return ["target", "target_a", "target_b"]
+
     def compile(self, payload: dict, default_model: str | None) -> PhloraSpec:
         payload = ensure_mapping_payload(payload, self.name)
         validate_payload_keys(

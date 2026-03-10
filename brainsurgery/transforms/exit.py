@@ -27,6 +27,7 @@ class ExitTransform(TypedTransform[ExitSpec]):
     name = "exit"
     error_type = ExitTransformError
     spec_type = ExitSpec
+    completion_requires_payload = False
     help_text = (
         "Exits the current execution loop.\n"
         "\n"

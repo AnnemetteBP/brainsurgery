@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import Any, Literal
 
 import typer
@@ -39,6 +40,7 @@ class PrefixesTransform(TypedTransform[PrefixesSpec]):
     name = "prefixes"
     error_type = PrefixesTransformError
     spec_type = PrefixesSpec
+    completion_requires_payload = False
     allowed_keys = {"mode", "alias", "from", "to"}
     help_text = (
         "Lists or edits the currently available model prefixes (aliases).\n"
@@ -147,11 +149,59 @@ class PrefixesTransform(TypedTransform[PrefixesSpec]):
             return typed.to_alias
         raise PrefixesTransformError("prefixes does not infer an output model in this mode")
 
+    def completion_key_candidates(self, before_cursor: str, prefix_text: str) -> list[str] | None:
+        used_keys = set(re.findall(r"([A-Za-z_][A-Za-z0-9_]*)\s*:", before_cursor))
+        mode = _prefixes_mode(before_cursor)
+        if mode is None:
+            options = ["mode: "]
+        elif mode == "list":
+            options = []
+        elif mode in {"add", "remove"}:
+            options = ["alias: "]
+        elif mode == "rename":
+            options = ["from: ", "to: "]
+        else:
+            options = ["mode: "]
+        filtered = [
+            candidate
+            for candidate in options
+            if candidate[:-2] not in used_keys and candidate.startswith(prefix_text)
+        ]
+        if filtered:
+            return filtered
+        if options and not all(option[:-2] in used_keys for option in options):
+            return []
+        return ["}"]
+
+    def completion_value_candidates(
+        self,
+        value_key: str | None,
+        prefix_text: str,
+        model_aliases: list[str],
+    ) -> list[str] | None:
+        if value_key == "mode":
+            return [
+                mode for mode in ("list", "add", "remove", "rename") if mode.startswith(prefix_text)
+            ]
+        if value_key in {"alias", "from", "to"}:
+            return [alias for alias in sorted(model_aliases) if alias.startswith(prefix_text)]
+        return None
+
+    def completion_reference_keys(self) -> list[str]:
+        return []
+
 
 def _require_only_keys(payload: dict[str, object], *, allowed: set[str]) -> None:
     unexpected = set(payload) - allowed
     if unexpected:
         raise PrefixesTransformError(f"prefixes received unknown keys: {sorted(unexpected)}")
+
+
+def _prefixes_mode(before_cursor: str) -> str | None:
+    match = re.search(r"\bmode\s*:\s*([A-Za-z_][A-Za-z0-9_]*)", before_cursor)
+    if match is None:
+        return None
+    return match.group(1).lower()
 
 
 def _list_aliases(provider: StateDictProvider) -> set[str]:

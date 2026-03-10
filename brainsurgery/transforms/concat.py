@@ -6,6 +6,7 @@ from typing import Any
 import torch
 
 from ..transform import (
+    BaseTransform,
     StateDictProvider,
     TensorRef,
     TransformError,
@@ -37,7 +38,7 @@ class ConcatSpec:
         return models
 
 
-class ConcatTransform:
+class ConcatTransform(BaseTransform):
     name = "concat"
     error_type = ConcatTransformError
     spec_type = ConcatSpec
@@ -53,6 +54,9 @@ class ConcatTransform:
         "  concat: { from: [a::x, a::y], to: a::xy, dim: 0 }\n"
         "  concat: { from: ['a::x::[:, :4]', 'a::x::[:, 4:]'], to: a::x_rebuilt, dim: 1 }"
     )
+
+    def completion_reference_keys(self) -> list[str]:
+        return ["from", "to"]
 
     def compile(self, payload: Any, default_model: str | None) -> ConcatSpec:
         payload = ensure_mapping_payload(payload, self.name)

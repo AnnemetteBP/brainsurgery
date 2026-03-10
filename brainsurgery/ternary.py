@@ -73,6 +73,9 @@ class TernaryMappingTransform(BaseTransform, ABC, Generic[SpecT]):
     allowed_keys = {"from_a", "from_b", "to"}
     required_keys = {"from_a", "from_b", "to"}
 
+    def completion_reference_keys(self) -> list[str]:
+        return ["from_a", "from_b", "to"]
+
     def compile(self, payload: dict, default_model: str | None) -> SpecT:
         payload = ensure_mapping_payload(payload, self.name)
         validate_payload_keys(

@@ -74,6 +74,7 @@ class StateDictProvider(Protocol):
 
 class BaseTransform(ABC):
     name: str
+    completion_requires_payload: bool = True
 
     @abstractmethod
     def compile(self, payload: dict, default_model: str | None) -> object:
@@ -86,6 +87,30 @@ class BaseTransform(ABC):
     @abstractmethod
     def infer_output_model(self, spec: object) -> str:
         raise NotImplementedError
+
+    def completion_reference_keys(self) -> list[str]:
+        return []
+
+    def completion_payload_start_candidates(self, prefix_text: str) -> list[str] | None:
+        del prefix_text
+        return None
+
+    def completion_key_candidates(self, before_cursor: str, prefix_text: str) -> list[str] | None:
+        del before_cursor, prefix_text
+        return None
+
+    def completion_value_candidates(
+        self,
+        value_key: str | None,
+        prefix_text: str,
+        model_aliases: list[str],
+    ) -> list[str] | None:
+        del value_key, prefix_text, model_aliases
+        return None
+
+    def completion_committed_next_candidates(self, value_key: str | None) -> list[str] | None:
+        del value_key
+        return None
 
 
 SpecT = TypeVar("SpecT")

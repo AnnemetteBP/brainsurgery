@@ -60,6 +60,9 @@ class SaveTransform(TypedTransform[SaveSpec]):
         "  save: { path: /tmp/emb.npy, target: model::embed.weight, format: numpy }"
     )
 
+    def completion_reference_keys(self) -> list[str]:
+        return ["target"]
+
     def compile(self, payload: Any, default_model: str | None) -> SaveSpec:
         if isinstance(payload, str):
             payload = {"path": payload}

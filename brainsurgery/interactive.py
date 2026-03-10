@@ -12,14 +12,11 @@ from omegaconf import OmegaConf
 from rich.console import Console
 from rich.panel import Panel
 
-from .completion_config import load_completion_config
-from .expressions import get_assert_expr_names
 from .history import add_history_entry
 from .transform import get_transform, list_transforms
 
 logger = logging.getLogger("brainsurgery")
 console = Console()
-_COMPLETION_CONFIG = load_completion_config()
 
 try:
     import readline
@@ -67,11 +64,9 @@ def _collect_completion_candidates(state_dict_provider: Any | None) -> list[str]
     del state_dict_provider
     commands = list_transforms()
     candidates: set[str] = set()
-    no_payload_transforms = set(
-        _COMPLETION_CONFIG.get("top_level", {}).get("no_payload_transforms", [])
-    )
     for command in commands:
-        if command in no_payload_transforms:
+        transform = get_transform(command)
+        if not getattr(transform, "completion_requires_payload", True):
             candidates.add(command)
         else:
             candidates.add(f"{command}: ")
@@ -237,9 +232,12 @@ def _match_payload_candidates(
     active_transform: str | None = None,
     model_aliases: list[str] | None = None,
 ) -> list[str]:
-    transform_rules = _COMPLETION_CONFIG.get("transforms", {}).get(active_transform or "", {})
-    reference_value_keys = set(_COMPLETION_CONFIG.get("reference_value_keys", []))
-    reference_key_order = list(_COMPLETION_CONFIG.get("reference_key_order", []))
+    transform = None
+    if active_transform is not None:
+        try:
+            transform = get_transform(active_transform)
+        except Exception:
+            transform = None
 
     def _dedupe_preserve_order(items: list[str]) -> list[str]:
         seen: set[str] = set()
@@ -266,19 +264,10 @@ def _match_payload_candidates(
         return [f", {candidate}" for candidate in remaining] + ["}"]
 
     def _ordered_transform_keys() -> list[str]:
-        if active_transform is None:
+        if transform is None:
             return []
-        try:
-            transform = get_transform(active_transform)
-        except Exception:
-            return []
-
-        required_keys = set(getattr(transform, "required_keys", set()) or set())
-        allowed_keys = set(getattr(transform, "allowed_keys", set()) or set())
-        keys = required_keys | allowed_keys
-        ordered = [key for key in reference_key_order if key in keys]
-        remaining = sorted(key for key in keys if key in reference_value_keys and key not in ordered)
-        return ordered + remaining
+        keys = getattr(transform, "completion_reference_keys", lambda: [])()
+        return [key for key in keys if isinstance(key, str) and key]
 
     def _next_reference_key(before_cursor: str, current_key: str | None) -> str | None:
         if current_key is None:
@@ -328,85 +317,24 @@ def _match_payload_candidates(
             ref_matches.append(f"{prefix_text}, {next_key}: ")
         return _dedupe_preserve_order(ref_matches)
 
-    def _resolve_source(source_name: str, *, prefix_text: str, value_rule: dict[str, Any] | None = None) -> list[str]:
-        if source_name == "transform_names":
-            return [name for name in list_transforms() if name.startswith(prefix_text)]
-        if source_name == "assert_expr_names":
-            return [name for name in get_assert_expr_names() if name.startswith(prefix_text)]
-        if source_name == "model_aliases":
-            return [alias for alias in sorted(model_aliases or []) if alias.startswith(prefix_text)]
-        if source_name == "static":
-            values = value_rule.get("values", []) if value_rule is not None else []
-            return [value for value in values if value.startswith(prefix_text)]
-        return []
-
     def _key_candidates_for_transform(
         *,
         before_cursor: str,
         prefix_text: str,
     ) -> list[str] | None:
-        key_context = transform_rules.get("key_context")
-        if not isinstance(key_context, dict):
+        if transform is None:
             return None
-
-        options: list[str] = []
-        keys = key_context.get("keys")
-        if isinstance(keys, list):
-            options = [f"{key}: " for key in keys]
-        dynamic_source = key_context.get("dynamic_source")
-        if isinstance(dynamic_source, str):
-            options = [f"{value}: " for value in _resolve_source(dynamic_source, prefix_text="", value_rule=None)]
-
-        mode_selector = key_context.get("mode_selector")
-        if isinstance(mode_selector, dict):
-            selected_mode = _lookup_mapping_value(before_cursor, mode_selector.get("key"))
-            mode_values = mode_selector.get("values", {})
-            mode_keys = mode_values.get(selected_mode, mode_selector.get("default", []))
-            options = [f"{key}: " for key in mode_keys]
-
-        used_keys = _used_keys(before_cursor)
-        filtered = [
-            candidate
-            for candidate in options
-            if candidate[:-2] not in used_keys and candidate.startswith(prefix_text)
-        ]
-        if filtered:
-            return filtered
-        if options and not all(option[:-2] in used_keys for option in options):
-            return []
-        return ["}"]
+        return transform.completion_key_candidates(before_cursor, prefix_text)
 
     def _value_candidates_for_transform(value_key: str | None, prefix_text: str) -> list[str] | None:
-        value_context = transform_rules.get("value_context")
-        if not isinstance(value_context, dict) or value_key is None:
+        if transform is None:
             return None
-        value_rule = value_context.get(value_key)
-        if not isinstance(value_rule, dict):
-            return None
-        source_name = value_rule.get("source")
-        if not isinstance(source_name, str):
-            return None
-        return _resolve_source(source_name, prefix_text=prefix_text, value_rule=value_rule)
+        return transform.completion_value_candidates(value_key, prefix_text, sorted(model_aliases or []))
 
     def _committed_next_candidates(value_key: str | None) -> list[str] | None:
-        value_context = transform_rules.get("value_context")
-        if not isinstance(value_context, dict) or value_key is None:
+        if transform is None:
             return None
-        value_rule = value_context.get(value_key)
-        if not isinstance(value_rule, dict):
-            return None
-        committed_next = value_rule.get("committed_next")
-        if isinstance(committed_next, list):
-            return list(committed_next)
-        return None
-
-    def _lookup_mapping_value(before_cursor: str, key: object) -> str | None:
-        if not isinstance(key, str) or not key:
-            return None
-        match = re.search(rf"\b{re.escape(key)}\s*:\s*([A-Za-z_][A-Za-z0-9_]*)", before_cursor)
-        if match is None:
-            return None
-        return match.group(1).lower()
+        return transform.completion_committed_next_candidates(value_key)
 
     raw_text = text
     prefix = text
@@ -432,17 +360,13 @@ def _match_payload_candidates(
         active_transform=active_transform,
         endidx=endidx,
     ):
-        payload_start = transform_rules.get("payload_start", {})
-        open_brace = payload_start.get("open_brace", "{ ")
-        empty_value_source = payload_start.get("empty_value_source")
-        if isinstance(empty_value_source, str):
-            command_values = _resolve_source(empty_value_source, prefix_text=prefix)
-            if not prefix:
-                return command_values + [open_brace]
-            return command_values
+        if transform is not None:
+            payload_start_candidates = transform.completion_payload_start_candidates(prefix)
+            if payload_start_candidates is not None:
+                return payload_start_candidates
         if not prefix:
-            return [open_brace]
-        return [candidate for candidate in [open_brace] if candidate.startswith(prefix)]
+            return ["{ "]
+        return [candidate for candidate in ["{ "] if candidate.startswith(prefix)]
 
     value_key = _current_value_key(before_cursor)
     raw_value_fragment = _current_value_fragment(before_cursor) or ""
@@ -483,7 +407,7 @@ def _match_payload_candidates(
             transform_value_candidates = _value_candidates_for_transform(value_key, "")
             if transform_value_candidates is not None:
                 return transform_value_candidates
-            if value_key in reference_value_keys:
+            if value_key in _ordered_transform_keys():
                 return _reference_candidates("", value_key)
             return [candidate for candidate in payload_candidates if candidate in {"{ ", "[ ", "]", "}"}]
         return payload_candidates
@@ -492,7 +416,7 @@ def _match_payload_candidates(
         value_key = _current_value_key(before_cursor)
         if ctx == "value" and _value_candidates_for_transform(value_key, prefix) is not None:
             return _value_candidates_for_transform(value_key, prefix) or []
-        if ctx == "value" and value_key in reference_value_keys:
+        if ctx == "value" and value_key in _ordered_transform_keys():
             return _reference_candidates(prefix, value_key)
         return [candidate for candidate in payload_candidates if "::" in candidate and candidate.startswith(prefix)]
 
@@ -526,7 +450,7 @@ def _match_payload_candidates(
         transform_value_candidates = _value_candidates_for_transform(value_key, prefix)
         if transform_value_candidates is not None:
             return transform_value_candidates
-        if value_key in reference_value_keys:
+        if value_key in _ordered_transform_keys():
             return _reference_candidates(prefix, value_key)
         return [
             candidate

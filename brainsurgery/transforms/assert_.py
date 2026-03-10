@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..expressions import AssertExpr, AssertTransformError, compile_assert_expr
+from ..expressions import AssertExpr, AssertTransformError, compile_assert_expr, get_assert_expr_names
 from ..transform import (
     StateDictProvider,
     TypedTransform,
@@ -39,6 +39,16 @@ class AssertTransform(TypedTransform[AssertSpec]):
         "  assert: { shape: { of: 'ln_f.weight::[:8]', is: [8] } }\n"
         "  assert: { all: [ { exists: '.*weight' }, { dimensions: { of: ln_f.weight, is: 1 } } ] }"
     )
+
+    def completion_payload_start_candidates(self, prefix_text: str) -> list[str] | None:
+        candidates = [name for name in get_assert_expr_names() if name.startswith(prefix_text)]
+        if not prefix_text:
+            return candidates + ["{ "]
+        return candidates
+
+    def completion_key_candidates(self, before_cursor: str, prefix_text: str) -> list[str] | None:
+        del before_cursor
+        return [f"{name}: " for name in get_assert_expr_names() if name.startswith(prefix_text)]
 
     def compile(self, payload: Any, default_model: str | None) -> AssertSpec:
         payload = ensure_mapping_payload(payload, self.name)

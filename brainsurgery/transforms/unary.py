@@ -74,6 +74,9 @@ class UnaryTransform(BaseTransform, ABC, Generic[SpecT]):
     target_key: str = "target"
     slice_policy: Literal["allow", "forbid"] = "forbid"
 
+    def completion_reference_keys(self) -> list[str]:
+        return [self.target_key]
+
     def compile(self, payload: dict, default_model: str | None) -> SpecT:
         payload = ensure_mapping_payload(payload, self.name)
         validate_payload_keys(

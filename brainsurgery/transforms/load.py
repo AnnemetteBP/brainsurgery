@@ -54,6 +54,9 @@ class LoadTransform(TypedTransform[LoadSpec]):
         "  load: /tmp/model.safetensors"
     )
 
+    def completion_reference_keys(self) -> list[str]:
+        return ["to"]
+
     def compile(self, payload: Any, default_model: str | None) -> LoadSpec:
         if isinstance(payload, str):
             payload = {"path": payload}
