@@ -39,6 +39,80 @@ def configure_logging(log_level: str) -> None:
     logger.setLevel(level)
 
 
+def _execute_configured_transforms(
+    *,
+    raw_plan: dict[str, Any],
+    surgery_plan: Any,
+    state_dict_provider: Any,
+) -> tuple[bool, list[dict[str, Any]]]:
+    configured_pairs = zip(
+        normalize_transform_specs(raw_plan.get("transforms")),
+        surgery_plan.transforms,
+        strict=False,
+    )
+    return execute_transform_pairs(
+        configured_pairs,
+        state_dict_provider,
+        interactive=False,
+    )
+
+
+def _build_interactive_raw_plan(
+    *,
+    raw_plan: dict[str, Any],
+    state_dict_provider: Any,
+    extra_specs: list[dict[str, Any]],
+) -> dict[str, Any]:
+    interactive_inputs = raw_plan.get("inputs", [])
+    aliases = sorted(list_model_aliases(state_dict_provider))
+    if aliases:
+        interactive_inputs = [f"{alias}::/dev/null" for alias in aliases]
+    return build_raw_plan(
+        inputs=interactive_inputs,
+        output=raw_plan.get("output"),
+        transforms=extra_specs,
+    )
+
+
+def _run_interactive_session(
+    *,
+    raw_plan: dict[str, Any],
+    state_dict_provider: Any,
+) -> tuple[bool, list[dict[str, Any]]]:
+    executed: list[dict[str, Any]] = []
+    while True:
+        extra_specs = prompt_interactive_transform(state_dict_provider=state_dict_provider)
+        if extra_specs is None:
+            logger.info("Interactive session complete")
+            return True, executed
+
+        interactive_raw_plan = _build_interactive_raw_plan(
+            raw_plan=raw_plan,
+            state_dict_provider=state_dict_provider,
+            extra_specs=extra_specs,
+        )
+        try:
+            interactive_plan = compile_plan(interactive_raw_plan)
+        except Exception as exc:
+            logger.error("Could not compile interactive transform(s): %s", exc)
+            continue
+
+        interactive_pairs = zip(
+            extra_specs,
+            interactive_plan.transforms,
+            strict=False,
+        )
+        should_continue, newly_executed = execute_transform_pairs(
+            interactive_pairs,
+            state_dict_provider,
+            interactive=True,
+        )
+        executed.extend(newly_executed)
+        if not should_continue:
+            logger.info("Leaving interactive mode")
+            return False, executed
+
+
 @app.command()
 def run(
     config_items: list[str] = typer.Argument(
@@ -125,59 +199,20 @@ def run(
 
     try:
         with use_output_emitter(typer.echo):
-            configured_pairs = zip(
-                normalize_transform_specs(raw_plan.get("transforms")),
-                surgery_plan.transforms,
-                strict=False,
-            )
-            should_continue, newly_executed = execute_transform_pairs(
-                configured_pairs,
-                state_dict_provider,
-                interactive=False,
+            should_continue, newly_executed = _execute_configured_transforms(
+                raw_plan=raw_plan,
+                surgery_plan=surgery_plan,
+                state_dict_provider=state_dict_provider,
             )
             executed_transforms.extend(newly_executed)
 
             if should_continue and interactive:
                 logger.info("Entering interactive mode after configured procedures")
-
-                while True:
-                    extra_specs = prompt_interactive_transform(state_dict_provider=state_dict_provider)
-                    if extra_specs is None:
-                        logger.info("Interactive session complete")
-                        break
-
-                    interactive_inputs = raw_plan.get("inputs", [])
-                    aliases = sorted(list_model_aliases(state_dict_provider))
-                    if aliases:
-                        interactive_inputs = [f"{alias}::/dev/null" for alias in aliases]
-
-                    interactive_raw_plan = build_raw_plan(
-                        inputs=interactive_inputs,
-                        output=raw_plan.get("output"),
-                        transforms=extra_specs,
-                    )
-
-                    try:
-                        interactive_plan = compile_plan(interactive_raw_plan)
-                    except Exception as exc:
-                        logger.error("Could not compile interactive transform(s): %s", exc)
-                        continue
-
-                    interactive_pairs = zip(
-                        extra_specs,
-                        interactive_plan.transforms,
-                        strict=False,
-                    )
-                    should_continue, newly_executed = execute_transform_pairs(
-                        interactive_pairs,
-                        state_dict_provider,
-                        interactive=True,
-                    )
-                    executed_transforms.extend(newly_executed)
-
-                    if not should_continue:
-                        logger.info("Leaving interactive mode")
-                        break
+                should_continue, interactive_executed = _run_interactive_session(
+                    raw_plan=raw_plan,
+                    state_dict_provider=state_dict_provider,
+                )
+                executed_transforms.extend(interactive_executed)
 
             if surgery_plan.output is None:
                 logger.info("No preservation requested; concluding operation without closure")

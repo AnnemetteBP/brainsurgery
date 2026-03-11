@@ -81,26 +81,31 @@ class HelpTransform(TypedTransform[HelpSpec]):
         del provider
 
         typed = self.require_spec(spec)
-
-        if typed.command is None:
-            self._print_all_commands()
-        elif typed.command == "assert":
-            if typed.subcommand is None:
-                self._print_assert_help()
-            else:
-                self._print_assert_expr_help(typed.subcommand)
-        else:
-            if typed.subcommand is not None:
-                raise HelpTransformError(
-                    f"command {typed.command!r} does not support subcommand help"
-                )
-            self._print_command_help(typed.command)
+        self._dispatch_help(typed)
 
         return TransformResult(
             name=self.name,
             count=0,
             control=TransformControl.CONTINUE,
         )
+
+    def _dispatch_help(self, spec: HelpSpec) -> None:
+        if spec.command is None:
+            self._print_all_commands()
+            return
+
+        if spec.command == "assert":
+            if spec.subcommand is None:
+                self._print_assert_help()
+            else:
+                self._print_assert_expr_help(spec.subcommand)
+            return
+
+        if spec.subcommand is not None:
+            raise HelpTransformError(
+                f"command {spec.command!r} does not support subcommand help"
+            )
+        self._print_command_help(spec.command)
 
     def infer_output_model(self, spec: object) -> str:
         del spec
@@ -164,34 +169,10 @@ class HelpTransform(TypedTransform[HelpSpec]):
         if help_text:
             emit_line(help_text)
 
-        if allowed_keys is None and required_keys is None:
-            emit_line("Key metadata: unavailable")
-            return
-
-        allowed = sorted(allowed_keys or set())
-        required = sorted(required_keys or set())
-
-        if required:
-            emit_line("Required keys:")
-            for key in required:
-                emit_line(f"  - {key}")
-        else:
-            emit_line("Required keys: none")
-
-        optional = [key for key in allowed if key not in required]
-        if optional:
-            emit_line("Optional keys:")
-            for key in optional:
-                emit_line(f"  - {key}")
-        else:
-            emit_line("Optional keys: none")
-
-        if allowed:
-            emit_line("All allowed keys:")
-            for key in allowed:
-                emit_line(f"  - {key}")
-        else:
-            emit_line("All allowed keys: none")
+        self._emit_key_metadata(
+            required_keys=required_keys,
+            allowed_keys=allowed_keys,
+        )
 
     def _print_assert_help(self) -> None:
         try:
@@ -225,11 +206,26 @@ class HelpTransform(TypedTransform[HelpSpec]):
         if meta.description:
             emit_line(meta.description)
 
-        required = sorted(meta.required_keys or [])
-        allowed = sorted(meta.allowed_keys or [])
+        self._emit_key_metadata(
+            required_keys=meta.required_keys,
+            allowed_keys=meta.allowed_keys,
+        )
+
+    def _emit_key_metadata(
+        self,
+        *,
+        required_keys: set[str] | None,
+        allowed_keys: set[str] | None,
+    ) -> None:
+        if allowed_keys is None and required_keys is None:
+            emit_line("Key metadata: unavailable")
+            return
+
+        required = sorted(required_keys or set())
+        allowed = sorted(allowed_keys or set())
         optional = [key for key in allowed if key not in required]
 
-        if meta.required_keys is not None:
+        if required_keys is not None:
             if required:
                 emit_line("Required keys:")
                 for key in required:
@@ -237,7 +233,7 @@ class HelpTransform(TypedTransform[HelpSpec]):
             else:
                 emit_line("Required keys: none")
 
-        if meta.allowed_keys is not None:
+        if allowed_keys is not None:
             if optional:
                 emit_line("Optional keys:")
                 for key in optional:
