@@ -4,8 +4,6 @@ from dataclasses import dataclass
 import re
 from typing import Any, Literal
 
-import typer
-
 from ..engine import (
     find_alias_mapping,
     get_or_create_alias_state_dict,
@@ -13,6 +11,7 @@ from ..engine import (
     list_model_aliases,
     new_empty_state_dict,
 )
+from ..engine.frontend import emit_line
 from ..core import TransformError
 from ..core import TypedTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
@@ -115,11 +114,11 @@ class PrefixesTransform(TypedTransform[PrefixesSpec]):
         if typed.mode == "list":
             aliases = sorted(list_model_aliases(provider))
             if aliases:
-                typer.echo("Available model prefixes:")
+                emit_line("Available model prefixes:")
                 for alias in aliases:
-                    typer.echo(f"  {alias}::")
+                    emit_line(f"  {alias}::")
             else:
-                typer.echo("No model prefixes available.")
+                emit_line("No model prefixes available.")
             return TransformResult(name=self.name, count=len(aliases))
 
         if typed.mode == "add":

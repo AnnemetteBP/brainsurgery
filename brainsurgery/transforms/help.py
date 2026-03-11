@@ -3,12 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-import typer
-
 from ..expressions import get_assert_expr_help, get_assert_expr_names
 from ..core import TransformError
 from ..core import TypedTransform, TransformControl, TransformResult, get_transform, list_transforms, register_transform
 from ..core import StateDictProvider
+from ..engine.frontend import emit_line
 
 
 class HelpTransformError(TransformError):
@@ -143,12 +142,12 @@ class HelpTransform(TypedTransform[HelpSpec]):
         return None
 
     def _print_all_commands(self) -> None:
-        typer.echo("Available commands:")
+        emit_line("Available commands:")
         for name in list_transforms():
-            typer.echo(f"  {name}")
-        typer.echo("")
-        typer.echo("For help on a specific command, run: help: <command>")
-        typer.echo("For help on a specific assert expression, run: help: { assert: <expr> }")
+            emit_line(f"  {name}")
+        emit_line("")
+        emit_line("For help on a specific command, run: help: <command>")
+        emit_line("For help on a specific assert expression, run: help: { assert: <expr> }")
 
     def _print_command_help(self, command_name: str) -> None:
         try:
@@ -160,39 +159,39 @@ class HelpTransform(TypedTransform[HelpSpec]):
         required_keys = getattr(transform, "required_keys", None)
         help_text = getattr(transform, "help_text", None)
 
-        typer.echo(f"Command: {command_name}")
+        emit_line(f"Command: {command_name}")
 
         if help_text:
-            typer.echo(help_text)
+            emit_line(help_text)
 
         if allowed_keys is None and required_keys is None:
-            typer.echo("Key metadata: unavailable")
+            emit_line("Key metadata: unavailable")
             return
 
         allowed = sorted(allowed_keys or set())
         required = sorted(required_keys or set())
 
         if required:
-            typer.echo("Required keys:")
+            emit_line("Required keys:")
             for key in required:
-                typer.echo(f"  - {key}")
+                emit_line(f"  - {key}")
         else:
-            typer.echo("Required keys: none")
+            emit_line("Required keys: none")
 
         optional = [key for key in allowed if key not in required]
         if optional:
-            typer.echo("Optional keys:")
+            emit_line("Optional keys:")
             for key in optional:
-                typer.echo(f"  - {key}")
+                emit_line(f"  - {key}")
         else:
-            typer.echo("Optional keys: none")
+            emit_line("Optional keys: none")
 
         if allowed:
-            typer.echo("All allowed keys:")
+            emit_line("All allowed keys:")
             for key in allowed:
-                typer.echo(f"  - {key}")
+                emit_line(f"  - {key}")
         else:
-            typer.echo("All allowed keys: none")
+            emit_line("All allowed keys: none")
 
     def _print_assert_help(self) -> None:
         try:
@@ -200,31 +199,31 @@ class HelpTransform(TypedTransform[HelpSpec]):
         except TransformError:
             transform = None
 
-        typer.echo("Command: assert")
+        emit_line("Command: assert")
         if transform is not None:
             help_text = getattr(transform, "help_text", None)
             if help_text:
-                typer.echo(help_text)
+                emit_line(help_text)
 
-        typer.echo("Supported assert expression operators:")
+        emit_line("Supported assert expression operators:")
         for name in get_assert_expr_names():
             meta = get_assert_expr_help(name)
             if meta.description:
-                typer.echo(f"  {name}: {meta.description}")
+                emit_line(f"  {name}: {meta.description}")
             else:
-                typer.echo(f"  {name}")
+                emit_line(f"  {name}")
 
-        typer.echo("")
-        typer.echo("For help on a specific assert expression, run: help: { assert: <expr> }")
+        emit_line("")
+        emit_line("For help on a specific assert expression, run: help: { assert: <expr> }")
 
     def _print_assert_expr_help(self, expr_name: str) -> None:
         meta = get_assert_expr_help(expr_name)
 
-        typer.echo(f"Assert expression: {meta.name}")
-        typer.echo(f"Payload: {meta.payload_kind}")
+        emit_line(f"Assert expression: {meta.name}")
+        emit_line(f"Payload: {meta.payload_kind}")
 
         if meta.description:
-            typer.echo(meta.description)
+            emit_line(meta.description)
 
         required = sorted(meta.required_keys or [])
         allowed = sorted(meta.allowed_keys or [])
@@ -232,26 +231,26 @@ class HelpTransform(TypedTransform[HelpSpec]):
 
         if meta.required_keys is not None:
             if required:
-                typer.echo("Required keys:")
+                emit_line("Required keys:")
                 for key in required:
-                    typer.echo(f"  - {key}")
+                    emit_line(f"  - {key}")
             else:
-                typer.echo("Required keys: none")
+                emit_line("Required keys: none")
 
         if meta.allowed_keys is not None:
             if optional:
-                typer.echo("Optional keys:")
+                emit_line("Optional keys:")
                 for key in optional:
-                    typer.echo(f"  - {key}")
+                    emit_line(f"  - {key}")
             else:
-                typer.echo("Optional keys: none")
+                emit_line("Optional keys: none")
 
             if allowed:
-                typer.echo("All allowed keys:")
+                emit_line("All allowed keys:")
                 for key in allowed:
-                    typer.echo(f"  - {key}")
+                    emit_line(f"  - {key}")
             else:
-                typer.echo("All allowed keys: none")
+                emit_line("All allowed keys: none")
 
 
 

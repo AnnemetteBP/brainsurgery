@@ -5,7 +5,6 @@ import re
 from typing import Any, Literal
 
 import torch
-import typer
 
 from ..core import match_expr_names
 from ..core import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice, select_tensor
@@ -13,6 +12,7 @@ from ..core import TransformError
 from ..core import TypedTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
 from ..core import StateDictProvider
+from ..engine.frontend import emit_line
 
 
 class DiffTransformError(TransformError):
@@ -107,7 +107,7 @@ class DiffTransform(TypedTransform[DiffSpec]):
         shared = sorted(left_names & right_names)
         differing = _collect_differences(shared, typed, provider)
 
-        typer.echo(
+        emit_line(
             f"Diff: {format_tensor_ref(typed.left_ref)} <-> {format_tensor_ref(typed.right_ref)}"
         )
         _echo_names("Missing on left", missing_on_left)
@@ -116,7 +116,7 @@ class DiffTransform(TypedTransform[DiffSpec]):
 
         findings = len(missing_on_left) + len(missing_on_right) + len(differing)
         if findings == 0:
-            typer.echo("No differences found.")
+            emit_line("No differences found.")
 
         return TransformResult(name=self.name, count=findings)
 
@@ -244,21 +244,21 @@ def _difference_reason(left: torch.Tensor, right: torch.Tensor, *, eps: float | 
 
 
 def _echo_names(title: str, names: list[str]) -> None:
-    typer.echo(f"{title}:")
+    emit_line(f"{title}:")
     if not names:
-        typer.echo("  (none)")
+        emit_line("  (none)")
         return
     for name in names:
-        typer.echo(f"  - {name}")
+        emit_line(f"  - {name}")
 
 
 def _echo_differences(differing: list[tuple[str, str]]) -> None:
-    typer.echo("Differing:")
+    emit_line("Differing:")
     if not differing:
-        typer.echo("  (none)")
+        emit_line("  (none)")
         return
     for name, reason in differing:
-        typer.echo(f"  - {name}: {reason}")
+        emit_line(f"  - {name}: {reason}")
 
 
 def _diff_mode(before_cursor: str) -> str | None:

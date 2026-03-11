@@ -4,11 +4,10 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-import typer
-
 from ..engine import render_tree, summarize_tensor
 from ..core import UnarySpec, UnaryTransform
 from ..engine.checkpoint_io import tqdm
+from ..engine.frontend import emit_line
 from ..core import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
 from ..core import TransformError
 from ..core import TransformResult, register_transform
@@ -122,11 +121,11 @@ class DumpTransform(UnaryTransform[DumpSpec]):
             )
 
         if typed.format == "json":
-            typer.echo(json.dumps(tree, separators=(",", ":"), sort_keys=True))
+            emit_line(json.dumps(tree, separators=(",", ":"), sort_keys=True))
         elif typed.format == "tree":
-            typer.echo(render_tree(tree, compact=False))
+            emit_line(render_tree(tree, compact=False))
         else:
-            typer.echo(render_tree(tree, compact=True))
+            emit_line(render_tree(tree, compact=True))
 
         return TransformResult(name=self.name, count=len(targets))
 

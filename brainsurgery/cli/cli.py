@@ -16,6 +16,7 @@ from ..engine import (
     ProviderError,
     create_state_dict_provider,
     list_model_aliases,
+    use_output_emitter,
 )
 
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
@@ -123,77 +124,78 @@ def run(
     written_path: str | Path | None = None
 
     try:
-        configured_pairs = zip(
-            normalize_transform_specs(raw_plan.get("transforms")),
-            surgery_plan.transforms,
-            strict=False,
-        )
-        should_continue, newly_executed = execute_transform_pairs(
-            configured_pairs,
-            state_dict_provider,
-            interactive=False,
-        )
-        executed_transforms.extend(newly_executed)
+        with use_output_emitter(typer.echo):
+            configured_pairs = zip(
+                normalize_transform_specs(raw_plan.get("transforms")),
+                surgery_plan.transforms,
+                strict=False,
+            )
+            should_continue, newly_executed = execute_transform_pairs(
+                configured_pairs,
+                state_dict_provider,
+                interactive=False,
+            )
+            executed_transforms.extend(newly_executed)
 
-        if should_continue and interactive:
-            logger.info("Entering interactive mode after configured procedures")
+            if should_continue and interactive:
+                logger.info("Entering interactive mode after configured procedures")
 
-            while True:
-                extra_specs = prompt_interactive_transform(state_dict_provider=state_dict_provider)
-                if extra_specs is None:
-                    logger.info("Interactive session complete")
-                    break
+                while True:
+                    extra_specs = prompt_interactive_transform(state_dict_provider=state_dict_provider)
+                    if extra_specs is None:
+                        logger.info("Interactive session complete")
+                        break
 
-                interactive_inputs = raw_plan.get("inputs", [])
-                aliases = sorted(list_model_aliases(state_dict_provider))
-                if aliases:
-                    interactive_inputs = [f"{alias}::/dev/null" for alias in aliases]
+                    interactive_inputs = raw_plan.get("inputs", [])
+                    aliases = sorted(list_model_aliases(state_dict_provider))
+                    if aliases:
+                        interactive_inputs = [f"{alias}::/dev/null" for alias in aliases]
 
-                interactive_raw_plan = build_raw_plan(
-                    inputs=interactive_inputs,
+                    interactive_raw_plan = build_raw_plan(
+                        inputs=interactive_inputs,
+                        output=raw_plan.get("output"),
+                        transforms=extra_specs,
+                    )
+
+                    try:
+                        interactive_plan = compile_plan(interactive_raw_plan)
+                    except Exception as exc:
+                        logger.error("Could not compile interactive transform(s): %s", exc)
+                        continue
+
+                    interactive_pairs = zip(
+                        extra_specs,
+                        interactive_plan.transforms,
+                        strict=False,
+                    )
+                    should_continue, newly_executed = execute_transform_pairs(
+                        interactive_pairs,
+                        state_dict_provider,
+                        interactive=True,
+                    )
+                    executed_transforms.extend(newly_executed)
+
+                    if not should_continue:
+                        logger.info("Leaving interactive mode")
+                        break
+
+            if surgery_plan.output is None:
+                logger.info("No preservation requested; concluding operation without closure")
+            else:
+                written_path = state_dict_provider.save_output(
+                    surgery_plan,
+                    default_shard_size=shard_size,
+                    max_io_workers=num_workers,
+                )
+                logger.info("Operation complete. Brain preserved at %s", written_path)
+
+            if summarize:
+                write_executed_plan_summary(
+                    inputs=raw_plan.get("inputs", []),
                     output=raw_plan.get("output"),
-                    transforms=extra_specs,
+                    transforms=executed_transforms,
+                    destination=summarize_path,
                 )
-
-                try:
-                    interactive_plan = compile_plan(interactive_raw_plan)
-                except Exception as exc:
-                    logger.error("Could not compile interactive transform(s): %s", exc)
-                    continue
-
-                interactive_pairs = zip(
-                    extra_specs,
-                    interactive_plan.transforms,
-                    strict=False,
-                )
-                should_continue, newly_executed = execute_transform_pairs(
-                    interactive_pairs,
-                    state_dict_provider,
-                    interactive=True,
-                )
-                executed_transforms.extend(newly_executed)
-
-                if not should_continue:
-                    logger.info("Leaving interactive mode")
-                    break
-
-        if surgery_plan.output is None:
-            logger.info("No preservation requested; concluding operation without closure")
-        else:
-            written_path = state_dict_provider.save_output(
-                surgery_plan,
-                default_shard_size=shard_size,
-                max_io_workers=num_workers,
-            )
-            logger.info("Operation complete. Brain preserved at %s", written_path)
-
-        if summarize:
-            write_executed_plan_summary(
-                inputs=raw_plan.get("inputs", []),
-                output=raw_plan.get("output"),
-                transforms=executed_transforms,
-                destination=summarize_path,
-            )
 
     finally:
         state_dict_provider.close()

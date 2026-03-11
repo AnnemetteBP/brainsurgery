@@ -19,3 +19,4 @@ from .provider_utils import (
 )
 from .render import render_tree, summarize_tensor
 from .plan import compile_plan
+from .frontend import emit_line, set_output_emitter, use_output_emitter
