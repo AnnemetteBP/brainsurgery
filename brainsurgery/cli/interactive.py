@@ -13,7 +13,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from .history import _add_history_entry
-from .provider_utils import (
+from ..engine.provider_utils import (
     _list_loaded_tensor_names as list_loaded_tensor_names_from_provider,
     list_model_aliases as list_model_aliases_from_provider,
 )

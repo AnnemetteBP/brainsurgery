@@ -63,6 +63,3 @@ def _add_history_entry(entry: str) -> None:
         readline.add_history(text)
     except Exception:
         logger.debug("Could not add history entry", exc_info=True)
-
-
-__all__ = ["configure_history"]
