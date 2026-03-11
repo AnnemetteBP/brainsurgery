@@ -8,9 +8,11 @@ from typing import Dict, Generic, Iterable, List, Literal, TypeVar
 
 from tqdm import tqdm
 
-from .expr_matching import _match_structured_expr, _rewrite_structured_expr, match_expr_names
 from .name_mapping import (
+    _match_structured_expr,
+    _rewrite_structured_expr,
     ResolvedMapping,
+    match_expr_names,
     require_dest_missing,
     require_dest_present,
     resolve_name_mappings,

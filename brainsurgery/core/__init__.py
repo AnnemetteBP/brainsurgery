@@ -6,15 +6,13 @@ from .resolver import (
 )
 from .validation import (
     ensure_mapping_payload,
+    parse_torch_dtype,
     require_expr,
     require_nonempty_string,
     require_numeric,
     require_same_shape_dtype_device,
     require_same_shape_dtype_device3,
     validate_payload_keys,
-)
-from .dtypes import (
-    parse_torch_dtype,
 )
 from .types import (
     StateDictLike,
@@ -34,11 +32,9 @@ from .matching import (
     StructuredMatch,
     StructuredPathMatcher,
 )
-from .expr_matching import (
-    match_expr_names,
-)
 from .name_mapping import (
     ResolvedMapping,
+    match_expr_names,
     require_dest_missing,
     require_dest_present,
     resolve_name_mappings,
