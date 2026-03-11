@@ -17,6 +17,10 @@ from .types import (
     StateDictProvider,
     TransformError,
 )
+from .scalar_comparison import (
+    ScalarComparison,
+    parse_scalar_comparison,
+)
 from .refs import (
     TensorRef,
     format_tensor_ref,

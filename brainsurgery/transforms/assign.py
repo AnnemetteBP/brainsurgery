@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import torch
-
 from ..core import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..core import ResolvedMapping
 from ..core import TensorRef, parse_slice, select_tensor

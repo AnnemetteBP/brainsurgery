@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..core import TransformError
+from .types import TransformError
 
 
 COMPARISON_KEYS = ("is", "ge", "gt", "le", "lt")
@@ -54,6 +54,7 @@ def parse_scalar_comparison(
     values: dict[str, int | None] = {key: None for key in COMPARISON_KEYS}
 
     def parse_value(field_name: str, public_name: str) -> int | None:
+        del field_name
         value = payload.get(public_name)
         if value is None:
             return None
