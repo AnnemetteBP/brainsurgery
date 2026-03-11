@@ -69,9 +69,6 @@ class SlotBackedStateDict(StateDictLike):
 
 
 class InMemoryStateDict(SlotBackedStateDict):
-    def __init__(self):
-        super().__init__()
-
     def __getitem__(self, key: str) -> torch.Tensor:
         value = self._slots[key]
         assert isinstance(value, torch.Tensor)

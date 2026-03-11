@@ -8,13 +8,8 @@ from ..core import register_transform
 from ..core import StateDictProvider, TransformError
 
 
-class AssignTransformError(TransformError):
-    pass
-
-
 class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
     name = "assign"
-    error_type = AssignTransformError
     spec_type = BinaryMappingSpec
     destination_policy = DestinationPolicy.MUST_EXIST
     progress_desc = "Applying assign transforms"

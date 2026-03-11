@@ -126,9 +126,6 @@ class BaseStateDictProvider:
 
 
 class InMemoryStateDictProvider(BaseStateDictProvider):
-    def __init__(self, model_paths: Dict[str, Path], max_io_workers: int):
-        super().__init__(model_paths, max_io_workers=max_io_workers)
-
     def get_state_dict(self, model: str) -> InMemoryStateDict:
         state_dict = self._get_or_load_state_dict(
             model,
