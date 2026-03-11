@@ -13,7 +13,6 @@ from .expression import (
     register_assert_expr,
     require_mapping_assert_payload,
     resolve_matches,
-    resolve_single_tensor,
     resolve_tensor_mappings,
     resolve_tensors,
 )
@@ -26,40 +25,27 @@ from .mappings import (
     resolve_name_mappings,
     rewrite_structured_expr,
 )
-from .matching import MatchError, StructuredMatch, StructuredPathMatcher
 from .phlora import (
     PhloraSvdCache,
     compute_phlora_factors,
     reconstruct_phlora_rank,
-    require_matrix,
     require_positive_rank,
-    resolve_effective_rank,
 )
 from .refs import (
-    Expr,
     TensorRef,
-    format_ref_expr,
     format_tensor_ref,
-    looks_like_slice,
     must_model,
-    parse_int,
     parse_model_expr,
-    parse_optional_int,
     parse_slice,
-    parse_slice_component,
     select_tensor,
-    validate_expr_kind,
 )
 from .transform import (
     BaseTransform,
-    CompiledTransform,
     TransformControl,
     TransformResult,
     TypedTransform,
-    apply_transform,
     ensure_mapping_payload,
     get_transform,
-    infer_output_model,
     list_transforms,
     register_transform,
     require_expr,
@@ -68,7 +54,6 @@ from .transform import (
     validate_payload_keys,
 )
 from .transform_types import (
-    StateDictLike,
     StateDictProvider,
     TransformError,
     note_tensor_write,
