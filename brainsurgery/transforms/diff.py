@@ -7,9 +7,9 @@ from typing import Any, Literal
 import torch
 import typer
 
-from ..mappings import match_expr_names
-from ..refs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice, select_tensor
-from ..transform import (
+from ..core import match_expr_names
+from ..core import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice, select_tensor
+from ..core import (
     TypedTransform,
     TransformError,
     TransformResult,
@@ -18,7 +18,7 @@ from ..transform import (
     require_nonempty_string,
     validate_payload_keys,
 )
-from ..transform_types import StateDictProvider
+from ..core import StateDictProvider
 
 
 class DiffTransformError(TransformError):

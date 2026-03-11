@@ -4,18 +4,15 @@ from dataclasses import dataclass
 
 import torch
 
-from ..dtypes import parse_torch_dtype
-from ..refs import TensorRef, must_model
-from .unary import UnarySpec, UnaryTransform
-from ..transform import (
+from ..utils import parse_torch_dtype
+from ..core import TensorRef, must_model
+from .unary import UnarySpec
+from ..core import (
     register_transform,
     require_nonempty_string,
 )
-from ..transform_types import StateDictProvider, TransformError
-
-
-class CastInPlaceTransformError(TransformError):
-    pass
+from ..core import StateDictProvider, TransformError
+from ..utils import DeclarativeUnaryTransform, Docs, UnaryRefs
 
 
 @dataclass(frozen=True)
@@ -23,46 +20,42 @@ class CastInPlaceSpec(UnarySpec):
     dtype: torch.dtype
 
 
-class CastInPlaceTransform(UnaryTransform[CastInPlaceSpec]):
+def _build_cast_in_place_spec(target_ref: TensorRef, payload: dict) -> CastInPlaceSpec:
+    raw_dtype = require_nonempty_string(payload, op_name="cast_", key="to")
+    dtype = parse_torch_dtype(
+        raw_dtype,
+        error_type=TransformError,
+        op_name="cast_",
+        field_name="to",
+    )
+    return CastInPlaceSpec(target_ref=target_ref, dtype=dtype)
+
+
+def _cast_in_place_apply(
+    spec: CastInPlaceSpec, name: str, provider: StateDictProvider
+) -> None:
+    model = must_model(spec.target_ref)
+    sd = provider.get_state_dict(model)
+    sd[name] = sd[name].to(dtype=spec.dtype)
+
+
+class CastInPlaceTransform(DeclarativeUnaryTransform[CastInPlaceSpec]):
     name = "cast_"
-    error_type = CastInPlaceTransformError
+    error_type = TransformError
     spec_type = CastInPlaceSpec
     allowed_keys = {"target", "to"}
     required_keys = {"target", "to"}
-    progress_desc = "Applying cast_ transforms"
-    help_text = (
-        "Casts one or more tensors to a different dtype in-place.\n"
-        "\n"
-        "The 'target' selects tensors by name or pattern. The entire tensor is cast; "
-        "slicing is not supported.\n"
-        "\n"
-        "Examples:\n"
-        "  cast_: { target: ln_f.weight, to: float16 }\n"
-        "  cast_: { target: '.*weight', to: bfloat16 }"
+    docs = Docs(
+        "Casts one or more tensors to a different dtype in-place.",
+        notes=("The entire tensor is cast.",),
+        examples=(
+            "cast_: { target: ln_f.weight, to: float16 }",
+            "cast_: { target: '.*weight', to: bfloat16 }",
+        ),
     )
-
-    def build_spec(self, target_ref: TensorRef, payload: dict) -> CastInPlaceSpec:
-        raw_dtype = require_nonempty_string(payload, op_name=self.name, key="to")
-        dtype = parse_torch_dtype(
-            raw_dtype,
-            error_type=CastInPlaceTransformError,
-            op_name=self.name,
-            field_name="to",
-        )
-        return CastInPlaceSpec(target_ref=target_ref, dtype=dtype)
-
-    def apply_to_target(self, spec: CastInPlaceSpec, name: str, provider: StateDictProvider) -> None:
-        model = must_model(spec.target_ref)
-        sd = provider.get_state_dict(model)
-        sd[name] = sd[name].to(dtype=spec.dtype)
-
-
-
-
-
-
-
-
+    refs = UnaryRefs()
+    spec_builder = staticmethod(_build_cast_in_place_spec)
+    apply_fn = staticmethod(_cast_in_place_apply)
 
 
 register_transform(CastInPlaceTransform())

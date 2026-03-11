@@ -5,7 +5,7 @@ from typing import Any
 
 import torch
 
-from ..expression import (
+from ..core import (
     AssertTransformError,
     compile_tensor_ref_expr,
     format_ref,
@@ -13,9 +13,9 @@ from ..expression import (
     require_mapping_assert_payload,
     resolve_tensor_mappings,
 )
-from ..refs import TensorRef, must_model
-from ..tensor_checks import require_same_shape_dtype_device
-from ..transform_types import StateDictProvider
+from ..core import TensorRef, must_model
+from ..utils import require_same_shape_dtype_device
+from ..core import StateDictProvider
 
 
 @dataclass(frozen=True)
@@ -30,8 +30,7 @@ class EqualExpr:
             require_same_shape_dtype_device(
                 left,
                 right,
-                error_type=AssertTransformError,
-                op_name="comparing",
+                        op_name="comparing",
                 left_name=format_ref(left_ref),
                 right_name=format_ref(right_ref),
             )

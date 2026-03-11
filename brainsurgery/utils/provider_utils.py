@@ -3,8 +3,15 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from .providers import BaseStateDictProvider
-from .transform_types import StateDictLike, StateDictProvider, TransformError
+from ..core.transform_types import StateDictLike, StateDictProvider, TransformError
+
+
+def _is_base_provider_instance(provider: object) -> bool:
+    try:
+        from ..providers.state import BaseStateDictProvider
+    except Exception:
+        return False
+    return isinstance(provider, BaseStateDictProvider)
 
 
 def iter_alias_mappings(provider: StateDictProvider) -> list[tuple[str, dict[str, object]]]:
@@ -20,7 +27,7 @@ def list_model_aliases(provider: StateDictProvider | None) -> set[str]:
     if provider is None:
         return set()
 
-    if isinstance(provider, BaseStateDictProvider):
+    if _is_base_provider_instance(provider):
         return provider.list_model_aliases()
 
     list_aliases = getattr(provider, "list_model_aliases", None)
@@ -37,7 +44,7 @@ def list_model_aliases(provider: StateDictProvider | None) -> set[str]:
 
 
 def has_model_alias(provider: StateDictProvider, alias: str) -> bool:
-    if isinstance(provider, BaseStateDictProvider):
+    if _is_base_provider_instance(provider):
         return provider.has_model_alias(alias)
     return alias in list_model_aliases(provider)
 
@@ -49,7 +56,7 @@ def get_or_create_alias_state_dict(
     error_type: type[TransformError],
     op_name: str,
 ) -> StateDictLike:
-    if isinstance(provider, BaseStateDictProvider):
+    if _is_base_provider_instance(provider):
         return provider.get_or_create_alias_state_dict(alias)
     if has_model_alias(provider, alias):
         return provider.get_state_dict(alias)
@@ -60,7 +67,7 @@ def list_loaded_tensor_names(provider: StateDictProvider | None) -> dict[str, se
     if provider is None:
         return {}
 
-    if isinstance(provider, BaseStateDictProvider):
+    if _is_base_provider_instance(provider):
         items: Mapping[str, StateDictLike] = provider.state_dicts
     else:
         state_dicts = getattr(provider, "state_dicts", None)
@@ -113,3 +120,15 @@ def new_empty_state_dict(mappings: list[tuple[str, dict[str, object]]]) -> objec
             except Exception:
                 continue
     return {}
+
+
+__all__ = [
+    "iter_alias_mappings",
+    "list_model_aliases",
+    "has_model_alias",
+    "get_or_create_alias_state_dict",
+    "list_loaded_tensor_names",
+    "resolve_single_model_alias",
+    "find_alias_mapping",
+    "new_empty_state_dict",
+]

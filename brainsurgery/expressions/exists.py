@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..expression import (
+from ..core import (
     AssertExpr,
     AssertTransformError,
     collect_ref_models,
@@ -12,8 +12,8 @@ from ..expression import (
     register_assert_expr,
     resolve_matches,
 )
-from ..refs import TensorRef
-from ..transform_types import StateDictProvider
+from ..core import TensorRef
+from ..core import StateDictProvider
 
 
 @dataclass(frozen=True)

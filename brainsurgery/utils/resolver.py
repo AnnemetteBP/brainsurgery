@@ -4,9 +4,9 @@ from typing import Any, Callable
 
 import torch
 
-from .mappings import ResolvedMapping, require_dest_present, resolve_name_mappings
-from .refs import TensorRef, format_tensor_ref, must_model, parse_slice, select_tensor
-from .transform_types import StateDictProvider, TransformError
+from ..core.mappings import ResolvedMapping, require_dest_present, resolve_name_mappings
+from ..core.refs import TensorRef, format_tensor_ref, must_model, parse_slice, select_tensor
+from ..core.transform_types import StateDictProvider, TransformError
 
 
 def resolve_target_names(
@@ -120,3 +120,12 @@ def resolve_mapping_tensors(
     left = select_tensor(src_sd[item.src_name], item.src_slice)
     right = select_tensor(dst_sd[item.dst_name], item.dst_slice)
     return left_ref, left, right_ref, right
+
+
+__all__ = [
+    "resolve_target_names",
+    "resolve_single_tensor",
+    "resolve_tensors",
+    "resolve_tensor_mappings",
+    "resolve_mapping_tensors",
+]

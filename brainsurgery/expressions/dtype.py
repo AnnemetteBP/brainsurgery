@@ -5,7 +5,7 @@ from typing import Any
 
 import torch
 
-from ..expression import (
+from ..core import (
     AssertTransformError,
     collect_ref_models,
     compile_tensor_ref_expr,
@@ -14,9 +14,9 @@ from ..expression import (
     resolve_tensors,
     require_mapping_assert_payload,
 )
-from ..dtypes import parse_torch_dtype
-from ..refs import TensorRef
-from ..transform_types import StateDictProvider
+from ..utils import parse_torch_dtype
+from ..core import TensorRef
+from ..core import StateDictProvider
 
 
 @dataclass(frozen=True)

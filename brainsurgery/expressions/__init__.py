@@ -3,7 +3,7 @@ from __future__ import annotations
 from importlib import import_module
 from pkgutil import iter_modules
 
-from ..expression import (
+from ..core import (
     AssertExpr,
     AssertExprHelp,
     AssertTransformError,

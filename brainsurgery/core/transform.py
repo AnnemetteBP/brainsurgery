@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Dict, Generic, List, TypeVar
 from .transform_types import StateDictLike, StateDictProvider, TransformError
 
 if TYPE_CHECKING:
-    from .plan import SurgeryPlan
+    from ..engine import SurgeryPlan
 
 
 from .refs import (

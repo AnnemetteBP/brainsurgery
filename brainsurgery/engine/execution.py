@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Iterable
 
-from .transform import CompiledTransform, TransformControl, apply_transform
+from ..core.transform import CompiledTransform, TransformControl, apply_transform
 
 logger = logging.getLogger("brainsurgery")
 

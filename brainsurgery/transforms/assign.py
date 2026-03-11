@@ -3,11 +3,11 @@ from __future__ import annotations
 import torch
 
 from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
-from ..mappings import ResolvedMapping
-from ..refs import TensorRef, parse_slice, select_tensor
-from ..tensor_checks import require_same_shape_dtype_device
-from ..transform import register_transform
-from ..transform_types import StateDictProvider, TransformError, note_tensor_write
+from ..core import ResolvedMapping
+from ..core import TensorRef, parse_slice, select_tensor
+from ..utils import require_same_shape_dtype_device
+from ..core import register_transform
+from ..core import StateDictProvider, TransformError, note_tensor_write
 
 
 class AssignTransformError(TransformError):
@@ -46,7 +46,6 @@ class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
         require_same_shape_dtype_device(
             src_view,
             dst_view,
-            error_type=AssignTransformError,
             op_name="assigning",
             left_name=item.src_name,
             right_name=item.dst_name,

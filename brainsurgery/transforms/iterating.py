@@ -4,9 +4,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Generic, Iterable, TypeVar
 
-from ..model import tqdm
-from ..transform import BaseTransform, TransformResult
-from ..transform_types import StateDictProvider, TransformError
+from ..core import BaseTransform, StateDictProvider, TransformError, TransformResult
+from ..engine.model import tqdm
 
 
 class DestinationPolicy(Enum):

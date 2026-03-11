@@ -231,3 +231,16 @@ def format_index_range(start: int, end: int) -> str:
 
 def canonical_key(node: Any) -> str:
     return json.dumps(node, sort_keys=True, separators=(",", ":"))
+
+
+__all__ = [
+    "summarize_tensor",
+    "is_tensor_summary",
+    "shape_only",
+    "format_summary",
+    "render_tree",
+    "render_node",
+    "list_group_entries",
+    "format_index_range",
+    "canonical_key",
+]

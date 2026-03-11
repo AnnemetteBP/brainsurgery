@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..phlora import PhloraSvdCache, reconstruct_phlora_rank, require_positive_rank
+from ..core import PhloraSvdCache, reconstruct_phlora_rank, require_positive_rank
 from .unary import UnarySpec, UnaryTransform
-from ..refs import TensorRef, must_model
-from ..transform import register_transform, require_numeric
-from ..transform_types import StateDictProvider, TransformError
+from ..core import TensorRef, must_model
+from ..core import register_transform, require_numeric
+from ..core import StateDictProvider, TransformError
 
 
 class PhloraInPlaceTransformError(TransformError):

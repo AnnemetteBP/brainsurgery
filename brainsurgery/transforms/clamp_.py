@@ -2,19 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import torch
-
-from .unary import UnarySpec, UnaryTransform
+from .unary import UnarySpec
 from .clamp import _parse_bounds
-from ..refs import TensorRef, must_model, parse_slice, select_tensor
-from ..transform import (
+from ..core import TensorRef, must_model, parse_slice, select_tensor
+from ..core import (
     register_transform,
 )
-from ..transform_types import StateDictProvider, TransformError, note_tensor_write
-
-
-class ClampInPlaceTransformError(TransformError):
-    pass
+from ..core import StateDictProvider, TransformError, note_tensor_write
+from ..utils import DeclarativeUnaryTransform, Docs, UnaryRefs
 
 
 @dataclass(frozen=True)
@@ -23,42 +18,44 @@ class ClampInPlaceSpec(UnarySpec):
     max_value: float | None
 
 
-class ClampInPlaceTransform(UnaryTransform[ClampInPlaceSpec]):
+def _build_clamp_in_place_spec(
+    target_ref: TensorRef, payload: dict
+) -> ClampInPlaceSpec:
+    min_value, max_value = _parse_bounds(payload, "clamp_", TransformError)
+    return ClampInPlaceSpec(
+        target_ref=target_ref, min_value=min_value, max_value=max_value
+    )
+
+
+def _clamp_in_place_apply(
+    spec: ClampInPlaceSpec, name: str, provider: StateDictProvider
+) -> None:
+    model = must_model(spec.target_ref)
+    sd = provider.get_state_dict(model)
+    slice_spec = (
+        parse_slice(spec.target_ref.slice_spec)
+        if spec.target_ref.slice_spec is not None
+        else None
+    )
+    view = select_tensor(sd[name], slice_spec)
+    view.clamp_(min=spec.min_value, max=spec.max_value)
+    note_tensor_write(sd, name)
+
+
+class ClampInPlaceTransform(DeclarativeUnaryTransform[ClampInPlaceSpec]):
     name = "clamp_"
-    error_type = ClampInPlaceTransformError
+    error_type = TransformError
     spec_type = ClampInPlaceSpec
     allowed_keys = {"target", "min", "max"}
     required_keys = {"target"}
-    slice_policy = "allow"
-    progress_desc = "Applying clamp_ transforms"
-    help_text = (
-        "Clamps target tensors in-place.\n"
-        "\n"
-        "Targets may include slicing. At least one of 'min' or 'max' is required.\n"
-        "\n"
-        "Example:\n"
-        "  clamp_: { target: x, min: -1.0, max: 1.0 }"
+    docs = Docs(
+        "Clamps target tensors in-place.",
+        notes=("At least one of 'min' or 'max' is required.",),
+        examples=("clamp_: { target: x, min: -1.0, max: 1.0 }",),
     )
-
-    def build_spec(self, target_ref: TensorRef, payload: dict) -> ClampInPlaceSpec:
-        min_value, max_value = _parse_bounds(payload, self.name, ClampInPlaceTransformError)
-        return ClampInPlaceSpec(target_ref=target_ref, min_value=min_value, max_value=max_value)
-
-    def apply_to_target(self, spec: ClampInPlaceSpec, name: str, provider: StateDictProvider) -> None:
-        model = must_model(spec.target_ref)
-        sd = provider.get_state_dict(model)
-        slice_spec = (
-            parse_slice(spec.target_ref.slice_spec)
-            if spec.target_ref.slice_spec is not None
-            else None
-        )
-        view = select_tensor(sd[name], slice_spec)
-        view.clamp_(min=spec.min_value, max=spec.max_value)
-        note_tensor_write(sd, name)
-
-
-
-
+    refs = UnaryRefs(target_slice=True)
+    spec_builder = staticmethod(_build_clamp_in_place_spec)
+    apply_fn = staticmethod(_clamp_in_place_apply)
 
 
 register_transform(ClampInPlaceTransform())

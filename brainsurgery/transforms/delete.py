@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from .unary import UnarySpec, UnaryTransform
-from ..refs import TensorRef, must_model
-from ..transform import register_transform
-from ..transform_types import StateDictProvider, TransformError
+from ..core import TensorRef, must_model
+from ..core import register_transform
+from ..core import StateDictProvider, TransformError
 
 
 class DeleteTransformError(TransformError):

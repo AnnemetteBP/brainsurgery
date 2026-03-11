@@ -5,18 +5,20 @@ from typing import Any, Literal
 
 import torch
 
-from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
-from ..mappings import ResolvedMapping
-from ..refs import TensorRef, parse_slice, select_tensor
-from ..transform import ensure_mapping_payload, register_transform, require_numeric, validate_payload_keys
-from ..transform_types import StateDictProvider, TransformError
+from .binary import BinaryMappingSpec, DestinationPolicy
+from ..core import (
+    ResolvedMapping,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    register_transform,
+    require_numeric,
+    select_tensor,
+)
+from ..utils import BinaryRefs, DeclarativeBinaryTransform, Docs
 
 FillMode = Literal["constant", "rand", "tensor"]
 RandDistribution = Literal["uniform", "normal"]
-
-
-class FillTransformError(TransformError):
-    pass
 
 
 @dataclass(frozen=True)
@@ -37,9 +39,25 @@ class FillSpec(BinaryMappingSpec):
     config: FillConfig
 
 
-class FillTransform(BinaryMappingTransform[FillSpec]):
+def _build_fill_spec(from_ref: TensorRef, to_ref: TensorRef, payload: dict) -> FillSpec:
+    config = parse_fill_config(payload, op_name="fill", error_type=TransformError)
+    return FillSpec(from_ref=from_ref, to_ref=to_ref, config=config)
+
+
+def _fill_apply(
+    spec: FillSpec, item: ResolvedMapping, provider: StateDictProvider
+) -> None:
+    src_sd = provider.get_state_dict(item.src_model)
+    dst_sd = provider.get_state_dict(item.dst_model)
+    template = select_tensor(src_sd[item.src_name], item.src_slice)
+    dst_sd[item.dst_name] = build_filled_tensor_like(
+        template, spec.config, TransformError
+    )
+
+
+class FillTransform(DeclarativeBinaryTransform[FillSpec]):
     name = "fill"
-    error_type = FillTransformError
+    error_type = TransformError
     spec_type = FillSpec
     destination_policy = DestinationPolicy.MUST_NOT_EXIST
     allowed_keys = {
@@ -56,45 +74,19 @@ class FillTransform(BinaryMappingTransform[FillSpec]):
         "seed",
     }
     required_keys = {"from", "to", "mode"}
-    progress_desc = "Applying fill transforms"
-    help_text = (
-        "Fills new destination tensors using the source tensor shape.\n"
-        "\n"
-        "Modes:\n"
-        "  - constant: uses scalar 'value'\n"
-        "  - rand: random fill ('distribution': uniform|normal)\n"
-        "  - tensor: uses concrete payload 'values' (broadcasted if needed)\n"
-        "\n"
-        "Source references may be sliced. Destination tensors must not exist.\n"
-        "\n"
-        "Example:\n"
-        "  fill: { from: x, to: x_zeros, mode: constant, value: 0 }"
+    docs = Docs(
+        "Fills new destination tensors using the source tensor shape.",
+        notes=(
+            "Modes:",
+            "  - constant: uses scalar 'value'",
+            "  - rand: random fill ('distribution': uniform|normal)",
+            "  - tensor: uses concrete payload 'values' (broadcasted if needed)",
+        ),
+        examples=("fill: { from: x, to: x_zeros, mode: constant, value: 0 }",),
     )
-
-    def compile(self, payload: dict, default_model: str | None) -> FillSpec:
-        payload = ensure_mapping_payload(payload, self.name)
-        validate_payload_keys(
-            payload,
-            op_name=self.name,
-            allowed_keys=self.allowed_keys,
-            required_keys=self.required_keys,
-        )
-        from_ref, to_ref = self.parse_refs(payload, default_model)
-        self.validate_refs(from_ref, to_ref)
-        config = parse_fill_config(payload, op_name=self.name, error_type=FillTransformError)
-        return FillSpec(from_ref=from_ref, to_ref=to_ref, config=config)
-
-    def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
-        if from_ref.slice_spec is not None:
-            parse_slice(from_ref.slice_spec)
-        if to_ref.slice_spec is not None:
-            raise FillTransformError("fill destination must not be sliced")
-
-    def apply_item(self, spec: FillSpec, item: ResolvedMapping, provider: StateDictProvider) -> None:
-        src_sd = provider.get_state_dict(item.src_model)
-        dst_sd = provider.get_state_dict(item.dst_model)
-        template = select_tensor(src_sd[item.src_name], item.src_slice)
-        dst_sd[item.dst_name] = build_filled_tensor_like(template, spec.config, FillTransformError)
+    refs = BinaryRefs(from_slice=True)
+    spec_builder = staticmethod(_build_fill_spec)
+    apply_fn = staticmethod(_fill_apply)
 
 
 def parse_fill_config(
@@ -135,7 +127,10 @@ def parse_fill_config(
         values_payload = payload.get("values")
     else:
         raw_dist = payload.get("distribution", "uniform")
-        if not isinstance(raw_dist, str) or raw_dist.strip().lower() not in {"uniform", "normal"}:
+        if not isinstance(raw_dist, str) or raw_dist.strip().lower() not in {
+            "uniform",
+            "normal",
+        }:
             raise error_type(f"{op_name}.distribution must be one of: uniform, normal")
         distribution = raw_dist.strip().lower()  # type: ignore[assignment]
         if distribution == "uniform":
@@ -144,7 +139,9 @@ def parse_fill_config(
             if "high" in payload:
                 high = require_numeric(payload, op_name=op_name, key="high")
             if low >= high:
-                raise error_type(f"{op_name} requires low < high for uniform distribution")
+                raise error_type(
+                    f"{op_name} requires low < high for uniform distribution"
+                )
         else:
             if "mean" in payload:
                 mean = require_numeric(payload, op_name=op_name, key="mean")
@@ -188,7 +185,9 @@ def build_filled_tensor_like(
         return out
 
     assert config.mode == "tensor"
-    value = torch.as_tensor(config.values_payload, dtype=template.dtype, device=template.device)
+    value = torch.as_tensor(
+        config.values_payload, dtype=template.dtype, device=template.device
+    )
     if value.shape == template.shape:
         return value.clone()
     try:
@@ -198,14 +197,6 @@ def build_filled_tensor_like(
             f"fill.values cannot broadcast to target shape {tuple(template.shape)} from {tuple(value.shape)}"
         ) from exc
     return expanded.clone()
-
-
-
-
-
-
-
-
 
 
 register_transform(FillTransform())

@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from typing import Generic, TypeVar
 
 from .iterating import DestinationPolicy, IteratingTransform
-from ..mappings import ResolvedMapping, require_dest_missing, require_dest_present, resolve_name_mappings
-from ..refs import TensorRef, must_model, parse_model_expr
-from ..transform import ensure_mapping_payload, require_expr, validate_payload_keys
-from ..transform_types import StateDictProvider, TransformError
+from ..core import ResolvedMapping, require_dest_missing, require_dest_present, resolve_name_mappings
+from ..core import TensorRef, must_model, parse_model_expr
+from ..core import ensure_mapping_payload, require_expr, validate_payload_keys
+from ..core import StateDictProvider, TransformError
 
 
 @dataclass(frozen=True)

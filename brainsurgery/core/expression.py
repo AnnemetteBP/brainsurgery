@@ -5,7 +5,7 @@ from typing import Any, Callable, Protocol
 
 import torch
 
-from .resolver import (
+from ..utils import (
     resolve_single_tensor as resolve_single_tensor_generic,
     resolve_target_names as resolve_target_names_generic,
     resolve_tensor_mappings as resolve_tensor_mappings_generic,

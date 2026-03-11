@@ -5,9 +5,9 @@ from typing import Any
 
 import torch
 
-from ..mappings import match_expr_names
-from ..refs import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
-from ..transform import (
+from ..core import match_expr_names
+from ..core import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
+from ..core import (
     BaseTransform,
     TransformError,
     TransformResult,
@@ -15,7 +15,7 @@ from ..transform import (
     register_transform,
     validate_payload_keys,
 )
-from ..transform_types import StateDictProvider
+from ..core import StateDictProvider
 
 
 class ConcatTransformError(TransformError):

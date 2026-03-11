@@ -5,9 +5,9 @@ from typing import Any
 
 import torch
 
-from ..mappings import match_expr_names
-from ..refs import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
-from ..transform import (
+from ..core import match_expr_names
+from ..core import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
+from ..core import (
     BaseTransform,
     StateDictProvider,
     TransformError,

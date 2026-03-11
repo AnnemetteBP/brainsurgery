@@ -37,8 +37,8 @@ except ImportError:  # pragma: no cover
         return _TqdmDummy(iterable, **kwargs)
 
 from .plan import OutputSpec
-from .transform_types import StateDictLike
-from .workers import choose_num_io_workers, run_threadpool_tasks_with_progress
+from ..core.transform_types import StateDictLike
+from ..utils import choose_num_io_workers, run_threadpool_tasks_with_progress
 
 
 logger = logging.getLogger("brainsurgery")

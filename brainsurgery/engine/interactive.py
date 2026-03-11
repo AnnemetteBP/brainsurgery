@@ -12,12 +12,12 @@ from omegaconf import OmegaConf
 from rich.console import Console
 from rich.panel import Panel
 
-from .history import add_history_entry
-from .provider_utils import (
+from ..utils import add_history_entry
+from ..utils import (
     list_loaded_tensor_names as list_loaded_tensor_names_from_provider,
     list_model_aliases as list_model_aliases_from_provider,
 )
-from .transform import get_transform, list_transforms
+from ..core import get_transform, list_transforms
 
 logger = logging.getLogger("brainsurgery")
 console = Console()

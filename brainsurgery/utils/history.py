@@ -64,3 +64,5 @@ def add_history_entry(entry: str) -> None:
     except Exception:
         logger.debug("Could not add history entry", exc_info=True)
 
+
+__all__ = ["configure_history", "add_history_entry"]

@@ -5,11 +5,11 @@ from dataclasses import dataclass
 from typing import Generic, Literal, TypeVar
 
 from .iterating import IteratingTransform
-from ..mappings import match_expr_names
-from ..refs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
-from ..resolver import resolve_target_names as resolve_target_names_generic
-from ..transform import ensure_mapping_payload, require_expr, validate_payload_keys
-from ..transform_types import StateDictProvider, TransformError
+from ..core import match_expr_names
+from ..core import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
+from ..utils import resolve_target_names as resolve_target_names_generic
+from ..core import ensure_mapping_payload, require_expr, validate_payload_keys
+from ..core import StateDictProvider, TransformError
 
 
 @dataclass(frozen=True)

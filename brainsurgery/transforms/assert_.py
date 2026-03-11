@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..expressions import AssertExpr, AssertTransformError, compile_assert_expr, get_assert_expr_names
-from ..transform import (
+from ..core import (
     StateDictProvider,
     TypedTransform,
     TransformResult,
