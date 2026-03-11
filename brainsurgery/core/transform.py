@@ -113,11 +113,11 @@ def list_transforms() -> List[str]:
     return sorted(_REGISTRY.keys())
 
 
-def _apply_transform(compiled: CompiledTransform, provider: StateDictProvider) -> TransformResult:
+def apply_transform(compiled: CompiledTransform, provider: StateDictProvider) -> TransformResult:
     return compiled.transform.apply(compiled.spec, provider)
 
 
-def _infer_output_model(
+def infer_output_model(
     plan: SurgeryPlan,
     provider: StateDictProvider | None = None,
 ) -> str:
@@ -256,8 +256,8 @@ __all__ = [
     "TransformControl",
     "TransformResult",
     "_REGISTRY",
-    "_apply_transform",
-    "_infer_output_model",
+    "apply_transform",
+    "infer_output_model",
     "TypedTransform",
     "ensure_mapping_payload",
     "get_transform",

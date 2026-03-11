@@ -10,7 +10,7 @@ from ..core import (
     TransformError,
     register_transform,
 )
-from ..utils import DeclarativeUnaryTransform, Docs, UnaryRefs
+from ..utils.transforms import DeclarativeUnaryTransform, Docs, UnaryRefs
 
 
 @dataclass(frozen=True)

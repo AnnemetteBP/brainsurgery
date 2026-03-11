@@ -43,7 +43,7 @@ def list_model_aliases(provider: StateDictProvider | None) -> set[str]:
     return aliases
 
 
-def has_model_alias(provider: StateDictProvider, alias: str) -> bool:
+def _has_model_alias(provider: StateDictProvider, alias: str) -> bool:
     if _is_base_provider_instance(provider):
         return provider.has_model_alias(alias)
     return alias in list_model_aliases(provider)
@@ -58,7 +58,7 @@ def get_or_create_alias_state_dict(
 ) -> StateDictLike:
     if _is_base_provider_instance(provider):
         return provider.get_or_create_alias_state_dict(alias)
-    if has_model_alias(provider, alias):
+    if _has_model_alias(provider, alias):
         return provider.get_state_dict(alias)
     raise error_type(f"{op_name} requires a provider that supports creating new aliases")
 
@@ -125,7 +125,6 @@ def new_empty_state_dict(mappings: list[tuple[str, dict[str, object]]]) -> objec
 __all__ = [
     "iter_alias_mappings",
     "list_model_aliases",
-    "has_model_alias",
     "get_or_create_alias_state_dict",
     "list_loaded_tensor_names",
     "resolve_single_model_alias",

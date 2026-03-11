@@ -6,8 +6,6 @@ from .transform_types import (
 )
 from .refs import (
     TensorRef,
-    _looks_like_slice,
-    _validate_expr_kind,
     format_tensor_ref,
     must_model,
     parse_model_expr,
@@ -33,9 +31,8 @@ from .transform import (
     CompiledTransform,
     TransformControl,
     TransformResult,
-    _REGISTRY,
-    _apply_transform,
-    _infer_output_model,
+    apply_transform,
+    infer_output_model,
     TypedTransform,
     ensure_mapping_payload,
     get_transform,
@@ -48,8 +45,6 @@ from .transform import (
 )
 from .phlora import (
     PhloraSvdCache,
-    _require_matrix,
-    _resolve_effective_rank,
     compute_phlora_factors,
     reconstruct_phlora_rank,
     require_positive_rank,

@@ -9,7 +9,7 @@ from ..core import select_tensor
 from ..utils import require_same_shape_dtype_device3
 from ..core import register_transform
 from ..core import StateDictProvider, TransformError, note_tensor_write
-from ..utils import DeclarativeTernaryTransform, Docs, TernaryRefs
+from ..utils.transforms import DeclarativeTernaryTransform, Docs, TernaryRefs
 
 
 def _add_apply(

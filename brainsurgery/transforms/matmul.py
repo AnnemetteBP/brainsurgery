@@ -13,7 +13,7 @@ from ..core import (
     TransformError,
     register_transform,
 )
-from ..utils import DeclarativeTernaryTransform, Docs, TernaryRefs
+from ..utils.transforms import DeclarativeTernaryTransform, Docs, TernaryRefs
 
 
 def _matmul_apply(

@@ -12,7 +12,7 @@ from ..core import (
     select_tensor,
 )
 from .binary import BinaryMappingSpec, DestinationPolicy
-from ..utils import BinaryRefs, DeclarativeBinaryTransform, Docs
+from ..utils.transforms import BinaryRefs, DeclarativeBinaryTransform, Docs
 
 
 @dataclass(frozen=True)

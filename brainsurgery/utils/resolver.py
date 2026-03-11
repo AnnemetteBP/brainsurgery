@@ -101,11 +101,11 @@ def resolve_tensor_mappings(
 
     resolved: list[tuple[TensorRef, torch.Tensor, TensorRef, torch.Tensor]] = []
     for item in mappings:
-        resolved.append(resolve_mapping_tensors(item, from_ref=from_ref, to_ref=to_ref, provider=provider))
+        resolved.append(_resolve_mapping_tensors(item, from_ref=from_ref, to_ref=to_ref, provider=provider))
     return resolved
 
 
-def resolve_mapping_tensors(
+def _resolve_mapping_tensors(
     item: ResolvedMapping,
     *,
     from_ref: TensorRef,
@@ -127,5 +127,4 @@ __all__ = [
     "resolve_single_tensor",
     "resolve_tensors",
     "resolve_tensor_mappings",
-    "resolve_mapping_tensors",
 ]

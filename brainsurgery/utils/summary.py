@@ -24,7 +24,7 @@ def build_raw_plan(
     return raw
 
 
-def derive_summary_path(written_path: str | Path | None) -> Path:
+def _derive_summary_path(written_path: str | Path | None) -> Path:
     if written_path is None:
         return Path("brainsurgery-executed-plan.yaml")
 
@@ -57,4 +57,4 @@ def write_executed_plan_summary(
     logger.info("Executed plan summary written to %s", destination)
 
 
-__all__ = ["build_raw_plan", "derive_summary_path", "write_executed_plan_summary"]
+__all__ = ["build_raw_plan", "write_executed_plan_summary"]

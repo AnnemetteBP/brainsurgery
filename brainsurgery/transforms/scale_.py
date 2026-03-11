@@ -11,7 +11,7 @@ from ..core import (
     require_numeric,
 )
 from ..core import note_tensor_write
-from ..utils import DeclarativeUnaryTransform, Docs, UnaryRefs
+from ..utils.transforms import DeclarativeUnaryTransform, Docs, UnaryRefs
 
 
 @dataclass(frozen=True)

@@ -10,11 +10,9 @@ from ..core import (
     select_tensor,
 )
 from ..utils import (
-    BinaryRefs,
-    DeclarativeBinaryTransform,
-    Docs,
     require_same_shape_dtype_device,
 )
+from ..utils.transforms import BinaryRefs, DeclarativeBinaryTransform, Docs
 
 
 def _add_in_place_apply(

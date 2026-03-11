@@ -12,7 +12,7 @@ from ..core import (
     require_nonempty_string,
 )
 from ..core import StateDictProvider, TransformError
-from ..utils import DeclarativeUnaryTransform, Docs, UnaryRefs
+from ..utils.transforms import DeclarativeUnaryTransform, Docs, UnaryRefs
 
 
 @dataclass(frozen=True)

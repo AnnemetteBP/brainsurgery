@@ -58,7 +58,7 @@ def summarize_tensor(
     return summary
 
 
-def is_tensor_summary(node: Any) -> bool:
+def _is_tensor_summary(node: Any) -> bool:
     return (
         isinstance(node, dict)
         and set(node.keys())
@@ -72,20 +72,20 @@ def is_tensor_summary(node: Any) -> bool:
     )
 
 
-def shape_only(node: Any) -> Any:
-    if is_tensor_summary(node):
+def _shape_only(node: Any) -> Any:
+    if _is_tensor_summary(node):
         return {"shape": node["shape"]}
 
     if isinstance(node, dict):
-        return {key: shape_only(value) for key, value in node.items()}
+        return {key: _shape_only(value) for key, value in node.items()}
 
     if isinstance(node, list):
-        return [None if value is None else shape_only(value) for value in node]
+        return [None if value is None else _shape_only(value) for value in node]
 
     return node
 
 
-def format_summary(summary: dict[str, Any], *, compact: bool) -> str:
+def _format_summary(summary: dict[str, Any], *, compact: bool) -> str:
     del compact  # layout is handled by the tree renderer, not by summary content
 
     shape = summary["shape"]
@@ -131,7 +131,7 @@ def render_tree(tree: dict[str, Any], *, compact: bool) -> str:
 
     for index, (key, value) in enumerate(items):
         lines.extend(
-            render_node(
+            _render_node(
                 str(key),
                 value,
                 prefix="",
@@ -143,7 +143,7 @@ def render_tree(tree: dict[str, Any], *, compact: bool) -> str:
     return "\n".join(lines)
 
 
-def render_node(
+def _render_node(
     name: str,
     node: Any,
     *,
@@ -154,8 +154,8 @@ def render_node(
     branch = "└── " if is_last else "├── "
     child_prefix = prefix + ("    " if is_last else "│   ")
 
-    if is_tensor_summary(node):
-        return [f"{prefix}{branch}{name}  {format_summary(node, compact=compact)}"]
+    if _is_tensor_summary(node):
+        return [f"{prefix}{branch}{name}  {_format_summary(node, compact=compact)}"]
 
     lines = [f"{prefix}{branch}{name}"]
 
@@ -163,7 +163,7 @@ def render_node(
         items = list(node.items())
         for index, (child_name, child_node) in enumerate(items):
             lines.extend(
-                render_node(
+                _render_node(
                     str(child_name),
                     child_node,
                     prefix=child_prefix,
@@ -174,10 +174,10 @@ def render_node(
         return lines
 
     if isinstance(node, list):
-        groups = list_group_entries(node, compact=compact)
+        groups = _list_group_entries(node, compact=compact)
         for index, (label, child_node) in enumerate(groups):
             lines.extend(
-                render_node(
+                _render_node(
                     label,
                     child_node,
                     prefix=child_prefix,
@@ -190,23 +190,23 @@ def render_node(
     return [f"{prefix}{branch}{name}  {node!r}"]
 
 
-def list_group_entries(node: list[Any], *, compact: bool) -> list[tuple[str, Any]]:
+def _list_group_entries(node: list[Any], *, compact: bool) -> list[tuple[str, Any]]:
     present = [(index, value) for index, value in enumerate(node) if value is not None]
     if not present:
         return []
 
     if not compact:
-        return [(format_index_range(index, index), value) for index, value in present]
+        return [(_format_index_range(index, index), value) for index, value in present]
 
     groups: list[tuple[int, int, Any]] = []
 
     start, first_value = present[0]
     prev = start
     current_value = first_value
-    current_key = canonical_key(first_value)
+    current_key = _canonical_key(first_value)
 
     for index, value in present[1:]:
-        value_key = canonical_key(value)
+        value_key = _canonical_key(value)
 
         if index == prev + 1 and value_key == current_key:
             prev = index
@@ -220,27 +220,20 @@ def list_group_entries(node: list[Any], *, compact: bool) -> list[tuple[str, Any
 
     groups.append((start, prev, current_value))
 
-    return [(format_index_range(start, end), value) for start, end, value in groups]
+    return [(_format_index_range(start, end), value) for start, end, value in groups]
 
 
-def format_index_range(start: int, end: int) -> str:
+def _format_index_range(start: int, end: int) -> str:
     if start == end:
         return f"[{start}]"
     return f"[{start}-{end}]"
 
 
-def canonical_key(node: Any) -> str:
+def _canonical_key(node: Any) -> str:
     return json.dumps(node, sort_keys=True, separators=(",", ":"))
 
 
 __all__ = [
     "summarize_tensor",
-    "is_tensor_summary",
-    "shape_only",
-    "format_summary",
     "render_tree",
-    "render_node",
-    "list_group_entries",
-    "format_index_range",
-    "canonical_key",
 ]

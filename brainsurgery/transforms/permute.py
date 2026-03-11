@@ -11,7 +11,7 @@ from ..core import (
     register_transform,
     select_tensor,
 )
-from ..utils import BinaryRefs, DeclarativeBinaryTransform, Docs
+from ..utils.transforms import BinaryRefs, DeclarativeBinaryTransform, Docs
 
 
 @dataclass(frozen=True)

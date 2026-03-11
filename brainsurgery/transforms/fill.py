@@ -15,7 +15,7 @@ from ..core import (
     require_numeric,
     select_tensor,
 )
-from ..utils import BinaryRefs, DeclarativeBinaryTransform, Docs
+from ..utils.transforms import BinaryRefs, DeclarativeBinaryTransform, Docs
 
 FillMode = Literal["constant", "rand", "tensor"]
 RandDistribution = Literal["uniform", "normal"]

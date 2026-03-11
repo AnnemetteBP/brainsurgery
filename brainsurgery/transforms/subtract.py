@@ -13,7 +13,7 @@ from ..core import (
     register_transform,
 )
 from ..core import note_tensor_write
-from ..utils import DeclarativeTernaryTransform, Docs, TernaryRefs
+from ..utils.transforms import DeclarativeTernaryTransform, Docs, TernaryRefs
 
 
 def _subtract_apply(
