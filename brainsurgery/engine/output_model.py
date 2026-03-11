@@ -55,6 +55,3 @@ def _has_any_tensor(provider: StateDictProvider, model: str) -> bool:
         return len(provider.get_state_dict(model)) > 0
     except Exception:
         return False
-
-
-__all__ = ["infer_output_model"]

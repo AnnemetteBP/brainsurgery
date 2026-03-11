@@ -45,6 +45,3 @@ def run_threadpool_tasks_with_progress(
                 progress.update(1)
         finally:
             progress.close()
-
-
-__all__ = ["choose_num_io_workers", "run_threadpool_tasks_with_progress"]

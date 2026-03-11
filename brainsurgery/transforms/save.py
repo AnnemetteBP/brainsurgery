@@ -9,7 +9,7 @@ from ..engine.model import (
     persist_state_dict,
     save_tensor_to_path,
 )
-from ..providers import resolve_single_model_alias
+from ..engine import resolve_single_model_alias
 from ..core import parse_model_expr
 from ..core import StateDictProvider, TransformError
 from ..core import TypedTransform, TransformResult, register_transform

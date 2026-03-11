@@ -12,9 +12,9 @@ from omegaconf import OmegaConf
 from rich.console import Console
 from rich.panel import Panel
 
-from .history import add_history_entry
-from ..providers import (
-    list_loaded_tensor_names as list_loaded_tensor_names_from_provider,
+from .history import _add_history_entry
+from .provider_utils import (
+    _list_loaded_tensor_names as list_loaded_tensor_names_from_provider,
     list_model_aliases as list_model_aliases_from_provider,
 )
 from ..core import get_transform, list_transforms
@@ -632,7 +632,7 @@ def prompt_interactive_transform(state_dict_provider: Any | None = None) -> list
                     block = "\n".join(lines)
                     try:
                         parsed = parse_transform_block(block)
-                        add_history_entry(block)
+                        _add_history_entry(block)
                         return parsed
                     except ValueError as exc:
                         logger.error("Interactive transform rejected: %s", exc)

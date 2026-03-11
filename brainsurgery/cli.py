@@ -16,7 +16,7 @@ from .engine import (
     prompt_interactive_transform,
     write_executed_plan_summary,
 )
-from .providers import ProviderError, create_state_dict_provider, list_model_aliases
+from .engine import ProviderError, create_state_dict_provider, list_model_aliases
 
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)

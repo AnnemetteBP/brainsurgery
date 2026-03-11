@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from ..engine.model import load_tensor_from_path
-from ..providers import get_or_create_alias_state_dict
-from ..providers import BaseStateDictProvider, ProviderError
+from ..engine import get_or_create_alias_state_dict
+from ..engine import BaseStateDictProvider, ProviderError
 from ..core import parse_model_expr
 from ..core import StateDictProvider, TransformError
 from ..core import TypedTransform, TransformResult, register_transform

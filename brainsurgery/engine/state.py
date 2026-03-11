@@ -9,14 +9,14 @@ from typing import Dict
 import torch
 
 from .arena import ProviderError, SegmentedFileBackedArena, TensorSlot
-from ..engine.model import (
+from .model import (
     load_state_dict_from_path,
     persist_state_dict,
     resolve_output_destination,
     parse_shard_size,
 )
-from ..engine.plan import SurgeryPlan
-from ..engine.output_model import infer_output_model
+from .plan import SurgeryPlan
+from .output_model import infer_output_model
 from ..core import StateDictLike
 
 logger = logging.getLogger("brainsurgery")

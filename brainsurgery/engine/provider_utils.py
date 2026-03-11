@@ -8,7 +8,7 @@ from ..core import StateDictLike, StateDictProvider, TransformError
 
 def _is_base_provider_instance(provider: object) -> bool:
     try:
-        from ..providers.state import BaseStateDictProvider
+        from .state import BaseStateDictProvider
     except Exception:
         return False
     return isinstance(provider, BaseStateDictProvider)
@@ -63,7 +63,7 @@ def get_or_create_alias_state_dict(
     raise error_type(f"{op_name} requires a provider that supports creating new aliases")
 
 
-def list_loaded_tensor_names(provider: StateDictProvider | None) -> dict[str, set[str]]:
+def _list_loaded_tensor_names(provider: StateDictProvider | None) -> dict[str, set[str]]:
     if provider is None:
         return {}
 
@@ -126,7 +126,6 @@ __all__ = [
     "iter_alias_mappings",
     "list_model_aliases",
     "get_or_create_alias_state_dict",
-    "list_loaded_tensor_names",
     "resolve_single_model_alias",
     "find_alias_mapping",
     "new_empty_state_dict",

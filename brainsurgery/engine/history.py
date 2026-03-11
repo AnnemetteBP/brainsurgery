@@ -46,7 +46,7 @@ def configure_history() -> None:
     atexit.register(_write_history)
 
 
-def add_history_entry(entry: str) -> None:
+def _add_history_entry(entry: str) -> None:
     if readline is None:
         return
 
@@ -65,4 +65,4 @@ def add_history_entry(entry: str) -> None:
         logger.debug("Could not add history entry", exc_info=True)
 
 
-__all__ = ["configure_history", "add_history_entry"]
+__all__ = ["configure_history"]
