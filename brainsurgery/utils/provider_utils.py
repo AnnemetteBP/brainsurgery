@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from ..core.transform_types import StateDictLike, StateDictProvider, TransformError
+from ..core import StateDictLike, StateDictProvider, TransformError
 
 
 def _is_base_provider_instance(provider: object) -> bool:

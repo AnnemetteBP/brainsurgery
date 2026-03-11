@@ -151,16 +151,6 @@ def resolve_matches(
     )
 
 
-def resolve_single_tensor(ref: TensorRef, provider: StateDictProvider, op_name: str) -> torch.Tensor:
-    return resolve_single_tensor_generic(
-        ref,
-        provider,
-        op_name=op_name,
-        resolve_names=resolve_matches,
-        error_type=AssertTransformError,
-    )
-
-
 def resolve_tensors(
     ref: TensorRef,
     provider: StateDictProvider,
@@ -204,3 +194,23 @@ def collect_expr_models(exprs: list[AssertExpr]) -> set[str]:
 
 def format_ref(ref: TensorRef) -> str:
     return format_tensor_ref(ref)
+
+
+__all__ = [
+    "AssertExpr",
+    "AssertExprHelp",
+    "AssertTransformError",
+    "collect_expr_models",
+    "collect_ref_models",
+    "compile_assert_expr",
+    "compile_shape",
+    "compile_tensor_ref_expr",
+    "format_ref",
+    "get_assert_expr_help",
+    "get_assert_expr_names",
+    "register_assert_expr",
+    "require_mapping_assert_payload",
+    "resolve_matches",
+    "resolve_tensor_mappings",
+    "resolve_tensors",
+]

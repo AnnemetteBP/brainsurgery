@@ -34,7 +34,7 @@ def require_positive_rank(
     return integer
 
 
-def resolve_effective_rank(
+def _resolve_effective_rank(
     source: torch.Tensor,
     requested_rank: int,
     *,
@@ -42,7 +42,7 @@ def resolve_effective_rank(
     op_name: str,
     tensor_name: str,
 ) -> int:
-    require_matrix(
+    _require_matrix(
         source,
         error_type=error_type,
         op_name=op_name,
@@ -56,7 +56,7 @@ def resolve_effective_rank(
     return rank
 
 
-def require_matrix(
+def _require_matrix(
     source: torch.Tensor,
     *,
     error_type: type[TransformError],
@@ -79,7 +79,7 @@ def compute_phlora_factors(
     op_name: str,
     tensor_name: str,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    rank = resolve_effective_rank(
+    rank = _resolve_effective_rank(
         source,
         requested_rank,
         error_type=error_type,
@@ -103,7 +103,7 @@ def reconstruct_phlora_rank(
     op_name: str,
     tensor_name: str,
 ) -> torch.Tensor:
-    rank = resolve_effective_rank(
+    rank = _resolve_effective_rank(
         source,
         requested_rank,
         error_type=error_type,
@@ -112,3 +112,13 @@ def reconstruct_phlora_rank(
     )
     u, s, vh = cache.get(source, cache_key=cache_key)
     return (u[:, :rank] * s[:rank]) @ vh[:rank, :]
+
+
+__all__ = [
+    "PhloraSvdCache",
+    "_require_matrix",
+    "_resolve_effective_rank",
+    "compute_phlora_factors",
+    "reconstruct_phlora_rank",
+    "require_positive_rank",
+]

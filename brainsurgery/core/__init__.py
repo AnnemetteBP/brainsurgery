@@ -1,3 +1,59 @@
+from .transform_types import (
+    StateDictLike,
+    StateDictProvider,
+    TransformError,
+    note_tensor_write,
+)
+from .refs import (
+    TensorRef,
+    _looks_like_slice,
+    _validate_expr_kind,
+    format_tensor_ref,
+    must_model,
+    parse_model_expr,
+    parse_slice,
+    select_tensor,
+)
+from .matching import (
+    MatchError,
+    StructuredMatch,
+    StructuredPathMatcher,
+)
+from .mappings import (
+    ResolvedMapping,
+    match_expr_names,
+    match_structured_expr,
+    require_dest_missing,
+    require_dest_present,
+    resolve_name_mappings,
+    rewrite_structured_expr,
+)
+from .transform import (
+    BaseTransform,
+    CompiledTransform,
+    TransformControl,
+    TransformResult,
+    _REGISTRY,
+    _apply_transform,
+    _infer_output_model,
+    TypedTransform,
+    ensure_mapping_payload,
+    get_transform,
+    list_transforms,
+    register_transform,
+    require_expr,
+    require_nonempty_string,
+    require_numeric,
+    validate_payload_keys,
+)
+from .phlora import (
+    PhloraSvdCache,
+    _require_matrix,
+    _resolve_effective_rank,
+    compute_phlora_factors,
+    reconstruct_phlora_rank,
+    require_positive_rank,
+)
 from .expression import (
     AssertExpr,
     AssertExprHelp,
@@ -15,46 +71,4 @@ from .expression import (
     resolve_matches,
     resolve_tensor_mappings,
     resolve_tensors,
-)
-from .mappings import (
-    ResolvedMapping,
-    match_expr_names,
-    match_structured_expr,
-    require_dest_missing,
-    require_dest_present,
-    resolve_name_mappings,
-    rewrite_structured_expr,
-)
-from .phlora import (
-    PhloraSvdCache,
-    compute_phlora_factors,
-    reconstruct_phlora_rank,
-    require_positive_rank,
-)
-from .refs import (
-    TensorRef,
-    format_tensor_ref,
-    must_model,
-    parse_model_expr,
-    parse_slice,
-    select_tensor,
-)
-from .transform import (
-    BaseTransform,
-    TransformControl,
-    TransformResult,
-    TypedTransform,
-    ensure_mapping_payload,
-    get_transform,
-    list_transforms,
-    register_transform,
-    require_expr,
-    require_nonempty_string,
-    require_numeric,
-    validate_payload_keys,
-)
-from .transform_types import (
-    StateDictProvider,
-    TransformError,
-    note_tensor_write,
 )

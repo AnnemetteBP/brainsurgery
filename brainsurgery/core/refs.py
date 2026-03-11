@@ -39,13 +39,13 @@ def parse_model_expr(raw: object, default_model: Optional[str] = None) -> Tensor
 
     if len(parts) == 2:
         head, tail = parts
-        if default_model is not None and looks_like_slice(tail):
+        if default_model is not None and _looks_like_slice(tail):
             return TensorRef(model=default_model, expr=head, slice_spec=tail)
         return TensorRef(model=head or default_model, expr=tail, slice_spec=None)
 
     if len(parts) == 3:
         head, expr, slice_spec = parts
-        if not looks_like_slice(slice_spec):
+        if not _looks_like_slice(slice_spec):
             raise TransformError(f"invalid slice syntax in reference: {raw!r}")
         model = head or default_model
         if model is None:
@@ -56,7 +56,7 @@ def parse_model_expr(raw: object, default_model: Optional[str] = None) -> Tensor
 
 
 def parse_slice(raw: str) -> Tuple[object, ...]:
-    if not looks_like_slice(raw):
+    if not _looks_like_slice(raw):
         raise TransformError(f"invalid slice syntax: {raw!r}")
 
     inner = raw[1:-1].strip()
@@ -67,23 +67,23 @@ def parse_slice(raw: str) -> Tuple[object, ...]:
     if any(part == "" for part in parts):
         raise TransformError(f"invalid empty slice component in {raw!r}")
 
-    return tuple(parse_slice_component(part) for part in parts)
+    return tuple(_parse_slice_component(part) for part in parts)
 
 
-def parse_slice_component(raw: str) -> object:
+def _parse_slice_component(raw: str) -> object:
     if raw == ":":
         return slice(None, None, None)
 
     if ":" not in raw:
-        return parse_int(raw)
+        return _parse_int(raw)
 
     parts = raw.split(":")
     if len(parts) not in (2, 3):
         raise TransformError(f"invalid slice component: {raw!r}")
 
-    start = parse_optional_int(parts[0])
-    stop = parse_optional_int(parts[1])
-    step = parse_optional_int(parts[2]) if len(parts) == 3 else None
+    start = _parse_optional_int(parts[0])
+    stop = _parse_optional_int(parts[1])
+    step = _parse_optional_int(parts[2]) if len(parts) == 3 else None
     return slice(start, stop, step)
 
 
@@ -98,18 +98,18 @@ def select_tensor(tensor: torch.Tensor, slice_spec: Optional[Tuple[object, ...]]
         ) from exc
 
 
-def parse_int(raw: str) -> int:
+def _parse_int(raw: str) -> int:
     try:
         return int(raw)
     except ValueError as exc:
         raise TransformError(f"invalid integer in slice component: {raw!r}") from exc
 
 
-def parse_optional_int(raw: str) -> Optional[int]:
-    return None if raw == "" else parse_int(raw)
+def _parse_optional_int(raw: str) -> Optional[int]:
+    return None if raw == "" else _parse_int(raw)
 
 
-def looks_like_slice(raw: str) -> bool:
+def _looks_like_slice(raw: str) -> bool:
     return raw.startswith("[") and raw.endswith("]")
 
 
@@ -119,7 +119,7 @@ def must_model(ref: TensorRef) -> str:
     return ref.model
 
 
-def format_ref_expr(expr: Expr) -> str:
+def _format_ref_expr(expr: Expr) -> str:
     if isinstance(expr, str):
         return expr
     return "[" + ", ".join(repr(part) for part in expr) + "]"
@@ -127,13 +127,13 @@ def format_ref_expr(expr: Expr) -> str:
 
 def format_tensor_ref(ref: TensorRef) -> str:
     model = must_model(ref)
-    expr = format_ref_expr(ref.expr)
+    expr = _format_ref_expr(ref.expr)
     if ref.slice_spec is None:
         return f"{model}::{expr}"
     return f"{model}::{expr}::{ref.slice_spec}"
 
 
-def validate_expr_kind(
+def _validate_expr_kind(
     *,
     expr: Expr,
     op_name: str,
@@ -154,3 +154,15 @@ def validate_expr_kind(
         return
 
     raise TransformError(f"{op_name} {role} expression has invalid type: {type(expr).__name__}")
+
+
+__all__ = [
+    "TensorRef",
+    "_looks_like_slice",
+    "_validate_expr_kind",
+    "format_tensor_ref",
+    "must_model",
+    "parse_model_expr",
+    "parse_slice",
+    "select_tensor",
+]

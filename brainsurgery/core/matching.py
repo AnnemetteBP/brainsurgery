@@ -258,3 +258,10 @@ class StructuredPathMatcher:
             out.append(self._interpolate_segment(token, env))
 
         return self.join_name(out)
+
+
+__all__ = [
+    "MatchError",
+    "StructuredMatch",
+    "StructuredPathMatcher",
+]

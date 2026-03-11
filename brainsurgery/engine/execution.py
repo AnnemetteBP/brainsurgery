@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Iterable
 
-from ..core.transform import CompiledTransform, TransformControl, apply_transform
+from ..core import CompiledTransform, TransformControl, _apply_transform
 
 logger = logging.getLogger("brainsurgery")
 
@@ -45,7 +45,7 @@ def execute_transform_pairs(
         )
 
         try:
-            transform_result = apply_transform(compiled_transform, state_dict_provider)
+            transform_result = _apply_transform(compiled_transform, state_dict_provider)
         except Exception as exc:
             if not interactive:
                 raise

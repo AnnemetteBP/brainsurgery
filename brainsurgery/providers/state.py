@@ -16,8 +16,8 @@ from ..engine.model import (
     parse_shard_size,
 )
 from ..engine.plan import SurgeryPlan
-from ..core.transform import infer_output_model
-from ..core.transform_types import StateDictLike
+from ..core import _infer_output_model
+from ..core import StateDictLike
 
 logger = logging.getLogger("brainsurgery")
 
@@ -226,7 +226,7 @@ class BaseStateDictProvider:
         if plan.output is None:
             raise ProviderError("save_output requires plan.output")
 
-        output_model = infer_output_model(plan, self)
+        output_model = _infer_output_model(plan, self)
         state_dict = self.get_state_dict(output_model)
 
         output_path, output_format, shard_size = resolve_output_destination(

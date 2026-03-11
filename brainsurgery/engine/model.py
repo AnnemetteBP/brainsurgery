@@ -37,7 +37,7 @@ except ImportError:  # pragma: no cover
         return _TqdmDummy(iterable, **kwargs)
 
 from .plan import OutputSpec
-from ..core.transform_types import StateDictLike
+from ..core import StateDictLike
 from ..utils import choose_num_io_workers, run_threadpool_tasks_with_progress
 
 

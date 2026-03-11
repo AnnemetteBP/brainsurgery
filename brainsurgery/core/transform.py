@@ -11,21 +11,7 @@ if TYPE_CHECKING:
     from ..engine import SurgeryPlan
 
 
-from .refs import (
-    Expr,
-    TensorRef,
-    format_ref_expr,
-    format_tensor_ref,
-    looks_like_slice,
-    must_model,
-    parse_int,
-    parse_model_expr,
-    parse_optional_int,
-    parse_slice,
-    parse_slice_component,
-    select_tensor,
-    validate_expr_kind,
-)
+from .refs import Expr
 
 
 class TransformControl(Enum):
@@ -127,11 +113,11 @@ def list_transforms() -> List[str]:
     return sorted(_REGISTRY.keys())
 
 
-def apply_transform(compiled: CompiledTransform, provider: StateDictProvider) -> TransformResult:
+def _apply_transform(compiled: CompiledTransform, provider: StateDictProvider) -> TransformResult:
     return compiled.transform.apply(compiled.spec, provider)
 
 
-def infer_output_model(
+def _infer_output_model(
     plan: SurgeryPlan,
     provider: StateDictProvider | None = None,
 ) -> str:
@@ -262,3 +248,23 @@ def require_numeric(payload: dict, *, op_name: str, key: str) -> float:
         return float(value)
     except (TypeError, ValueError) as exc:
         raise TransformError(f"{op_name}.{key} must be numeric") from exc
+
+
+__all__ = [
+    "BaseTransform",
+    "CompiledTransform",
+    "TransformControl",
+    "TransformResult",
+    "_REGISTRY",
+    "_apply_transform",
+    "_infer_output_model",
+    "TypedTransform",
+    "ensure_mapping_payload",
+    "get_transform",
+    "list_transforms",
+    "register_transform",
+    "require_expr",
+    "require_nonempty_string",
+    "require_numeric",
+    "validate_payload_keys",
+]

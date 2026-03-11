@@ -3,15 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Sequence, TypeVar
 
-from ..core.mappings import ResolvedMapping
-from ..core.refs import TensorRef, parse_slice
+from ..core import ResolvedMapping
+from ..core import TensorRef, parse_slice
 from ..transforms.ternary import (
     ResolvedTernaryMapping,
     TernaryMappingSpec,
     TernaryMappingTransform,
 )
-from ..core.transform import TransformError, ensure_mapping_payload, validate_payload_keys
-from ..core.transform_types import StateDictProvider
+from ..core import TransformError, ensure_mapping_payload, validate_payload_keys
+from ..core import StateDictProvider
 from ..transforms.binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..transforms.unary import UnarySpec, UnaryTransform
 

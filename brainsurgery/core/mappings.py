@@ -13,7 +13,7 @@ from .refs import (
     format_tensor_ref,
     must_model,
     parse_slice,
-    validate_expr_kind,
+    _validate_expr_kind,
 )
 from .transform_types import StateDictProvider, TransformError
 
@@ -38,7 +38,7 @@ def match_expr_names(
     op_name: str,
     role: str,
 ) -> list[str]:
-    validate_expr_kind(expr=expr, op_name=op_name, role=role)
+    _validate_expr_kind(expr=expr, op_name=op_name, role=role)
 
     if isinstance(expr, str):
         try:
@@ -60,7 +60,7 @@ def match_structured_expr(
     op_name: str,
     role: str,
 ):
-    validate_expr_kind(expr=expr, op_name=op_name, role=role)
+    _validate_expr_kind(expr=expr, op_name=op_name, role=role)
     try:
         return _MATCHER.match(expr, name)
     except MatchError as exc:
@@ -74,7 +74,7 @@ def rewrite_structured_expr(
     op_name: str,
     role: str,
 ) -> str:
-    validate_expr_kind(expr=expr, op_name=op_name, role=role)
+    _validate_expr_kind(expr=expr, op_name=op_name, role=role)
     try:
         return _MATCHER.rewrite(expr, match)
     except MatchError as exc:
@@ -272,3 +272,14 @@ def require_dest_present(
         dst_sd = provider.get_state_dict(item.dst_model)
         if item.dst_name not in dst_sd:
             raise TransformError(f"{op_name} destination missing: {item.dst_model}::{item.dst_name}")
+
+
+__all__ = [
+    "ResolvedMapping",
+    "match_expr_names",
+    "match_structured_expr",
+    "require_dest_missing",
+    "require_dest_present",
+    "resolve_name_mappings",
+    "rewrite_structured_expr",
+]
