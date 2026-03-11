@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..expression import AssertExpr, AssertTransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, resolve_matches
+from ..core import Expression, TransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, resolve_matches
 from ..core import TensorRef
 from ..core import StateDictProvider
 
@@ -15,7 +15,7 @@ class ExistsExpr:
     def evaluate(self, provider: StateDictProvider) -> None:
         matches = resolve_matches(self.ref, provider, op_name="exists")
         if not matches:
-            raise AssertTransformError(f"exists failed: {format_ref(self.ref)} matched zero tensors")
+            raise TransformError(f"exists failed: {format_ref(self.ref)} matched zero tensors")
 
     def collect_models(self) -> set[str]:
         return collect_ref_models(self.ref)
@@ -26,5 +26,5 @@ class ExistsExpr:
     payload_kind="tensor-ref",
     description="Succeeds if the reference matches at least one tensor.",
 )
-def compile_exists_expr(payload: Any, default_model: str | None) -> AssertExpr:
+def compile_exists_expr(payload: Any, default_model: str | None) -> Expression:
     return ExistsExpr(ref=compile_tensor_ref_expr(payload, default_model, "exists"))

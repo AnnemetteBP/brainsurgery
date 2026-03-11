@@ -5,8 +5,8 @@ from typing import Any
 
 import torch
 
-from ..expression import collect_ref_models, compile_shape, compile_tensor_ref_expr, format_ref, register_assert_expr, resolve_tensors, require_mapping_assert_payload
-from ..expression import AssertTransformError
+from ..core import collect_ref_models, compile_shape, compile_tensor_ref_expr, format_ref, register_assert_expr, resolve_tensors, require_mapping_assert_payload
+from ..core import TransformError
 from ..core import TensorRef
 from ..core import StateDictProvider
 
@@ -19,7 +19,7 @@ class ShapeExpr:
     def evaluate(self, provider: StateDictProvider) -> None:
         for ref, tensor in resolve_tensors(self.ref, provider, op_name="shape.of"):
             if tuple(tensor.shape) != self.is_value:
-                raise AssertTransformError(
+                raise TransformError(
                     f"shape failed: {format_ref(ref)} has shape {tuple(tensor.shape)}, expected {self.is_value}"
                 )
 

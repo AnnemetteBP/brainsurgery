@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..expression import AssertTransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_matches
+from ..core import TransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_matches
 from ..core import TensorRef
 from ..core import StateDictProvider
 
@@ -16,7 +16,7 @@ class CountExpr:
     def evaluate(self, provider: StateDictProvider) -> None:
         matches = resolve_matches(self.ref, provider, op_name="count.of")
         if len(matches) != self.is_value:
-            raise AssertTransformError(
+            raise TransformError(
                 f"count failed: {format_ref(self.ref)} matched {len(matches)} tensors, expected {self.is_value}"
             )
 
@@ -41,5 +41,5 @@ def compile_count_expr(payload: Any, default_model: str | None) -> CountExpr:
     ref = compile_tensor_ref_expr(payload["of"], default_model, "count.of")
     is_value = payload["is"]
     if not isinstance(is_value, int):
-        raise AssertTransformError("count.is must be an integer")
+        raise TransformError("count.is must be an integer")
     return CountExpr(ref=ref, is_value=is_value)

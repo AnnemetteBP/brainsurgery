@@ -60,7 +60,7 @@ def resolve_single_tensor(
     return select_tensor(tensor, slice_spec)
 
 
-def resolve_tensors(
+def _resolve_tensors(
     ref: TensorRef,
     provider: StateDictProvider,
     *,
@@ -80,7 +80,7 @@ def resolve_tensors(
     return resolved
 
 
-def resolve_tensor_mappings(
+def _resolve_tensor_mappings(
     from_ref: TensorRef,
     to_ref: TensorRef,
     provider: StateDictProvider,
@@ -125,6 +125,4 @@ def _resolve_mapping_tensors(
 __all__ = [
     "resolve_target_names",
     "resolve_single_tensor",
-    "resolve_tensors",
-    "resolve_tensor_mappings",
 ]

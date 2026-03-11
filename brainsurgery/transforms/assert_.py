@@ -3,15 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..expressions import AssertExpr, AssertTransformError, compile_assert_expr, get_assert_expr_names
-from ..core import StateDictProvider
+from ..expressions import Expression, compile_assert_expr, get_assert_expr_names
+from ..core import StateDictProvider, TransformError
 from ..core import TypedTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload
 
 
 @dataclass(frozen=True)
 class AssertSpec:
-    expr: AssertExpr
+    expr: Expression
 
     def collect_models(self) -> set[str]:
         return self.expr.collect_models()
@@ -19,7 +19,7 @@ class AssertSpec:
 
 class AssertTransform(TypedTransform[AssertSpec]):
     name = "assert"
-    error_type = AssertTransformError
+    error_type = TransformError
     spec_type = AssertSpec
     help_text = (
         "Checks conditions on tensors using a single assert expression. "

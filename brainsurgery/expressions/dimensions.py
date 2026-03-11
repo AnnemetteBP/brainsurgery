@@ -5,7 +5,7 @@ from typing import Any
 
 import torch
 
-from ..expression import AssertTransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, resolve_tensors, require_mapping_assert_payload
+from ..core import TransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, resolve_tensors, require_mapping_assert_payload
 from ..core import TensorRef
 from ..core import StateDictProvider
 from .scalar_compare import ScalarComparison, parse_scalar_comparison
@@ -20,7 +20,7 @@ class DimensionsExpr:
         for ref, tensor in resolve_tensors(self.ref, provider, op_name="dimensions.of"):
             actual = len(tensor.shape)
             if not self.comparison.matches(actual):
-                raise AssertTransformError(
+                raise TransformError(
                     f"dimensions failed: {format_ref(ref)} has {actual} dims, expected {self.comparison.describe()}"
                 )
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..expression import AssertTransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_matches
+from ..core import TransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_matches
 from ..core import StateDictProvider
 from .scalar_compare import ScalarComparison, parse_scalar_comparison
 
@@ -20,17 +20,17 @@ class TensorAccessExpr:
         state_dict = provider.get_state_dict(model)
         access_counts = getattr(state_dict, "access_counts", None)
         if not callable(access_counts):
-            raise AssertTransformError(f"{self.field} assertions require an instrumented state_dict backend")
+            raise TransformError(f"{self.field} assertions require an instrumented state_dict backend")
 
         matches = resolve_matches(self.ref, provider, op_name=self.field)
         if not matches:
-            raise AssertTransformError(f"{self.field} failed: {format_ref(self.ref)} matched zero tensors")
+            raise TransformError(f"{self.field} failed: {format_ref(self.ref)} matched zero tensors")
 
         expected = self.comparison.describe()
         for name in matches:
             actual = access_counts(name)[self.field]
             if not self.comparison.matches(actual):
-                raise AssertTransformError(
+                raise TransformError(
                     f"{self.field} failed: {model}::{name} had {self.field}={actual}, expected {expected}"
                 )
 

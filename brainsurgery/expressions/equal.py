@@ -5,7 +5,7 @@ from typing import Any
 
 import torch
 
-from ..expression import AssertTransformError, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_tensor_mappings
+from ..core import TransformError, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_tensor_mappings
 from ..core import TensorRef, must_model
 from ..core import require_same_shape_dtype_device
 from ..core import StateDictProvider
@@ -38,7 +38,7 @@ class EqualExpr:
                 is_equal = bool(torch.all(diff <= self.eps).item())
 
             if not is_equal:
-                raise AssertTransformError(
+                raise TransformError(
                     f"equal failed: {format_ref(left_ref)} != {format_ref(right_ref)}"
                 )
 
@@ -70,8 +70,8 @@ def compile_equal_expr(payload: Any, default_model: str | None) -> EqualExpr:
         eps = None
     else:
         if isinstance(raw_eps, bool) or not isinstance(raw_eps, (int, float)):
-            raise AssertTransformError("equal.eps must be a non-negative number")
+            raise TransformError("equal.eps must be a non-negative number")
         eps = float(raw_eps)
         if eps < 0:
-            raise AssertTransformError("equal.eps must be a non-negative number")
+            raise TransformError("equal.eps must be a non-negative number")
     return EqualExpr(left=left, right=right, eps=eps)

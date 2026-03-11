@@ -5,7 +5,7 @@ from typing import Any
 
 import torch
 
-from ..expression import AssertTransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, resolve_tensors, require_mapping_assert_payload
+from ..core import TransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, resolve_tensors, require_mapping_assert_payload
 from ..core import parse_torch_dtype
 from ..core import TensorRef
 from ..core import StateDictProvider
@@ -19,7 +19,7 @@ class DtypeExpr:
     def evaluate(self, provider: StateDictProvider) -> None:
         for ref, tensor in resolve_tensors(self.ref, provider, op_name="dtype.of"):
             if tensor.dtype != self.is_value:
-                raise AssertTransformError(
+                raise TransformError(
                     f"dtype failed: {format_ref(ref)} has dtype {tensor.dtype}, expected {self.is_value}"
                 )
 
@@ -45,13 +45,13 @@ def compile_dtype_expr(payload: Any, default_model: str | None) -> DtypeExpr:
 
     raw_dtype = payload["is"]
     if not isinstance(raw_dtype, str) or not raw_dtype:
-        raise AssertTransformError("dtype.is must be a non-empty string")
+        raise TransformError("dtype.is must be a non-empty string")
 
     return DtypeExpr(
         ref=ref,
         is_value=parse_torch_dtype(
             raw_dtype,
-            error_type=AssertTransformError,
+            error_type=TransformError,
             op_name="dtype",
             field_name="is",
         ),

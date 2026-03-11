@@ -3,21 +3,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..expression import AssertExpr, AssertTransformError, compile_assert_expr, register_assert_expr
+from ..core import Expression, TransformError, compile_assert_expr, register_assert_expr
 from ..core import StateDictProvider
 
 
 @dataclass(frozen=True)
 class NotExpr:
-    expr: AssertExpr
+    expr: Expression
 
     def evaluate(self, provider: StateDictProvider) -> None:
         try:
             self.expr.evaluate(provider)
-        except AssertTransformError:
+        except TransformError:
             return
 
-        raise AssertTransformError(f"not failed: inner assertion succeeded: {self.expr!r}")
+        raise TransformError(f"not failed: inner assertion succeeded: {self.expr!r}")
 
     def collect_models(self) -> set[str]:
         return self.expr.collect_models()
@@ -28,5 +28,5 @@ class NotExpr:
     payload_kind="assert-expr",
     description="Succeeds if the inner assertion fails.",
 )
-def compile_not_expr(payload: Any, default_model: str | None) -> AssertExpr:
+def compile_not_expr(payload: Any, default_model: str | None) -> Expression:
     return NotExpr(expr=compile_assert_expr(payload, default_model))

@@ -3,13 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..expression import AssertExpr, AssertTransformError, collect_expr_models, compile_assert_expr, register_assert_expr
+from ..core import Expression, TransformError, collect_expr_models, compile_assert_expr, register_assert_expr
 from ..core import StateDictProvider
 
 
 @dataclass(frozen=True)
 class AllExpr:
-    exprs: list[AssertExpr]
+    exprs: list[Expression]
 
     def evaluate(self, provider: StateDictProvider) -> None:
         for expr in self.exprs:
@@ -26,5 +26,5 @@ class AllExpr:
 )
 def compile_all_expr(payload: Any, default_model: str | None) -> AllExpr:
     if not isinstance(payload, list) or not payload:
-        raise AssertTransformError("all must be a non-empty list")
+        raise TransformError("all must be a non-empty list")
     return AllExpr(exprs=[compile_assert_expr(item, default_model) for item in payload])

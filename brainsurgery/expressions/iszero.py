@@ -5,7 +5,7 @@ from typing import Any
 
 import torch
 
-from ..expression import AssertExpr, AssertTransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_tensors
+from ..core import Expression, TransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_tensors
 from ..core import TensorRef
 from ..core import StateDictProvider
 
@@ -28,8 +28,8 @@ class IsZeroExpr:
 
             if not is_zero:
                 if self.eps is None:
-                    raise AssertTransformError(f"iszero failed: {format_ref(ref)} is not all zeros")
-                raise AssertTransformError(
+                    raise TransformError(f"iszero failed: {format_ref(ref)} is not all zeros")
+                raise TransformError(
                     f"iszero failed: {format_ref(ref)} is not all zeros within eps={self.eps}"
                 )
 
@@ -47,7 +47,7 @@ class IsZeroExpr:
         "or within optional absolute tolerance 'eps'."
     ),
 )
-def compile_iszero_expr(payload: Any, default_model: str | None) -> AssertExpr:
+def compile_iszero_expr(payload: Any, default_model: str | None) -> Expression:
     if isinstance(payload, dict):
         payload = require_mapping_assert_payload(
             payload,
@@ -67,9 +67,9 @@ def compile_iszero_expr(payload: Any, default_model: str | None) -> AssertExpr:
         eps = None
     else:
         if isinstance(raw_eps, bool) or not isinstance(raw_eps, (int, float)):
-            raise AssertTransformError("iszero.eps must be a non-negative number")
+            raise TransformError("iszero.eps must be a non-negative number")
         eps = float(raw_eps)
         if eps < 0:
-            raise AssertTransformError("iszero.eps must be a non-negative number")
+            raise TransformError("iszero.eps must be a non-negative number")
 
     return IsZeroExpr(ref=ref, eps=eps)

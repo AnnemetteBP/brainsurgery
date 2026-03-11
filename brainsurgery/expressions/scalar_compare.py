@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..expression import AssertTransformError
+from ..core import TransformError
 
 
 COMPARISON_KEYS = ("is", "ge", "gt", "le", "lt")
@@ -58,7 +58,7 @@ def parse_scalar_comparison(
         if value is None:
             return None
         if not isinstance(value, int) or value < 0:
-            raise AssertTransformError(f"{op_name}.{public_name} must be a non-negative integer")
+            raise TransformError(f"{op_name}.{public_name} must be a non-negative integer")
         return value
 
     for key in COMPARISON_KEYS:
@@ -71,7 +71,7 @@ def parse_scalar_comparison(
                 continue
             existing = values[canonical_name]
             if existing is not None and existing != alias_value:
-                raise AssertTransformError(
+                raise TransformError(
                     f"{op_name}.{alias_name} conflicts with {op_name}.{canonical_name}"
                 )
             values[canonical_name] = alias_value
@@ -88,7 +88,7 @@ def parse_scalar_comparison(
         keys = list(COMPARISON_KEYS)
         if aliases:
             keys.extend(sorted(aliases))
-        raise AssertTransformError(f"{op_name} must include at least one of: {', '.join(keys)}")
+        raise TransformError(f"{op_name} must include at least one of: {', '.join(keys)}")
 
     _validate_scalar_comparison(comparison, op_name=op_name)
     return comparison
@@ -117,18 +117,18 @@ def _validate_scalar_comparison(comparison: ScalarComparison, *, op_name: str) -
 
     if lower_bound is not None and upper_bound is not None:
         if lower_bound > upper_bound:
-            raise AssertTransformError(f"{op_name} has contradictory bounds")
+            raise TransformError(f"{op_name} has contradictory bounds")
         if lower_bound == upper_bound and (not lower_inclusive or not upper_inclusive):
-            raise AssertTransformError(f"{op_name} has contradictory bounds")
+            raise TransformError(f"{op_name} has contradictory bounds")
 
     if comparison.exact is None:
         return
 
     if comparison.ge is not None and comparison.exact < comparison.ge:
-        raise AssertTransformError(f"{op_name}.is cannot be smaller than {op_name}.ge")
+        raise TransformError(f"{op_name}.is cannot be smaller than {op_name}.ge")
     if comparison.gt is not None and comparison.exact <= comparison.gt:
-        raise AssertTransformError(f"{op_name}.is must be greater than {op_name}.gt")
+        raise TransformError(f"{op_name}.is must be greater than {op_name}.gt")
     if comparison.le is not None and comparison.exact > comparison.le:
-        raise AssertTransformError(f"{op_name}.is cannot be larger than {op_name}.le")
+        raise TransformError(f"{op_name}.is cannot be larger than {op_name}.le")
     if comparison.lt is not None and comparison.exact >= comparison.lt:
-        raise AssertTransformError(f"{op_name}.is must be less than {op_name}.lt")
+        raise TransformError(f"{op_name}.is must be less than {op_name}.lt")
