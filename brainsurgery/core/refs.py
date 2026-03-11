@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 import torch
 
-from .transform_types import TransformError
+from .types import TransformError
 
 
 Expr = str | list[str]
@@ -158,8 +158,6 @@ def _validate_expr_kind(
 
 __all__ = [
     "TensorRef",
-    "_looks_like_slice",
-    "_validate_expr_kind",
     "format_tensor_ref",
     "must_model",
     "parse_model_expr",

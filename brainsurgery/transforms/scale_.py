@@ -2,16 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .unary import UnarySpec
+from ..core import UnarySpec
 from ..core import TensorRef, must_model, parse_slice, select_tensor
-from ..core import (
-    StateDictProvider,
-    TransformError,
-    register_transform,
-    require_numeric,
-)
-from ..core import note_tensor_write
-from ..utils.transforms import DeclarativeUnaryTransform, Docs, UnaryRefs
+from ..core import StateDictProvider, TransformError
+from ..core import register_transform
+from ..core import require_numeric
+from ..core import DeclarativeUnaryTransform, Docs, UnaryRefs
 
 
 @dataclass(frozen=True)
@@ -40,7 +36,7 @@ def _scale_in_place_apply(
     )
     view = select_tensor(tensor, slice_spec)
     view.mul_(spec.factor)
-    note_tensor_write(sd, name)
+    sd.mark_write(name)
 
 
 class ScaleInPlaceTransform(DeclarativeUnaryTransform[ScaleInPlaceSpec]):

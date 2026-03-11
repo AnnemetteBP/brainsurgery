@@ -5,16 +5,7 @@ from typing import Any
 
 import torch
 
-from ..core import (
-    AssertExpr,
-    AssertTransformError,
-    collect_ref_models,
-    compile_tensor_ref_expr,
-    format_ref,
-    register_assert_expr,
-    require_mapping_assert_payload,
-    resolve_tensors,
-)
+from ..expression import AssertExpr, AssertTransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_tensors
 from ..core import TensorRef
 from ..core import StateDictProvider
 

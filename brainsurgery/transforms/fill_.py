@@ -3,13 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .fill import FillConfig, build_filled_tensor_like, parse_fill_config
-from .unary import UnarySpec
+from ..core import UnarySpec
 from ..core import TensorRef, must_model, parse_slice, select_tensor
-from ..core import (
-    register_transform,
-)
-from ..core import StateDictProvider, TransformError, note_tensor_write
-from ..utils.transforms import DeclarativeUnaryTransform, Docs, UnaryRefs
+from ..core import register_transform
+from ..core import StateDictProvider, TransformError
+from ..core import DeclarativeUnaryTransform, Docs, UnaryRefs
 
 
 @dataclass(frozen=True)
@@ -35,7 +33,7 @@ def _fill_in_place_apply(
     view = select_tensor(sd[name], slice_spec)
     filled = build_filled_tensor_like(view, spec.config, TransformError)
     view.copy_(filled)
-    note_tensor_write(sd, name)
+    sd.mark_write(name)
 
 
 class FillInPlaceTransform(DeclarativeUnaryTransform[FillInPlaceSpec]):

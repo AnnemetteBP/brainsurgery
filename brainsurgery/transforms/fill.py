@@ -5,17 +5,11 @@ from typing import Any, Literal
 
 import torch
 
-from .binary import BinaryMappingSpec, DestinationPolicy
-from ..core import (
-    ResolvedMapping,
-    StateDictProvider,
-    TensorRef,
-    TransformError,
-    register_transform,
-    require_numeric,
-    select_tensor,
-)
-from ..utils.transforms import BinaryRefs, DeclarativeBinaryTransform, Docs
+from ..core import BinaryMappingSpec, DestinationPolicy
+from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError, select_tensor
+from ..core import register_transform
+from ..core import require_numeric
+from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs
 
 FillMode = Literal["constant", "rand", "tensor"]
 RandDistribution = Literal["uniform", "normal"]

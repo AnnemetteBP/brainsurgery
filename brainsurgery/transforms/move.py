@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
+from ..core import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..core import ResolvedMapping
 from ..core import TensorRef
-from ..core import (
-    StateDictProvider,
-    TransformError,
-    register_transform,
-)
+from ..core import StateDictProvider, TransformError
+from ..core import register_transform
 
 
 class MoveTransformError(TransformError):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch
 
-from ..core import TransformError
+from .types import TransformError
 
 
 _DTYPE_ALIASES: dict[str, torch.dtype] = {

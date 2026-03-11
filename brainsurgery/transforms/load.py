@@ -5,19 +5,12 @@ from pathlib import Path
 from typing import Any
 
 from ..engine.model import load_tensor_from_path
-from ..utils import get_or_create_alias_state_dict
+from ..providers import get_or_create_alias_state_dict
 from ..providers import BaseStateDictProvider, ProviderError
 from ..core import parse_model_expr
-from ..core import (
-    StateDictProvider,
-    TypedTransform,
-    TransformError,
-    TransformResult,
-    ensure_mapping_payload,
-    register_transform,
-    require_nonempty_string,
-    validate_payload_keys,
-)
+from ..core import StateDictProvider, TransformError
+from ..core import TypedTransform, TransformResult, register_transform
+from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
 
 
 class LoadTransformError(TransformError):

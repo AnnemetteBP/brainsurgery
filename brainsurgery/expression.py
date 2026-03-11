@@ -5,16 +5,15 @@ from typing import Any, Callable, Protocol
 
 import torch
 
-from ..utils import (
-    resolve_single_tensor as resolve_single_tensor_generic,
+from .core import (
     resolve_target_names as resolve_target_names_generic,
     resolve_tensor_mappings as resolve_tensor_mappings_generic,
     resolve_tensors as resolve_tensors_generic,
 )
-from .mappings import match_expr_names
-from .refs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
-from .transform import ensure_mapping_payload, validate_payload_keys
-from .transform_types import StateDictProvider, TransformError
+from .core import match_expr_names
+from .core import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
+from .core import StateDictProvider, TransformError
+from .core import ensure_mapping_payload, validate_payload_keys
 
 
 class AssertTransformError(TransformError):

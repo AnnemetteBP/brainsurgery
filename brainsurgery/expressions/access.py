@@ -3,15 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..core import (
-    AssertTransformError,
-    collect_ref_models,
-    compile_tensor_ref_expr,
-    format_ref,
-    register_assert_expr,
-    require_mapping_assert_payload,
-    resolve_matches,
-)
+from ..expression import AssertTransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_matches
 from ..core import StateDictProvider
 from .scalar_compare import ScalarComparison, parse_scalar_comparison
 

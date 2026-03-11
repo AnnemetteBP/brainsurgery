@@ -7,14 +7,9 @@ import torch
 
 from ..core import match_expr_names
 from ..core import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
-from ..core import (
-    BaseTransform,
-    TransformError,
-    TransformResult,
-    ensure_mapping_payload,
-    register_transform,
-    validate_payload_keys,
-)
+from ..core import TransformError
+from ..core import BaseTransform, TransformResult, register_transform
+from ..core import ensure_mapping_payload, validate_payload_keys
 from ..core import StateDictProvider
 
 

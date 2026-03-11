@@ -2,17 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .iterating import IteratingTransform
+from ..core import IteratingTransform
+from ..algorithms.phlora import PhloraSvdCache, compute_phlora_factors, require_positive_rank
 from ..core import ResolvedMapping, resolve_name_mappings
-from ..core import PhloraSvdCache, compute_phlora_factors, require_positive_rank
 from ..core import TensorRef, must_model, parse_model_expr
-from ..core import (
-    ensure_mapping_payload,
-    register_transform,
-    require_expr,
-    require_numeric,
-    validate_payload_keys,
-)
+from ..core import register_transform
+from ..core import ensure_mapping_payload, require_expr, require_numeric, validate_payload_keys
 from ..core import StateDictProvider, TransformError
 
 

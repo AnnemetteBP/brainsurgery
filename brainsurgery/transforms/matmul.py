@@ -2,18 +2,15 @@ from __future__ import annotations
 
 import torch
 
-from .ternary import (
+from ..core import (
     DestinationPolicy,
     ResolvedTernaryMapping,
     TernaryMappingSpec,
 )
 from ..core import select_tensor
-from ..core import (
-    StateDictProvider,
-    TransformError,
-    register_transform,
-)
-from ..utils.transforms import DeclarativeTernaryTransform, Docs, TernaryRefs
+from ..core import StateDictProvider, TransformError
+from ..core import register_transform
+from ..core import DeclarativeTernaryTransform, Docs, TernaryRefs
 
 
 def _matmul_apply(

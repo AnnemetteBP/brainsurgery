@@ -1,21 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import List
 
 import re
 
-from .matching import MatchError, StructuredPathMatcher
-from .refs import (
-    Expr,
-    TensorRef,
-    format_tensor_ref,
-    must_model,
-    parse_slice,
-    _validate_expr_kind,
-)
-from .transform_types import StateDictProvider, TransformError
+from .expr_matching import _match_structured_expr, _rewrite_structured_expr, match_expr_names
+from .refs import TensorRef, format_tensor_ref, must_model, parse_slice
+from .types import StateDictProvider, TransformError
 
 
 @dataclass(frozen=True)
@@ -26,59 +18,6 @@ class ResolvedMapping:
     dst_model: str
     dst_name: str
     dst_slice: tuple[object, ...] | None
-
-
-_MATCHER = StructuredPathMatcher()
-
-
-def match_expr_names(
-    *,
-    expr: Expr,
-    names: Iterable[str],
-    op_name: str,
-    role: str,
-) -> list[str]:
-    _validate_expr_kind(expr=expr, op_name=op_name, role=role)
-
-    if isinstance(expr, str):
-        try:
-            return sorted(name for name in names if re.fullmatch(expr, name))
-        except re.error as exc:
-            raise TransformError(f"{op_name} invalid {role} regex {expr!r}: {exc}") from exc
-
-    assert isinstance(expr, list)
-    try:
-        return sorted(name for name in names if _MATCHER.match(expr, name) is not None)
-    except MatchError as exc:
-        raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
-
-
-def match_structured_expr(
-    *,
-    expr: list[str],
-    name: str,
-    op_name: str,
-    role: str,
-):
-    _validate_expr_kind(expr=expr, op_name=op_name, role=role)
-    try:
-        return _MATCHER.match(expr, name)
-    except MatchError as exc:
-        raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
-
-
-def rewrite_structured_expr(
-    *,
-    expr: list[str],
-    match,
-    op_name: str,
-    role: str,
-) -> str:
-    _validate_expr_kind(expr=expr, op_name=op_name, role=role)
-    try:
-        return _MATCHER.rewrite(expr, match)
-    except MatchError as exc:
-        raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
 
 
 def _resolve_name_mappings_regex(
@@ -165,7 +104,7 @@ def _resolve_name_mappings_structured(
     resolved: List[ResolvedMapping] = []
 
     for src_name in sorted(src_sd.keys()):
-        match = match_structured_expr(
+        match = _match_structured_expr(
             expr=from_ref.expr,
             name=src_name,
             op_name=op_name,
@@ -176,7 +115,7 @@ def _resolve_name_mappings_structured(
 
         matched_any = True
 
-        dst_name = rewrite_structured_expr(
+        dst_name = _rewrite_structured_expr(
             expr=to_ref.expr,
             match=match,
             op_name=op_name,
@@ -276,10 +215,7 @@ def require_dest_present(
 
 __all__ = [
     "ResolvedMapping",
-    "match_expr_names",
-    "match_structured_expr",
     "require_dest_missing",
     "require_dest_present",
     "resolve_name_mappings",
-    "rewrite_structured_expr",
 ]

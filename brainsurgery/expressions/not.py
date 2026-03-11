@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..core import AssertExpr, AssertTransformError, compile_assert_expr, register_assert_expr
+from ..expression import AssertExpr, AssertTransformError, compile_assert_expr, register_assert_expr
 from ..core import StateDictProvider
 
 

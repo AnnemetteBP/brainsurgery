@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import torch
 
-from .binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
+from ..core import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..core import ResolvedMapping
 from ..core import TensorRef, parse_slice, select_tensor
-from ..utils import require_same_shape_dtype_device
+from ..core import require_same_shape_dtype_device
 from ..core import register_transform
-from ..core import StateDictProvider, TransformError, note_tensor_write
+from ..core import StateDictProvider, TransformError
 
 
 class AssignTransformError(TransformError):
@@ -52,7 +52,7 @@ class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
         )
 
         dst_view.copy_(src_view)
-        note_tensor_write(dst_sd, item.dst_name)
+        dst_sd.mark_write(item.dst_name)
 
 
 

@@ -3,15 +3,7 @@ from __future__ import annotations
 from importlib import import_module
 from pkgutil import iter_modules
 
-from ..core import (
-    AssertExpr,
-    AssertExprHelp,
-    AssertTransformError,
-    compile_assert_expr,
-    get_assert_expr_help,
-    get_assert_expr_names,
-    register_assert_expr,
-)
+from ..expression import AssertExpr, AssertExprHelp, AssertTransformError, compile_assert_expr, get_assert_expr_help, get_assert_expr_names, register_assert_expr
 
 
 for module_info in iter_modules(__path__):  # type: ignore[name-defined]

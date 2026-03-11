@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .unary import UnarySpec, UnaryTransform
+from ..core import UnarySpec, UnaryTransform
 from ..core import TensorRef, must_model
 from ..core import register_transform
 from ..core import StateDictProvider, TransformError

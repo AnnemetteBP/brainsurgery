@@ -16,7 +16,7 @@ from ..engine.model import (
     parse_shard_size,
 )
 from ..engine.plan import SurgeryPlan
-from ..core import infer_output_model
+from ..engine.output_model import infer_output_model
 from ..core import StateDictLike
 
 logger = logging.getLogger("brainsurgery")

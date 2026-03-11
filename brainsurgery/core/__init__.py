@@ -1,8 +1,25 @@
-from .transform_types import (
+from .resolver import (
+    resolve_single_tensor,
+    resolve_target_names,
+    resolve_tensor_mappings,
+    resolve_tensors,
+)
+from .validation import (
+    ensure_mapping_payload,
+    require_expr,
+    require_nonempty_string,
+    require_numeric,
+    require_same_shape_dtype_device,
+    require_same_shape_dtype_device3,
+    validate_payload_keys,
+)
+from .dtypes import (
+    parse_torch_dtype,
+)
+from .types import (
     StateDictLike,
     StateDictProvider,
     TransformError,
-    note_tensor_write,
 )
 from .refs import (
     TensorRef,
@@ -17,53 +34,42 @@ from .matching import (
     StructuredMatch,
     StructuredPathMatcher,
 )
-from .mappings import (
-    ResolvedMapping,
+from .expr_matching import (
     match_expr_names,
-    match_structured_expr,
+)
+from .name_mapping import (
+    ResolvedMapping,
     require_dest_missing,
     require_dest_present,
     resolve_name_mappings,
-    rewrite_structured_expr,
 )
 from .transform import (
     BaseTransform,
+    BinaryMappingSpec,
+    BinaryMappingTransform,
     CompiledTransform,
+    DestinationPolicy,
+    IteratingTransform,
+    ResolvedTernaryMapping,
+    TernaryMappingSpec,
+    TernaryMappingTransform,
     TransformControl,
     TransformResult,
-    apply_transform,
-    infer_output_model,
     TypedTransform,
-    ensure_mapping_payload,
+    UnarySpec,
+    UnaryTransform,
+    REGISTRY,
+    apply_transform,
     get_transform,
     list_transforms,
     register_transform,
-    require_expr,
-    require_nonempty_string,
-    require_numeric,
-    validate_payload_keys,
 )
-from .phlora import (
-    PhloraSvdCache,
-    compute_phlora_factors,
-    reconstruct_phlora_rank,
-    require_positive_rank,
-)
-from .expression import (
-    AssertExpr,
-    AssertExprHelp,
-    AssertTransformError,
-    collect_expr_models,
-    collect_ref_models,
-    compile_assert_expr,
-    compile_shape,
-    compile_tensor_ref_expr,
-    format_ref,
-    get_assert_expr_help,
-    get_assert_expr_names,
-    register_assert_expr,
-    require_mapping_assert_payload,
-    resolve_matches,
-    resolve_tensor_mappings,
-    resolve_tensors,
+from .declarative import (
+    BinaryRefs,
+    DeclarativeBinaryTransform,
+    DeclarativeTernaryTransform,
+    DeclarativeUnaryTransform,
+    Docs,
+    TernaryRefs,
+    UnaryRefs,
 )

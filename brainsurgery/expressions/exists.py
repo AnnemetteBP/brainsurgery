@@ -3,15 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..core import (
-    AssertExpr,
-    AssertTransformError,
-    collect_ref_models,
-    compile_tensor_ref_expr,
-    format_ref,
-    register_assert_expr,
-    resolve_matches,
-)
+from ..expression import AssertExpr, AssertTransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, resolve_matches
 from ..core import TensorRef
 from ..core import StateDictProvider
 

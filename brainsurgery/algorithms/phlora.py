@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch
 
-from .transform_types import TransformError
+from ..core import TransformError
 
 
 class PhloraSvdCache:

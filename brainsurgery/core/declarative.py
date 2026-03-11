@@ -1,19 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Sequence, TypeVar
+from typing import Callable, TypeVar
 
-from ..core import ResolvedMapping
-from ..core import TensorRef, parse_slice
-from ..transforms.ternary import (
+from .refs import TensorRef, parse_slice
+from .transform import (
+    BinaryMappingSpec,
+    BinaryMappingTransform,
+    DestinationPolicy,
+    ResolvedMapping,
     ResolvedTernaryMapping,
     TernaryMappingSpec,
     TernaryMappingTransform,
+    UnarySpec,
+    UnaryTransform,
 )
-from ..core import TransformError, ensure_mapping_payload, validate_payload_keys
-from ..core import StateDictProvider
-from ..transforms.binary import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
-from ..transforms.unary import UnarySpec, UnaryTransform
+from .types import StateDictProvider, TransformError
+from .validation import ensure_mapping_payload, validate_payload_keys
 
 UnarySpecT = TypeVar("UnarySpecT", bound=UnarySpec)
 BinarySpecT = TypeVar("BinarySpecT", bound=BinaryMappingSpec)

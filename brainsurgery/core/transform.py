@@ -3,15 +3,22 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Dict, Generic, List, TypeVar
+import re
+from typing import Dict, Generic, Iterable, List, Literal, TypeVar
 
-from .transform_types import StateDictLike, StateDictProvider, TransformError
+from tqdm import tqdm
 
-if TYPE_CHECKING:
-    from ..engine import SurgeryPlan
-
-
-from .refs import Expr
+from .expr_matching import _match_structured_expr, _rewrite_structured_expr, match_expr_names
+from .name_mapping import (
+    ResolvedMapping,
+    require_dest_missing,
+    require_dest_present,
+    resolve_name_mappings,
+)
+from .refs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
+from .resolver import resolve_target_names as resolve_target_names_generic
+from .types import StateDictProvider, TransformError
+from .validation import ensure_mapping_payload, require_expr, validate_payload_keys
 
 
 class TransformControl(Enum):
@@ -24,6 +31,8 @@ class TransformResult:
     name: str
     count: int
     control: TransformControl = TransformControl.CONTINUE
+
+
 @dataclass(frozen=True)
 class CompiledTransform:
     transform: "BaseTransform"
@@ -90,181 +99,566 @@ class TypedTransform(BaseTransform, ABC, Generic[SpecT]):
         return spec
 
 
-_REGISTRY: Dict[str, BaseTransform] = {}
+REGISTRY: Dict[str, BaseTransform] = {}
 
 
 def register_transform(transform: BaseTransform) -> None:
     name = getattr(transform, "name", None)
     if not isinstance(name, str) or not name:
         raise TransformError("transform must define a non-empty string 'name'")
-    if name in _REGISTRY:
+    if name in REGISTRY:
         raise TransformError(f"transform already registered: {name}")
-    _REGISTRY[name] = transform
+    REGISTRY[name] = transform
 
 
 def get_transform(name: str) -> BaseTransform:
     try:
-        return _REGISTRY[name]
+        return REGISTRY[name]
     except KeyError as exc:
         raise TransformError(f"unknown transform: {name}") from exc
 
 
 def list_transforms() -> List[str]:
-    return sorted(_REGISTRY.keys())
+    return sorted(REGISTRY.keys())
 
 
 def apply_transform(compiled: CompiledTransform, provider: StateDictProvider) -> TransformResult:
     return compiled.transform.apply(compiled.spec, provider)
 
 
-def infer_output_model(
-    plan: SurgeryPlan,
-    provider: StateDictProvider | None = None,
-) -> str:
-    destination_models = set()
-
-    for compiled in plan.transforms:
-        if not compiled.transform.contributes_output_model(compiled.spec):
-            continue
-        inferred_model = _infer_transform_output_model(compiled, provider)
-        if provider is not None and not _has_any_tensor(provider, inferred_model):
-            continue
-        destination_models.add(inferred_model)
-
-    if len(destination_models) != 1:
-        raise TransformError(
-            "cannot infer output model uniquely; expected exactly one destination model across all transforms"
-        )
-
-    return next(iter(destination_models))
+class DestinationPolicy(Enum):
+    ANY = "any"
+    MUST_EXIST = "must_exist"
+    MUST_NOT_EXIST = "must_not_exist"
 
 
-def _infer_transform_output_model(
-    compiled: CompiledTransform,
-    provider: StateDictProvider | None,
-) -> str:
-    try:
-        return compiled.transform.infer_output_model(compiled.spec)
-    except TransformError:
-        if provider is None:
-            raise
-
-        collect_models = getattr(compiled.spec, "collect_models", None)
-        if not callable(collect_models):
-            raise
-
-        models = collect_models()
-        if not isinstance(models, set):
-            raise
-
-        non_empty_models = [model for model in models if _has_any_tensor(provider, model)]
-        if len(non_empty_models) == 1:
-            return non_empty_models[0]
-        raise
+ItemT = TypeVar("ItemT")
 
 
-def _has_any_tensor(provider: StateDictProvider, model: str) -> bool:
-    try:
-        return len(provider.get_state_dict(model)) > 0
-    except Exception:
-        return False
+class IteratingTransform(TypedTransform[SpecT], ABC, Generic[SpecT, ItemT]):
+    error_type: type[TransformError] = TransformError
+    spec_type: type[SpecT]
+    progress_desc: str | None = None
+    progress_unit: str = "tensor"
+
+    def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
+        typed = self.require_spec(spec)
+        items = self.resolve_items(typed, provider)
+        self.validate_resolved_items(typed, items, provider)
+
+        for item in self.iter_items(items):
+            self.apply_item(typed, item, provider)
+
+        return TransformResult(name=self.name, count=len(items))
+
+    def iter_items(self, items: list[ItemT]) -> Iterable[ItemT]:
+        if self.progress_desc is None:
+            return items
+        return tqdm(items, desc=self.progress_desc, unit=self.progress_unit)
+
+    @abstractmethod
+    def resolve_items(
+        self,
+        spec: SpecT,
+        provider: StateDictProvider,
+    ) -> list[ItemT]:
+        ...
+
+    def validate_resolved_items(
+        self,
+        spec: SpecT,
+        items: list[ItemT],
+        provider: StateDictProvider,
+    ) -> None:
+        del spec, items, provider
+
+    @abstractmethod
+    def apply_item(
+        self,
+        spec: SpecT,
+        item: ItemT,
+        provider: StateDictProvider,
+    ) -> None:
+        ...
 
 
-from .mappings import (
-    ResolvedMapping,
-    match_expr_names,
-    match_structured_expr,
-    require_dest_missing,
-    require_dest_present,
-    resolve_name_mappings,
-    rewrite_structured_expr,
-)
+@dataclass(frozen=True)
+class UnarySpec:
+    target_ref: TensorRef
+
+    def collect_models(self) -> set[str]:
+        return {must_model(self.target_ref)}
 
 
-def ensure_mapping_payload(payload: object, op_name: str) -> dict:
-    if not isinstance(payload, dict):
-        raise TransformError(f"{op_name} payload must be a mapping")
-    return payload
+UnarySpecT = TypeVar("UnarySpecT", bound=UnarySpec)
 
 
-def validate_payload_keys(
-    payload: dict,
+def _resolve_unary_target_names(
     *,
+    target_ref: TensorRef,
+    provider: StateDictProvider,
     op_name: str,
-    allowed_keys: set[str],
-    required_keys: set[str] | None = None,
-) -> None:
-    unknown = set(payload) - allowed_keys
-    if unknown:
-        raise TransformError(f"{op_name} received unknown keys: {sorted(unknown)}")
-
-    if required_keys is None:
-        required_keys = set()
-
-    missing = required_keys - set(payload)
-    if missing:
-        missing_list = sorted(missing)
-        if len(missing_list) == 1:
-            raise TransformError(f"{op_name}.{missing_list[0]} is required")
-        raise TransformError(f"{op_name} is missing required keys: {missing_list}")
-
-
-def require_nonempty_string(payload: dict, *, op_name: str, key: str) -> str:
-    value = payload.get(key)
-    if not isinstance(value, str) or not value:
-        raise TransformError(f"{op_name}.{key} must be a non-empty string")
-    return value
-
-
-def require_expr(payload: dict, *, op_name: str, key: str) -> Expr:
-    value = payload.get(key)
-
-    if isinstance(value, str):
-        if not value:
-            raise TransformError(
-                f"{op_name}.{key} must be a non-empty string or a non-empty list of non-empty strings"
-            )
-        return value
-
-    if isinstance(value, list):
-        if not value:
-            raise TransformError(
-                f"{op_name}.{key} must be a non-empty string or a non-empty list of non-empty strings"
-            )
-        if not all(isinstance(item, str) and item for item in value):
-            raise TransformError(
-                f"{op_name}.{key} must be a non-empty string or a non-empty list of non-empty strings"
-            )
-        return value
-
-    raise TransformError(
-        f"{op_name}.{key} must be a non-empty string or a non-empty list of non-empty strings"
+    error_type: type[TransformError],
+) -> list[str]:
+    return resolve_target_names_generic(
+        target_ref=target_ref,
+        provider=provider,
+        op_name=op_name,
+        match_names=match_expr_names,
+        error_type=error_type,
     )
 
 
-def require_numeric(payload: dict, *, op_name: str, key: str) -> float:
-    value = payload.get(key)
-    try:
-        return float(value)
-    except (TypeError, ValueError) as exc:
-        raise TransformError(f"{op_name}.{key} must be numeric") from exc
+class UnaryTransform(IteratingTransform[UnarySpecT, str], ABC, Generic[UnarySpecT]):
+    error_type: type[TransformError] = TransformError
+    spec_type: type[UnarySpecT]
+
+    allowed_keys: set[str] = {"target"}
+    required_keys: set[str] = {"target"}
+    target_key: str = "target"
+    slice_policy: Literal["allow", "forbid"] = "forbid"
+
+    def completion_reference_keys(self) -> list[str]:
+        return [self.target_key]
+
+    def compile(self, payload: dict, default_model: str | None) -> UnarySpecT:
+        payload = ensure_mapping_payload(payload, self.name)
+        validate_payload_keys(
+            payload,
+            op_name=self.name,
+            allowed_keys=self.allowed_keys,
+            required_keys=self.required_keys,
+        )
+
+        raw_target = self.require_target_expr(payload)
+        target_ref = parse_model_expr(raw_target, default_model=default_model)
+
+        self.validate_target_ref(target_ref)
+
+        assert target_ref.model is not None
+        return self.build_spec(target_ref=target_ref, payload=payload)
+
+    def infer_output_model(self, spec: object) -> str:
+        typed = self.require_spec(spec)
+        model = typed.target_ref.model
+        if model is None:
+            raise self.error_type(f"{self.name} output model missing")
+        return model
+
+    def require_target_expr(self, payload: dict) -> str | list[object]:
+        return require_expr(payload, op_name=self.name, key=self.target_key)
+
+    def build_spec(self, target_ref: TensorRef, payload: dict) -> UnarySpecT:
+        return self.spec_type(target_ref=target_ref)
+
+    def validate_target_ref(self, target_ref: TensorRef) -> None:
+        if target_ref.slice_spec is None:
+            return
+
+        if self.slice_policy == "forbid":
+            raise self.error_type(f"{self.name} target must not be sliced")
+
+        parse_slice(target_ref.slice_spec)
+
+    def resolve_items(self, spec: UnarySpecT, provider: StateDictProvider) -> list[str]:
+        return _resolve_unary_target_names(
+            target_ref=spec.target_ref,
+            provider=provider,
+            op_name=self.name,
+            error_type=self.error_type,
+        )
+
+    def resolve_targets(self, spec: UnarySpecT, provider: StateDictProvider) -> list[str]:
+        return self.resolve_items(spec, provider)
+
+    @abstractmethod
+    def apply_to_target(self, spec: UnarySpecT, name: str, provider: StateDictProvider) -> None:
+        ...
+
+    def apply_item(self, spec: UnarySpecT, item: str, provider: StateDictProvider) -> None:
+        self.apply_to_target(spec, item, provider)
+
+
+@dataclass(frozen=True)
+class BinaryMappingSpec:
+    from_ref: TensorRef
+    to_ref: TensorRef
+
+    def collect_models(self) -> set[str]:
+        return {must_model(self.from_ref), must_model(self.to_ref)}
+
+
+BinarySpecT = TypeVar("BinarySpecT", bound=BinaryMappingSpec)
+
+
+class BinaryMappingTransform(IteratingTransform[BinarySpecT, ResolvedMapping], ABC, Generic[BinarySpecT]):
+    error_type: type[TransformError] = TransformError
+    spec_type: type[BinarySpecT]
+    destination_policy: DestinationPolicy = DestinationPolicy.ANY
+
+    allowed_keys = {"from", "to"}
+    required_keys = {"from", "to"}
+
+    def completion_reference_keys(self) -> list[str]:
+        return ["from", "to"]
+
+    def compile(self, payload: dict, default_model: str | None) -> BinarySpecT:
+        payload = ensure_mapping_payload(payload, self.name)
+        validate_payload_keys(
+            payload,
+            op_name=self.name,
+            allowed_keys=self.allowed_keys,
+            required_keys=self.required_keys,
+        )
+
+        from_ref, to_ref = self.parse_refs(payload, default_model)
+        self.validate_refs(from_ref, to_ref)
+
+        assert from_ref.model is not None
+        assert to_ref.model is not None
+        return self.build_spec(from_ref=from_ref, to_ref=to_ref)
+
+    def infer_output_model(self, spec: object) -> str:
+        typed = self.require_spec(spec)
+        model = typed.to_ref.model
+        if model is None:
+            raise self.error_type(f"{self.name} output model missing")
+        return model
+
+    def parse_refs(
+        self,
+        payload: dict,
+        default_model: str | None,
+    ) -> tuple[TensorRef, TensorRef]:
+        raw_from = require_expr(payload, op_name=self.name, key="from")
+        raw_to = require_expr(payload, op_name=self.name, key="to")
+
+        from_ref = parse_model_expr(raw_from, default_model=default_model)
+        to_ref = parse_model_expr(raw_to, default_model=default_model)
+        return from_ref, to_ref
+
+    def build_spec(self, from_ref: TensorRef, to_ref: TensorRef) -> BinarySpecT:
+        return self.spec_type(from_ref=from_ref, to_ref=to_ref)
+
+    def resolve_items(
+        self,
+        spec: BinarySpecT,
+        provider: StateDictProvider,
+    ) -> list[ResolvedMapping]:
+        return resolve_name_mappings(
+            from_ref=spec.from_ref,
+            to_ref=spec.to_ref,
+            provider=provider,
+            op_name=self.name,
+        )
+
+    @abstractmethod
+    def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
+        ...
+
+    def validate_resolved_items(
+        self,
+        spec: BinarySpecT,
+        mappings: list[ResolvedMapping],
+        provider: StateDictProvider,
+    ) -> None:
+        del spec
+        if self.destination_policy is DestinationPolicy.MUST_EXIST:
+            require_dest_present(
+                mappings=mappings,
+                provider=provider,
+                op_name=self.name,
+            )
+            return
+
+        if self.destination_policy is DestinationPolicy.MUST_NOT_EXIST:
+            require_dest_missing(
+                mappings=mappings,
+                provider=provider,
+                op_name=self.name,
+            )
+
+    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
+        del item, provider
+        raise NotImplementedError
+
+    def apply_item(self, spec: BinarySpecT, item: ResolvedMapping, provider: StateDictProvider) -> None:
+        del spec
+        self.apply_mapping(item, provider)
+
+
+@dataclass(frozen=True)
+class TernaryMappingSpec:
+    from_a_ref: TensorRef
+    from_b_ref: TensorRef
+    to_ref: TensorRef
+
+    def collect_models(self) -> set[str]:
+        return {
+            must_model(self.from_a_ref),
+            must_model(self.from_b_ref),
+            must_model(self.to_ref),
+        }
+
+
+@dataclass(frozen=True)
+class ResolvedTernaryMapping:
+    src_a_model: str
+    src_a_name: str
+    src_a_slice: tuple[object, ...] | None
+    src_b_model: str
+    src_b_name: str
+    src_b_slice: tuple[object, ...] | None
+    dst_model: str
+    dst_name: str
+    dst_slice: tuple[object, ...] | None
+
+
+TernarySpecT = TypeVar("TernarySpecT", bound=TernaryMappingSpec)
+
+
+class TernaryMappingTransform(IteratingTransform[TernarySpecT, ResolvedTernaryMapping], ABC, Generic[TernarySpecT]):
+    error_type: type[TransformError] = TransformError
+    spec_type: type[TernarySpecT]
+    destination_policy: DestinationPolicy = DestinationPolicy.ANY
+
+    allowed_keys = {"from_a", "from_b", "to"}
+    required_keys = {"from_a", "from_b", "to"}
+
+    def completion_reference_keys(self) -> list[str]:
+        return ["from_a", "from_b", "to"]
+
+    def compile(self, payload: dict, default_model: str | None) -> TernarySpecT:
+        payload = ensure_mapping_payload(payload, self.name)
+        validate_payload_keys(
+            payload,
+            op_name=self.name,
+            allowed_keys=self.allowed_keys,
+            required_keys=self.required_keys,
+        )
+
+        from_a_ref, from_b_ref, to_ref = self.parse_refs(payload, default_model)
+        self.validate_refs(from_a_ref, from_b_ref, to_ref)
+
+        assert from_a_ref.model is not None
+        assert from_b_ref.model is not None
+        assert to_ref.model is not None
+        return self.build_spec(from_a_ref=from_a_ref, from_b_ref=from_b_ref, to_ref=to_ref)
+
+    def infer_output_model(self, spec: object) -> str:
+        typed = self.require_spec(spec)
+        model = typed.to_ref.model
+        if model is None:
+            raise self.error_type(f"{self.name} output model missing")
+        return model
+
+    def parse_refs(
+        self,
+        payload: dict,
+        default_model: str | None,
+    ) -> tuple[TensorRef, TensorRef, TensorRef]:
+        raw_from_a = require_expr(payload, op_name=self.name, key="from_a")
+        raw_from_b = require_expr(payload, op_name=self.name, key="from_b")
+        raw_to = require_expr(payload, op_name=self.name, key="to")
+
+        from_a_ref = parse_model_expr(raw_from_a, default_model=default_model)
+        from_b_ref = parse_model_expr(raw_from_b, default_model=default_model)
+        to_ref = parse_model_expr(raw_to, default_model=default_model)
+        return from_a_ref, from_b_ref, to_ref
+
+    def build_spec(self, from_a_ref: TensorRef, from_b_ref: TensorRef, to_ref: TensorRef) -> TernarySpecT:
+        return self.spec_type(from_a_ref=from_a_ref, from_b_ref=from_b_ref, to_ref=to_ref)
+
+    @abstractmethod
+    def validate_refs(self, from_a_ref: TensorRef, from_b_ref: TensorRef, to_ref: TensorRef) -> None:
+        ...
+
+    def resolve_items(
+        self,
+        spec: TernarySpecT,
+        provider: StateDictProvider,
+    ) -> list[ResolvedTernaryMapping]:
+        from_a_ref = spec.from_a_ref
+        from_b_ref = spec.from_b_ref
+        to_ref = spec.to_ref
+
+        a_slice = parse_slice(from_a_ref.slice_spec) if from_a_ref.slice_spec is not None else None
+        b_slice = parse_slice(from_b_ref.slice_spec) if from_b_ref.slice_spec is not None else None
+        dst_slice = parse_slice(to_ref.slice_spec) if to_ref.slice_spec is not None else None
+
+        src_a_model = must_model(from_a_ref)
+        src_b_model = must_model(from_b_ref)
+        dst_model = must_model(to_ref)
+        src_a_sd = provider.get_state_dict(src_a_model)
+        src_b_sd = provider.get_state_dict(src_b_model)
+
+        a_expr = from_a_ref.expr
+        b_expr = from_b_ref.expr
+        to_expr = to_ref.expr
+        if isinstance(a_expr, str) and isinstance(b_expr, str) and isinstance(to_expr, str):
+            src_a_names = match_expr_names(
+                expr=a_expr,
+                names=src_a_sd.keys(),
+                op_name=self.name,
+                role="source_a",
+            )
+            if not src_a_names:
+                raise self.error_type(
+                    f"{self.name} source_a matched zero tensors: "
+                    f"{format_tensor_ref(from_a_ref)}; available tensors: {sorted(src_a_sd.keys())}"
+                )
+
+            resolved: list[ResolvedTernaryMapping] = []
+            dst_names_seen: set[str] = set()
+            for src_a_name in src_a_names:
+                try:
+                    src_b_name = re.sub(a_expr, b_expr, src_a_name)
+                    dst_name = re.sub(a_expr, to_expr, src_a_name)
+                except re.error as exc:
+                    raise self.error_type(
+                        f"{self.name} invalid regex rewrite from {a_expr!r}: {exc}"
+                    ) from exc
+
+                if src_b_name not in src_b_sd:
+                    raise self.error_type(
+                        f"{self.name} source_b missing: {src_b_model}::{src_b_name}"
+                    )
+                if dst_name in dst_names_seen:
+                    raise self.error_type(f"{self.name} destination collision: {dst_model}::{dst_name}")
+                dst_names_seen.add(dst_name)
+
+                resolved.append(
+                    ResolvedTernaryMapping(
+                        src_a_model=src_a_model,
+                        src_a_name=src_a_name,
+                        src_a_slice=a_slice,
+                        src_b_model=src_b_model,
+                        src_b_name=src_b_name,
+                        src_b_slice=b_slice,
+                        dst_model=dst_model,
+                        dst_name=dst_name,
+                        dst_slice=dst_slice,
+                    )
+                )
+            return resolved
+
+        if isinstance(a_expr, list) and isinstance(b_expr, list) and isinstance(to_expr, list):
+            resolved: list[ResolvedTernaryMapping] = []
+            dst_names_seen: set[str] = set()
+            matched_any = False
+            for src_a_name in sorted(src_a_sd.keys()):
+                match = _match_structured_expr(
+                    expr=a_expr,
+                    name=src_a_name,
+                    op_name=self.name,
+                    role="source_a",
+                )
+                if match is None:
+                    continue
+                matched_any = True
+
+                src_b_name = _rewrite_structured_expr(
+                    expr=b_expr,
+                    match=match,
+                    op_name=self.name,
+                    role="source_b",
+                )
+                dst_name = _rewrite_structured_expr(
+                    expr=to_expr,
+                    match=match,
+                    op_name=self.name,
+                    role="destination",
+                )
+
+                if src_b_name not in src_b_sd:
+                    raise self.error_type(
+                        f"{self.name} source_b missing: {src_b_model}::{src_b_name}"
+                    )
+                if dst_name in dst_names_seen:
+                    raise self.error_type(f"{self.name} destination collision: {dst_model}::{dst_name}")
+                dst_names_seen.add(dst_name)
+
+                resolved.append(
+                    ResolvedTernaryMapping(
+                        src_a_model=src_a_model,
+                        src_a_name=src_a_name,
+                        src_a_slice=a_slice,
+                        src_b_model=src_b_model,
+                        src_b_name=src_b_name,
+                        src_b_slice=b_slice,
+                        dst_model=dst_model,
+                        dst_name=dst_name,
+                        dst_slice=dst_slice,
+                    )
+                )
+
+            if not matched_any:
+                raise self.error_type(
+                    f"{self.name} source_a matched zero tensors: "
+                    f"{format_tensor_ref(from_a_ref)}; available tensors: {sorted(src_a_sd.keys())}"
+                )
+            return resolved
+
+        raise self.error_type(
+            f"{self.name} requires from_a/from_b/to expressions of the same kind: "
+            "either all strings (regex mode) or all lists (structured mode)"
+        )
+
+    def validate_resolved_items(
+        self,
+        spec: TernarySpecT,
+        mappings: list[ResolvedTernaryMapping],
+        provider: StateDictProvider,
+    ) -> None:
+        del spec
+        if self.destination_policy is DestinationPolicy.ANY:
+            return
+
+        for item in mappings:
+            dst_sd = provider.get_state_dict(item.dst_model)
+            exists = item.dst_name in dst_sd
+
+            if self.destination_policy is DestinationPolicy.MUST_EXIST and not exists:
+                raise self.error_type(
+                    f"{self.name} destination missing: {item.dst_model}::{item.dst_name}"
+                )
+            if self.destination_policy is DestinationPolicy.MUST_NOT_EXIST and exists:
+                raise self.error_type(
+                    f"{self.name} destination already exists: {item.dst_model}::{item.dst_name}"
+                )
+
+    @abstractmethod
+    def apply_mapping(self, item: ResolvedTernaryMapping, provider: StateDictProvider) -> None:
+        ...
+
+    def apply_item(
+        self,
+        spec: TernarySpecT,
+        item: ResolvedTernaryMapping,
+        provider: StateDictProvider,
+    ) -> None:
+        del spec
+        self.apply_mapping(item, provider)
 
 
 __all__ = [
     "BaseTransform",
+    "BinaryMappingSpec",
+    "BinaryMappingTransform",
     "CompiledTransform",
+    "DestinationPolicy",
+    "IteratingTransform",
+    "ResolvedTernaryMapping",
+    "TernaryMappingSpec",
+    "TernaryMappingTransform",
     "TransformControl",
     "TransformResult",
-    "_REGISTRY",
-    "apply_transform",
-    "infer_output_model",
     "TypedTransform",
-    "ensure_mapping_payload",
+    "UnarySpec",
+    "UnaryTransform",
+    "REGISTRY",
+    "apply_transform",
     "get_transform",
     "list_transforms",
     "register_transform",
-    "require_expr",
-    "require_nonempty_string",
-    "require_numeric",
-    "validate_payload_keys",
 ]

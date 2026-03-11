@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .unary import UnarySpec
+from ..core import UnarySpec
 from .clamp import _parse_bounds
 from ..core import TensorRef, must_model, parse_slice, select_tensor
-from ..core import (
-    register_transform,
-)
-from ..core import StateDictProvider, TransformError, note_tensor_write
-from ..utils.transforms import DeclarativeUnaryTransform, Docs, UnaryRefs
+from ..core import register_transform
+from ..core import StateDictProvider, TransformError
+from ..core import DeclarativeUnaryTransform, Docs, UnaryRefs
 
 
 @dataclass(frozen=True)
@@ -39,7 +37,7 @@ def _clamp_in_place_apply(
     )
     view = select_tensor(sd[name], slice_spec)
     view.clamp_(min=spec.min_value, max=spec.max_value)
-    note_tensor_write(sd, name)
+    sd.mark_write(name)
 
 
 class ClampInPlaceTransform(DeclarativeUnaryTransform[ClampInPlaceSpec]):

@@ -12,8 +12,8 @@ from omegaconf import OmegaConf
 from rich.console import Console
 from rich.panel import Panel
 
-from ..utils import add_history_entry
-from ..utils import (
+from .history import add_history_entry
+from ..providers import (
     list_loaded_tensor_names as list_loaded_tensor_names_from_provider,
     list_model_aliases as list_model_aliases_from_provider,
 )

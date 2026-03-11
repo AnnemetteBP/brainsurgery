@@ -38,7 +38,7 @@ except ImportError:  # pragma: no cover
 
 from .plan import OutputSpec
 from ..core import StateDictLike
-from ..utils import choose_num_io_workers, run_threadpool_tasks_with_progress
+from .workers import choose_num_io_workers, run_threadpool_tasks_with_progress
 
 
 logger = logging.getLogger("brainsurgery")

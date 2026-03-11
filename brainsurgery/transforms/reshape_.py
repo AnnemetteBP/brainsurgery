@@ -2,15 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .unary import UnarySpec
+from ..core import UnarySpec
 from .reshape import _parse_shape
 from ..core import TensorRef, must_model
-from ..core import (
-    StateDictProvider,
-    TransformError,
-    register_transform,
-)
-from ..utils.transforms import DeclarativeUnaryTransform, Docs, UnaryRefs
+from ..core import StateDictProvider, TransformError
+from ..core import register_transform
+from ..core import DeclarativeUnaryTransform, Docs, UnaryRefs
 
 
 @dataclass(frozen=True)

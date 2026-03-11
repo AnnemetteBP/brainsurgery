@@ -4,15 +4,13 @@ from dataclasses import dataclass
 
 import torch
 
-from ..utils import parse_torch_dtype
+from ..core import parse_torch_dtype
 from ..core import TensorRef, must_model
-from .unary import UnarySpec
-from ..core import (
-    register_transform,
-    require_nonempty_string,
-)
+from ..core import UnarySpec
+from ..core import register_transform
+from ..core import require_nonempty_string
 from ..core import StateDictProvider, TransformError
-from ..utils.transforms import DeclarativeUnaryTransform, Docs, UnaryRefs
+from ..core import DeclarativeUnaryTransform, Docs, UnaryRefs
 
 
 @dataclass(frozen=True)

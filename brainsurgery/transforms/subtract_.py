@@ -1,18 +1,12 @@
 from __future__ import annotations
 
-from .binary import BinaryMappingSpec, DestinationPolicy
+from ..core import BinaryMappingSpec, DestinationPolicy
+from ..core import ResolvedMapping, StateDictProvider, TransformError, select_tensor
+from ..core import register_transform
 from ..core import (
-    ResolvedMapping,
-    StateDictProvider,
-    TransformError,
-    note_tensor_write,
-    register_transform,
-    select_tensor,
-)
-from ..utils import (
     require_same_shape_dtype_device,
 )
-from ..utils.transforms import BinaryRefs, DeclarativeBinaryTransform, Docs
+from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs
 
 
 def _subtract_in_place_apply(
@@ -34,7 +28,7 @@ def _subtract_in_place_apply(
     )
 
     dst_view.sub_(src_view)
-    note_tensor_write(dst_sd, item.dst_name)
+    dst_sd.mark_write(item.dst_name)
 
 
 class SubtractInPlaceTransform(DeclarativeBinaryTransform[BinaryMappingSpec]):

@@ -10,6 +10,7 @@ from .config import (
     parse_override_value,
 )
 from .execution import execute_transform_pairs
+from .history import add_history_entry, configure_history
 from .interactive import (
     normalize_transform_specs,
     parse_transform_block,
@@ -38,6 +39,9 @@ from .model import (
     tqdm,
     validate_state_dict_mapping,
 )
+from .render import render_tree, summarize_tensor
+from .summary import build_raw_plan, write_executed_plan_summary
+from .workers import choose_num_io_workers, run_threadpool_tasks_with_progress
 from .plan import (
     ModelCollectingSpec,
     OutputSpec,

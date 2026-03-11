@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-from .binary import BinaryMappingSpec, DestinationPolicy
-from ..core import (
-    ResolvedMapping,
-    StateDictProvider,
-    TransformError,
-    register_transform,
-    select_tensor,
-)
-from ..utils.transforms import BinaryRefs, DeclarativeBinaryTransform, Docs
+from ..core import BinaryMappingSpec, DestinationPolicy
+from ..core import ResolvedMapping, StateDictProvider, TransformError, select_tensor
+from ..core import register_transform
+from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs
 
 
 def _copy_apply(

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..core import AssertTransformError
+from ..expression import AssertTransformError
 
 
 COMPARISON_KEYS = ("is", "ge", "gt", "le", "lt")

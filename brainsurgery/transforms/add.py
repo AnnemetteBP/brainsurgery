@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from .ternary import (
+from ..core import (
     DestinationPolicy,
     ResolvedTernaryMapping,
     TernaryMappingSpec,
 )
 from ..core import select_tensor
-from ..utils import require_same_shape_dtype_device3
+from ..core import require_same_shape_dtype_device3
 from ..core import register_transform
-from ..core import StateDictProvider, TransformError, note_tensor_write
-from ..utils.transforms import DeclarativeTernaryTransform, Docs, TernaryRefs
+from ..core import StateDictProvider, TransformError
+from ..core import DeclarativeTernaryTransform, Docs, TernaryRefs
 
 
 def _add_apply(
@@ -36,7 +36,7 @@ def _add_apply(
         symbol="+",
     )
     dst_view.copy_(src_a_view + src_b_view)
-    note_tensor_write(dst_sd, item.dst_name)
+    dst_sd.mark_write(item.dst_name)
 
 
 class AddTransform(DeclarativeTernaryTransform[TernaryMappingSpec]):

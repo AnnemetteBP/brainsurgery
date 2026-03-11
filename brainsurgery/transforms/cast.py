@@ -2,21 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .binary import BinaryMappingSpec, DestinationPolicy
+from ..core import BinaryMappingSpec, DestinationPolicy
 import torch
+from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError, select_tensor
+from ..core import register_transform
+from ..core import require_nonempty_string
 from ..core import (
-    ResolvedMapping,
-    StateDictProvider,
-    TensorRef,
-    TransformError,
-    register_transform,
-    require_nonempty_string,
-    select_tensor,
-)
-from ..utils import (
     parse_torch_dtype,
 )
-from ..utils.transforms import BinaryRefs, DeclarativeBinaryTransform, Docs
+from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs
 
 
 @dataclass(frozen=True)
