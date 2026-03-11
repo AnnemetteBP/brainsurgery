@@ -4,11 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..engine.model import (
-    parse_shard_size,
-    persist_state_dict,
-    save_tensor_to_path,
-)
+from ..engine.checkpoint_io import persist_state_dict
+from ..engine.tensor_files import save_tensor_to_path
+from ..engine.output_paths import parse_shard_size
 from ..engine import resolve_single_model_alias
 from ..core import parse_model_expr
 from ..core import StateDictProvider, TransformError

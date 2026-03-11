@@ -1,9 +1,11 @@
 from .execution import execute_transform_pairs
 from .arena import ProviderError
-from .state import (
+from .state_dicts import (
     ArenaStateDict,
-    BaseStateDictProvider,
     InMemoryStateDict,
+)
+from .providers import (
+    BaseStateDictProvider,
     InMemoryStateDictProvider,
     create_state_dict_provider,
 )

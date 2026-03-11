@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..engine.model import load_tensor_from_path
+from ..engine.tensor_files import load_tensor_from_path
 from ..engine import get_or_create_alias_state_dict
 from ..engine import BaseStateDictProvider, ProviderError
 from ..core import parse_model_expr

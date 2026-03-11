@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from contextlib import nullcontext
 from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, Literal, TypeVar
 
-import numpy as np
 import torch
 from safetensors.torch import load_file as load_safetensors_file
 from safetensors.torch import save_file as save_safetensors_file
+
+from ..core import StateDictLike
+from .output_paths import resolve_sharded_output_directory
+from .workers import choose_num_io_workers, run_threadpool_tasks_with_progress
+
 
 try:
     from tqdm import tqdm
@@ -36,138 +39,8 @@ except ImportError:  # pragma: no cover
     def tqdm(iterable=None, **kwargs):  # type: ignore
         return _TqdmDummy(iterable, **kwargs)
 
-from .plan import OutputSpec
-from ..core import StateDictLike
-from .workers import choose_num_io_workers, run_threadpool_tasks_with_progress
-
 
 logger = logging.getLogger("brainsurgery")
-
-def resolve_output_destination(
-    output: OutputSpec,
-    *,
-    default_shard_size: str,
-) -> tuple[Path, Literal["safetensors", "torch"], int | None]:
-    path = output.path
-    format_value = output.format
-    shard_size = resolve_shard_size(output, default_shard_size=default_shard_size)
-
-    if format_value is not None:
-        if format_value == "safetensors":
-            resolved_path, resolved_format = resolve_output_destination_for_explicit_safetensors(path)
-        elif format_value == "torch":
-            resolved_path, resolved_format = resolve_output_destination_for_explicit_torch(path)
-        else:  # pragma: no cover
-            raise RuntimeError(f"unsupported explicit output format: {format_value}")
-    else:
-        suffix = path.suffix.lower()
-        if suffix == ".safetensors":
-            resolved_path, resolved_format = path, "safetensors"
-        elif suffix in {".pt", ".pth", ".bin"}:
-            resolved_path, resolved_format = path, "torch"
-        elif path.exists() and path.is_dir():
-            resolved_path, resolved_format = path / "model.safetensors", "safetensors"
-        elif suffix == "":
-            resolved_path, resolved_format = path / "model.safetensors", "safetensors"
-        else:
-            raise RuntimeError(
-                f"unsupported output format for {path}; use a directory, .safetensors, .pt, .pth, or .bin, "
-                f"or specify output.format explicitly"
-            )
-
-    if shard_size is not None and resolved_format != "safetensors":
-        raise RuntimeError("output.shard is only supported for safetensors output")
-
-    return resolved_path, resolved_format, shard_size
-
-
-def resolve_output_destination_for_explicit_safetensors(path: Path) -> tuple[Path, Literal["safetensors"]]:
-    if path.exists() and path.is_dir():
-        return path / "model.safetensors", "safetensors"
-    if path.suffix == "":
-        return path / "model.safetensors", "safetensors"
-    if path.suffix.lower() != ".safetensors":
-        raise RuntimeError(
-            f"output.format='safetensors' is incompatible with file path {path}; "
-            f"use a directory or a .safetensors file"
-        )
-    return path, "safetensors"
-
-
-def resolve_output_destination_for_explicit_torch(path: Path) -> tuple[Path, Literal["torch"]]:
-    if path.exists() and path.is_dir():
-        raise RuntimeError("output.format='torch' requires a file path, not a directory")
-    if path.suffix.lower() not in {".pt", ".pth", ".bin"}:
-        raise RuntimeError(
-            f"output.format='torch' requires a .pt, .pth, or .bin file path; got {path}"
-        )
-    return path, "torch"
-
-
-def resolve_shard_size(output: OutputSpec, default_shard_size: str) -> int | None:
-    raw = output.shard
-
-    if raw is None:
-        if is_directory_style_output(output):
-            raw = default_shard_size
-        else:
-            return None
-
-    return parse_shard_size(raw)
-
-
-def is_directory_style_output(output: OutputSpec) -> bool:
-    path = output.path
-
-    if output.format == "torch":
-        return False
-
-    if output.format == "safetensors":
-        if path.exists() and path.is_dir():
-            return True
-        return path.suffix == ""
-
-    if path.exists() and path.is_dir():
-        return True
-
-    return path.suffix == ""
-
-
-def parse_shard_size(raw: str | None) -> int | None:
-    if raw is None or raw == "none":
-        return None
-
-    if not isinstance(raw, str) or not raw:
-        raise RuntimeError("output.shard must be a non-empty string or 'none'")
-
-    match = re.fullmatch(r"(?i)\s*(\d+)\s*(b|kb|mb|gb|tb)\s*", raw)
-    if not match:
-        raise RuntimeError(
-            f"invalid output.shard value {raw!r}; expected values like 'none', '500MB', '5GB'"
-        )
-
-    value = int(match.group(1))
-    unit = match.group(2).lower()
-
-    multipliers = {
-        "b": 1,
-        "kb": 1024,
-        "mb": 1024**2,
-        "gb": 1024**3,
-        "tb": 1024**4,
-    }
-
-    return value * multipliers[unit]
-
-
-def resolve_sharded_output_directory(original_path: Path, resolved_path: Path) -> Path:
-    if original_path.exists() and original_path.is_dir():
-        return original_path
-    if original_path.suffix == "":
-        return original_path
-    raise RuntimeError(
-        "sharded safetensors output requires a directory-style output path, not a single file"
-    )
 
 
 def tensor_nbytes(tensor: torch.Tensor) -> int:
@@ -246,14 +119,14 @@ def save_sharded_safetensors(
     num_workers = choose_num_io_workers(total_shards, max_io_workers=max_io_workers)
     logger.info("Dispatching %d orderly thread(s) for preservation", num_workers)
 
-    def save_one_shard(
+    def _save_one_shard(
         item: tuple[int, str, Path, dict[str, torch.Tensor]],
     ) -> tuple[int, str]:
         shard_index, shard_name, shard_path, shard = item
-        save_safetensors_shard(shard_path, shard)
+        _save_safetensors_shard(shard_path, shard)
         return shard_index, shard_name
 
-    def on_shard_saved(
+    def _on_shard_saved(
         item: tuple[int, str, Path, dict[str, torch.Tensor]],
         result: tuple[int, str],
     ) -> None:
@@ -263,13 +136,13 @@ def save_sharded_safetensors(
 
     run_threadpool_tasks_with_progress(
         items=shard_infos,
-        worker=save_one_shard,
+        worker=_save_one_shard,
         num_workers=num_workers,
         total=total_shards,
         progress_desc="Shard save",
         progress_unit="shard",
         progress_factory=tqdm,
-        on_result=on_shard_saved,
+        on_result=_on_shard_saved,
     )
 
     index = {
@@ -281,66 +154,8 @@ def save_sharded_safetensors(
     return index_path
 
 
-def save_safetensors_shard(path: Path, shard: dict[str, torch.Tensor]) -> None:
+def _save_safetensors_shard(path: Path, shard: dict[str, torch.Tensor]) -> None:
     save_safetensors_file(shard, str(path))
-
-
-def infer_tensor_file_format(path: Path) -> Literal["numpy", "safetensors", "torch"]:
-    suffix = path.suffix.lower()
-    if suffix in {".npy", ".npz"}:
-        return "numpy"
-    if suffix == ".safetensors":
-        return "safetensors"
-    return "torch"
-
-
-def load_tensor_from_path(
-    path: Path,
-    *,
-    format: Literal["auto", "numpy", "safetensors", "torch"] = "auto",
-) -> torch.Tensor:
-    format_name = infer_tensor_file_format(path) if format == "auto" else format
-
-    if format_name == "numpy":
-        if np is None:
-            raise RuntimeError("numpy is required to load .npy/.npz tensors")
-        loaded = np.load(path, allow_pickle=False)
-        if isinstance(loaded, np.ndarray):
-            return torch.from_numpy(loaded)
-        if isinstance(loaded, np.lib.npyio.NpzFile):
-            keys = list(loaded.keys())
-            if len(keys) != 1:
-                raise RuntimeError(
-                    "loading tensor from .npz requires exactly one array, or use state_dict load"
-                )
-            return torch.from_numpy(loaded[keys[0]])
-        raise RuntimeError(f"unsupported numpy payload at {path}")
-
-    if format_name == "safetensors":
-        loaded = load_safetensors_file(str(path), device="cpu")
-        if len(loaded) != 1:
-            raise RuntimeError(
-                "loading tensor from safetensors requires exactly one tensor, or use state_dict load"
-            )
-        return next(iter(loaded.values()))
-
-    loaded_obj: Any = torch.load(path, map_location="cpu")
-    if torch.is_tensor(loaded_obj):
-        return loaded_obj
-    if np is not None and isinstance(loaded_obj, np.ndarray):
-        return torch.from_numpy(loaded_obj)
-    if isinstance(loaded_obj, dict):
-        candidate = loaded_obj.get("state_dict", loaded_obj)
-        if isinstance(candidate, dict):
-            tensors = [
-                (k, v) for k, v in candidate.items() if isinstance(k, str) and torch.is_tensor(v)
-            ]
-            if len(tensors) == 1:
-                return tensors[0][1]
-            raise RuntimeError(
-                "loading tensor from torch checkpoint requires exactly one tensor, or use state_dict load"
-            )
-    raise RuntimeError(f"unsupported tensor payload at {path}")
 
 
 def save_state_dict_to_path(
@@ -382,25 +197,6 @@ def persist_state_dict(
     )
 
 
-def save_tensor_to_path(
-    tensor_name: str,
-    tensor: torch.Tensor,
-    path: Path,
-    *,
-    format: Literal["safetensors", "torch", "numpy"],
-) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if format == "torch":
-        torch.save(tensor, path)
-        return
-    if format == "numpy":
-        if np is None:
-            raise RuntimeError("numpy is required for numpy tensor output")
-        np.save(path, tensor.detach().cpu().numpy())
-        return
-    save_safetensors_file({tensor_name: tensor}, str(path))
-
-
 def load_state_dict_from_path(path: Path, global_state_dict: StateDictLike, *, max_io_workers: int) -> None:
     if not path.exists():
         raise RuntimeError(f"checkpoint path does not exist: {path}")
@@ -409,6 +205,7 @@ def load_state_dict_from_path(path: Path, global_state_dict: StateDictLike, *, m
         return load_state_dict_from_directory(path, global_state_dict, max_io_workers=max_io_workers)
     logger.info("CT scan shows a single checkpoint file at %s", path)
     return load_state_dict_from_file(path, global_state_dict)
+
 
 def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike, *, max_io_workers: int) -> None:
     pt_files = sorted(path.glob("*.pt")) + sorted(path.glob("*.pth")) + sorted(path.glob("*.bin"))
@@ -441,22 +238,23 @@ def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike,
     merge_lock = Lock()
     initial_count = len(global_state_dict)
     loaded_counts: list[int] = []
-    def load_one_file(file_path: Path) -> int:
+
+    def _load_one_file(file_path: Path) -> int:
         return load_state_dict_from_file(file_path, global_state_dict, merge_lock)
 
-    def on_file_loaded(file_path: Path, loaded_count: int) -> None:
+    def _on_file_loaded(file_path: Path, loaded_count: int) -> None:
         del file_path
         loaded_counts.append(loaded_count)
 
     run_threadpool_tasks_with_progress(
         items=files,
-        worker=load_one_file,
+        worker=_load_one_file,
         num_workers=num_workers,
         total=len(files),
         progress_desc=f"Open {path.name}",
         progress_unit="file",
         progress_factory=tqdm,
-        on_result=on_file_loaded,
+        on_result=_on_file_loaded,
     )
 
     if len(loaded_counts) != len(files):

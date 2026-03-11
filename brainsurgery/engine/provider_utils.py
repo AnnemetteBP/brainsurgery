@@ -8,7 +8,7 @@ from ..core import StateDictLike, StateDictProvider, TransformError
 
 def _is_base_provider_instance(provider: object) -> bool:
     try:
-        from .state import BaseStateDictProvider
+        from .providers import BaseStateDictProvider
     except Exception:
         return False
     return isinstance(provider, BaseStateDictProvider)
