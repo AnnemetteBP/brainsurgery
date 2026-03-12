@@ -34,10 +34,12 @@ class HelpTransform(TypedTransform[HelpSpec]):
         "command or, for 'assert', for an individual expression operator.\n"
         "\n"
         "Examples:\n"
-        "  help\n"
-        "  help: copy\n"
-        "  help: assert\n"
-        "  help: { assert: equal }"
+        "  YAML: help\n"
+        "  YAML: help: copy\n"
+        "  YAML: help: assert\n"
+        "  YAML: help: { assert: equal }\n"
+        "  OLY:  help: copy\n"
+        "  OLY:  help: assert: equal"
     )
 
     def compile(self, payload: Any, default_model: str | None) -> HelpSpec:
@@ -151,8 +153,12 @@ class HelpTransform(TypedTransform[HelpSpec]):
         for name in list_transforms():
             emit_line(f"  {name}")
         emit_line("")
-        emit_line("For help on a specific command, run: help: <command>")
-        emit_line("For help on a specific assert expression, run: help: { assert: <expr> }")
+        emit_line("For help on a specific command:")
+        emit_line("  YAML: help: <command>")
+        emit_line("  OLY:  help: <command>")
+        emit_line("For help on a specific assert expression:")
+        emit_line("  YAML: help: { assert: <expr> }")
+        emit_line("  OLY:  help: assert: <expr>")
 
     def _print_command_help(self, command_name: str) -> None:
         try:
@@ -168,6 +174,10 @@ class HelpTransform(TypedTransform[HelpSpec]):
 
         if help_text:
             emit_line(help_text)
+        emit_line("")
+        emit_line("Syntax:")
+        emit_line("  YAML: <command>: { key: value, ... }")
+        emit_line("  OLY:  <command>: key: value, ...")
 
         self._emit_key_metadata(
             required_keys=required_keys,
@@ -185,6 +195,10 @@ class HelpTransform(TypedTransform[HelpSpec]):
             help_text = getattr(transform, "help_text", None)
             if help_text:
                 emit_line(help_text)
+        emit_line("")
+        emit_line("Syntax:")
+        emit_line("  YAML: assert: { <expr>: { ... } }")
+        emit_line("  OLY:  assert: <expr>: { ... }")
 
         emit_line("Supported assert expression operators:")
         for name in get_assert_expr_names():
@@ -195,7 +209,9 @@ class HelpTransform(TypedTransform[HelpSpec]):
                 emit_line(f"  {name}")
 
         emit_line("")
-        emit_line("For help on a specific assert expression, run: help: { assert: <expr> }")
+        emit_line("For help on a specific assert expression:")
+        emit_line("  YAML: help: { assert: <expr> }")
+        emit_line("  OLY:  help: assert: <expr>")
 
     def _print_assert_expr_help(self, expr_name: str) -> None:
         meta = get_assert_expr_help(expr_name)

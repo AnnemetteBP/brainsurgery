@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from omegaconf import OmegaConf
+from .oly import parse_oly_line
 
 
 def _normalize_single_transform_spec(raw: Any) -> dict[str, Any]:
@@ -36,11 +37,20 @@ def normalize_transform_specs(raw: Any) -> list[dict[str, Any]]:
 
 
 def parse_transform_block(block: str) -> list[dict[str, Any]]:
+    yaml_exc: Exception | None = None
     try:
         # Keep `${name}` intact so structured-path destination templates can be
         # interpreted by the matcher rather than OmegaConf interpolation.
         loaded = OmegaConf.to_container(OmegaConf.create(block), resolve=False)
+        return normalize_transform_specs(loaded)
     except Exception as exc:
-        raise ValueError(f"invalid YAML: {exc}") from exc
+        yaml_exc = exc
 
-    return normalize_transform_specs(loaded)
+    text = block.strip()
+    if text:
+        try:
+            return normalize_transform_specs(parse_oly_line(text))
+        except Exception as oly_exc:
+            raise ValueError(f"invalid YAML: {yaml_exc}\ninvalid OLY: {oly_exc}") from oly_exc
+
+    raise ValueError(f"invalid YAML: {yaml_exc}")

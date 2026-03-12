@@ -97,6 +97,12 @@ Output tokens:
 - literals (with `${x}` interpolation)
 - `*xs` variadic splice
 
+Equivalent command forms:
+- YAML: `copy: { from: ln_f.weight, to: ln_f_copy.weight }`
+- OLY: `copy: from: ln_f.weight, to: ln_f_copy.weight`
+- YAML: `help: { assert: equal }`
+- OLY: `help: assert: equal`
+
 ## Batch vs interactive mode
 Batch mode (default):
 - Executes configured transforms in order.
@@ -104,13 +110,13 @@ Batch mode (default):
 
 Interactive mode (`-i`):
 - First executes configured transforms in batch mode.
-- Then opens prompt for additional YAML transform blocks.
+- Then opens prompt for additional transform blocks (YAML or OLY).
 - On failure in an interactive block, logs error, stops only that submitted block, and returns to prompt.
 - `exit` transform cleanly stops the execution loop.
 - Interactive prompt uses a richer UI and supports tab completion for command names, payload keys, model aliases, and loaded tensor names.
 
 Interactive prompt accepts:
-- a single transform mapping, or
+- a single transform mapping (YAML or OLY), or
 - a YAML list of transform mappings.
 
 Special transforms:
@@ -124,6 +130,7 @@ History is stored in `~/.brainsurgery_history`.
 All registered transforms:
 
 - `help`: show command/assert help (`help`, `help: copy`, `help: assert`, `help: { assert: equal }`).
+  OLY shorthand also works (for example `help: assert: equal`).
 - `prefixes`: list or manage model prefixes (`alias::`):
   `mode=list` (default), `mode=add` with `alias`, `mode=remove` with `alias`,
   `mode=rename` with `from` + `to`.
@@ -157,6 +164,9 @@ All registered transforms:
   - `mode=rand` (+ `distribution`, `low/high` or `mean/std`, optional `seed`)
   - `mode=tensor` + `values` (broadcast allowed)
 - `fill_`: in-place fill with same modes as `fill`.
+- `zeroes`: create new zero-filled tensor (`target`, `shape`).
+- `ones`: create new one-filled tensor (`target`, `shape`).
+- `rand`: create new random tensor (`target`, `shape`, optional `distribution`, params, `seed`).
 - `split`: split one source tensor into multiple new tensors (`to` list, `sizes`, optional `dim`).
 - `concat`: concatenate multiple source refs into one new tensor (`from` list, optional `dim`).
 - `phlora_`: in-place low-rank reconstruction (`rank`) on 2D tensors.
@@ -168,6 +178,12 @@ Used via:
 
 ```yaml
 - assert: { equal: { left: a.weight, right: b.weight, eps: 1e-6 } }
+```
+
+OLY equivalent:
+
+```text
+assert: equal: { left: a.weight, right: b.weight, eps: 1e-6 }
 ```
 
 Supported operators:

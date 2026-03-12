@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Callable, TypeVar
+import re
 
 from .refs import TensorRef, parse_slice
 from .transform import (
@@ -21,6 +22,7 @@ from .validation import ensure_mapping_payload, validate_payload_keys
 UnarySpecT = TypeVar("UnarySpecT", bound=UnarySpec)
 BinarySpecT = TypeVar("BinarySpecT", bound=BinaryMappingSpec)
 TernarySpecT = TypeVar("TernarySpecT", bound=TernaryMappingSpec)
+_YAML_INLINE_EXAMPLE_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*\{\s*(.*)\s*\}\s*$")
 
 
 @dataclass(frozen=True)
@@ -53,7 +55,16 @@ def _lines(text: Docs, *rules: str) -> str:
     if text.notes:
         lines.extend(["", *text.notes])
     if text.examples:
-        lines.extend(["", "Examples:", *[f"  {example}" for example in text.examples]])
+        rendered_examples: list[str] = []
+        for example in text.examples:
+            rendered_examples.append(f"  YAML: {example}")
+            match = _YAML_INLINE_EXAMPLE_RE.fullmatch(example.strip())
+            if match:
+                command = match.group(1)
+                payload = match.group(2).strip()
+                if payload:
+                    rendered_examples.append(f"  OLY:  {command}: {payload}")
+        lines.extend(["", "Examples:", *rendered_examples])
     return "\n".join(lines)
 
 
