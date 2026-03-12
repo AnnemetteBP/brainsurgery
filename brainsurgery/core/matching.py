@@ -33,9 +33,9 @@ class StructuredPathMatcher:
 
     Output-pattern token semantics:
       - literal / template string with ${x} interpolation
+      - $x                interpolate scalar capture x (shorthand for ${x})
       - *xs               splice a captured variadic binding
       - regex tokens are forbidden
-      - bare $x is NOT special in output; use ${x}
     """
 
     def split_name(self, name: str) -> list[str]:
@@ -240,6 +240,19 @@ class StructuredPathMatcher:
         out: list[str] = []
 
         for token in pattern:
+            if self._is_single_capture_token(token) and _INTERP_RE.fullmatch(token) is None:
+                name = token[1:]
+                self._validate_capture_name(name, token=token)
+                if name not in env:
+                    raise MatchError(f"unknown interpolation variable: {name}")
+                value = env[name]
+                if not isinstance(value, str):
+                    raise MatchError(
+                        f"cannot interpolate non-scalar variable {name!r} into segment {token!r}"
+                    )
+                out.append(value)
+                continue
+
             if self._is_variadic_capture_token(token):
                 name = token[1:]
                 if name not in env:

@@ -37,7 +37,9 @@ def normalize_transform_specs(raw: Any) -> list[dict[str, Any]]:
 
 def parse_transform_block(block: str) -> list[dict[str, Any]]:
     try:
-        loaded = OmegaConf.to_container(OmegaConf.create(block), resolve=True)
+        # Keep `${name}` intact so structured-path destination templates can be
+        # interpreted by the matcher rather than OmegaConf interpolation.
+        loaded = OmegaConf.to_container(OmegaConf.create(block), resolve=False)
     except Exception as exc:
         raise ValueError(f"invalid YAML: {exc}") from exc
 
