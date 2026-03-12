@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -33,9 +34,17 @@ try:
 except ImportError:  # pragma: no cover
     readline = None
 
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
 
 def _configure_readline_completion_bindings() -> None:
     _configure_readline_completion_bindings_impl(readline)
+
+
+def _readline_safe_prompt(prompt_text: str) -> str:
+    if readline is None:
+        return prompt_text
+    return _ANSI_ESCAPE_RE.sub(lambda match: f"\001{match.group(0)}\002", prompt_text)
 
 
 @contextmanager
@@ -145,8 +154,8 @@ def prompt_interactive_transform(state_dict_provider: Any | None = None) -> list
 
     while True:
         lines: list[str] = []
-        prompt = typer.style("brainsurgery> ", fg=typer.colors.CYAN, bold=True)
-        continuation = typer.style("... ", fg=typer.colors.BRIGHT_BLACK)
+        prompt = _readline_safe_prompt(typer.style("brainsurgery> ", fg=typer.colors.CYAN, bold=True))
+        continuation = _readline_safe_prompt(typer.style("... ", fg=typer.colors.BRIGHT_BLACK))
         top_level_candidates = _collect_completion_candidates(state_dict_provider)
 
         with _interactive_completion(
