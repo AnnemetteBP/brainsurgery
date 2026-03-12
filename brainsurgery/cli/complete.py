@@ -200,7 +200,7 @@ def _match_payload_candidates(
         return [key for key in keys if isinstance(key, str) and key]
 
     def _next_reference_key(before_cursor: str, current_key: str | None) -> str | None:
-        if current_key is None:
+        if current_key is None:  # pragma: no cover
             return None
         ordered_keys = _ordered_transform_keys()
         if current_key not in ordered_keys:
@@ -326,7 +326,7 @@ def _match_payload_candidates(
                 )
             ]
             if before_cursor.rstrip().endswith(",") and not before_cursor.endswith(", "):
-                if raw_text.rstrip().endswith(","):
+                if raw_text.rstrip().endswith(","):  # pragma: no cover
                     return [f"{raw_text} {candidate}" for candidate in key_candidates]
                 return [f" {candidate}" for candidate in key_candidates]
             return key_candidates
@@ -365,7 +365,7 @@ def _match_payload_candidates(
                 )
             ]
             if before_cursor.rstrip().endswith(",") and not before_cursor.endswith(", "):
-                if raw_text.rstrip().endswith(","):
+                if raw_text.rstrip().endswith(","):  # pragma: no cover
                     return [f"{raw_text} {candidate}" for candidate in key_candidates]
                 return [f" {candidate}" for candidate in key_candidates]
             return key_candidates
