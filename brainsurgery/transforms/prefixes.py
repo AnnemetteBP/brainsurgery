@@ -11,11 +11,12 @@ from ..engine import (
     list_model_aliases,
     new_empty_state_dict,
 )
-from ..engine.frontend import emit_line
+from ..engine import emit_line
 from ..core import TransformError
 from ..core import TypedTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
 from ..core import StateDictProvider
+from ..engine import emit_verbose_event
 
 
 class PrefixesTransformError(TransformError):
@@ -119,22 +120,26 @@ class PrefixesTransform(TypedTransform[PrefixesSpec]):
                     emit_line(f"  {alias}::")
             else:
                 emit_line("No model prefixes available.")
+            emit_verbose_event(self.name, "list")
             return TransformResult(name=self.name, count=len(aliases))
 
         if typed.mode == "add":
             assert typed.alias is not None
             _create_empty_alias(provider, typed.alias)
+            emit_verbose_event(self.name, f"add {typed.alias}")
             return TransformResult(name=self.name, count=1)
 
         if typed.mode == "remove":
             assert typed.alias is not None
             _delete_alias(provider, typed.alias)
+            emit_verbose_event(self.name, f"remove {typed.alias}")
             return TransformResult(name=self.name, count=1)
 
         if typed.mode == "rename":
             assert typed.source_alias is not None
             assert typed.dest_alias is not None
             _rename_alias(provider, source=typed.source_alias, dest=typed.dest_alias)
+            emit_verbose_event(self.name, f"rename {typed.source_alias} -> {typed.dest_alias}")
             return TransformResult(name=self.name, count=1)
 
         raise PrefixesTransformError(f"unsupported prefixes mode: {typed.mode}")

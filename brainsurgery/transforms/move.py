@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from ..engine import get_runtime_flags
 from ..core import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..core import ResolvedMapping
 from ..core import TensorRef
 from ..core import StateDictProvider, TransformError
 from ..core import register_transform
+from ..engine import emit_verbose_binary_activity
 
 
 class MoveTransformError(TransformError):
@@ -38,16 +40,21 @@ class MoveTransform(BinaryMappingTransform[BinaryMappingSpec]):
         src_sd = provider.get_state_dict(item.src_model)
         dst_sd = provider.get_state_dict(item.dst_model)
 
-        slot = src_sd.slot(item.src_name)
-
         if item.dst_name in dst_sd:
             raise MoveTransformError(
                 f"move destination already exists during apply: "
                 f"{item.dst_model}::{item.dst_name}"
             )
 
-        dst_sd.bind_slot(item.dst_name, slot)
-        del src_sd[item.src_name]
+        if get_runtime_flags().dry_run:
+            # In dry-run we still execute the transform flow, but with tensor-level overlay
+            # semantics instead of slot rebinding.
+            dst_sd[item.dst_name] = src_sd[item.src_name]
+            del src_sd[item.src_name]
+        else:
+            slot = src_sd.slot(item.src_name)
+            dst_sd.bind_slot(item.dst_name, slot)
+            del src_sd[item.src_name]
 
         if item.dst_name not in dst_sd:
             raise MoveTransformError(
@@ -59,6 +66,7 @@ class MoveTransform(BinaryMappingTransform[BinaryMappingSpec]):
                 f"move internal error: source still present after move: "
                 f"{item.src_model}::{item.src_name}"
             )
+        emit_verbose_binary_activity(self.name, item)
 
 
 

@@ -10,6 +10,7 @@ from ..core import must_model
 from ..core import register_transform
 from ..core import require_numeric
 from ..core import StateDictProvider, TransformError
+from ..engine import emit_verbose_unary_activity
 
 RandDistribution = Literal["uniform", "normal"]
 
@@ -99,6 +100,7 @@ class ZeroesTransform(_ShapeCreateUnaryTransform):
         model = must_model(spec.target_ref)
         sd = provider.get_state_dict(model)
         sd[name] = torch.zeros(spec.shape, dtype=torch.float32)
+        emit_verbose_unary_activity(self.name, name)
 
 
 class OnesTransform(_ShapeCreateUnaryTransform):
@@ -128,6 +130,7 @@ class OnesTransform(_ShapeCreateUnaryTransform):
         model = must_model(spec.target_ref)
         sd = provider.get_state_dict(model)
         sd[name] = torch.ones(spec.shape, dtype=torch.float32)
+        emit_verbose_unary_activity(self.name, name)
 
 
 class RandTransform(_ShapeCreateUnaryTransform):
@@ -176,6 +179,7 @@ class RandTransform(_ShapeCreateUnaryTransform):
         else:
             out.normal_(spec.mean, spec.std, generator=generator)
         sd[name] = out
+        emit_verbose_unary_activity(self.name, name)
 
     def completion_value_candidates(
         self,

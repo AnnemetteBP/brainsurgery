@@ -7,6 +7,8 @@ from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError
 from ..core import register_transform
 from ..core import require_numeric
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, DeclarativeUnaryTransform, UnaryRefs
+from ..engine import emit_verbose_binary_activity
+from ..engine import emit_verbose_unary_activity
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,7 @@ def _clamp_apply(
     dst_sd[item.dst_name] = src_view.clamp(
         min=spec.min_value, max=spec.max_value
     ).clone()
+    emit_verbose_binary_activity("clamp", item)
 
 
 class ClampTransform(DeclarativeBinaryTransform[ClampSpec]):
@@ -105,6 +108,7 @@ def _clamp_in_place_apply(
     view = select_tensor(sd[name], slice_spec)
     view.clamp_(min=spec.min_value, max=spec.max_value)
     sd.mark_write(name)
+    emit_verbose_unary_activity("clamp_", name)
 
 
 class ClampInPlaceTransform(DeclarativeUnaryTransform[ClampInPlaceSpec]):

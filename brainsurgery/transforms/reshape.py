@@ -6,6 +6,8 @@ from ..core import BinaryMappingSpec, DestinationPolicy, UnarySpec
 from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError, must_model, select_tensor
 from ..core import register_transform
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, DeclarativeUnaryTransform, UnaryRefs
+from ..engine import emit_verbose_binary_activity
+from ..engine import emit_verbose_unary_activity
 
 
 @dataclass(frozen=True)
@@ -30,6 +32,7 @@ def _reshape_apply(
     src_view = select_tensor(src_sd[item.src_name], item.src_slice)
     try:
         dst_sd[item.dst_name] = src_view.reshape(spec.shape).clone()
+        emit_verbose_binary_activity("reshape", item)
     except RuntimeError as exc:
         raise TransformError(
             f"reshape failed for {item.src_name} -> {item.dst_name}: {exc}"
@@ -93,6 +96,7 @@ def _reshape_in_place_apply(
     sd = provider.get_state_dict(model)
     try:
         sd[name] = sd[name].reshape(spec.shape).clone()
+        emit_verbose_unary_activity("reshape_", name)
     except RuntimeError as exc:
         raise TransformError(f"reshape_ failed for {model}::{name}: {exc}") from exc
 

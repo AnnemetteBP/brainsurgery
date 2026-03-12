@@ -7,6 +7,7 @@ from ..expressions import Expression, compile_assert_expr, get_assert_expr_names
 from ..core import StateDictProvider, TransformError
 from ..core import TypedTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload
+from ..engine import emit_verbose_event
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,7 @@ class AssertTransform(TypedTransform[AssertSpec]):
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
         typed = self.require_spec(spec)
         typed.expr.evaluate(provider)
+        emit_verbose_event(self.name, "ok")
         return TransformResult(name=self.name, count=1)
 
     def infer_output_model(self, spec: object) -> str:

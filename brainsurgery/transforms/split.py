@@ -10,6 +10,7 @@ from ..core import TensorRef, must_model, parse_model_expr, parse_slice, select_
 from ..core import StateDictProvider, TransformError
 from ..core import BaseTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload, validate_payload_keys
+from ..engine import emit_verbose_event
 
 
 class SplitTransformError(TransformError):
@@ -123,6 +124,7 @@ class SplitTransform(BaseTransform):
             if dst_name in dst_sd:
                 raise SplitTransformError(f"split destination already exists: {dst_model}::{dst_name}")
             dst_sd[dst_name] = part.clone()
+            emit_verbose_event(self.name, f"{src_name} -> {dst_name}")
 
         return TransformResult(name=self.name, count=len(parts))
 

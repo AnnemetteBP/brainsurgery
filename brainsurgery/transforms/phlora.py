@@ -9,6 +9,8 @@ from ..core import TensorRef, must_model, parse_model_expr
 from ..core import register_transform
 from ..core import ensure_mapping_payload, require_expr, require_numeric, validate_payload_keys
 from ..core import StateDictProvider, TransformError
+from ..engine import emit_verbose_unary_activity
+from ..engine import emit_verbose_event
 
 
 class PhloraTransformError(TransformError):
@@ -227,6 +229,10 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
 
         factor_a_sd[item.factor_a_name] = lora_a.to(dtype=source.dtype, device=source.device)
         factor_b_sd[item.factor_b_name] = lora_b.to(dtype=source.dtype, device=source.device)
+        emit_verbose_event(
+            self.name,
+            f"{item.source_name} -> {item.factor_b_name}, {item.factor_a_name}",
+        )
 
         if spec.delete_source:
             del src_sd[item.source_name]
@@ -324,6 +330,7 @@ class PhloraInPlaceTransform(UnaryTransform[PhloraInPlaceSpec]):
             tensor_name=f"{model}::{name}",
         )
         sd[name] = new_tensor.to(dtype=source.dtype, device=source.device)
+        emit_verbose_unary_activity(self.name, name)
 
 
 register_transform(PhloraInPlaceTransform())

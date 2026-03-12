@@ -6,7 +6,7 @@ import sys
 from typing import Any
 
 from ..core import get_transform, list_transforms
-from ..engine.provider_utils import (
+from ..engine import (
     _list_loaded_tensor_names as list_loaded_tensor_names_from_provider,
     list_model_aliases as list_model_aliases_from_provider,
 )

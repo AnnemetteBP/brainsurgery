@@ -12,7 +12,7 @@ from ..core import TransformError
 from ..core import TypedTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
 from ..core import StateDictProvider
-from ..engine.frontend import emit_line
+from ..engine import emit_line, emit_verbose_event
 
 
 class DiffTransformError(TransformError):
@@ -117,6 +117,7 @@ class DiffTransform(TypedTransform[DiffSpec]):
         findings = len(missing_on_left) + len(missing_on_right) + len(differing)
         if findings == 0:
             emit_line("No differences found.")
+        emit_verbose_event(self.name, f"{findings} finding(s)")
 
         return TransformResult(name=self.name, count=findings)
 

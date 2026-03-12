@@ -140,7 +140,6 @@ def prompt_interactive_transform(state_dict_provider: Any | None = None) -> list
         Panel.fit(
             "\n".join(
                 [
-                    "[bold]Interactive mode[/bold]",
                     "Enter one transform as YAML or OLY, or a YAML list of transforms.",
                     "Finish input with an empty line.",
                     "Tab completion: top-level transforms, then payload keys/aliases/tensors/syntax.",
@@ -149,6 +148,7 @@ def prompt_interactive_transform(state_dict_provider: Any | None = None) -> list
                     "OLY:  [dim]copy: from: ln_f.weight, to: ln_f_copy.weight[/dim]",
                 ]
             ),
+            title="Interactive mode",
             border_style="cyan",
         )
     )

@@ -11,6 +11,7 @@ from ..core import TransformError
 from ..core import BaseTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload, validate_payload_keys
 from ..core import StateDictProvider
+from ..engine import emit_verbose_event
 
 
 class ConcatTransformError(TransformError):
@@ -100,6 +101,7 @@ class ConcatTransform(BaseTransform):
         cat_dim = typed.dim if typed.dim >= 0 else typed.dim + rank
 
         dst_sd[dst_name] = torch.cat(source_tensors, dim=cat_dim).clone()
+        emit_verbose_event(self.name, f"{len(source_tensors)} tensors -> {dst_name}")
         return TransformResult(name=self.name, count=1)
 
     def infer_output_model(self, spec: object) -> str:

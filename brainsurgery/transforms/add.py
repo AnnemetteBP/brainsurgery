@@ -17,6 +17,8 @@ from ..core import (
 from ..core import require_same_shape_dtype_device3
 from ..core import register_transform
 from ..core import DeclarativeTernaryTransform, TernaryRefs
+from ..engine import emit_verbose_binary_activity
+from ..engine import emit_verbose_ternary_activity
 
 
 def _add_apply(
@@ -44,6 +46,7 @@ def _add_apply(
     )
     dst_view.copy_(src_a_view + src_b_view)
     dst_sd.mark_write(item.dst_name)
+    emit_verbose_ternary_activity("add", item)
 
 
 class AddTransform(DeclarativeTernaryTransform[TernaryMappingSpec]):
@@ -84,6 +87,7 @@ def _add_in_place_apply(
 
     dst_view.add_(src_view)
     dst_sd.mark_write(item.dst_name)
+    emit_verbose_binary_activity("add_", item)
 
 
 class AddInPlaceTransform(DeclarativeBinaryTransform[BinaryMappingSpec]):

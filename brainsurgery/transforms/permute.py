@@ -6,6 +6,7 @@ from ..core import BinaryMappingSpec, DestinationPolicy
 from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError, select_tensor
 from ..core import register_transform
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs
+from ..engine import emit_verbose_binary_activity
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,7 @@ def _permute_apply(
             f"permute.order must be a permutation of [0..{src_view.dim() - 1}], got {list(order)}"
         )
     dst_sd[item.dst_name] = src_view.permute(*order).clone()
+    emit_verbose_binary_activity("permute", item)
 
 
 class PermuteTransform(DeclarativeBinaryTransform[PermuteSpec]):

@@ -4,6 +4,7 @@ from ..core import BinaryMappingSpec, DestinationPolicy
 from ..core import ResolvedMapping, StateDictProvider, TransformError, select_tensor
 from ..core import register_transform
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs
+from ..engine import emit_verbose_binary_activity
 
 
 def _copy_apply(
@@ -24,6 +25,7 @@ def _copy_apply(
         )
 
     dst_sd[item.dst_name] = copied
+    emit_verbose_binary_activity("copy", item)
 
 
 class CopyTransform(DeclarativeBinaryTransform[BinaryMappingSpec]):

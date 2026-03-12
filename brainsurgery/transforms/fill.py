@@ -10,6 +10,8 @@ from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError
 from ..core import register_transform
 from ..core import require_numeric
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, DeclarativeUnaryTransform, UnaryRefs
+from ..engine import emit_verbose_binary_activity
+from ..engine import emit_verbose_unary_activity
 
 FillMode = Literal["constant", "rand", "tensor"]
 RandDistribution = Literal["uniform", "normal"]
@@ -47,6 +49,7 @@ def _fill_apply(
     dst_sd[item.dst_name] = build_filled_tensor_like(
         template, spec.config, TransformError
     )
+    emit_verbose_binary_activity("fill", item)
 
 
 class FillTransform(DeclarativeBinaryTransform[FillSpec]):
@@ -220,6 +223,7 @@ def _fill_in_place_apply(
     filled = build_filled_tensor_like(view, spec.config, TransformError)
     view.copy_(filled)
     sd.mark_write(name)
+    emit_verbose_unary_activity("fill_", name)
 
 
 class FillInPlaceTransform(DeclarativeUnaryTransform[FillInPlaceSpec]):

@@ -4,6 +4,7 @@ from ..core import UnarySpec, UnaryTransform
 from ..core import TensorRef, must_model
 from ..core import register_transform
 from ..core import StateDictProvider, TransformError
+from ..engine import emit_verbose_unary_activity
 
 
 class DeleteTransformError(TransformError):
@@ -34,6 +35,7 @@ class DeleteTransform(UnaryTransform[UnarySpec]):
             raise DeleteTransformError(f"delete target disappeared during apply: {model}::{name}")
 
         del sd[name]
+        emit_verbose_unary_activity(self.name, name)
 
 
 

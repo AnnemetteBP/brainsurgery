@@ -10,6 +10,7 @@ from ..core import require_same_shape_dtype_device3
 from ..core import StateDictProvider, TransformError
 from ..core import register_transform
 from ..core import DeclarativeTernaryTransform, Docs, TernaryRefs
+from ..engine import emit_verbose_ternary_activity
 
 
 def _multiply_apply(
@@ -37,6 +38,7 @@ def _multiply_apply(
     )
     dst_view.copy_(src_a_view * src_b_view)
     dst_sd.mark_write(item.dst_name)
+    emit_verbose_ternary_activity("multiply", item)
 
 
 class MultiplyTransform(DeclarativeTernaryTransform[TernaryMappingSpec]):

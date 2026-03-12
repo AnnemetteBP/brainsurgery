@@ -15,7 +15,9 @@ from ..engine import (
     execute_transform_pairs,
     ProviderError,
     create_state_dict_provider,
+    get_runtime_flags,
     list_model_aliases,
+    reset_runtime_flags,
     use_output_emitter,
 )
 
@@ -168,6 +170,7 @@ def run(
     """Load a plan, execute it, and save the rewritten output checkpoint."""
     configure_logging(log_level)
     configure_history()
+    reset_runtime_flags()
 
     raw_plan = load_cli_config(config_items or [])
 
@@ -216,6 +219,8 @@ def run(
 
             if surgery_plan.output is None:
                 logger.info("No preservation requested; concluding operation without closure")
+            elif get_runtime_flags().dry_run:
+                logger.info("Dry-run enabled; skipping output save")
             else:
                 written_path = state_dict_provider.save_output(
                     surgery_plan,
@@ -225,12 +230,15 @@ def run(
                 logger.info("Operation complete. Brain preserved at %s", written_path)
 
             if summarize:
-                write_executed_plan_summary(
-                    inputs=raw_plan.get("inputs", []),
-                    output=raw_plan.get("output"),
-                    transforms=executed_transforms,
-                    destination=summarize_path,
-                )
+                if get_runtime_flags().dry_run and summarize_path is not None:
+                    logger.info("Dry-run enabled; skipping summary file write to %s", summarize_path)
+                else:
+                    write_executed_plan_summary(
+                        inputs=raw_plan.get("inputs", []),
+                        output=raw_plan.get("output"),
+                        transforms=executed_transforms,
+                        destination=summarize_path,
+                    )
 
     finally:
         state_dict_provider.close()

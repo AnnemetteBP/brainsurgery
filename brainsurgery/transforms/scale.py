@@ -7,6 +7,8 @@ from ..core import register_transform
 from ..core import require_numeric
 from ..core import BinaryMappingSpec, DestinationPolicy
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, UnaryRefs, UnarySpec, DeclarativeUnaryTransform
+from ..engine import emit_verbose_binary_activity
+from ..engine import emit_verbose_unary_activity
 
 
 @dataclass(frozen=True)
@@ -29,6 +31,7 @@ def _scale_apply(
     scaled = select_tensor(src_sd[item.src_name], item.src_slice).clone()
     scaled.mul_(spec.factor)
     dst_sd[item.dst_name] = scaled
+    emit_verbose_binary_activity("scale", item)
 
 
 class ScaleTransform(DeclarativeBinaryTransform[ScaleSpec]):
@@ -81,6 +84,7 @@ def _scale_in_place_apply(
     view = select_tensor(tensor, slice_spec)
     view.mul_(spec.factor)
     sd.mark_write(name)
+    emit_verbose_unary_activity("scale_", name)
 
 
 class ScaleInPlaceTransform(DeclarativeUnaryTransform[ScaleInPlaceSpec]):

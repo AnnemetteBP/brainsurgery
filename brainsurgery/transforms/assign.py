@@ -6,6 +6,7 @@ from ..core import TensorRef, parse_slice, select_tensor
 from ..core import require_same_shape_dtype_device
 from ..core import register_transform
 from ..core import StateDictProvider, TransformError
+from ..engine import emit_verbose_binary_activity
 
 
 class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
@@ -46,6 +47,7 @@ class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
 
         dst_view.copy_(src_view)
         dst_sd.mark_write(item.dst_name)
+        emit_verbose_binary_activity(self.name, item)
 
 
 

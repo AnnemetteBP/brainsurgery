@@ -6,6 +6,7 @@ from typing import Any
 from ..core import TransformError
 from ..core import TypedTransform, TransformControl, TransformResult, register_transform
 from ..core import StateDictProvider
+from ..engine import emit_verbose_event
 
 
 class ExitTransformError(TransformError):
@@ -48,6 +49,7 @@ class ExitTransform(TypedTransform[ExitSpec]):
         del provider
 
         self.require_spec(spec)
+        emit_verbose_event(self.name)
 
         return TransformResult(
             name=self.name,

@@ -11,6 +11,8 @@ from ..core import (
     parse_torch_dtype,
 )
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, DeclarativeUnaryTransform, UnaryRefs
+from ..engine import emit_verbose_binary_activity
+from ..engine import emit_verbose_unary_activity
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,7 @@ def _cast_apply(
     dst_sd = provider.get_state_dict(item.dst_model)
     src_view = select_tensor(src_sd[item.src_name], item.src_slice)
     dst_sd[item.dst_name] = src_view.to(dtype=spec.dtype)
+    emit_verbose_binary_activity("cast", item)
 
 
 class CastTransform(DeclarativeBinaryTransform[CastSpec]):
@@ -82,6 +85,7 @@ def _cast_in_place_apply(
     model = must_model(spec.target_ref)
     sd = provider.get_state_dict(model)
     sd[name] = sd[name].to(dtype=spec.dtype)
+    emit_verbose_unary_activity("cast_", name)
 
 
 class CastInPlaceTransform(DeclarativeUnaryTransform[CastInPlaceSpec]):

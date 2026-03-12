@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from io import StringIO
 from typing import Any
 
 from ..expressions import get_assert_expr_help, get_assert_expr_names
 from ..core import TransformError
 from ..core import TypedTransform, TransformControl, TransformResult, get_transform, list_transforms, register_transform
 from ..core import StateDictProvider
-from ..engine.frontend import emit_line
+from ..engine import emit_line, emit_verbose_event
 
 
 class HelpTransformError(TransformError):
@@ -83,6 +84,12 @@ class HelpTransform(TypedTransform[HelpSpec]):
         del provider
 
         typed = self.require_spec(spec)
+        if typed.command is None:
+            emit_verbose_event(self.name, "commands")
+        elif typed.subcommand is None:
+            emit_verbose_event(self.name, typed.command)
+        else:
+            emit_verbose_event(self.name, f"{typed.command}.{typed.subcommand}")
         self._dispatch_help(typed)
 
         return TransformResult(
@@ -149,16 +156,18 @@ class HelpTransform(TypedTransform[HelpSpec]):
         return None
 
     def _print_all_commands(self) -> None:
-        emit_line("Available commands:")
+        lines: list[str] = []
+        lines.append("Available commands:")
         for name in list_transforms():
-            emit_line(f"  {name}")
-        emit_line("")
-        emit_line("For help on a specific command:")
-        emit_line("  YAML: help: <command>")
-        emit_line("  OLY:  help: <command>")
-        emit_line("For help on a specific assert expression:")
-        emit_line("  YAML: help: { assert: <expr> }")
-        emit_line("  OLY:  help: assert: <expr>")
+            lines.append(f"  {name}")
+        lines.append("")
+        lines.append("For help on a specific command:")
+        lines.append("  YAML: help: <command>")
+        lines.append("  OLY:  help: <command>")
+        lines.append("For help on a specific assert expression:")
+        lines.append("  YAML: help: { assert: <expr> }")
+        lines.append("  OLY:  help: assert: <expr>")
+        self._emit_help_panel("Help for commands", lines)
 
     def _print_command_help(self, command_name: str) -> None:
         try:
@@ -170,19 +179,22 @@ class HelpTransform(TypedTransform[HelpSpec]):
         required_keys = getattr(transform, "required_keys", None)
         help_text = getattr(transform, "help_text", None)
 
-        emit_line(f"Command: {command_name}")
+        lines: list[str] = [f"Command: {command_name}"]
 
         if help_text:
-            emit_line(help_text)
-        emit_line("")
-        emit_line("Syntax:")
-        emit_line("  YAML: <command>: { key: value, ... }")
-        emit_line("  OLY:  <command>: key: value, ...")
+            lines.append(help_text)
+        lines.append("")
+        lines.append("Syntax:")
+        lines.append("  YAML: <command>: { key: value, ... }")
+        lines.append("  OLY:  <command>: key: value, ...")
 
-        self._emit_key_metadata(
-            required_keys=required_keys,
-            allowed_keys=allowed_keys,
+        lines.extend(
+            self._build_key_metadata_lines(
+                required_keys=required_keys,
+                allowed_keys=allowed_keys,
+            )
         )
+        self._emit_help_panel(f"Help for {command_name}", lines)
 
     def _print_assert_help(self) -> None:
         try:
@@ -190,42 +202,107 @@ class HelpTransform(TypedTransform[HelpSpec]):
         except TransformError:
             transform = None
 
-        emit_line("Command: assert")
+        lines: list[str] = ["Command: assert"]
         if transform is not None:
             help_text = getattr(transform, "help_text", None)
             if help_text:
-                emit_line(help_text)
-        emit_line("")
-        emit_line("Syntax:")
-        emit_line("  YAML: assert: { <expr>: { ... } }")
-        emit_line("  OLY:  assert: <expr>: { ... }")
-
-        emit_line("Supported assert expression operators:")
+                lines.append(help_text)
+        lines.append("")
+        lines.append("Syntax:")
+        lines.append("  YAML: assert: { <expr>: { ... } }")
+        lines.append("  OLY:  assert: <expr>: { ... }")
+        lines.append("")
+        lines.append("Supported assert expression operators:")
         for name in get_assert_expr_names():
             meta = get_assert_expr_help(name)
             if meta.description:
-                emit_line(f"  {name}: {meta.description}")
+                lines.append(f"  {name}: {meta.description}")
             else:
-                emit_line(f"  {name}")
+                lines.append(f"  {name}")
 
-        emit_line("")
-        emit_line("For help on a specific assert expression:")
-        emit_line("  YAML: help: { assert: <expr> }")
-        emit_line("  OLY:  help: assert: <expr>")
+        lines.append("")
+        lines.append("For help on a specific assert expression:")
+        lines.append("  YAML: help: { assert: <expr> }")
+        lines.append("  OLY:  help: assert: <expr>")
+        self._emit_help_panel("Help for assert", lines)
 
     def _print_assert_expr_help(self, expr_name: str) -> None:
         meta = get_assert_expr_help(expr_name)
 
-        emit_line(f"Assert expression: {meta.name}")
-        emit_line(f"Payload: {meta.payload_kind}")
-
+        lines: list[str] = [
+            f"Assert expression: {meta.name}",
+            f"Payload: {meta.payload_kind}",
+        ]
         if meta.description:
-            emit_line(meta.description)
+            lines.append(meta.description)
 
-        self._emit_key_metadata(
-            required_keys=meta.required_keys,
-            allowed_keys=meta.allowed_keys,
+        lines.extend(
+            self._build_key_metadata_lines(
+                required_keys=meta.required_keys,
+                allowed_keys=meta.allowed_keys,
+            )
         )
+        self._emit_help_panel(f"Help for assert.{meta.name}", lines)
+
+    def _build_key_metadata_lines(
+        self,
+        *,
+        required_keys: set[str] | None,
+        allowed_keys: set[str] | None,
+    ) -> list[str]:
+        if allowed_keys is None and required_keys is None:
+            return ["Key metadata: unavailable"]
+
+        lines: list[str] = []
+        required = sorted(required_keys or set())
+        allowed = sorted(allowed_keys or set())
+        optional = [key for key in allowed if key not in required]
+
+        if required_keys is not None:
+            if required:
+                lines.append("Required keys:")
+                for key in required:
+                    lines.append(f"  - {key}")
+            else:
+                lines.append("Required keys: none")
+
+        if allowed_keys is not None:
+            if optional:
+                lines.append("Optional keys:")
+                for key in optional:
+                    lines.append(f"  - {key}")
+            else:
+                lines.append("Optional keys: none")
+
+            if allowed:
+                lines.append("All allowed keys:")
+                for key in allowed:
+                    lines.append(f"  - {key}")
+            else:
+                lines.append("All allowed keys: none")
+
+        return lines
+
+    def _emit_help_panel(self, title: str, lines: list[str]) -> None:
+        try:
+            from rich.console import Console
+            from rich.panel import Panel
+        except Exception:
+            emit_line(title)
+            for line in lines:
+                emit_line(line)
+            return
+
+        buffer = StringIO()
+        console = Console(
+            file=buffer,
+            color_system=None,
+            force_terminal=False,
+            width=100,
+        )
+        console.print(Panel.fit("\n".join(lines), title=title, border_style="cyan"))
+        for line in buffer.getvalue().splitlines():
+            emit_line(line)
 
     def _emit_key_metadata(
         self,
@@ -233,36 +310,11 @@ class HelpTransform(TypedTransform[HelpSpec]):
         required_keys: set[str] | None,
         allowed_keys: set[str] | None,
     ) -> None:
-        if allowed_keys is None and required_keys is None:
-            emit_line("Key metadata: unavailable")
-            return
-
-        required = sorted(required_keys or set())
-        allowed = sorted(allowed_keys or set())
-        optional = [key for key in allowed if key not in required]
-
-        if required_keys is not None:
-            if required:
-                emit_line("Required keys:")
-                for key in required:
-                    emit_line(f"  - {key}")
-            else:
-                emit_line("Required keys: none")
-
-        if allowed_keys is not None:
-            if optional:
-                emit_line("Optional keys:")
-                for key in optional:
-                    emit_line(f"  - {key}")
-            else:
-                emit_line("Optional keys: none")
-
-            if allowed:
-                emit_line("All allowed keys:")
-                for key in allowed:
-                    emit_line(f"  - {key}")
-            else:
-                emit_line("All allowed keys: none")
+        for line in self._build_key_metadata_lines(
+            required_keys=required_keys,
+            allowed_keys=allowed_keys,
+        ):
+            emit_line(line)
 
 
 

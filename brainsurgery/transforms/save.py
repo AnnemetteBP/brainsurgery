@@ -4,14 +4,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..engine.checkpoint_io import persist_state_dict
-from ..engine.tensor_files import save_tensor_to_path
-from ..engine.output_paths import parse_shard_size
-from ..engine import resolve_single_model_alias
+from ..engine import (
+    get_runtime_flags,
+    parse_shard_size,
+    persist_state_dict,
+    resolve_single_model_alias,
+    save_tensor_to_path,
+)
 from ..core import parse_model_expr
 from ..core import StateDictProvider, TransformError
 from ..core import TypedTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
+from ..engine import emit_verbose_event
 
 
 class SaveTransformError(TransformError):
@@ -116,21 +120,24 @@ class SaveTransform(TypedTransform[SaveSpec]):
             error_type=SaveTransformError,
             op_name=self.name,
         )
+        dry_run = get_runtime_flags().dry_run
 
         if typed.tensor_name is None:
             state_dict = provider.get_state_dict(alias)
             format_name = typed.format or "safetensors"
-            try:
-                persist_state_dict(
-                    dict(state_dict.items()),
-                    output_path=typed.path,
-                    output_format=format_name,  # type: ignore[arg-type]
-                    shard_size=typed.shard_size,
-                    sharded_output_root=typed.path,
-                    max_io_workers=_resolve_max_io_workers(provider),
-                )
-            except RuntimeError as exc:
-                raise SaveTransformError(str(exc)) from exc
+            if not dry_run:
+                try:
+                    persist_state_dict(
+                        dict(state_dict.items()),
+                        output_path=typed.path,
+                        output_format=format_name,  # type: ignore[arg-type]
+                        shard_size=typed.shard_size,
+                        sharded_output_root=typed.path,
+                        max_io_workers=_resolve_max_io_workers(provider),
+                    )
+                except RuntimeError as exc:
+                    raise SaveTransformError(str(exc)) from exc
+            emit_verbose_event(self.name, f"{alias} -> {typed.path}")
             return TransformResult(name=self.name, count=len(state_dict))
 
         state_dict = provider.get_state_dict(alias)
@@ -138,15 +145,17 @@ class SaveTransform(TypedTransform[SaveSpec]):
             raise SaveTransformError(f"save target missing: {alias}::{typed.tensor_name}")
 
         format_name = typed.format or "safetensors"
-        try:
-            save_tensor_to_path(
-                typed.tensor_name,
-                state_dict[typed.tensor_name],
-                typed.path,
-                format=format_name,  # type: ignore[arg-type]
-            )
-        except RuntimeError as exc:
-            raise SaveTransformError(str(exc)) from exc
+        if not dry_run:
+            try:
+                save_tensor_to_path(
+                    typed.tensor_name,
+                    state_dict[typed.tensor_name],
+                    typed.path,
+                    format=format_name,  # type: ignore[arg-type]
+                )
+            except RuntimeError as exc:
+                raise SaveTransformError(str(exc)) from exc
+        emit_verbose_event(self.name, f"{alias}::{typed.tensor_name} -> {typed.path}")
         return TransformResult(name=self.name, count=1)
 
     def infer_output_model(self, spec: object) -> str:

@@ -11,6 +11,7 @@ from ..core import select_tensor
 from ..core import StateDictProvider, TransformError
 from ..core import register_transform
 from ..core import DeclarativeTernaryTransform, Docs, TernaryRefs
+from ..engine import emit_verbose_ternary_activity
 
 
 def _matmul_apply(
@@ -44,6 +45,7 @@ def _matmul_apply(
         ) from exc
 
     dst_sd[item.dst_name] = result.clone()
+    emit_verbose_ternary_activity("matmul", item)
 
 
 class MatmulTransform(DeclarativeTernaryTransform[TernaryMappingSpec]):

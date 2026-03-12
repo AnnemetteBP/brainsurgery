@@ -4,13 +4,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..engine.tensor_files import load_tensor_from_path
-from ..engine import get_or_create_alias_state_dict
-from ..engine import BaseStateDictProvider, ProviderError
+from ..engine import (
+    BaseStateDictProvider,
+    ProviderError,
+    get_or_create_alias_state_dict,
+    get_runtime_flags,
+    load_tensor_from_path,
+)
 from ..core import parse_model_expr
 from ..core import StateDictProvider, TransformError
 from ..core import TypedTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
+from ..engine import emit_verbose_event
 
 
 class LoadTransformError(TransformError):
@@ -96,34 +101,44 @@ class LoadTransform(TypedTransform[LoadSpec]):
 
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
         typed = self.require_spec(spec)
+        dry_run = get_runtime_flags().dry_run
 
         if typed.tensor_name is None:
             if not isinstance(provider, BaseStateDictProvider):
                 raise LoadTransformError("load requires a provider that supports creating new aliases")
             try:
-                state_dict = provider.load_alias_from_path(typed.alias, typed.path)
+                if dry_run:
+                    state_dict = provider.load_state_dict_from_checkpoint_path(typed.path)
+                else:
+                    state_dict = provider.load_alias_from_path(typed.alias, typed.path)
             except ProviderError as exc:
                 message = str(exc).replace("model alias", "load alias")
                 raise LoadTransformError(message) from exc
             except RuntimeError as exc:
                 raise LoadTransformError(str(exc)) from exc
+            emit_verbose_event(self.name, f"{typed.path} -> alias {typed.alias}")
             return TransformResult(name=self.name, count=len(state_dict))
 
         try:
             tensor = load_tensor_from_path(typed.path, format=typed.format)  # type: ignore[arg-type]
         except RuntimeError as exc:
             raise LoadTransformError(str(exc)) from exc
-        state_dict = get_or_create_alias_state_dict(
-            provider,
-            typed.alias,
-            error_type=LoadTransformError,
-            op_name=self.name,
-        )
+        if dry_run and isinstance(provider, BaseStateDictProvider) and not provider.has_model_alias(typed.alias):
+            state_dict: dict[str, object] = {}
+        else:
+            state_dict = get_or_create_alias_state_dict(
+                provider,
+                typed.alias,
+                error_type=LoadTransformError,
+                op_name=self.name,
+            )
         if typed.tensor_name in state_dict:
             raise LoadTransformError(
                 f"load destination already exists: {typed.alias}::{typed.tensor_name}"
             )
-        state_dict[typed.tensor_name] = tensor
+        if not dry_run:
+            state_dict[typed.tensor_name] = tensor
+        emit_verbose_event(self.name, f"{typed.path} -> {typed.alias}::{typed.tensor_name}")
         return TransformResult(name=self.name, count=1)
 
     def infer_output_model(self, spec: object) -> str:
