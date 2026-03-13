@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
-from contextlib import nullcontext
+import tempfile
+import warnings
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, Literal, TypeVar
@@ -208,6 +210,10 @@ def load_state_dict_from_path(path: Path, global_state_dict: StateDictLike, *, m
 
 
 def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike, *, max_io_workers: int) -> None:
+    if is_torch_distributed_checkpoint_directory(path):
+        logger.info("Detected torch distributed checkpoint directory at %s", path)
+        return load_state_dict_from_torch_distributed_checkpoint(path, global_state_dict)
+
     pt_files = sorted(path.glob("*.pt")) + sorted(path.glob("*.pth")) + sorted(path.glob("*.bin"))
     safetensor_files = sorted(path.glob("*.safetensors"))
     index_file = path / "model.safetensors.index.json"
@@ -273,6 +279,157 @@ def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike,
     logger.info("Cranial assembly complete for %s: %d tensor(s)", path, len(global_state_dict))
 
 
+def is_torch_distributed_checkpoint_directory(path: Path) -> bool:
+    metadata_file = path / ".metadata"
+    has_distcp_shards = any(path.glob("*.distcp"))
+    return metadata_file.exists() and has_distcp_shards
+
+
+def load_state_dict_from_torch_distributed_checkpoint(
+    path: Path,
+    global_state_dict: StateDictLike,
+) -> None:
+    layout = detect_torch_distributed_checkpoint_layout(path)
+    logger.info("Torch distributed checkpoint layout at %s appears to be: %s", path, layout)
+    try:
+        loaded = _load_state_dict_from_torch_distributed_checkpoint_direct(path)
+    except Exception as direct_exc:
+        logger.info(
+            "Direct torch distributed checkpoint load failed for %s; falling back to conversion: %s",
+            path,
+            direct_exc,
+        )
+        try:
+            loaded = _load_state_dict_from_torch_distributed_checkpoint_via_conversion(path)
+        except Exception as exc:
+            raise RuntimeError(f"failed to load torch distributed checkpoint from {path}") from exc
+
+    loaded_count = _merge_loaded_state_dict(loaded, global_state_dict, path=path)
+    if loaded_count <= 0:
+        raise RuntimeError("torch distributed checkpoint contained zero tensors")
+
+    logger.info("Cranial assembly complete for %s: %d tensor(s)", path, len(global_state_dict))
+
+
+def detect_torch_distributed_checkpoint_layout(path: Path) -> Literal["full", "sharded", "mixed", "unknown"]:
+    try:
+        from torch.distributed.checkpoint import FileSystemReader
+        from torch.distributed.checkpoint.metadata import BytesStorageMetadata, TensorStorageMetadata
+    except Exception:
+        return "unknown"
+
+    try:
+        metadata = FileSystemReader(str(path)).read_metadata()
+        entries = metadata.state_dict_metadata
+    except Exception:
+        return "unknown"
+
+    if not isinstance(entries, dict) or not entries:
+        return "unknown"
+
+    saw_full = False
+    saw_sharded = False
+
+    for entry in entries.values():
+        if isinstance(entry, TensorStorageMetadata):
+            if _is_full_tensor_storage_metadata(entry):
+                saw_full = True
+            else:
+                saw_sharded = True
+        elif isinstance(entry, BytesStorageMetadata):
+            saw_sharded = True
+        else:
+            saw_sharded = True
+
+        if saw_full and saw_sharded:
+            return "mixed"
+
+    if saw_sharded:
+        return "sharded"
+    return "full"
+
+
+def _is_full_tensor_storage_metadata(entry: Any) -> bool:
+    chunks = getattr(entry, "chunks", None)
+    size_tuple = tuple(getattr(entry, "size", ()))
+    if not isinstance(chunks, list) or len(chunks) != 1:
+        return False
+
+    chunk = chunks[0]
+    offsets = tuple(getattr(chunk, "offsets", ()))
+    sizes = tuple(getattr(chunk, "sizes", ()))
+    return offsets == tuple(0 for _ in size_tuple) and sizes == size_tuple
+
+
+def _load_state_dict_from_torch_distributed_checkpoint_direct(path: Path) -> Dict[str, torch.Tensor]:
+    from torch.distributed.checkpoint import FileSystemReader, load as load_dcp
+    from torch.distributed.checkpoint.metadata import TensorStorageMetadata
+
+    reader = FileSystemReader(str(path))
+    metadata = reader.read_metadata()
+    entries = metadata.state_dict_metadata
+    if not isinstance(entries, dict):
+        raise RuntimeError(f"invalid torch distributed checkpoint metadata at {path}")
+
+    loaded: dict[str, torch.Tensor] = {}
+    for key, entry in entries.items():
+        if not isinstance(key, str):
+            raise RuntimeError(f"invalid torch distributed checkpoint tensor key in {path}: {key!r}")
+        if not isinstance(entry, TensorStorageMetadata):
+            raise RuntimeError(f"torch distributed checkpoint contains non-tensor entry: {key!r}")
+        properties = getattr(entry, "properties", None)
+        dtype = getattr(properties, "dtype", None)
+        if not isinstance(dtype, torch.dtype):
+            raise RuntimeError(f"torch distributed checkpoint tensor entry is missing dtype: {key!r}")
+        loaded[key] = torch.empty(tuple(entry.size), dtype=dtype, device="cpu")
+
+    with _suppress_torch_distributed_checkpoint_warnings():
+        load_dcp(loaded, storage_reader=reader, no_dist=True)
+
+    return validate_state_dict_mapping(loaded, path)
+
+
+def _load_state_dict_from_torch_distributed_checkpoint_via_conversion(path: Path) -> Dict[str, torch.Tensor]:
+    try:
+        from torch.distributed.checkpoint.format_utils import dcp_to_torch_save
+    except Exception as exc:
+        raise RuntimeError(
+            "torch distributed checkpoint support requires torch.distributed.checkpoint.format_utils"
+        ) from exc
+
+    with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as tmp_file:
+        tmp_path = Path(tmp_file.name)
+    try:
+        with _suppress_torch_distributed_checkpoint_warnings():
+            dcp_to_torch_save(path, tmp_path)
+        loaded = torch.load(tmp_path, map_location="cpu")
+        if isinstance(loaded, dict) and "state_dict" in loaded and isinstance(loaded["state_dict"], dict):
+            logger.info("Detected wrapped state_dict payload while converting DCP in %s", path)
+            loaded = loaded["state_dict"]
+        return validate_state_dict_mapping(loaded, path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@contextmanager
+def _suppress_torch_distributed_checkpoint_warnings():
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=(
+                r"torch\.distributed is disabled, unavailable or uninitialized, "
+                r"assuming the intent is to (save|load) in a single process\."
+            ),
+            category=UserWarning,
+        )
+        warnings.filterwarnings(
+            "ignore",
+            message=r"TypedStorage is deprecated\..*",
+            category=UserWarning,
+        )
+        yield
+
+
 def resolve_safetensor_shards_from_index(index_file: Path, base_dir: Path) -> list[Path]:
     try:
         index_data = json.loads(index_file.read_text(encoding="utf-8"))
@@ -322,6 +479,16 @@ def load_state_dict_from_file(
             logger.info("Detected wrapped state_dict payload in %s", path)
             loaded = loaded["state_dict"]
     loaded = validate_state_dict_mapping(loaded, path)
+    return _merge_loaded_state_dict(loaded, global_state_dict, path=path, merge_lock=merge_lock)
+
+
+def _merge_loaded_state_dict(
+    loaded: Dict[str, torch.Tensor],
+    global_state_dict: StateDictLike,
+    *,
+    path: Path,
+    merge_lock: Lock | None = None,
+) -> int:
     loaded_count = 0
     for key, tensor in loaded.items():
         lock_context = merge_lock if merge_lock is not None else nullcontext()
