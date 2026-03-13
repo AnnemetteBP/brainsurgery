@@ -217,6 +217,12 @@ class _Parser:
         self._skip_ws()
         if self._peek() is None:
             return {transform: {}}
+        if self._peek() == "{":
+            payload = self._parse_inline_map()
+            self._skip_ws()
+            if self._peek() is not None:
+                raise self._error("unexpected token after top-level map")
+            return {transform: payload}
         payload = self._parse_kv_pairs(end_ch=None)
         return {transform: payload}
 
@@ -265,6 +271,8 @@ def _emit_value(value: Any) -> str:
     if isinstance(value, list):
         return f"[{', '.join(_emit_value(item) for item in value)}]"
     if isinstance(value, dict):
+        if not value:
+            return "{}"
         return "{ " + ", ".join(f"{key}: {_emit_value(val)}" for key, val in value.items()) + " }"
     raise TypeError(f"unsupported OLY value type: {type(value).__name__}")
 
@@ -279,10 +287,7 @@ def emit_oly_line(transform_spec: dict[str, Any]) -> str:
         payload = {}
     if not isinstance(payload, dict):
         raise ValueError("transform payload must be a mapping")
-    if not payload:
-        return f"{transform_name}:"
-    body = ", ".join(f"{key}: {_emit_value(value)}" for key, value in payload.items())
-    return f"{transform_name}: {body}"
+    return f"{transform_name}: {_emit_value(payload)}"
 
 
 def emit_yaml_transform(transform_spec: dict[str, Any]) -> str:
