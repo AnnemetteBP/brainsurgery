@@ -46,12 +46,14 @@ class SaveTransform(TypedTransform[SaveSpec]):
         "\n"
         "Without 'target', saves an alias state_dict (default format: safetensors). "
         "Set 'shard' (for example '500MB') to write sharded safetensors in parallel.\n"
+        "Set format: dcp to write a torch distributed checkpoint directory.\n"
         "With 'target', saves one tensor from that alias.\n"
         "\n"
         "Examples:\n"
         "  save: { path: /tmp/out.safetensors }\n"
         "  save: { path: /tmp/out_dir, shard: 500MB }\n"
         "  save: { path: /tmp/a.pt, alias: a, format: torch }\n"
+        "  save: { path: /tmp/dcp_out, alias: a, format: dcp }\n"
         "  save: { path: /tmp/emb.npy, target: model::embed.weight, format: numpy }"
     )
 
@@ -104,11 +106,11 @@ class SaveTransform(TypedTransform[SaveSpec]):
                     "save.format for tensor save must be one of: safetensors, torch, numpy"
                 )
         else:
-            if fmt is not None and fmt not in {"safetensors", "torch"}:
+            if fmt is not None and fmt not in {"safetensors", "torch", "dcp"}:
                 raise SaveTransformError(
-                    "save.format for state_dict save must be one of: safetensors, torch"
+                    "save.format for state_dict save must be one of: safetensors, torch, dcp"
                 )
-            if shard_size is not None and fmt == "torch":
+            if shard_size is not None and fmt in {"torch", "dcp"}:
                 raise SaveTransformError("save.shard is only supported for safetensors state_dict save")
 
         return SaveSpec(path=path, alias=alias, tensor_name=tensor_name, format=fmt, shard_size=shard_size)

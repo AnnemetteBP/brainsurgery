@@ -11,7 +11,7 @@ def resolve_output_destination(
     output: OutputSpec,
     *,
     default_shard_size: str,
-) -> tuple[Path, Literal["safetensors", "torch"], int | None]:
+) -> tuple[Path, Literal["safetensors", "torch", "dcp"], int | None]:
     path = output.path
     format_value = output.format
     shard_size = resolve_shard_size(output, default_shard_size=default_shard_size)
@@ -21,6 +21,8 @@ def resolve_output_destination(
             resolved_path, resolved_format = _resolve_explicit_safetensors_destination(path)
         elif format_value == "torch":
             resolved_path, resolved_format = _resolve_explicit_torch_destination(path)
+        elif format_value == "dcp":
+            resolved_path, resolved_format = _resolve_explicit_dcp_destination(path)
         else:  # pragma: no cover
             raise RuntimeError(f"unsupported explicit output format: {format_value}")
     else:
@@ -68,6 +70,16 @@ def _resolve_explicit_torch_destination(path: Path) -> tuple[Path, Literal["torc
     return path, "torch"
 
 
+def _resolve_explicit_dcp_destination(path: Path) -> tuple[Path, Literal["dcp"]]:
+    if path.exists() and not path.is_dir():
+        raise RuntimeError("output.format='dcp' requires a directory path, not a file")
+    if path.suffix != "":
+        raise RuntimeError(
+            f"output.format='dcp' requires a directory-style path with no file extension; got {path}"
+        )
+    return path, "dcp"
+
+
 def resolve_shard_size(output: OutputSpec, default_shard_size: str) -> int | None:
     raw = output.shard
 
@@ -85,6 +97,9 @@ def _is_directory_style_output(output: OutputSpec) -> bool:
 
     if output.format == "torch":
         return False
+
+    if output.format == "dcp":
+        return True
 
     if output.format == "safetensors":
         if path.exists() and path.is_dir():

@@ -17,7 +17,7 @@ class PlanLoaderError(RuntimeError):
 @dataclass(frozen=True)
 class OutputSpec:
     path: Path
-    format: Optional[Literal["safetensors", "torch"]] = None
+    format: Optional[Literal["safetensors", "torch", "dcp"]] = None
     shard: Optional[str] = None
 
 
@@ -136,8 +136,8 @@ def parse_output_mapping(raw: Dict[str, Any]) -> OutputSpec:
     if format_value is not None:
         if not isinstance(format_value, str) or not format_value:
             raise PlanLoaderError("output.format must be a non-empty string when provided")
-        if format_value not in {"safetensors", "torch"}:
-            raise PlanLoaderError("output.format must be one of: 'safetensors', 'torch'")
+        if format_value not in {"safetensors", "torch", "dcp"}:
+            raise PlanLoaderError("output.format must be one of: 'safetensors', 'torch', 'dcp'")
 
     shard_value = raw.get("shard")
     if shard_value is not None:
