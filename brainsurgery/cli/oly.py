@@ -213,6 +213,8 @@ class _Parser:
             raise self._error("empty input")
         transform = self._parse_ident()
         self._skip_ws()
+        if self._peek() is None:
+            return {transform: {}}
         self._expect(":")
         self._skip_ws()
         if self._peek() is None:

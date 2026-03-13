@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..engine import render_tree, summarize_tensor
-from ..core import UnarySpec, UnaryTransform
+from ..core import UnaryTransform
 from ..engine import emit_line, tqdm
 from ..core import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
 from ..core import TransformError
@@ -20,9 +20,19 @@ class DumpTransformError(TransformError):
 
 
 @dataclass(frozen=True)
-class DumpSpec(UnarySpec):
+class DumpSpec:
+    target_ref: TensorRef | None
     format: str
     verbosity: str
+    dump_all_models: bool = False
+    default_model_hint: str | None = None
+
+    def collect_models(self) -> set[str]:
+        if self.dump_all_models:
+            return {self.default_model_hint} if self.default_model_hint is not None else set()
+        if self.target_ref is None:
+            return set()
+        return {must_model(self.target_ref)}
 
 
 class DumpTransform(UnaryTransform[DumpSpec]):
@@ -35,6 +45,8 @@ class DumpTransform(UnaryTransform[DumpSpec]):
     progress_desc = "Dumping tensors"
     help_text = (
         "Displays tensors selected by 'target' without modifying them.\n"
+        "\n"
+        "When 'target' is omitted, dumps all tensors across all loaded model aliases.\n"
         "\n"
         "Targets may be specified by name or pattern. Slices are written after '::', "
         "for example 'ln_f.weight::[:8]'. 'format' controls layout: 'tree' (default), "
@@ -57,19 +69,29 @@ class DumpTransform(UnaryTransform[DumpSpec]):
             required_keys=self.required_keys,
         )
 
-        if "target" not in payload:
-            payload = dict(payload)
-            payload["target"] = ".*"
+        target_ref: TensorRef | None = None
+        dump_all_models = "target" not in payload
+        if not dump_all_models:
+            raw_target = self.require_target_expr(payload)
+            target_ref = parse_model_expr(raw_target, default_model=default_model)
+            self.validate_target_ref(target_ref)
+            assert target_ref.model is not None
 
-        raw_target = self.require_target_expr(payload)
-        target_ref = parse_model_expr(raw_target, default_model=default_model)
+        return self.build_spec(
+            target_ref=target_ref,
+            payload=payload,
+            dump_all_models=dump_all_models,
+            default_model_hint=default_model,
+        )
 
-        self.validate_target_ref(target_ref)
-
-        assert target_ref.model is not None
-        return self.build_spec(target_ref=target_ref, payload=payload)
-
-    def build_spec(self, target_ref: TensorRef, payload: dict) -> DumpSpec:
+    def build_spec(
+        self,
+        target_ref: TensorRef | None,
+        payload: dict,
+        *,
+        dump_all_models: bool = False,
+        default_model_hint: str | None = None,
+    ) -> DumpSpec:
         raw_format = payload.get("format", "compact")
         if not isinstance(raw_format, str) or not raw_format:
             raise DumpTransformError("dump.format must be a non-empty string")
@@ -86,7 +108,13 @@ class DumpTransform(UnaryTransform[DumpSpec]):
         if verbosity not in {"shape", "stat", "full"}:
             raise DumpTransformError("dump.verbosity must be one of: shape, stat, full")
 
-        return DumpSpec(target_ref=target_ref, format=fmt, verbosity=verbosity)
+        return DumpSpec(
+            target_ref=target_ref,
+            format=fmt,
+            verbosity=verbosity,
+            dump_all_models=dump_all_models,
+            default_model_hint=default_model_hint,
+        )
 
     def apply_to_target(self, spec: DumpSpec, name: str, provider: StateDictProvider) -> None:
         raise AssertionError("DumpTransform overrides apply() and does not use apply_to_target()")
@@ -95,40 +123,93 @@ class DumpTransform(UnaryTransform[DumpSpec]):
         del spec
         return False
 
+    def infer_output_model(self, spec: object) -> str:
+        del spec
+        raise DumpTransformError("dump does not infer an output model")
+
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
         typed = self.require_spec(spec)
 
-        model = must_model(typed.target_ref)
-        sd = provider.get_state_dict(model)
-        targets = self.resolve_targets(typed, provider)
-
-        slice_spec = (
-            parse_slice(typed.target_ref.slice_spec)
-            if typed.target_ref.slice_spec is not None
-            else None
-        )
-
         tree: dict[str, Any] = {}
+        trees_by_alias: dict[str, dict[str, Any]] = {}
+        total = 0
 
-        for name in tqdm(targets, desc=self.progress_desc, unit="tensor"):
-            tensor = sd[name]
-            view = select_tensor(tensor, slice_spec)
-            access_counts = _maybe_get_access_counts(sd, name, verbosity=typed.verbosity)
-            insert_into_tree(
-                tree,
-                name.split("."),
-                summarize_tensor(view, verbosity=typed.verbosity, access_counts=access_counts),
+        if typed.dump_all_models:
+            aliases = _resolve_model_aliases(provider, typed.default_model_hint)
+            for alias in aliases:
+                sd = provider.get_state_dict(alias)
+                alias_tree: dict[str, Any] = {}
+                for name in tqdm(sorted(sd.keys()), desc=self.progress_desc, unit="tensor"):
+                    tensor = sd[name]
+                    access_counts = _maybe_get_access_counts(sd, name, verbosity=typed.verbosity)
+                    summary = summarize_tensor(tensor, verbosity=typed.verbosity, access_counts=access_counts)
+                    insert_into_tree(
+                        tree,
+                        [alias, *name.split(".")],
+                        summary,
+                    )
+                    insert_into_tree(alias_tree, name.split("."), summary)
+                    emit_verbose_unary_activity(self.name, f"{alias}::{name}")
+                    total += 1
+                trees_by_alias[alias] = alias_tree
+        else:
+            if typed.target_ref is None:
+                raise DumpTransformError("dump target missing")
+            model = must_model(typed.target_ref)
+            sd = provider.get_state_dict(model)
+            targets = self.resolve_targets(typed, provider)
+
+            slice_spec = (
+                parse_slice(typed.target_ref.slice_spec)
+                if typed.target_ref.slice_spec is not None
+                else None
             )
-            emit_verbose_unary_activity(self.name, name)
+
+            for name in tqdm(targets, desc=self.progress_desc, unit="tensor"):
+                tensor = sd[name]
+                view = select_tensor(tensor, slice_spec)
+                access_counts = _maybe_get_access_counts(sd, name, verbosity=typed.verbosity)
+                insert_into_tree(
+                    tree,
+                    name.split("."),
+                    summarize_tensor(view, verbosity=typed.verbosity, access_counts=access_counts),
+                )
+                emit_verbose_unary_activity(self.name, name)
+                total += 1
 
         if typed.format == "json":
-            emit_line(json.dumps(tree, separators=(",", ":"), sort_keys=True))
+            if typed.dump_all_models:
+                if not trees_by_alias:
+                    emit_line("{}")
+                else:
+                    for alias in sorted(trees_by_alias):
+                        emit_line(json.dumps({alias: trees_by_alias[alias]}, separators=(",", ":"), sort_keys=True))
+            else:
+                emit_line(json.dumps(tree, separators=(",", ":"), sort_keys=True))
         elif typed.format == "tree":
-            emit_line(render_tree(tree, compact=False))
+            if typed.dump_all_models:
+                blocks = [render_tree({alias: trees_by_alias[alias]}, compact=False) for alias in sorted(trees_by_alias)]
+                emit_line("\n\n".join(blocks))
+            else:
+                emit_line(render_tree(tree, compact=False))
         else:
-            emit_line(render_tree(tree, compact=True))
+            if typed.dump_all_models:
+                blocks = [render_tree({alias: trees_by_alias[alias]}, compact=True) for alias in sorted(trees_by_alias)]
+                emit_line("\n\n".join(blocks))
+            else:
+                emit_line(render_tree(tree, compact=True))
 
-        return TransformResult(name=self.name, count=len(targets))
+        return TransformResult(name=self.name, count=total)
+
+
+def _resolve_model_aliases(provider: StateDictProvider, default_model_hint: str | None) -> list[str]:
+    list_aliases = getattr(provider, "list_model_aliases", None)
+    if callable(list_aliases):
+        aliases = sorted(alias for alias in list_aliases() if isinstance(alias, str) and alias)
+        return aliases
+    if default_model_hint is not None:
+        return [default_model_hint]
+    return []
 
 
 def insert_into_tree(tree: dict[str, Any], parts: list[str], leaf: Any) -> None:

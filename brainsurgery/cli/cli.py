@@ -115,7 +115,7 @@ def _run_interactive_session(
             return False, executed
 
 
-@app.command()
+@app.callback(invoke_without_command=True)
 def run(
     config_items: list[str] = typer.Argument(
         None,
