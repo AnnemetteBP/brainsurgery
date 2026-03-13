@@ -15,6 +15,7 @@ from ..core import parse_model_expr
 from ..core import StateDictProvider, TransformError
 from ..core import TypedTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
+from ..core.completion import complete_filesystem_paths
 from ..engine import emit_verbose_event
 
 
@@ -59,6 +60,23 @@ class SaveTransform(TypedTransform[SaveSpec]):
 
     def completion_reference_keys(self) -> list[str]:
         return ["target"]
+
+    def completion_value_candidates(
+        self,
+        value_key: str | None,
+        prefix_text: str,
+        model_aliases: list[str],
+    ) -> list[str] | None:
+        if value_key == "path":
+            return complete_filesystem_paths(prefix_text)
+        if value_key == "alias":
+            return [alias for alias in model_aliases if alias.startswith(prefix_text)]
+        if value_key == "format":
+            return [
+                name for name in ("safetensors", "torch", "dcp", "numpy")
+                if name.startswith(prefix_text)
+            ]
+        return None
 
     def compile(self, payload: Any, default_model: str | None) -> SaveSpec:
         if isinstance(payload, str):
