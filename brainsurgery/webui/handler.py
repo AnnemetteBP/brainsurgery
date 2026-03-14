@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import json
 import logging
 from http import HTTPStatus
@@ -17,6 +18,7 @@ from .backend import (
     default_alias,
     parse_filter_expr,
     render_dump_for_alias,
+    render_execution_summary,
     require_string,
     serialize_models,
     transform_items,
@@ -75,6 +77,9 @@ def handler_factory(session: SessionState):
                     try:
                         chosen_alias = alias_clean or default_alias(session.provider)
                         apply_load_transform(provider=session.provider, path=load_path, alias=chosen_alias)
+                        session.executed_transforms.append(
+                            {"load": {"path": str(load_path), "alias": chosen_alias}}
+                        )
                         models = serialize_models(session.provider)
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -90,7 +95,7 @@ def handler_factory(session: SessionState):
                     payload = body.get("payload")
                     if payload is None:
                         payload = {}
-                    if not isinstance(payload, dict):
+                    if transform_name != "help" and not isinstance(payload, dict):
                         raise ValueError("payload must be an object.")
                 except Exception as exc:
                     self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -103,6 +108,13 @@ def handler_factory(session: SessionState):
                             transform_name=transform_name,
                             payload=payload,
                         )
+                        session.executed_transforms.append({transform_name: copy.deepcopy(payload)})
+                        if transform_name == "exit":
+                            summary = render_execution_summary(
+                                provider=session.provider,
+                                executed_transforms=session.executed_transforms,
+                            )
+                            output = f"{output}\n\n{summary}".strip() if output else summary
                         models = serialize_models(session.provider)
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -125,6 +137,7 @@ def handler_factory(session: SessionState):
                 with session.lock:
                     try:
                         output, filename, mime, content_b64 = self._run_save_download(payload)
+                        session.executed_transforms.append({"save": copy.deepcopy(payload)})
                         models = serialize_models(session.provider)
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)

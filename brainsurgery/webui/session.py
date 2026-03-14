@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import threading
 from typing import Any
@@ -11,6 +11,7 @@ class SessionState:
     provider: Any
     lock: threading.Lock
     upload_root: Path
+    executed_transforms: list[dict[str, Any]] = field(default_factory=list)
 
 
 __all__ = ["SessionState"]

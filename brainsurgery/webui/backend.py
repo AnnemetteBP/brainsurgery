@@ -4,12 +4,14 @@ import json
 from pathlib import Path
 from typing import Any
 
+from omegaconf import OmegaConf
 from ..core import (
     BinaryMappingTransform,
     DestinationPolicy,
     TernaryMappingTransform,
     UnaryTransform,
     get_transform,
+    get_assert_expr_names,
     list_transforms,
     match_expr_names,
     parse_model_expr,
@@ -17,7 +19,7 @@ from ..core import (
 from ..engine import list_model_aliases, reset_runtime_flags, use_output_emitter
 
 
-DISABLED_TRANSFORMS = {"dump", "help", "exit"}
+DISABLED_TRANSFORMS: set[str] = set()
 
 
 def transform_items() -> list[dict[str, Any]]:
@@ -37,6 +39,8 @@ def transform_items() -> list[dict[str, Any]]:
                 "required_keys": spec["required_keys"] if spec else [],
                 "reference_keys": spec["reference_keys"] if spec else [],
                 "to_must_exist": bool(spec and spec["to_must_exist"]),
+                "help_commands": spec["help_commands"] if spec else [],
+                "help_subcommands": spec["help_subcommands"] if spec else {},
             }
         )
     return items
@@ -67,6 +71,8 @@ def _transform_specs() -> dict[str, dict[str, Any]]:
             "required_keys": required,
             "reference_keys": ref_keys,
             "to_must_exist": destination_policy is DestinationPolicy.MUST_EXIST,
+            "help_commands": sorted(list_transforms()) if name == "help" else [],
+            "help_subcommands": {"assert": sorted(get_assert_expr_names())} if name == "help" else {},
         }
     return specs
 
@@ -116,7 +122,7 @@ def apply_transform(
     *,
     provider: Any,
     transform_name: str,
-    payload: dict[str, Any],
+    payload: Any,
 ) -> str:
     transform = get_transform(transform_name)
     if transform_name in DISABLED_TRANSFORMS:
@@ -212,6 +218,24 @@ def serialize_models(provider: Any) -> list[dict[str, Any]]:
     return models
 
 
+def render_execution_summary(*, provider: Any, executed_transforms: list[dict[str, Any]]) -> str:
+    del provider
+    summary_doc = {
+        "transforms": [_normalize_summary_node(item) for item in executed_transforms],
+    }
+    return OmegaConf.to_yaml(summary_doc)
+
+
+def _normalize_summary_node(value: Any) -> Any:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return {key: _normalize_summary_node(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_normalize_summary_node(item) for item in value]
+    return value
+
+
 __all__ = [
     "DISABLED_TRANSFORMS",
     "apply_load_transform",
@@ -219,6 +243,7 @@ __all__ = [
     "default_alias",
     "parse_filter_expr",
     "render_dump_for_alias",
+    "render_execution_summary",
     "require_string",
     "serialize_models",
     "transform_items",

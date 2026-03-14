@@ -510,12 +510,70 @@ HTML_PAGE = """<!doctype html>
       transformRunBtn.textContent = "Run " + selectedTransform;
 
       for (const key of orderedKeys) {
+        if (selectedTransform === "dump" && key === "format") {
+          const fmtSelect = document.createElement("select");
+          fmtSelect.innerHTML =
+            "<option value='compact'>format: compact</option>" +
+            "<option value='tree'>format: tree</option>" +
+            "<option value='json'>format: json</option>";
+          fmtSelect.value = cfg.fields.format == null ? "compact" : String(cfg.fields.format).toLowerCase();
+          if (!["compact", "tree", "json"].includes(fmtSelect.value)) fmtSelect.value = "compact";
+          fmtSelect.addEventListener("change", () => { cfg.fields.format = fmtSelect.value; });
+          transformFields.appendChild(fmtSelect);
+          continue;
+        }
+        if (selectedTransform === "dump" && key === "verbosity") {
+          const verbositySelect = document.createElement("select");
+          verbositySelect.innerHTML =
+            "<option value='shape'>verbosity: shape</option>" +
+            "<option value='stat'>verbosity: stat</option>" +
+            "<option value='full'>verbosity: full</option>";
+          verbositySelect.value = cfg.fields.verbosity == null ? "shape" : String(cfg.fields.verbosity).toLowerCase();
+          if (!["shape", "stat", "full"].includes(verbositySelect.value)) verbositySelect.value = "shape";
+          verbositySelect.addEventListener("change", () => { cfg.fields.verbosity = verbositySelect.value; });
+          transformFields.appendChild(verbositySelect);
+          continue;
+        }
         const input = document.createElement("input");
         const suffix = required.has(key) ? "required" : "optional";
         input.placeholder = key + " (" + suffix + ")";
         input.value = cfg.fields[key] == null ? "" : String(cfg.fields[key]);
         input.addEventListener("input", () => { cfg.fields[key] = input.value; });
         transformFields.appendChild(input);
+      }
+
+      if (selectedTransform === "help") {
+        const commandSelect = document.createElement("select");
+        const helpCommands = Array.isArray(meta.help_commands) ? meta.help_commands : [];
+        commandSelect.innerHTML =
+          "<option value=''>command: all commands</option>" +
+          helpCommands.map((name) => "<option value='" + name + "'>command: " + name + "</option>").join("");
+        commandSelect.value = cfg.fields.help_command == null ? "" : String(cfg.fields.help_command);
+        if (!["", ...helpCommands].includes(commandSelect.value)) commandSelect.value = "";
+        commandSelect.addEventListener("change", () => {
+          cfg.fields.help_command = commandSelect.value;
+          if (commandSelect.value !== "assert") cfg.fields.help_subcommand = "";
+          renderTransformPanel();
+        });
+        transformFields.appendChild(commandSelect);
+
+        const subcommandSelect = document.createElement("select");
+        const subcommandsByCommand =
+          (meta.help_subcommands && typeof meta.help_subcommands === "object")
+            ? meta.help_subcommands
+            : {};
+        const selectedCommand = String(cfg.fields.help_command || "");
+        const commandSubcommands = selectedCommand
+          ? (Array.isArray(subcommandsByCommand[selectedCommand]) ? subcommandsByCommand[selectedCommand] : [])
+          : [];
+        subcommandSelect.innerHTML =
+          "<option value=''>subcommand: none</option>" +
+          commandSubcommands.map((name) => "<option value='" + name + "'>subcommand: " + name + "</option>").join("");
+        subcommandSelect.value = cfg.fields.help_subcommand == null ? "" : String(cfg.fields.help_subcommand);
+        if (!["", ...commandSubcommands].includes(subcommandSelect.value)) subcommandSelect.value = "";
+        subcommandSelect.disabled = !selectedCommand || commandSubcommands.length === 0;
+        subcommandSelect.addEventListener("change", () => { cfg.fields.help_subcommand = subcommandSelect.value; });
+        transformFields.appendChild(subcommandSelect);
       }
 
       if (selectedTransform === "save") {
@@ -817,7 +875,7 @@ HTML_PAGE = """<!doctype html>
       const cfg = getTransformConfig(runTransformName);
       const allowed = Array.isArray(meta.allowed_keys) ? meta.allowed_keys : [];
       const required = new Set(Array.isArray(meta.required_keys) ? meta.required_keys : []);
-      const payload = {};
+      let payload = {};
 
       for (const key of allowed) {
         const parsed = parseFieldValue(cfg.fields[key] == null ? "" : String(cfg.fields[key]));
@@ -826,6 +884,22 @@ HTML_PAGE = """<!doctype html>
           continue;
         }
         payload[key] = parsed;
+      }
+
+      if (runTransformName === "help") {
+        const command = String(cfg.fields.help_command || "").trim();
+        const subcommand = String(cfg.fields.help_subcommand || "").trim();
+        if (!command && subcommand) {
+          setStatus("Set command before subcommand for help.");
+          return;
+        }
+        if (!command) {
+          payload = {};
+        } else if (!subcommand) {
+          payload = command;
+        } else {
+          payload = { [command]: subcommand };
+        }
       }
 
       if (runTransformName === "save" && (cfg.save_mode || "server") === "download") {
