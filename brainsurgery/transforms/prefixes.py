@@ -142,7 +142,7 @@ class PrefixesTransform(TypedTransform[PrefixesSpec]):
 
         raise PrefixesTransformError(f"unsupported prefixes mode: {typed.mode}")
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         typed = self.require_spec(spec)
         if typed.mode == "add":
             assert typed.alias is not None

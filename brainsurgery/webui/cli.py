@@ -3,7 +3,7 @@ import webbrowser
 
 import typer
 
-from .server import serve_webui
+from .server import _serve_webui
 
 
 logger = logging.getLogger("brainsurgery")
@@ -53,7 +53,7 @@ def webui(
             webbrowser.open(url)
         except Exception as exc:
             logger.warning("Could not open browser automatically: %s", exc)
-    serve_webui(host=host, port=port)
+    _serve_webui(host=host, port=port)
 
 
 __all__ = ["app", "configure_logging", "webui", "logger"]

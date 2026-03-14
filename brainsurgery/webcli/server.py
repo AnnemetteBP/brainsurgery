@@ -1,14 +1,14 @@
 from http.server import ThreadingHTTPServer
 import logging
 
-from .handler import handler_factory
+from .handler import _handler_factory
 
 
 logger = logging.getLogger("brainsurgery")
 
 
-def serve_webcli(*, host: str, port: int) -> None:
-    server = ThreadingHTTPServer((host, port), handler_factory())
+def _serve_webcli(*, host: str, port: int) -> None:
+    server = ThreadingHTTPServer((host, port), _handler_factory())
     logger.info("Brain surgery web CLI available at http://%s:%d", host, port)
     try:
         server.serve_forever()
@@ -17,5 +17,3 @@ def serve_webcli(*, host: str, port: int) -> None:
     finally:
         server.server_close()
 
-
-__all__ = ["serve_webcli"]

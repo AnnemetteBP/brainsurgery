@@ -121,7 +121,7 @@ class DumpTransform(UnaryTransform[DumpSpec]):
         del spec
         return False
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         del spec
         raise DumpTransformError("dump does not infer an output model")
 

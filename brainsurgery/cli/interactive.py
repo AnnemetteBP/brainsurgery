@@ -22,8 +22,8 @@ from .complete import (
     _is_transform_payload_start,
 )
 from .history import _add_history_entry
-from .oly import parse_oly_line
-from .parse import normalize_transform_specs, parse_transform_block
+from .oly import _parse_oly_line
+from .parse import normalize_transform_specs, _parse_transform_block
 
 logger = logging.getLogger("brainsurgery")
 console = Console()
@@ -133,7 +133,7 @@ def _interactive_completion(
             logger.debug("Could not restore readline completion", exc_info=True)
 
 
-def prompt_interactive_transform(state_dict_provider: Any | None = None) -> list[dict[str, Any]] | None:
+def _prompt_interactive_transform(state_dict_provider: Any | None = None) -> list[dict[str, Any]] | None:
     console.print()
     console.print(
         Panel.fit(
@@ -179,7 +179,7 @@ def prompt_interactive_transform(state_dict_provider: Any | None = None) -> list
 
                     block = "\n".join(lines)
                     try:
-                        parsed = parse_transform_block(block)
+                        parsed = _parse_transform_block(block)
                         _add_history_entry(block)
                         return parsed
                     except ValueError as exc:
@@ -193,7 +193,7 @@ def prompt_interactive_transform(state_dict_provider: Any | None = None) -> list
                     text = line.strip()
                     if text:
                         try:
-                            parsed = normalize_transform_specs(parse_oly_line(text))
+                            parsed = normalize_transform_specs(_parse_oly_line(text))
                             _add_history_entry(line)
                             return parsed
                         except Exception:

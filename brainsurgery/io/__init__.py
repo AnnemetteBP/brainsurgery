@@ -39,7 +39,6 @@ from .torch import _save_state_dict as save_torch_state_dict
 
 TensorFileFormat = Literal["numpy", "safetensors", "torch"]
 TensorLoadFormat = Literal["auto", "numpy", "safetensors", "torch"]
-StateDictLoadLayout = Literal["full", "sharded", "mixed", "unknown"]
 
 
 def infer_tensor_file_format(path: Path) -> TensorFileFormat:
@@ -83,28 +82,16 @@ def save_tensor_to_path(
 
 
 __all__ = [
-    "StateDictLoadLayout",
-    "TensorFileFormat",
-    "TensorLoadFormat",
     "detect_torch_distributed_checkpoint_layout",
-    "infer_tensor_file_format",
-    "is_full_torch_distributed_tensor_storage_metadata",
     "is_torch_distributed_checkpoint_directory",
-    "load_numpy_tensor",
     "load_safetensors_state_dict",
-    "load_safetensors_tensor",
     "load_tensor_from_path",
     "load_torch_distributed_checkpoint_state_dict_direct",
     "load_torch_distributed_checkpoint_state_dict_via_conversion",
-    "load_torch_object",
     "load_torch_state_dict",
-    "load_torch_tensor",
     "resolve_torch_distributed_checkpoint_output_directory",
-    "save_numpy_tensor",
     "save_safetensors_state_dict",
-    "save_safetensors_tensor",
     "save_tensor_to_path",
     "save_torch_distributed_checkpoint_state_dict",
     "save_torch_state_dict",
-    "save_torch_tensor",
 ]

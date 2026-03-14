@@ -2,13 +2,8 @@ from dataclasses import dataclass
 import re
 from typing import Any
 
-import yaml
-
-
-_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
 _INT_RE = re.compile(r"^-?(0|[1-9][0-9]*)$")
 _FLOAT_RE = re.compile(r"^-?(?:[0-9]+\.[0-9]*|\.[0-9]+|[0-9]+(?:[eE][+-]?[0-9]+)|[0-9]+\.[0-9]*[eE][+-]?[0-9]+)$")
-_BARE_OUT_RE = re.compile(r"^[^\s,\[\]{}\"']+$")
 
 
 class OlyParseError(ValueError):
@@ -242,53 +237,5 @@ def _coerce_bare_scalar(token: str) -> Any:
     return token
 
 
-def parse_oly_line(line: str) -> dict[str, Any]:
+def _parse_oly_line(line: str) -> dict[str, Any]:
     return _Parser(text=line).parse_line()
-
-
-def _quote_string(value: str) -> str:
-    escaped = (
-        value.replace("\\", "\\\\")
-        .replace('"', '\\"')
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
-        .replace("\t", "\\t")
-    )
-    return f'"{escaped}"'
-
-
-def _emit_value(value: Any) -> str:
-    if isinstance(value, str):
-        if value and _BARE_OUT_RE.fullmatch(value):
-            return value
-        return _quote_string(value)
-    if value is None:
-        return "null"
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, (int, float)):
-        return repr(value)
-    if isinstance(value, list):
-        return f"[{', '.join(_emit_value(item) for item in value)}]"
-    if isinstance(value, dict):
-        if not value:
-            return "{}"
-        return "{ " + ", ".join(f"{key}: {_emit_value(val)}" for key, val in value.items()) + " }"
-    raise TypeError(f"unsupported OLY value type: {type(value).__name__}")
-
-
-def emit_oly_line(transform_spec: dict[str, Any]) -> str:
-    if len(transform_spec) != 1:
-        raise ValueError("transform spec must contain exactly one transform")
-    transform_name, payload = next(iter(transform_spec.items()))
-    if not isinstance(transform_name, str) or not _IDENT_RE.fullmatch(transform_name):
-        raise ValueError("transform name must be a valid identifier")
-    if payload is None:
-        payload = {}
-    if not isinstance(payload, dict):
-        raise ValueError("transform payload must be a mapping")
-    return f"{transform_name}: {_emit_value(payload)}"
-
-
-def emit_yaml_transform(transform_spec: dict[str, Any]) -> str:
-    return yaml.safe_dump(transform_spec, sort_keys=False).strip()

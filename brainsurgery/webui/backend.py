@@ -24,7 +24,7 @@ from ..engine import get_runtime_flags
 DISABLED_TRANSFORMS: set[str] = set()
 
 
-def transform_items() -> list[dict[str, Any]]:
+def _transform_items() -> list[dict[str, Any]]:
     specs = _transform_specs()
     items: list[dict[str, Any]] = []
     for name in list_transforms():
@@ -137,13 +137,13 @@ def _assert_expression_meta() -> dict[str, dict[str, Any]]:
     return meta
 
 
-def require_string(value: Any, field: str) -> str:
+def _require_string(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty string.")
     return value
 
 
-def default_alias(provider: Any) -> str:
+def _default_alias(provider: Any) -> str:
     aliases = set(list_model_aliases(provider))
     base = "model"
     if base not in aliases:
@@ -156,7 +156,7 @@ def default_alias(provider: Any) -> str:
         index += 1
 
 
-def parse_filter_expr(raw: Any, *, alias: str) -> str | list[Any]:
+def _parse_filter_expr(raw: Any, *, alias: str) -> str | list[Any]:
     source: Any
     if raw is None:
         source = ".*"
@@ -178,7 +178,7 @@ def parse_filter_expr(raw: Any, *, alias: str) -> str | list[Any]:
     return ref.expr
 
 
-def apply_transform(
+def _apply_transform(
     *,
     provider: Any,
     transform_name: str,
@@ -211,13 +211,13 @@ def apply_transform(
     next_default_model = default_model
     try:
         if transform.contributes_output_model(spec):
-            next_default_model = transform.infer_output_model(spec)
+            next_default_model = transform._infer_output_model(spec)
     except Exception:
         next_default_model = default_model
     return "\n".join(lines), next_default_model
 
 
-def apply_load_transform(*, provider: Any, path: Path, alias: str) -> None:
+def _apply_load_transform(*, provider: Any, path: Path, alias: str) -> None:
     reset_runtime_flags()
     transform = get_transform("load")
     spec = transform.compile(
@@ -230,7 +230,7 @@ def apply_load_transform(*, provider: Any, path: Path, alias: str) -> None:
     transform.apply(spec, provider)
 
 
-def serialize_runtime_flags() -> dict[str, bool]:
+def _serialize_runtime_flags() -> dict[str, bool]:
     flags = get_runtime_flags()
     return {
         "dry_run": bool(flags.dry_run),
@@ -238,7 +238,7 @@ def serialize_runtime_flags() -> dict[str, bool]:
     }
 
 
-def render_dump_for_alias(
+def _render_dump_for_alias(
     *,
     provider: Any,
     alias: str,
@@ -273,18 +273,18 @@ def render_dump_for_alias(
     return "\n".join(lines), matched_count, total_count
 
 
-def serialize_models(provider: Any) -> list[dict[str, Any]]:
+def _serialize_models(provider: Any) -> list[dict[str, Any]]:
     models: list[dict[str, Any]] = []
     for alias in sorted(list_model_aliases(provider)):
         state_dict = provider.get_state_dict(alias)
-        dump_compact, matched_count, total_count = render_dump_for_alias(
+        dump_compact, matched_count, total_count = _render_dump_for_alias(
             provider=provider,
             alias=alias,
             format_name="compact",
             verbosity="shape",
             target=".*",
         )
-        dump_tree, _, _ = render_dump_for_alias(
+        dump_tree, _, _ = _render_dump_for_alias(
             provider=provider,
             alias=alias,
             format_name="tree",
@@ -304,7 +304,7 @@ def serialize_models(provider: Any) -> list[dict[str, Any]]:
     return models
 
 
-def render_execution_summary(*, provider: Any, executed_transforms: list[dict[str, Any]]) -> str:
+def _render_execution_summary(*, provider: Any, executed_transforms: list[dict[str, Any]]) -> str:
     del provider
     summary_doc = {
         "transforms": [_normalize_summary_node(item) for item in executed_transforms],
@@ -321,16 +321,3 @@ def _normalize_summary_node(value: Any) -> Any:
         return [_normalize_summary_node(item) for item in value]
     return value
 
-
-__all__ = [
-    "DISABLED_TRANSFORMS",
-    "apply_load_transform",
-    "apply_transform",
-    "default_alias",
-    "parse_filter_expr",
-    "render_dump_for_alias",
-    "render_execution_summary",
-    "require_string",
-    "serialize_models",
-    "transform_items",
-]

@@ -1,7 +1,4 @@
-from .resolver import (
-    resolve_single_tensor,
-    resolve_target_names,
-)
+from .completion import complete_filesystem_paths
 from .validation import (
     ensure_mapping_payload,
     parse_torch_dtype,
@@ -29,16 +26,9 @@ from .refs import (
     parse_slice,
     select_tensor,
 )
-from .matching import (
-    MatchError,
-    StructuredMatch,
-    StructuredPathMatcher,
-)
 from .name_mapping import (
     ResolvedMapping,
     match_expr_names,
-    require_dest_missing,
-    require_dest_present,
     resolve_name_mappings,
 )
 from .transform import (
@@ -56,7 +46,6 @@ from .transform import (
     TypedTransform,
     UnarySpec,
     UnaryTransform,
-    REGISTRY,
     apply_transform,
     get_transform,
     list_transforms,

@@ -1,6 +1,6 @@
 import torch
 
-from .refs import Expr
+from .refs import _Expr
 from .types import TransformError
 
 
@@ -80,7 +80,7 @@ def require_nonempty_string(payload: dict, *, op_name: str, key: str) -> str:
     return value
 
 
-def require_expr(payload: dict, *, op_name: str, key: str) -> Expr:
+def require_expr(payload: dict, *, op_name: str, key: str) -> _Expr:
     value = payload.get(key)
 
     if isinstance(value, str):

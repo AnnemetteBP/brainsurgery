@@ -3,7 +3,7 @@ import webbrowser
 
 import typer
 
-from .server import serve_webcli
+from .server import _serve_webcli
 
 
 logger = logging.getLogger("brainsurgery")
@@ -53,7 +53,7 @@ def webcli(
             webbrowser.open(url)
         except Exception as exc:
             logger.warning("Could not open browser automatically: %s", exc)
-    serve_webcli(host=host, port=port)
+    _serve_webcli(host=host, port=port)
 
 
 __all__ = ["app", "configure_logging", "webcli", "logger"]

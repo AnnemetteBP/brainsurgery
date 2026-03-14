@@ -126,7 +126,7 @@ class SplitTransform(BaseTransform):
 
         return TransformResult(name=self.name, count=len(parts))
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         typed = self.require_spec(spec)
         return must_model(typed.to_refs[0])
 

@@ -7,19 +7,19 @@ import threading
 from typing import Any
 
 from ..engine import ProviderError
-from .page import HTML_PAGE
-from .runner import run_web_plan
+from .page import _HTML_PAGE
+from .runner import _run_web_plan
 
 
 logger = logging.getLogger("brainsurgery")
 _run_lock = threading.Lock()
 
 
-def handler_factory():
+def _handler_factory():
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             if self.path == "/" or self.path.startswith("/?"):
-                self._send_html(HTML_PAGE)
+                self._send_html(_HTML_PAGE)
                 return
             self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
 
@@ -30,7 +30,7 @@ def handler_factory():
             try:
                 payload = self._read_json_body()
                 with _run_lock:
-                    result = run_web_plan(
+                    result = _run_web_plan(
                         plan_yaml=_as_string(payload.get("plan_yaml"), "plan_yaml"),
                         shard_size=_as_string(payload.get("shard_size", "5GB"), "shard_size"),
                         num_workers=_as_int(payload.get("num_workers", 8), "num_workers"),
@@ -107,6 +107,3 @@ def _as_int(value: Any, key: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{key} must be an integer.")
     return value
-
-
-__all__ = ["handler_factory"]

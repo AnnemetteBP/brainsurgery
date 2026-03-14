@@ -102,7 +102,7 @@ class ConcatTransform(BaseTransform):
         emit_verbose_event(self.name, f"{len(source_tensors)} tensors -> {dst_name}")
         return TransformResult(name=self.name, count=1)
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         typed = self.require_spec(spec)
         return must_model(typed.to_ref)
 

@@ -1,7 +1,7 @@
 from typing import Any
 
 from omegaconf import OmegaConf
-from .oly import parse_oly_line
+from .oly import _parse_oly_line
 
 
 def _normalize_single_transform_spec(raw: Any) -> dict[str, Any]:
@@ -34,7 +34,7 @@ def normalize_transform_specs(raw: Any) -> list[dict[str, Any]]:
     return [_normalize_single_transform_spec(raw)]
 
 
-def parse_transform_block(block: str) -> list[dict[str, Any]]:
+def _parse_transform_block(block: str) -> list[dict[str, Any]]:
     yaml_exc: Exception | None = None
     try:
         # Keep `${name}` intact so structured-path destination templates can be
@@ -47,7 +47,7 @@ def parse_transform_block(block: str) -> list[dict[str, Any]]:
     text = block.strip()
     if text:
         try:
-            return normalize_transform_specs(parse_oly_line(text))
+            return normalize_transform_specs(_parse_oly_line(text))
         except Exception as oly_exc:
             raise ValueError(f"invalid YAML: {yaml_exc}\ninvalid OLY: {oly_exc}") from oly_exc
 

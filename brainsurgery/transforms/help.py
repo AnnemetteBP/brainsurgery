@@ -114,7 +114,7 @@ class HelpTransform(TypedTransform[HelpSpec]):
             )
         self._print_command_help(spec.command)
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         del spec
         raise HelpTransformError("help does not infer an output model")
 

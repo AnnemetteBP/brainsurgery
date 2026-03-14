@@ -4,10 +4,10 @@ from typing import Any
 
 import typer
 
-from .config import load_cli_config
-from .history import configure_history
-from .interactive import normalize_transform_specs, prompt_interactive_transform
-from .summary import build_raw_plan, write_executed_plan_summary
+from .config import _load_cli_config
+from .history import _configure_history
+from .interactive import normalize_transform_specs, _prompt_interactive_transform
+from .summary import build_raw_plan, _write_executed_plan_summary
 from ..engine import (
     compile_plan,
     execute_transform_pairs,
@@ -81,7 +81,7 @@ def _run_interactive_session(
 ) -> tuple[bool, list[dict[str, Any]]]:
     executed: list[dict[str, Any]] = []
     while True:
-        extra_specs = prompt_interactive_transform(state_dict_provider=state_dict_provider)
+        extra_specs = _prompt_interactive_transform(state_dict_provider=state_dict_provider)
         if extra_specs is None:
             logger.info("Interactive session complete")
             return True, executed
@@ -167,10 +167,10 @@ def run(
 ) -> None:
     """Load a plan, execute it, and save the rewritten output checkpoint."""
     configure_logging(log_level)
-    configure_history()
+    _configure_history()
     reset_runtime_flags()
 
-    raw_plan = load_cli_config(config_items or [])
+    raw_plan = _load_cli_config(config_items or [])
 
     logger.info(
         "Scrubbing in. Surgical plan assembled from %d config item(s)",
@@ -231,7 +231,7 @@ def run(
                 if get_runtime_flags().dry_run and summarize_path is not None:
                     logger.info("Dry-run enabled; skipping summary file write to %s", summarize_path)
                 else:
-                    write_executed_plan_summary(
+                    _write_executed_plan_summary(
                         inputs=raw_plan.get("inputs", []),
                         output=raw_plan.get("output"),
                         transforms=executed_transforms,

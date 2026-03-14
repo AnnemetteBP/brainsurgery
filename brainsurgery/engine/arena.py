@@ -13,7 +13,7 @@ class ProviderError(RuntimeError):
 
 
 @dataclass(frozen=True)
-class TensorSlot:
+class _TensorSlot:
     segment_id: int
     offset: int
     nbytes: int
@@ -48,7 +48,7 @@ class ArenaSegment:
         self.mem.flush()
 
 
-class SegmentedFileBackedArena:
+class _SegmentedFileBackedArena:
     def __init__(
         self,
         root: Path,
@@ -75,7 +75,7 @@ class SegmentedFileBackedArena:
 
         self._ensure_segment()
 
-    def __enter__(self) -> "SegmentedFileBackedArena":
+    def __enter__(self) -> "_SegmentedFileBackedArena":
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
@@ -110,7 +110,7 @@ class SegmentedFileBackedArena:
         self._write_offset = offset + nbytes
         return segment_id, offset
 
-    def store_tensor(self, tensor: torch.Tensor) -> TensorSlot:
+    def store_tensor(self, tensor: torch.Tensor) -> _TensorSlot:
         if tensor.device.type != "cpu":
             tensor = tensor.cpu()
 
@@ -130,7 +130,7 @@ class SegmentedFileBackedArena:
         )
         view.copy_(tensor)
 
-        return TensorSlot(
+        return _TensorSlot(
             segment_id=segment_id,
             offset=offset,
             nbytes=nbytes,
@@ -138,7 +138,7 @@ class SegmentedFileBackedArena:
             shape=tuple(tensor.shape),
         )
 
-    def tensor_from_slot(self, slot: TensorSlot) -> torch.Tensor:
+    def tensor_from_slot(self, slot: _TensorSlot) -> torch.Tensor:
         return self.tensor_view(
             segment_id=slot.segment_id,
             offset=slot.offset,

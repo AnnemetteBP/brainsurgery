@@ -11,12 +11,12 @@ from .name_mapping import (
     _rewrite_structured_expr,
     ResolvedMapping,
     match_expr_names,
-    require_dest_missing,
-    require_dest_present,
+    _require_dest_missing,
+    _require_dest_present,
     resolve_name_mappings,
 )
 from .refs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
-from .resolver import resolve_target_names as resolve_target_names_generic
+from .resolver import _resolve_target_names as resolve_target_names_generic
 from .types import StateDictProvider, TransformError
 from .validation import ensure_mapping_payload, require_expr, validate_payload_keys
 
@@ -52,7 +52,7 @@ class BaseTransform(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         raise NotImplementedError
 
     def contributes_output_model(self, spec: object) -> bool:
@@ -238,7 +238,7 @@ class UnaryTransform(IteratingTransform[UnarySpecT, str], ABC, Generic[UnarySpec
         assert target_ref.model is not None
         return self.build_spec(target_ref=target_ref, payload=payload)
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         typed = self.require_spec(spec)
         model = typed.target_ref.model
         if model is None:
@@ -318,7 +318,7 @@ class BinaryMappingTransform(IteratingTransform[BinarySpecT, ResolvedMapping], A
         assert to_ref.model is not None
         return self.build_spec(from_ref=from_ref, to_ref=to_ref)
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         typed = self.require_spec(spec)
         model = typed.to_ref.model
         if model is None:
@@ -364,7 +364,7 @@ class BinaryMappingTransform(IteratingTransform[BinarySpecT, ResolvedMapping], A
     ) -> None:
         del spec
         if self.destination_policy is DestinationPolicy.MUST_EXIST:
-            require_dest_present(
+            _require_dest_present(
                 mappings=mappings,
                 provider=provider,
                 op_name=self.name,
@@ -372,7 +372,7 @@ class BinaryMappingTransform(IteratingTransform[BinarySpecT, ResolvedMapping], A
             return
 
         if self.destination_policy is DestinationPolicy.MUST_NOT_EXIST:
-            require_dest_missing(
+            _require_dest_missing(
                 mappings=mappings,
                 provider=provider,
                 op_name=self.name,
@@ -445,7 +445,7 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, ResolvedTernaryMa
         assert to_ref.model is not None
         return self.build_spec(from_a_ref=from_a_ref, from_b_ref=from_b_ref, to_ref=to_ref)
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         typed = self.require_spec(spec)
         model = typed.to_ref.model
         if model is None:

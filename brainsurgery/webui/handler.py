@@ -13,40 +13,40 @@ from omegaconf import OmegaConf
 
 from ..engine import list_model_aliases
 from .backend import (
-    apply_load_transform,
-    apply_transform,
-    default_alias,
-    parse_filter_expr,
-    render_dump_for_alias,
-    render_execution_summary,
-    require_string,
-    serialize_runtime_flags,
-    serialize_models,
-    transform_items,
+    _apply_load_transform,
+    _apply_transform,
+    _default_alias,
+    _parse_filter_expr,
+    _render_dump_for_alias,
+    _render_execution_summary,
+    _require_string,
+    _serialize_runtime_flags,
+    _serialize_models,
+    _transform_items,
 )
-from .page import HTML_PAGE
-from .session import SessionState
+from .page import _HTML_PAGE
+from .session import _SessionState
 
 
 logger = logging.getLogger("brainsurgery")
 
 
-def handler_factory(session: SessionState):
+def _handler_factory(session: _SessionState):
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             if self.path == "/" or self.path.startswith("/?"):
-                self._send_html(HTML_PAGE)
+                self._send_html(_HTML_PAGE)
                 return
             if self.path == "/api/transforms":
-                self._send_json({"ok": True, "transforms": transform_items()})
+                self._send_json({"ok": True, "transforms": _transform_items()})
                 return
             if self.path == "/api/state":
                 with session.lock:
                     self._send_json(
                         {
                             "ok": True,
-                            "models": serialize_models(session.provider),
-                            "runtime_flags": serialize_runtime_flags(),
+                            "models": _serialize_models(session.provider),
+                            "runtime_flags": _serialize_runtime_flags(),
                         }
                     )
                 return
@@ -71,8 +71,8 @@ def handler_factory(session: SessionState):
                     if server_path is not None:
                         load_path = Path(server_path)
                     else:
-                        filename = require_string(body.get("filename"), "filename")
-                        content_b64 = require_string(body.get("content_b64"), "content_b64")
+                        filename = _require_string(body.get("filename"), "filename")
+                        content_b64 = _require_string(body.get("content_b64"), "content_b64")
                         raw = base64.b64decode(content_b64, validate=True)
                         load_path = session.upload_root / f"{uuid.uuid4().hex}_{Path(filename).name}"
                         load_path.write_bytes(raw)
@@ -82,13 +82,13 @@ def handler_factory(session: SessionState):
 
                 with session.lock:
                     try:
-                        chosen_alias = alias_clean or default_alias(session.provider)
-                        apply_load_transform(provider=session.provider, path=load_path, alias=chosen_alias)
+                        chosen_alias = alias_clean or _default_alias(session.provider)
+                        _apply_load_transform(provider=session.provider, path=load_path, alias=chosen_alias)
                         session.default_model = chosen_alias
                         session.executed_transforms.append(
                             {"load": {"path": str(load_path), "alias": chosen_alias}}
                         )
-                        models = serialize_models(session.provider)
+                        models = _serialize_models(session.provider)
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                         return
@@ -97,15 +97,15 @@ def handler_factory(session: SessionState):
                     {
                         "ok": True,
                         "models": models,
-                        "runtime_flags": serialize_runtime_flags(),
+                        "runtime_flags": _serialize_runtime_flags(),
                     }
                 )
                 return
 
-            if self.path == "/api/apply_transform":
+            if self.path == "/api/_apply_transform":
                 try:
                     body = self._read_json_body()
-                    transform_name = require_string(body.get("transform"), "transform")
+                    transform_name = _require_string(body.get("transform"), "transform")
                     payload = body.get("payload")
                     if payload is None:
                         payload = {}
@@ -126,7 +126,7 @@ def handler_factory(session: SessionState):
                                 payload = OmegaConf.to_container(parsed, resolve=True)
                             except Exception as exc:
                                 raise ValueError(f"invalid assert YAML payload: {exc}") from exc
-                        output, next_default_model = apply_transform(
+                        output, next_default_model = _apply_transform(
                             provider=session.provider,
                             transform_name=transform_name,
                             payload=payload,
@@ -135,12 +135,12 @@ def handler_factory(session: SessionState):
                         session.default_model = next_default_model
                         session.executed_transforms.append({transform_name: copy.deepcopy(payload)})
                         if transform_name == "exit":
-                            summary = render_execution_summary(
+                            summary = _render_execution_summary(
                                 provider=session.provider,
                                 executed_transforms=session.executed_transforms,
                             )
                             output = f"{output}\n\n{summary}".strip() if output else summary
-                        models = serialize_models(session.provider)
+                        models = _serialize_models(session.provider)
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                         return
@@ -149,7 +149,7 @@ def handler_factory(session: SessionState):
                         "ok": True,
                         "models": models,
                         "output": output,
-                        "runtime_flags": serialize_runtime_flags(),
+                        "runtime_flags": _serialize_runtime_flags(),
                     }
                 )
                 return
@@ -170,7 +170,7 @@ def handler_factory(session: SessionState):
                     try:
                         output, filename, mime, content_b64 = self._run_save_download(payload)
                         session.executed_transforms.append({"save": copy.deepcopy(payload)})
-                        models = serialize_models(session.provider)
+                        models = _serialize_models(session.provider)
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                         return
@@ -179,7 +179,7 @@ def handler_factory(session: SessionState):
                         "ok": True,
                         "models": models,
                         "output": output,
-                        "runtime_flags": serialize_runtime_flags(),
+                        "runtime_flags": _serialize_runtime_flags(),
                         "download_filename": filename,
                         "download_mime": mime,
                         "download_b64": content_b64,
@@ -190,14 +190,14 @@ def handler_factory(session: SessionState):
             if self.path == "/api/model_dump":
                 try:
                     body = self._read_json_body()
-                    alias = require_string(body.get("alias"), "alias")
-                    format_name = require_string(body.get("format"), "format").strip().lower()
+                    alias = _require_string(body.get("alias"), "alias")
+                    format_name = _require_string(body.get("format"), "format").strip().lower()
                     if format_name not in {"compact", "tree"}:
                         raise ValueError("format must be 'compact' or 'tree'.")
-                    verbosity = require_string(body.get("verbosity", "shape"), "verbosity").strip().lower()
+                    verbosity = _require_string(body.get("verbosity", "shape"), "verbosity").strip().lower()
                     if verbosity not in {"shape", "stat"}:
                         raise ValueError("verbosity must be 'shape' or 'stat'.")
-                    target = parse_filter_expr(body.get("filter"), alias=alias)
+                    target = _parse_filter_expr(body.get("filter"), alias=alias)
                 except Exception as exc:
                     self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                     return
@@ -206,7 +206,7 @@ def handler_factory(session: SessionState):
                     try:
                         if alias not in set(list_model_aliases(session.provider)):
                             raise ValueError(f"unknown alias: {alias!r}")
-                        dumped, matched_count, total_count = render_dump_for_alias(
+                        dumped, matched_count, total_count = _render_dump_for_alias(
                             provider=session.provider,
                             alias=alias,
                             format_name=format_name,
@@ -240,7 +240,7 @@ def handler_factory(session: SessionState):
             return body
 
         def _run_save_download(self, payload: dict[str, Any]) -> tuple[str, str, str, str]:
-            requested_path = require_string(payload.get("path"), "payload.path")
+            requested_path = _require_string(payload.get("path"), "payload.path")
             requested_name = Path(requested_path).name or "model"
             payload_copy = dict(payload)
 
@@ -249,7 +249,7 @@ def handler_factory(session: SessionState):
                 out_path = tmp_root / requested_name
                 payload_copy["path"] = str(out_path)
 
-                output, next_default_model = apply_transform(
+                output, next_default_model = _apply_transform(
                     provider=session.provider,
                     transform_name="save",
                     payload=payload_copy,
@@ -299,9 +299,6 @@ def handler_factory(session: SessionState):
             logger.debug("webui request: " + format, *args)
 
     return Handler
-
-
-__all__ = ["handler_factory"]
 
 
 def _suggest_download_filename(*, requested_name: str, out_path: Path, payload: dict[str, Any]) -> str:

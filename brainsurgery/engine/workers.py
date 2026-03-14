@@ -6,7 +6,7 @@ ItemT = TypeVar("ItemT")
 ResultT = TypeVar("ResultT")
 
 
-def choose_num_io_workers(num_items: int, max_io_workers: int) -> int:
+def _choose_num_io_workers(num_items: int, max_io_workers: int) -> int:
     if num_items < 0:
         raise ValueError("num_items must be non-negative")
     if max_io_workers < 1:
@@ -14,7 +14,7 @@ def choose_num_io_workers(num_items: int, max_io_workers: int) -> int:
     return max(1, min(max_io_workers, num_items))
 
 
-def run_threadpool_tasks_with_progress(
+def _run_threadpool_tasks_with_progress(
     *,
     items: Iterable[ItemT],
     worker: Callable[[ItemT], ResultT],

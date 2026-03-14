@@ -91,7 +91,7 @@ class SetTransform(TypedTransform[SetSpec]):
         )
         return TransformResult(name=self.name, count=changed)
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         del spec
         raise SetTransformError("set does not infer an output model")
 

@@ -6,7 +6,7 @@ from typing import Any
 
 from ..core import get_transform, list_transforms
 from ..engine import (
-    _list_loaded_tensor_names as list_loaded_tensor_names_from_provider,
+    list_loaded_tensor_names as list_loaded_tensor_names_from_provider,
     list_model_aliases as list_model_aliases_from_provider,
 )
 
@@ -232,7 +232,7 @@ def _list_model_aliases(state_dict_provider: Any | None) -> set[str]:
         return set()
 
 
-def _list_loaded_tensor_names(state_dict_provider: Any | None) -> dict[str, set[str]]:
+def list_loaded_tensor_names(state_dict_provider: Any | None) -> dict[str, set[str]]:
     try:
         return list_loaded_tensor_names_from_provider(state_dict_provider)
     except Exception:
@@ -286,7 +286,7 @@ def _collect_payload_candidates(
     candidates.update(aliases)
     candidates.update(f"{alias}::" for alias in aliases)
 
-    loaded_tensors = _list_loaded_tensor_names(state_dict_provider)
+    loaded_tensors = list_loaded_tensor_names(state_dict_provider)
     for alias, names in loaded_tensors.items():
         for name in names:
             candidates.add(name)

@@ -6,13 +6,13 @@ import torch
 from .types import TransformError
 
 
-Expr = str | list[str]
+_Expr = str | list[str]
 
 
 @dataclass(frozen=True)
 class TensorRef:
     model: Optional[str]
-    expr: Expr
+    expr: _Expr
     slice_spec: Optional[str] = None
 
 
@@ -117,7 +117,7 @@ def must_model(ref: TensorRef) -> str:
     return ref.model
 
 
-def _format_ref_expr(expr: Expr) -> str:
+def _format_ref_expr(expr: _Expr) -> str:
     if isinstance(expr, str):
         return expr
     return "[" + ", ".join(repr(part) for part in expr) + "]"
@@ -133,7 +133,7 @@ def format_tensor_ref(ref: TensorRef) -> str:
 
 def _validate_expr_kind(
     *,
-    expr: Expr,
+    expr: _Expr,
     op_name: str,
     role: str,
 ) -> None:

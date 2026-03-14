@@ -1,4 +1,4 @@
-HTML_PAGE = """<!doctype html>
+_HTML_PAGE = """<!doctype html>
 <html lang=\"en\">
 <head>
   <meta charset=\"utf-8\" />
@@ -1212,7 +1212,7 @@ HTML_PAGE = """<!doctype html>
       try {
         const isSaveDownload = runTransformName === "save" && (cfg.save_mode || "server") === "download";
         const response = await fetch(
-          isSaveDownload ? "/api/save_download" : "/api/apply_transform",
+          isSaveDownload ? "/api/save_download" : "/api/_apply_transform",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1366,5 +1366,3 @@ HTML_PAGE = """<!doctype html>
 </body>
 </html>
 """
-
-__all__ = ["HTML_PAGE"]

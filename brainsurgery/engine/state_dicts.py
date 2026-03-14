@@ -4,7 +4,7 @@ from typing import Dict
 
 import torch
 
-from .arena import ProviderError, SegmentedFileBackedArena, TensorSlot
+from .arena import ProviderError, _SegmentedFileBackedArena, _TensorSlot
 from .flags import get_runtime_flags
 from ..core import StateDictLike
 
@@ -93,7 +93,7 @@ class SlotBackedStateDict(StateDictLike):
         return keys
 
 
-class InMemoryStateDict(SlotBackedStateDict):
+class _InMemoryStateDict(SlotBackedStateDict):
     def __getitem__(self, key: str) -> torch.Tensor:
         if self._is_dry_run():
             if key in self._dry_run_deleted:
@@ -139,8 +139,8 @@ class InMemoryStateDict(SlotBackedStateDict):
         self.mark_write(key)
 
 
-class ArenaStateDict(SlotBackedStateDict):
-    def __init__(self, arena: SegmentedFileBackedArena):
+class _ArenaStateDict(SlotBackedStateDict):
+    def __init__(self, arena: _SegmentedFileBackedArena):
         super().__init__()
         self._arena = arena
 
@@ -150,7 +150,7 @@ class ArenaStateDict(SlotBackedStateDict):
                 raise KeyError(key)
             if key not in self._dry_run_slots:
                 slot = self._slots[key]
-                assert isinstance(slot, TensorSlot)
+                assert isinstance(slot, _TensorSlot)
                 self._dry_run_slots[key] = self._arena.tensor_from_slot(slot).clone()
             value = self._dry_run_slots[key]
             assert isinstance(value, torch.Tensor)
@@ -160,7 +160,7 @@ class ArenaStateDict(SlotBackedStateDict):
             slot = self._slots[key]
         except KeyError as exc:
             raise KeyError(key) from exc
-        assert isinstance(slot, TensorSlot)
+        assert isinstance(slot, _TensorSlot)
         self._mark_read(key)
         return self._arena.tensor_from_slot(slot)
 
@@ -174,15 +174,15 @@ class ArenaStateDict(SlotBackedStateDict):
         self._slots[key] = self._arena.store_tensor(value)
         self.mark_write(key)
 
-    def slot(self, key: str) -> TensorSlot:
+    def slot(self, key: str) -> _TensorSlot:
         try:
             return self._slots[key]
         except KeyError as exc:
             raise KeyError(key) from exc
 
-    def bind_slot(self, key: str, slot: TensorSlot) -> None:
-        if not isinstance(slot, TensorSlot):
-            raise ProviderError(f"slot for key {key!r} is not a TensorSlot")
+    def bind_slot(self, key: str, slot: _TensorSlot) -> None:
+        if not isinstance(slot, _TensorSlot):
+            raise ProviderError(f"slot for key {key!r} is not a _TensorSlot")
         if self._is_dry_run():
             self._dry_run_slots[key] = self._arena.tensor_from_slot(slot).clone()
             self._dry_run_deleted.discard(key)

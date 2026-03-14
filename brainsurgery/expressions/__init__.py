@@ -13,10 +13,7 @@ for module_info in iter_modules(__path__):  # type: ignore[name-defined]
 
 __all__ = [
     "Expression",
-    "ExpressionHelp",
-    "TransformError",
     "compile_assert_expr",
     "get_assert_expr_help",
     "get_assert_expr_names",
-    "register_assert_expr",
 ]

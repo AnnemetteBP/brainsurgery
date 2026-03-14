@@ -3,14 +3,25 @@ import logging
 from contextlib import nullcontext
 from pathlib import Path
 from threading import Lock
-from typing import Any, Dict, Literal, TypeVar
+from typing import Dict, Literal, TypeVar
 
 import torch
 
 from ..core import StateDictLike
-from .. import io as io_api
-from .output_paths import resolve_sharded_output_directory
-from .workers import choose_num_io_workers, run_threadpool_tasks_with_progress
+from ..io import (
+    detect_torch_distributed_checkpoint_layout as io_detect_torch_distributed_checkpoint_layout,
+    is_torch_distributed_checkpoint_directory as io_is_torch_distributed_checkpoint_directory,
+    load_safetensors_state_dict as io_load_safetensors_state_dict,
+    load_torch_distributed_checkpoint_state_dict_direct as io_load_torch_distributed_checkpoint_state_dict_direct,
+    load_torch_distributed_checkpoint_state_dict_via_conversion as io_load_torch_distributed_checkpoint_state_dict_via_conversion,
+    load_torch_state_dict as io_load_torch_state_dict,
+    resolve_torch_distributed_checkpoint_output_directory as io_resolve_torch_distributed_checkpoint_output_directory,
+    save_safetensors_state_dict as io_save_safetensors_state_dict,
+    save_torch_distributed_checkpoint_state_dict as io_save_torch_distributed_checkpoint_state_dict,
+    save_torch_state_dict as io_save_torch_state_dict,
+)
+from .output_paths import _resolve_sharded_output_directory
+from .workers import _choose_num_io_workers, _run_threadpool_tasks_with_progress
 
 
 try:
@@ -113,7 +124,7 @@ def save_sharded_safetensors(
             "internal error while writing sharded safetensors: shard index coverage mismatch"
         )
 
-    num_workers = choose_num_io_workers(total_shards, max_io_workers=max_io_workers)
+    num_workers = _choose_num_io_workers(total_shards, max_io_workers=max_io_workers)
     logger.info("Dispatching %d orderly thread(s) for preservation", num_workers)
 
     def _save_one_shard(
@@ -131,7 +142,7 @@ def save_sharded_safetensors(
         shard_index, shard_name = result
         logger.debug("Preserved shard %d/%d at %s", shard_index, total_shards, shard_name)
 
-    run_threadpool_tasks_with_progress(
+    _run_threadpool_tasks_with_progress(
         items=shard_infos,
         worker=_save_one_shard,
         num_workers=num_workers,
@@ -152,7 +163,7 @@ def save_sharded_safetensors(
 
 
 def _save_safetensors_shard(path: Path, shard: dict[str, torch.Tensor]) -> None:
-    io_api.save_safetensors_state_dict(shard, path)
+    io_save_safetensors_state_dict(shard, path)
 
 
 def save_state_dict_to_path(
@@ -168,9 +179,9 @@ def save_state_dict_to_path(
 
     path.parent.mkdir(parents=True, exist_ok=True)
     if format == "torch":
-        io_api.save_torch_state_dict(state_dict, path)
+        io_save_torch_state_dict(state_dict, path)
         return
-    io_api.save_safetensors_state_dict(state_dict, path)
+    io_save_safetensors_state_dict(state_dict, path)
 
 
 def persist_state_dict(
@@ -194,7 +205,7 @@ def persist_state_dict(
         save_state_dict_to_path(state_dict, output_path, format="safetensors")
         return output_path
 
-    output_dir = resolve_sharded_output_directory(sharded_output_root, output_path)
+    output_dir = _resolve_sharded_output_directory(sharded_output_root, output_path)
     return save_sharded_safetensors(
         state_dict,
         output_dir,
@@ -204,17 +215,17 @@ def persist_state_dict(
 
 
 def resolve_dcp_output_directory(path: Path) -> Path:
-    return io_api.resolve_torch_distributed_checkpoint_output_directory(path)
+    return io_resolve_torch_distributed_checkpoint_output_directory(path)
 
 
 def save_state_dict_to_torch_distributed_checkpoint(
     state_dict: Dict[str, torch.Tensor],
     output_dir: Path,
 ) -> None:
-    io_api.save_torch_distributed_checkpoint_state_dict(state_dict, output_dir)
+    io_save_torch_distributed_checkpoint_state_dict(state_dict, output_dir)
 
 
-def load_state_dict_from_path(path: Path, global_state_dict: StateDictLike, *, max_io_workers: int) -> None:
+def _load_state_dict_from_path(path: Path, global_state_dict: StateDictLike, *, max_io_workers: int) -> None:
     if not path.exists():
         raise RuntimeError(f"checkpoint path does not exist: {path}")
     if path.is_dir():
@@ -253,7 +264,7 @@ def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike,
 
     logger.info("Located %d checkpoint shard(s) in %s", len(files), path)
 
-    num_workers = choose_num_io_workers(len(files), max_io_workers=max_io_workers)
+    num_workers = _choose_num_io_workers(len(files), max_io_workers=max_io_workers)
     logger.info("Dispatching %d orderly thread(s) for exposure", num_workers)
 
     merge_lock = Lock()
@@ -267,7 +278,7 @@ def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike,
         del file_path
         loaded_counts.append(loaded_count)
 
-    run_threadpool_tasks_with_progress(
+    _run_threadpool_tasks_with_progress(
         items=files,
         worker=_load_one_file,
         num_workers=num_workers,
@@ -295,7 +306,7 @@ def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike,
 
 
 def is_torch_distributed_checkpoint_directory(path: Path) -> bool:
-    return io_api.is_torch_distributed_checkpoint_directory(path)
+    return io_is_torch_distributed_checkpoint_directory(path)
 
 
 def load_state_dict_from_torch_distributed_checkpoint(
@@ -325,19 +336,15 @@ def load_state_dict_from_torch_distributed_checkpoint(
 
 
 def detect_torch_distributed_checkpoint_layout(path: Path) -> Literal["full", "sharded", "mixed", "unknown"]:
-    return io_api.detect_torch_distributed_checkpoint_layout(path)
-
-
-def _is_full_tensor_storage_metadata(entry: Any) -> bool:
-    return io_api.is_full_torch_distributed_tensor_storage_metadata(entry)
+    return io_detect_torch_distributed_checkpoint_layout(path)
 
 
 def _load_state_dict_from_torch_distributed_checkpoint_direct(path: Path) -> Dict[str, torch.Tensor]:
-    return io_api.load_torch_distributed_checkpoint_state_dict_direct(path)
+    return io_load_torch_distributed_checkpoint_state_dict_direct(path)
 
 
 def _load_state_dict_from_torch_distributed_checkpoint_via_conversion(path: Path) -> Dict[str, torch.Tensor]:
-    loaded, wrapped = io_api.load_torch_distributed_checkpoint_state_dict_via_conversion(path)
+    loaded, wrapped = io_load_torch_distributed_checkpoint_state_dict_via_conversion(path)
     if wrapped:
         logger.info("Detected wrapped state_dict payload while converting DCP in %s", path)
     return loaded
@@ -384,10 +391,10 @@ def load_state_dict_from_file(
     suffix = path.suffix.lower()
     if suffix == ".safetensors":
         logger.info("Using safetensors instruments on %s", path)
-        loaded = io_api.load_safetensors_state_dict(path)
+        loaded = io_load_safetensors_state_dict(path)
     else:
         logger.info("Using torch instruments on %s", path)
-        loaded, wrapped = io_api.load_torch_state_dict(path)
+        loaded, wrapped = io_load_torch_state_dict(path)
         if wrapped:
             logger.info("Detected wrapped state_dict payload in %s", path)
     return _merge_loaded_state_dict(loaded, global_state_dict, path=path, merge_lock=merge_lock)
@@ -409,11 +416,3 @@ def _merge_loaded_state_dict(
             global_state_dict[key] = tensor
             loaded_count += 1
     return loaded_count
-
-
-def validate_state_dict_mapping(loaded: object, path: Path) -> Dict[str, torch.Tensor]:
-    if not isinstance(loaded, dict):
-        raise RuntimeError(f"checkpoint at {path} is not a state_dict mapping")
-    if not all(isinstance(k, str) and torch.is_tensor(v) for k, v in loaded.items()):
-        raise RuntimeError(f"checkpoint at {path} is not a plain tensor state_dict")
-    return dict(loaded)

@@ -119,7 +119,7 @@ class DiffTransform(TypedTransform[DiffSpec]):
 
         return TransformResult(name=self.name, count=findings)
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         del spec
         raise DiffTransformError("diff does not infer an output model")
 

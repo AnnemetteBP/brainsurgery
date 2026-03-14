@@ -61,7 +61,7 @@ def get_or_create_alias_state_dict(
     raise error_type(f"{op_name} requires a provider that supports creating new aliases")
 
 
-def _list_loaded_tensor_names(provider: StateDictProvider | None) -> dict[str, set[str]]:
+def list_loaded_tensor_names(provider: StateDictProvider | None) -> dict[str, set[str]]:
     if provider is None:
         return {}
 

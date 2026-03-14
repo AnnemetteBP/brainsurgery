@@ -22,22 +22,7 @@ def build_raw_plan(
     return raw
 
 
-def _derive_summary_path(written_path: str | Path | None) -> Path:
-    if written_path is None:
-        return Path("brainsurgery-executed-plan.yaml")
-
-    path = Path(written_path)
-
-    if path.exists() and path.is_dir():
-        return path / "executed-plan.yaml"
-
-    if path.suffix:
-        return path.with_suffix(f"{path.suffix}.executed.yaml")
-
-    return path.parent / f"{path.name}.executed.yaml"
-
-
-def write_executed_plan_summary(
+def _write_executed_plan_summary(
     *,
     inputs: Any,
     output: Any,

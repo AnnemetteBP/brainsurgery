@@ -14,7 +14,7 @@ _HISTORY_FILE = Path.home() / ".brainsurgery_history"
 _HISTORY_LENGTH = 1000
 
 
-def configure_history() -> None:
+def _configure_history() -> None:
     if readline is None:
         return
 

@@ -3,7 +3,7 @@ from typing import Any
 
 
 @dataclass(frozen=True)
-class WebRunResult:
+class _WebRunResult:
     ok: bool
     logs: list[str]
     output_lines: list[str]
@@ -12,5 +12,3 @@ class WebRunResult:
     written_path: str | None
     error: str | None = None
 
-
-__all__ = ["WebRunResult"]

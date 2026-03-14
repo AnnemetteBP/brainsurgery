@@ -2,12 +2,12 @@ from typing import Any, Callable
 
 import torch
 
-from .name_mapping import ResolvedMapping, require_dest_present, resolve_name_mappings
+from .name_mapping import ResolvedMapping, _require_dest_present, resolve_name_mappings
 from .refs import TensorRef, format_tensor_ref, must_model, parse_slice, select_tensor
 from .types import StateDictProvider, TransformError
 
 
-def resolve_target_names(
+def _resolve_target_names(
     *,
     target_ref: TensorRef,
     provider: StateDictProvider,
@@ -32,30 +32,6 @@ def resolve_target_names(
         raise error_type(f"{op_name} matched zero tensors: {format_tensor_ref(target_ref)}")
 
     return matches
-
-
-def resolve_single_tensor(
-    ref: TensorRef,
-    provider: StateDictProvider,
-    *,
-    op_name: str,
-    resolve_names: Any,
-    error_type: type[TransformError],
-) -> torch.Tensor:
-    model = must_model(ref)
-    sd = provider.get_state_dict(model)
-    matches = resolve_names(ref, provider, op_name=op_name)
-
-    if len(matches) == 0:
-        raise error_type(f"{op_name} failed: {format_tensor_ref(ref)} matched zero tensors")
-    if len(matches) != 1:
-        raise error_type(
-            f"{op_name} failed: {format_tensor_ref(ref)} matched {len(matches)} tensors, expected 1"
-        )
-
-    tensor = sd[matches[0]]
-    slice_spec = parse_slice(ref.slice_spec) if ref.slice_spec else None
-    return select_tensor(tensor, slice_spec)
 
 
 def _resolve_tensors(
@@ -93,7 +69,7 @@ def _resolve_tensor_mappings(
             provider=provider,
             op_name=op_name,
         )
-        require_dest_present(mappings=mappings, provider=provider, op_name=op_name)
+        _require_dest_present(mappings=mappings, provider=provider, op_name=op_name)
     except TransformError as exc:
         raise error_type(str(exc)) from exc
 
@@ -121,6 +97,5 @@ def _resolve_mapping_tensors(
 
 
 __all__ = [
-    "resolve_target_names",
-    "resolve_single_tensor",
+    "_resolve_target_names",
 ]

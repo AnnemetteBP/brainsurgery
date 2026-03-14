@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from ..core import IteratingTransform, UnarySpec, UnaryTransform
-from ..algorithms.phlora import PhloraSvdCache, compute_phlora_factors, reconstruct_phlora_rank, require_positive_rank
+from ..algorithms import PhloraSvdCache, compute_phlora_factors, reconstruct_phlora_rank, require_positive_rank
 from ..core import ResolvedMapping, resolve_name_mappings
 from ..core import TensorRef, must_model, parse_model_expr
 from ..core import register_transform
@@ -144,7 +144,7 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
         if to_ref.slice_spec is not None:
             raise PhloraTransformError("phlora target_a must not be sliced")
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         typed = self.require_spec(spec)
         model = typed.source_ref.model
         if model is None:

@@ -5,8 +5,7 @@ from typing import Any
 from omegaconf import OmegaConf
 import yaml
 
-from ..cli.interactive import normalize_transform_specs
-from ..cli.summary import build_raw_plan
+from ..cli import normalize_transform_specs, build_raw_plan
 from ..engine import (
     compile_plan,
     create_state_dict_provider,
@@ -15,13 +14,13 @@ from ..engine import (
     reset_runtime_flags,
     use_output_emitter,
 )
-from .models import WebRunResult
+from .models import _WebRunResult
 
 
 logger = logging.getLogger("brainsurgery")
 
 
-def run_web_plan(
+def _run_web_plan(
     *,
     plan_yaml: str,
     shard_size: str,
@@ -31,14 +30,14 @@ def run_web_plan(
     arena_segment_size: str,
     summarize: bool,
     log_level: str,
-) -> WebRunResult:
+) -> _WebRunResult:
     raw = yaml.safe_load(plan_yaml) if plan_yaml.strip() else {}
     if raw is None:
         raw = {}
     if not isinstance(raw, dict):
         raise ValueError("Plan YAML root must be a mapping.")
 
-    configure_logging(log_level=log_level)
+    _configure_logging(log_level=log_level)
     reset_runtime_flags()
 
     logs: list[str] = []
@@ -97,7 +96,7 @@ def run_web_plan(
             )
             summary_yaml = OmegaConf.to_yaml(summary_doc)
 
-        return WebRunResult(
+        return _WebRunResult(
             ok=True,
             logs=logs,
             output_lines=output_lines,
@@ -112,7 +111,7 @@ def run_web_plan(
         logger.removeHandler(log_handler)
 
 
-def configure_logging(*, log_level: str) -> None:
+def _configure_logging(*, log_level: str) -> None:
     allowed = {"debug", "info", "warning", "error", "critical"}
     level_name = log_level.strip().lower()
     if level_name not in allowed:
@@ -130,5 +129,3 @@ class _ListLogHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         self._sink.append(self.format(record))
 
-
-__all__ = ["run_web_plan", "configure_logging"]

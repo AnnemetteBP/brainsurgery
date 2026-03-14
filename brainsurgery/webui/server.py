@@ -5,14 +5,14 @@ import tempfile
 import threading
 
 from ..engine import create_state_dict_provider
-from .handler import handler_factory
-from .session import SessionState
+from .handler import _handler_factory
+from .session import _SessionState
 
 
 logger = logging.getLogger("brainsurgery")
 
 
-def serve_webui(*, host: str, port: int) -> None:
+def _serve_webui(*, host: str, port: int) -> None:
     provider = create_state_dict_provider(
         provider="inmemory",
         model_paths={},
@@ -20,14 +20,14 @@ def serve_webui(*, host: str, port: int) -> None:
         arena_root=Path(".brainsurgery"),
         arena_segment_size="1GB",
     )
-    session = SessionState(
+    session = _SessionState(
         provider=provider,
         lock=threading.Lock(),
         upload_root=Path(tempfile.gettempdir()) / "brainsurgery-webui-uploads",
     )
     session.upload_root.mkdir(parents=True, exist_ok=True)
 
-    handler = handler_factory(session)
+    handler = _handler_factory(session)
     server = ThreadingHTTPServer((host, port), handler)
     logger.info("Brain surgery web UI available at http://%s:%d", host, port)
     try:
@@ -38,5 +38,3 @@ def serve_webui(*, host: str, port: int) -> None:
         server.server_close()
         provider.close()
 
-
-__all__ = ["serve_webui"]

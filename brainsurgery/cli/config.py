@@ -136,7 +136,7 @@ def apply_override(config: dict[str, Any], token: str) -> dict[str, Any]:
     return deep_merge_dicts(config, fragment)
 
 
-def load_cli_config(tokens: list[str]) -> dict[str, Any]:
+def _load_cli_config(tokens: list[str]) -> dict[str, Any]:
     merged: dict[str, Any] = {}
 
     for token in tokens:

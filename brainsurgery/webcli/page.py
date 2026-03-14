@@ -1,4 +1,4 @@
-HTML_PAGE = """<!doctype html>
+_HTML_PAGE = """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -164,5 +164,3 @@ output:
 </body>
 </html>
 """
-
-__all__ = ["HTML_PAGE"]

@@ -59,7 +59,7 @@ class AssertTransform(TypedTransform[AssertSpec]):
         emit_verbose_event(self.name, "ok")
         return TransformResult(name=self.name, count=1)
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         models = self.require_spec(spec).collect_models()
         if len(models) != 1:
             raise self.error_type(

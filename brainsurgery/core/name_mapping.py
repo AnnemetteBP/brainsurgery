@@ -4,17 +4,17 @@ from typing import List
 
 import re
 
-from .matching import MatchError, StructuredPathMatcher
-from .refs import Expr, TensorRef, _validate_expr_kind, format_tensor_ref, must_model, parse_slice
+from .matching import _MatchError, _StructuredPathMatcher
+from .refs import _Expr, TensorRef, _validate_expr_kind, format_tensor_ref, must_model, parse_slice
 from .types import StateDictProvider, TransformError
 
 
-_MATCHER = StructuredPathMatcher()
+_MATCHER = _StructuredPathMatcher()
 
 
 def match_expr_names(
     *,
-    expr: Expr,
+    expr: _Expr,
     names: Iterable[str],
     op_name: str,
     role: str,
@@ -30,7 +30,7 @@ def match_expr_names(
     assert isinstance(expr, list)
     try:
         return sorted(name for name in names if _MATCHER.match(expr, name) is not None)
-    except MatchError as exc:
+    except _MatchError as exc:
         raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
 
 
@@ -44,7 +44,7 @@ def _match_structured_expr(
     _validate_expr_kind(expr=expr, op_name=op_name, role=role)
     try:
         return _MATCHER.match(expr, name)
-    except MatchError as exc:
+    except _MatchError as exc:
         raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
 
 
@@ -58,7 +58,7 @@ def _rewrite_structured_expr(
     _validate_expr_kind(expr=expr, op_name=op_name, role=role)
     try:
         return _MATCHER.rewrite(expr, match)
-    except MatchError as exc:
+    except _MatchError as exc:
         raise TransformError(f"{op_name} invalid structured {role} pattern: {exc}") from exc
 
 
@@ -241,7 +241,7 @@ def resolve_name_mappings(
     )
 
 
-def require_dest_missing(
+def _require_dest_missing(
     *,
     mappings: List[ResolvedMapping],
     provider: StateDictProvider,
@@ -253,7 +253,7 @@ def require_dest_missing(
             raise TransformError(f"{op_name} destination already exists: {item.dst_model}::{item.dst_name}")
 
 
-def require_dest_present(
+def _require_dest_present(
     *,
     mappings: List[ResolvedMapping],
     provider: StateDictProvider,
@@ -268,7 +268,7 @@ def require_dest_present(
 __all__ = [
     "match_expr_names",
     "ResolvedMapping",
-    "require_dest_missing",
-    "require_dest_present",
+    "_require_dest_missing",
+    "_require_dest_present",
     "resolve_name_mappings",
 ]

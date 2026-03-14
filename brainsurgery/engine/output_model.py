@@ -1,9 +1,9 @@
-from .plan import SurgeryPlan
+from .plan import _SurgeryPlan
 from ..core import StateDictProvider, TransformError
 
 
-def infer_output_model(
-    plan: SurgeryPlan,
+def _infer_output_model(
+    plan: _SurgeryPlan,
     provider: StateDictProvider | None = None,
 ) -> str:
     destination_models = set()
@@ -29,7 +29,7 @@ def _infer_transform_output_model(
     provider: StateDictProvider | None,
 ) -> str:
     try:
-        return compiled.transform.infer_output_model(compiled.spec)
+        return compiled.transform._infer_output_model(compiled.spec)
     except TransformError:
         if provider is None:
             raise

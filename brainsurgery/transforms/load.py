@@ -13,7 +13,7 @@ from ..core import parse_model_expr
 from ..core import StateDictProvider, TransformError
 from ..core import TypedTransform, TransformResult, register_transform
 from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
-from ..core.completion import complete_filesystem_paths
+from ..core import complete_filesystem_paths
 from ..engine import emit_verbose_event
 
 
@@ -157,7 +157,7 @@ class LoadTransform(TypedTransform[LoadSpec]):
         emit_verbose_event(self.name, f"{typed.path} -> {typed.alias}::{typed.tensor_name}")
         return TransformResult(name=self.name, count=1)
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         return self.require_spec(spec).alias
 
 

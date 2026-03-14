@@ -55,7 +55,7 @@ class ExitTransform(TypedTransform[ExitSpec]):
             control=TransformControl.EXIT,
         )
 
-    def infer_output_model(self, spec: object) -> str:
+    def _infer_output_model(self, spec: object) -> str:
         del spec
         raise ExitTransformError("exit does not infer an output model")
 

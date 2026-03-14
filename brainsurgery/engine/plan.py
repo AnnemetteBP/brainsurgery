@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Protocol, runtime_checkable
 
-import yaml
-
 from ..core import CompiledTransform, get_transform
 from ..core import TransformError
 
@@ -13,16 +11,16 @@ class PlanLoaderError(RuntimeError):
 
 
 @dataclass(frozen=True)
-class OutputSpec:
+class _OutputSpec:
     path: Path
     format: Optional[Literal["safetensors", "torch", "dcp"]] = None
     shard: Optional[str] = None
 
 
 @dataclass(frozen=True)
-class SurgeryPlan:
+class _SurgeryPlan:
     inputs: Dict[str, Path]
-    output: OutputSpec | None
+    output: _OutputSpec | None
     transforms: List[CompiledTransform]
 
 
@@ -32,20 +30,7 @@ class ModelCollectingSpec(Protocol):
         ...
 
 
-def load_plan(path: str | Path) -> SurgeryPlan:
-    plan_path = Path(path)
-
-    try:
-        raw = yaml.safe_load(plan_path.read_text(encoding="utf-8"))
-    except OSError as exc:
-        raise PlanLoaderError(f"failed to read plan file: {plan_path}") from exc
-    except yaml.YAMLError as exc:
-        raise PlanLoaderError(f"failed to parse yaml from plan file: {plan_path}") from exc
-
-    return compile_plan(raw)
-
-
-def compile_plan(raw: Any) -> SurgeryPlan:
+def compile_plan(raw: Any) -> _SurgeryPlan:
     if not isinstance(raw, dict):
         raise PlanLoaderError("plan must be a YAML mapping")
 
@@ -53,7 +38,7 @@ def compile_plan(raw: Any) -> SurgeryPlan:
     output = parse_output(raw.get("output"))
     transforms = parse_transforms(raw.get("transforms"), inputs)
 
-    return SurgeryPlan(inputs=inputs, output=output, transforms=transforms)
+    return _SurgeryPlan(inputs=inputs, output=output, transforms=transforms)
 
 
 def parse_inputs(raw: Any) -> Dict[str, Path]:
@@ -99,14 +84,14 @@ def parse_input_entry(raw: Any) -> tuple[str | None, Path]:
     return None, Path(raw)
 
 
-def parse_output(raw: Any) -> OutputSpec | None:
+def parse_output(raw: Any) -> _OutputSpec | None:
     if raw is None:
         return None
 
     if isinstance(raw, str):
         if not raw:
             return None
-        return OutputSpec(path=Path(raw))
+        return _OutputSpec(path=Path(raw))
 
     if isinstance(raw, dict):
         if not raw:
@@ -116,7 +101,7 @@ def parse_output(raw: Any) -> OutputSpec | None:
     raise PlanLoaderError("output must be either empty, a non-empty string, or a mapping")
 
 
-def parse_output_mapping(raw: Dict[str, Any]) -> OutputSpec:
+def parse_output_mapping(raw: Dict[str, Any]) -> _OutputSpec:
     allowed_keys = {"path", "format", "shard"}
 
     unknown = set(raw) - allowed_keys
@@ -142,7 +127,7 @@ def parse_output_mapping(raw: Dict[str, Any]) -> OutputSpec:
         if not isinstance(shard_value, str) or not shard_value:
             raise PlanLoaderError("output.shard must be a non-empty string when provided")
 
-    return OutputSpec(
+    return _OutputSpec(
         path=Path(path_value),
         format=format_value,
         shard=shard_value,
@@ -167,7 +152,7 @@ def parse_transforms(raw: Any, inputs: Dict[str, Path]) -> List[CompiledTransfor
         parsed.append(compiled)
 
         try:
-            output_model = compiled.transform.infer_output_model(compiled.spec)
+            output_model = compiled.transform._infer_output_model(compiled.spec)
         except TransformError:
             output_model = None
         if output_model:

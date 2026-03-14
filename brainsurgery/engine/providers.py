@@ -2,12 +2,12 @@ import logging
 from pathlib import Path
 from typing import Dict
 
-from .arena import ProviderError, SegmentedFileBackedArena
-from .checkpoint_io import load_state_dict_from_path, persist_state_dict
-from .output_model import infer_output_model
-from .output_paths import parse_shard_size, resolve_output_destination
-from .plan import SurgeryPlan
-from .state_dicts import ArenaStateDict, InMemoryStateDict
+from .arena import ProviderError, _SegmentedFileBackedArena
+from .checkpoint_io import _load_state_dict_from_path, persist_state_dict
+from .output_model import _infer_output_model
+from .output_paths import parse_shard_size, _resolve_output_destination
+from .plan import _SurgeryPlan
+from .state_dicts import _ArenaStateDict, _InMemoryStateDict
 from ..core import StateDictLike
 
 
@@ -38,7 +38,7 @@ class BaseStateDictProvider:
 
     def load_state_dict_from_checkpoint_path(self, path: Path) -> StateDictLike:
         state_dict = self.create_state_dict()
-        load_state_dict_from_path(path, state_dict, max_io_workers=self.max_io_workers)
+        _load_state_dict_from_path(path, state_dict, max_io_workers=self.max_io_workers)
         return state_dict
 
     def load_alias_from_path(self, model: str, path: Path) -> StateDictLike:
@@ -81,7 +81,7 @@ class BaseStateDictProvider:
 
     def save_output(
         self,
-        plan: SurgeryPlan,
+        plan: _SurgeryPlan,
         *,
         default_shard_size: str,
         max_io_workers: int,
@@ -89,10 +89,10 @@ class BaseStateDictProvider:
         if plan.output is None:
             raise ProviderError("save_output requires plan.output")
 
-        output_model = infer_output_model(plan, self)
+        output_model = _infer_output_model(plan, self)
         state_dict = self.get_state_dict(output_model)
 
-        output_path, output_format, shard_size = resolve_output_destination(
+        output_path, output_format, shard_size = _resolve_output_destination(
             plan.output,
             default_shard_size=default_shard_size,
         )
@@ -124,16 +124,16 @@ class BaseStateDictProvider:
 
 
 class InMemoryStateDictProvider(BaseStateDictProvider):
-    def get_state_dict(self, model: str) -> InMemoryStateDict:
+    def get_state_dict(self, model: str) -> _InMemoryStateDict:
         state_dict = self._get_or_load_state_dict(
             model,
             loaded_log_message="Brain '%s' exposed: %d tensors laid out on the operating table",
         )
-        assert isinstance(state_dict, InMemoryStateDict)
+        assert isinstance(state_dict, _InMemoryStateDict)
         return state_dict
 
-    def create_state_dict(self) -> InMemoryStateDict:
-        return InMemoryStateDict()
+    def create_state_dict(self) -> _InMemoryStateDict:
+        return _InMemoryStateDict()
 
 
 class ArenaStateDictProvider(BaseStateDictProvider):
@@ -141,7 +141,7 @@ class ArenaStateDictProvider(BaseStateDictProvider):
         self,
         model_paths: Dict[str, Path],
         *,
-        arena: SegmentedFileBackedArena,
+        arena: _SegmentedFileBackedArena,
         max_io_workers: int,
     ):
         super().__init__(model_paths, max_io_workers=max_io_workers)
@@ -150,18 +150,18 @@ class ArenaStateDictProvider(BaseStateDictProvider):
     def close(self) -> None:
         self.arena.close()
 
-    def get_state_dict(self, model: str) -> ArenaStateDict:
+    def get_state_dict(self, model: str) -> _ArenaStateDict:
         state_dict = self._get_or_load_state_dict(
             model,
             loaded_log_message=(
                 "Brain '%s' transferred to surgical arena: %d tensors laid out on the operating table"
             ),
         )
-        assert isinstance(state_dict, ArenaStateDict)
+        assert isinstance(state_dict, _ArenaStateDict)
         return state_dict
 
-    def create_state_dict(self) -> ArenaStateDict:
-        return ArenaStateDict(self.arena)
+    def create_state_dict(self) -> _ArenaStateDict:
+        return _ArenaStateDict(self.arena)
 
 
 def create_state_dict_provider(
@@ -185,7 +185,7 @@ def create_state_dict_provider(
         if segment_size_bytes is None:
             raise ProviderError("arena-segment-size must not be 'none'")
 
-        arena = SegmentedFileBackedArena(
+        arena = _SegmentedFileBackedArena(
             arena_root,
             segment_size_bytes=segment_size_bytes,
         )

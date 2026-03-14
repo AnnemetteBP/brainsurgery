@@ -2,11 +2,11 @@ import re
 from pathlib import Path
 from typing import Literal
 
-from .plan import OutputSpec
+from .plan import _OutputSpec
 
 
-def resolve_output_destination(
-    output: OutputSpec,
+def _resolve_output_destination(
+    output: _OutputSpec,
     *,
     default_shard_size: str,
 ) -> tuple[Path, Literal["safetensors", "torch", "dcp"], int | None]:
@@ -78,7 +78,7 @@ def _resolve_explicit_dcp_destination(path: Path) -> tuple[Path, Literal["dcp"]]
     return path, "dcp"
 
 
-def resolve_shard_size(output: OutputSpec, default_shard_size: str) -> int | None:
+def resolve_shard_size(output: _OutputSpec, default_shard_size: str) -> int | None:
     raw = output.shard
 
     if raw is None:
@@ -90,7 +90,7 @@ def resolve_shard_size(output: OutputSpec, default_shard_size: str) -> int | Non
     return parse_shard_size(raw)
 
 
-def _is_directory_style_output(output: OutputSpec) -> bool:
+def _is_directory_style_output(output: _OutputSpec) -> bool:
     path = output.path
 
     if output.format == "torch":
@@ -137,7 +137,7 @@ def parse_shard_size(raw: str | None) -> int | None:
     return value * multipliers[unit]
 
 
-def resolve_sharded_output_directory(original_path: Path, resolved_path: Path) -> Path:
+def _resolve_sharded_output_directory(original_path: Path, resolved_path: Path) -> Path:
     if original_path.exists() and original_path.is_dir():
         return original_path
     if original_path.suffix == "":
