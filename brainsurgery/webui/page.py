@@ -22,20 +22,27 @@ HTML_PAGE = """<!doctype html>
       font-family: "Avenir Next", "Segoe UI", sans-serif;
       background: radial-gradient(circle at 100% 0%, #ffe5c3, transparent 40%), linear-gradient(120deg, #fff8ed, #f8fff8);
       min-height: 100vh;
-      padding: 18px;
+      height: 100vh;
+      padding: 0;
     }
     .shell {
-      max-width: 1260px;
-      margin: 0 auto;
+      width: 100vw;
+      height: 100vh;
       border: 1px solid var(--line);
-      border-radius: 16px;
+      border-radius: 0;
       background: var(--paper);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     .head {
       padding: 16px;
       border-bottom: 1px solid var(--line);
       background: linear-gradient(90deg, #ffe7cf, #f4ffef);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
     }
     .head h1 {
       margin: 0;
@@ -45,26 +52,44 @@ HTML_PAGE = """<!doctype html>
       font-size: 24px;
     }
     .head p { margin: 6px 0 0 0; color: var(--muted); }
+    .head-art {
+      width: 160px;
+      height: 56px;
+      border: 1px solid #d8c4a4;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #fff8ee, #f4ffef);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+      flex: 0 0 auto;
+    }
+    .head-art svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
     .main {
       display: grid;
       grid-template-columns: 420px 1fr;
       gap: 12px;
       padding: 12px;
       align-items: start;
+      flex: 1 1 auto;
+      min-height: 0;
     }
     .right-stack {
       display: grid;
       grid-template-rows: minmax(0, 1fr) auto;
       gap: 12px;
       align-content: start;
-      height: calc(100vh - 165px);
+      height: 100%;
+      min-height: 0;
     }
     .left-stack {
       display: grid;
       grid-template-rows: minmax(0, 1fr) auto;
       gap: 12px;
       align-content: start;
-      height: calc(100vh - 165px);
+      height: 100%;
+      min-height: 0;
     }
     .card {
       border: 1px solid var(--line);
@@ -353,11 +378,24 @@ HTML_PAGE = """<!doctype html>
       background: #fffdfa;
     }
     @media (max-width: 980px) {
-      .main { grid-template-columns: 1fr; }
-      .left-stack { height: auto; grid-template-rows: auto auto; }
-      .right-stack { height: auto; grid-template-rows: auto auto; }
+      .shell {
+        overflow-x: auto;
+        overflow-y: hidden;
+      }
+      .main {
+        grid-template-columns: 420px 1fr;
+        min-width: 980px;
+      }
+      .left-stack {
+        height: 100%;
+        grid-template-rows: minmax(0, 1fr) auto;
+      }
+      .right-stack {
+        height: 100%;
+        grid-template-rows: minmax(0, 1fr) auto;
+      }
       #modelsPanel {
-        max-height: none;
+        max-height: calc(100vh - 255px);
       }
     }
   </style>
@@ -366,6 +404,26 @@ HTML_PAGE = """<!doctype html>
   <div class=\"shell\">
     <div class=\"head\">
       <h1>BrainSurgery WebUI</h1>
+      <div class=\"head-art\" aria-hidden=\"true\">
+        <svg viewBox=\"0 0 160 56\" role=\"img\" focusable=\"false\">
+          <defs>
+            <linearGradient id=\"brainFill\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">
+              <stop offset=\"0%\" stop-color=\"#ffd7b5\" />
+              <stop offset=\"100%\" stop-color=\"#f3b98b\" />
+            </linearGradient>
+          </defs>
+          <path d=\"M24,31 C17,31 13,26 13,20 C13,14 17,10 22,10 C24,6 28,4 33,4 C37,4 41,6 44,9 C47,7 51,6 55,7 C61,8 65,13 65,19 C65,24 62,28 58,30 C58,37 52,42 45,42 C41,42 37,40 34,37 C31,40 27,42 23,42 C16,42 10,37 10,30 C10,27 11,24 13,22\" fill=\"url(#brainFill)\" stroke=\"#c2733b\" stroke-width=\"1.4\" />
+          <path d=\"M22,14 C27,17 27,23 22,26\" fill=\"none\" stroke=\"#a85f31\" stroke-width=\"1.1\" />
+          <path d=\"M32,10 C37,13 37,19 32,22\" fill=\"none\" stroke=\"#a85f31\" stroke-width=\"1.1\" />
+          <path d=\"M42,11 C47,14 47,20 42,24\" fill=\"none\" stroke=\"#a85f31\" stroke-width=\"1.1\" />
+          <path d=\"M51,14 C55,17 55,22 51,25\" fill=\"none\" stroke=\"#a85f31\" stroke-width=\"1.1\" />
+          <path d=\"M86,15 L142,15\" stroke=\"#5f6f86\" stroke-width=\"2\" />
+          <path d=\"M122,15 L142,35\" stroke=\"#5f6f86\" stroke-width=\"2\" />
+          <rect x=\"90\" y=\"12\" width=\"16\" height=\"6\" rx=\"2\" fill=\"#9cb0c9\" />
+          <path d=\"M137,30 L146,39 L139,46 L130,37 Z\" fill=\"#d45d1f\" stroke=\"#a44515\" stroke-width=\"1\" />
+          <circle cx=\"128\" cy=\"17\" r=\"2.2\" fill=\"#d45d1f\" />
+        </svg>
+      </div>
     </div>
     <div class=\"main\">
       <div class=\"left-stack\">
