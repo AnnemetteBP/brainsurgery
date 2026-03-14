@@ -321,10 +321,13 @@ def _apply_transform(
     if transform_name in _DISABLED_TRANSFORMS:
         raise ValueError(f"transform {transform_name!r} is disabled in webui2.")
 
+    aliases = sorted(list_model_aliases(provider))
+    default_model = aliases[0] if len(aliases) == 1 else None
+
     reset_runtime_flags()
     lines: list[str] = []
     with use_output_emitter(lines.append):
-        spec = transform.compile(payload, default_model=None)
+        spec = transform.compile(payload, default_model=default_model)
         transform.apply(spec, provider)
     return "\n".join(lines)
 
