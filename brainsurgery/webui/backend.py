@@ -10,6 +10,7 @@ from ..core import (
     DestinationPolicy,
     TernaryMappingTransform,
     UnaryTransform,
+    get_assert_expr_help,
     get_transform,
     get_assert_expr_names,
     list_transforms,
@@ -41,6 +42,8 @@ def transform_items() -> list[dict[str, Any]]:
                 "to_must_exist": bool(spec and spec["to_must_exist"]),
                 "help_commands": spec["help_commands"] if spec else [],
                 "help_subcommands": spec["help_subcommands"] if spec else {},
+                "assert_expressions": spec["assert_expressions"] if spec else [],
+                "assert_expression_meta": spec["assert_expression_meta"] if spec else {},
             }
         )
     return items
@@ -73,8 +76,24 @@ def _transform_specs() -> dict[str, dict[str, Any]]:
             "to_must_exist": destination_policy is DestinationPolicy.MUST_EXIST,
             "help_commands": sorted(list_transforms()) if name == "help" else [],
             "help_subcommands": {"assert": sorted(get_assert_expr_names())} if name == "help" else {},
+            "assert_expressions": sorted(get_assert_expr_names()) if name == "assert" else [],
+            "assert_expression_meta": _assert_expression_meta() if name == "assert" else {},
         }
     return specs
+
+
+def _assert_expression_meta() -> dict[str, dict[str, Any]]:
+    meta: dict[str, dict[str, Any]] = {}
+    for expr_name in sorted(get_assert_expr_names()):
+        expr_help = get_assert_expr_help(expr_name)
+        assert not isinstance(expr_help, dict)
+        meta[expr_name] = {
+            "payload_kind": expr_help.payload_kind,
+            "allowed_keys": sorted(expr_help.allowed_keys or set()),
+            "required_keys": sorted(expr_help.required_keys or set()),
+            "description": expr_help.description or "",
+        }
+    return meta
 
 
 def require_string(value: Any, field: str) -> str:
@@ -127,6 +146,16 @@ def apply_transform(
     transform = get_transform(transform_name)
     if transform_name in DISABLED_TRANSFORMS:
         raise ValueError(f"transform {transform_name!r} is disabled in webui.")
+
+    if transform_name == "assert" and isinstance(payload, str):
+        text = payload.strip()
+        if not text:
+            raise ValueError("assert payload cannot be empty.")
+        try:
+            parsed = OmegaConf.create(text)
+            payload = OmegaConf.to_container(parsed, resolve=True)
+        except Exception as exc:
+            raise ValueError(f"invalid assert YAML payload: {exc}") from exc
 
     aliases = sorted(list_model_aliases(provider))
     default_model = aliases[0] if len(aliases) == 1 else None

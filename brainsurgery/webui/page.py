@@ -278,6 +278,7 @@ HTML_PAGE = """<!doctype html>
     }
     #clearOptionsBtn,
     #optionsToggleBtn,
+    #copyResultsBtn,
     #resultsToggleBtn,
     #clearResultsBtn {
       margin: 0;
@@ -312,7 +313,6 @@ HTML_PAGE = """<!doctype html>
   <div class=\"shell\">
     <div class=\"head\">
       <h1>BrainSurgery WebUI</h1>
-      <p>Left: transform picker + options. Right: model panes with compact/tree dumps.</p>
     </div>
     <div class=\"main\">
       <div class=\"left-stack\">
@@ -356,6 +356,7 @@ HTML_PAGE = """<!doctype html>
           <div class=\"panel-row\">
             <h2 class=\"title\">Results</h2>
             <div class=\"results-actions\">
+              <button id=\"copyResultsBtn\" class=\"secondary-btn\">Copy</button>
               <button id=\"resultsToggleBtn\" class=\"secondary-btn\">Collapse</button>
               <button id=\"clearResultsBtn\" class=\"secondary-btn\">Clear</button>
             </div>
@@ -386,6 +387,7 @@ HTML_PAGE = """<!doctype html>
     const optionsToggleBtn = document.getElementById("optionsToggleBtn");
     const optionsPanelBody = document.getElementById("optionsPanelBody");
     const resultsToggleBtn = document.getElementById("resultsToggleBtn");
+    const copyResultsBtn = document.getElementById("copyResultsBtn");
     const clearResultsBtn = document.getElementById("clearResultsBtn");
     const resultsPanelBody = document.getElementById("resultsPanelBody");
     const resultsOutput = document.getElementById("resultsOutput");
@@ -404,6 +406,20 @@ HTML_PAGE = """<!doctype html>
       }
       resultsOutput.textContent += block;
       resultsOutput.scrollTop = resultsOutput.scrollHeight;
+    }
+    async function copyTextToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (_err) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        return ok;
+      }
     }
     function tensorCountText(shown, total, filterText) {
       return filterText.trim() ? (shown + " out of " + total + " tensors") : (total + " tensors");
@@ -574,6 +590,45 @@ HTML_PAGE = """<!doctype html>
         subcommandSelect.disabled = !selectedCommand || commandSubcommands.length === 0;
         subcommandSelect.addEventListener("change", () => { cfg.fields.help_subcommand = subcommandSelect.value; });
         transformFields.appendChild(subcommandSelect);
+      }
+
+      if (selectedTransform === "assert") {
+        const yamlInput = document.createElement("textarea");
+        yamlInput.rows = 9;
+        yamlInput.placeholder =
+          "YAML assert expression\\n\\n" +
+          "equal:\\n" +
+          "  left: model::a.weight\\n" +
+          "  right: model::b.weight\\n\\n" +
+          "Nested example:\\n" +
+          "all:\\n" +
+          "  - exists: model::.*weight\\n" +
+          "  - not:\\n" +
+          "      equal:\\n" +
+          "        left: model::a.weight\\n" +
+          "        right: model::b.weight";
+        yamlInput.value = cfg.fields.assert_yaml == null ? "" : String(cfg.fields.assert_yaml);
+        yamlInput.addEventListener("input", () => { cfg.fields.assert_yaml = yamlInput.value; });
+        transformFields.appendChild(yamlInput);
+      }
+
+      if (selectedTransform === "exit") {
+        const copyLabel = document.createElement("label");
+        copyLabel.style.display = "flex";
+        copyLabel.style.alignItems = "center";
+        copyLabel.style.gap = "8px";
+        copyLabel.style.marginBottom = "8px";
+        const copyCheckbox = document.createElement("input");
+        copyCheckbox.type = "checkbox";
+        copyCheckbox.style.width = "auto";
+        copyCheckbox.style.margin = "0";
+        copyCheckbox.checked = Boolean(cfg.fields.exit_auto_copy);
+        copyCheckbox.addEventListener("change", () => { cfg.fields.exit_auto_copy = copyCheckbox.checked; });
+        const copyText = document.createElement("span");
+        copyText.textContent = "Copy plan to clipboard";
+        copyLabel.appendChild(copyCheckbox);
+        copyLabel.appendChild(copyText);
+        transformFields.appendChild(copyLabel);
       }
 
       if (selectedTransform === "save") {
@@ -902,6 +957,15 @@ HTML_PAGE = """<!doctype html>
         }
       }
 
+      if (runTransformName === "assert") {
+        const yamlExpr = String(cfg.fields.assert_yaml || "").trim();
+        if (!yamlExpr) {
+          setStatus("Provide an assert YAML expression.");
+          return;
+        }
+        payload = yamlExpr;
+      }
+
       if (runTransformName === "save" && (cfg.save_mode || "server") === "download") {
         payload.format = cfg.save_download_format || "safetensors";
       }
@@ -929,8 +993,23 @@ HTML_PAGE = """<!doctype html>
         resetTransformSearch();
         renderTransforms();
         updatePanels();
-        setStatus("Applied " + runTransformName + " successfully.");
-        appendResultBlock(runTransformName, data.output || "");
+        if (runTransformName === "exit") {
+          const exitText = (data.output && data.output.trim()) ? data.output : "(no output)";
+          resultsOutput.textContent = exitText;
+          if (cfg.fields.exit_auto_copy && exitText !== "(no output)") {
+            const copied = await copyTextToClipboard(exitText);
+            setStatus(
+              copied
+                ? "Applied exit successfully. Copied plan to clipboard."
+                : "Applied exit successfully. Could not copy automatically."
+            );
+          } else {
+            setStatus("Applied exit successfully.");
+          }
+        } else {
+          setStatus("Applied " + runTransformName + " successfully.");
+          appendResultBlock(runTransformName, data.output || "");
+        }
         if (isSaveDownload) {
           const raw = atob(data.download_b64 || "");
           const bytes = new Uint8Array(raw.length);
@@ -953,6 +1032,15 @@ HTML_PAGE = """<!doctype html>
     clearResultsBtn.addEventListener("click", () => {
       resultsOutput.textContent = "(no transform output yet)";
       setStatus("Results cleared.");
+    });
+    copyResultsBtn.addEventListener("click", async () => {
+      const text = resultsOutput.textContent || "";
+      if (!text.trim() || text === "(no transform output yet)") {
+        setStatus("Nothing to copy.");
+        return;
+      }
+      const copied = await copyTextToClipboard(text);
+      setStatus(copied ? "Copied results to clipboard." : "Could not copy results.");
     });
     resultsToggleBtn.addEventListener("click", () => {
       const collapsing = !resultsPanelBody.classList.contains("hidden");

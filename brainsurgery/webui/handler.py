@@ -11,6 +11,8 @@ import tempfile
 from typing import Any
 import uuid
 
+from omegaconf import OmegaConf
+
 from ..engine import list_model_aliases
 from .backend import (
     apply_load_transform,
@@ -95,7 +97,7 @@ def handler_factory(session: SessionState):
                     payload = body.get("payload")
                     if payload is None:
                         payload = {}
-                    if transform_name != "help" and not isinstance(payload, dict):
+                    if transform_name not in {"help", "assert"} and not isinstance(payload, dict):
                         raise ValueError("payload must be an object.")
                 except Exception as exc:
                     self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -103,6 +105,15 @@ def handler_factory(session: SessionState):
 
                 with session.lock:
                     try:
+                        if transform_name == "assert" and isinstance(payload, str):
+                            text = payload.strip()
+                            if not text:
+                                raise ValueError("assert payload cannot be empty.")
+                            try:
+                                parsed = OmegaConf.create(text)
+                                payload = OmegaConf.to_container(parsed, resolve=True)
+                            except Exception as exc:
+                                raise ValueError(f"invalid assert YAML payload: {exc}") from exc
                         output = apply_transform(
                             provider=session.provider,
                             transform_name=transform_name,
