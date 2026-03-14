@@ -334,8 +334,9 @@ HTML_PAGE = """<!doctype html>
             <div id=\"loadPanel\" class=\"hidden\">
               <h2 class=\"title\">Load</h2>
               <input id=\"aliasInput\" placeholder=\"Alias (optional, defaults to model/model_2/...)\" />
+              <input id=\"serverPathInput\" placeholder=\"Server path (alternative to upload)\" />
               <input id=\"fileInput\" type=\"file\" />
-              <button id=\"loadBtn\">Load Selected File</button>
+              <button id=\"loadBtn\">Load Model</button>
             </div>
             <div id=\"transformPanel\" class=\"hidden\">
               <h2 id=\"transformTitle\" class=\"title\">Transform</h2>
@@ -372,6 +373,7 @@ HTML_PAGE = """<!doctype html>
     const modelsEl = document.getElementById("models");
     const statusEl = document.getElementById("status");
     const fileInput = document.getElementById("fileInput");
+    const serverPathInput = document.getElementById("serverPathInput");
     const aliasInput = document.getElementById("aliasInput");
     const loadBtn = document.getElementById("loadBtn");
     const loadPanel = document.getElementById("loadPanel");
@@ -423,7 +425,7 @@ HTML_PAGE = """<!doctype html>
     }
     function getTransformConfig(name) {
       if (!transformConfigByName[name]) {
-        transformConfigByName[name] = { fields: {} };
+        transformConfigByName[name] = { fields: {}, save_mode: "server", save_download_format: "safetensors" };
       }
       return transformConfigByName[name];
     }
@@ -514,6 +516,27 @@ HTML_PAGE = """<!doctype html>
         input.value = cfg.fields[key] == null ? "" : String(cfg.fields[key]);
         input.addEventListener("input", () => { cfg.fields[key] = input.value; });
         transformFields.appendChild(input);
+      }
+
+      if (selectedTransform === "save") {
+        const modeSelect = document.createElement("select");
+        modeSelect.innerHTML = "<option value='server'>save on server path</option><option value='download'>download to browser</option>";
+        modeSelect.value = cfg.save_mode || "server";
+        modeSelect.addEventListener("change", () => {
+          cfg.save_mode = modeSelect.value;
+          renderTransformPanel();
+        });
+        transformFields.appendChild(modeSelect);
+
+        if ((cfg.save_mode || "server") === "download") {
+          const fmtSelect = document.createElement("select");
+          fmtSelect.innerHTML = "<option value='safetensors'>download format: safetensors</option><option value='numpy'>download format: numpy</option><option value='torch'>download format: pytorch</option>";
+          fmtSelect.value = cfg.save_download_format || "safetensors";
+          fmtSelect.addEventListener("change", () => {
+            cfg.save_download_format = fmtSelect.value;
+          });
+          transformFields.appendChild(fmtSelect);
+        }
       }
 
       if (meta.kind === "binary" && !meta.to_must_exist && refSet.has("from") && refSet.has("to")) {
@@ -747,19 +770,24 @@ HTML_PAGE = """<!doctype html>
 
     loadBtn.addEventListener("click", async () => {
       if (selectedTransform !== "load") { setStatus("Select load first."); return; }
+      const serverPath = (serverPathInput.value || "").trim();
       const file = fileInput.files && fileInput.files[0];
-      if (!file) { setStatus("Pick a model file first."); return; }
+      if (!serverPath && !file) { setStatus("Provide a server path or pick a model file first."); return; }
 
-      setStatus("Reading file...");
       loadBtn.disabled = true;
       try {
         const payload = { alias: aliasInput.value || null };
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        let binary = "";
-        const chunk = 0x8000;
-        for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-        payload.filename = file.name;
-        payload.content_b64 = btoa(binary);
+        if (serverPath) {
+          payload.server_path = serverPath;
+        } else {
+          setStatus("Reading file...");
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          let binary = "";
+          const chunk = 0x8000;
+          for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+          payload.filename = file.name;
+          payload.content_b64 = btoa(binary);
+        }
 
         setStatus("Loading model via transform...");
         const response = await fetch("/api/load", {
@@ -800,14 +828,26 @@ HTML_PAGE = """<!doctype html>
         payload[key] = parsed;
       }
 
+      if (runTransformName === "save" && (cfg.save_mode || "server") === "download") {
+        payload.format = cfg.save_download_format || "safetensors";
+      }
+
       setStatus("Applying " + runTransformName + "...");
       transformRunBtn.disabled = true;
       try {
-        const response = await fetch("/api/apply_transform", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transform: runTransformName, payload: payload })
-        });
+        const isSaveDownload = runTransformName === "save" && (cfg.save_mode || "server") === "download";
+        const response = await fetch(
+          isSaveDownload ? "/api/save_download" : "/api/apply_transform",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              isSaveDownload
+                ? { payload: payload }
+                : { transform: runTransformName, payload: payload }
+            )
+          }
+        );
         const data = await response.json();
         if (!response.ok || !data.ok) { setStatus("Apply failed: " + (data.error || "unknown error")); return; }
         latestModels = data.models || [];
@@ -817,6 +857,18 @@ HTML_PAGE = """<!doctype html>
         updatePanels();
         setStatus("Applied " + runTransformName + " successfully.");
         appendResultBlock(runTransformName, data.output || "");
+        if (isSaveDownload) {
+          const raw = atob(data.download_b64 || "");
+          const bytes = new Uint8Array(raw.length);
+          for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+          const blob = new Blob([bytes], { type: data.download_mime || "application/octet-stream" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = data.download_filename || "brainsurgery-save.bin";
+          a.click();
+          URL.revokeObjectURL(url);
+        }
       } catch (err) {
         setStatus("Apply failed: " + String(err));
       } finally {
@@ -841,6 +893,7 @@ HTML_PAGE = """<!doctype html>
     clearOptionsBtn.addEventListener("click", () => {
       if (selectedTransform === "load") {
         aliasInput.value = "";
+        serverPathInput.value = "";
         fileInput.value = "";
         setStatus("Cleared load options.");
         return;
@@ -848,6 +901,8 @@ HTML_PAGE = """<!doctype html>
       if (isRunnableTransform(selectedTransform)) {
         const cfg = getTransformConfig(selectedTransform);
         cfg.fields = {};
+        cfg.save_mode = "server";
+        cfg.save_download_format = "safetensors";
         renderTransformPanel();
         setStatus("Cleared " + selectedTransform + " options.");
         return;
