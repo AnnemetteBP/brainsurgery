@@ -5,7 +5,7 @@ HTML_PAGE = """<!doctype html>
 <head>
   <meta charset=\"utf-8\" />
   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
-  <title>BrainSurgery WebUI2</title>
+  <title>BrainSurgery WebUI</title>
   <style>
     :root {
       --ink: #1a2229;
@@ -311,7 +311,7 @@ HTML_PAGE = """<!doctype html>
 <body>
   <div class=\"shell\">
     <div class=\"head\">
-      <h1>BrainSurgery WebUI2 (Experimental)</h1>
+      <h1>BrainSurgery WebUI</h1>
       <p>Left: transform picker + options. Right: model panes with compact/tree dumps.</p>
     </div>
     <div class=\"main\">

@@ -198,7 +198,7 @@ def handler_factory(session: SessionState):
             requested_name = Path(requested_path).name or "model"
             payload_copy = dict(payload)
 
-            with tempfile.TemporaryDirectory(prefix="brainsurgery-webui2-save-") as tmp:
+            with tempfile.TemporaryDirectory(prefix="brainsurgery-webui-save-") as tmp:
                 tmp_root = Path(tmp)
                 out_path = tmp_root / requested_name
                 payload_copy["path"] = str(out_path)
@@ -248,7 +248,7 @@ def handler_factory(session: SessionState):
             self.wfile.write(encoded)
 
         def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
-            logger.debug("webui2 request: " + format, *args)
+            logger.debug("webui request: " + format, *args)
 
     return Handler
 

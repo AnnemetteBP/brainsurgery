@@ -5,13 +5,13 @@ import webbrowser
 
 import typer
 
-from .server import serve_webui2
+from .server import serve_webui
 
 
 logger = logging.getLogger("brainsurgery")
 _ALLOWED_LOG_LEVELS = {"debug", "info", "warning", "error", "critical"}
 
-app = typer.Typer(help="Brain surgery web UI 2 (experimental).")
+app = typer.Typer(help="Brain surgery web UI.")
 
 
 def configure_logging(log_level: str) -> None:
@@ -26,14 +26,14 @@ def configure_logging(log_level: str) -> None:
 
 
 @app.callback(invoke_without_command=True)
-def webui2(
+def webui(
     host: str = typer.Option(
         "127.0.0.1",
-        help="Host interface to bind the web UI 2 server.",
+        help="Host interface to bind the web UI server.",
     ),
     port: int = typer.Option(
         8766,
-        help="Port for the web UI 2 server.",
+        help="Port for the web UI server.",
     ),
     log_level: str = typer.Option(
         "info",
@@ -49,13 +49,13 @@ def webui2(
     configure_logging(log_level)
     url_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
     url = f"http://{url_host}:{port}"
-    logger.info("Launching BrainSurgery web UI 2 on %s", url)
+    logger.info("Launching BrainSurgery web UI on %s", url)
     if open_browser:
         try:
             webbrowser.open(url)
         except Exception as exc:
             logger.warning("Could not open browser automatically: %s", exc)
-    serve_webui2(host=host, port=port)
+    serve_webui(host=host, port=port)
 
 
-__all__ = ["app", "configure_logging", "webui2", "logger"]
+__all__ = ["app", "configure_logging", "webui", "logger"]

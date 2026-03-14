@@ -120,7 +120,7 @@ def apply_transform(
 ) -> str:
     transform = get_transform(transform_name)
     if transform_name in DISABLED_TRANSFORMS:
-        raise ValueError(f"transform {transform_name!r} is disabled in webui2.")
+        raise ValueError(f"transform {transform_name!r} is disabled in webui.")
 
     aliases = sorted(list_model_aliases(provider))
     default_model = aliases[0] if len(aliases) == 1 else None
@@ -158,7 +158,7 @@ def render_dump_for_alias(
     matched = match_expr_names(
         expr=target,
         names=names,
-        op_name="webui2.dump",
+        op_name="webui.dump",
         role="target",
     )
     total_count = len(list(names))

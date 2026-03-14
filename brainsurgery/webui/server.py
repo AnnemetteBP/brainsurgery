@@ -14,7 +14,7 @@ from .session import SessionState
 logger = logging.getLogger("brainsurgery")
 
 
-def serve_webui2(*, host: str, port: int) -> None:
+def serve_webui(*, host: str, port: int) -> None:
     provider = create_state_dict_provider(
         provider="inmemory",
         model_paths={},
@@ -25,20 +25,20 @@ def serve_webui2(*, host: str, port: int) -> None:
     session = SessionState(
         provider=provider,
         lock=threading.Lock(),
-        upload_root=Path(tempfile.gettempdir()) / "brainsurgery-webui2-uploads",
+        upload_root=Path(tempfile.gettempdir()) / "brainsurgery-webui-uploads",
     )
     session.upload_root.mkdir(parents=True, exist_ok=True)
 
     handler = handler_factory(session)
     server = ThreadingHTTPServer((host, port), handler)
-    logger.info("Brain surgery web UI 2 available at http://%s:%d", host, port)
+    logger.info("Brain surgery web UI available at http://%s:%d", host, port)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        logger.info("Shutting down web UI 2 server")
+        logger.info("Shutting down web UI server")
     finally:
         server.server_close()
         provider.close()
 
 
-__all__ = ["serve_webui2"]
+__all__ = ["serve_webui"]
