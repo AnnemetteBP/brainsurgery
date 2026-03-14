@@ -72,6 +72,14 @@ HTML_PAGE = """<!doctype html>
       background: var(--panel);
       padding: 10px;
     }
+    .focus-scope {
+      position: relative;
+      transition: box-shadow 0.12s ease, border-color 0.12s ease;
+    }
+    .focus-scope.focused {
+      border-color: #d45d1f;
+      box-shadow: 0 0 0 2px rgba(212, 93, 31, 0.3);
+    }
     .picker-card {
       display: flex;
       flex-direction: column;
@@ -115,6 +123,11 @@ HTML_PAGE = """<!doctype html>
       box-shadow: inset 0 0 0 1px #d45d1f;
       background: #fff5eb;
     }
+    .transform-item:focus-visible {
+      outline: none;
+      border-color: #d45d1f;
+      box-shadow: inset 0 0 0 1px #d45d1f;
+    }
     .pill {
       font-size: 10px;
       text-transform: uppercase;
@@ -129,7 +142,7 @@ HTML_PAGE = """<!doctype html>
       color: #145b31;
       background: #edfdf2;
     }
-    input, button, select {
+    input, button, select, textarea {
       width: 100%;
       border-radius: 8px;
       border: 1px solid #c7af8a;
@@ -137,6 +150,14 @@ HTML_PAGE = """<!doctype html>
       font-size: 13px;
       margin-bottom: 8px;
       background: #fff;
+    }
+    input:focus-visible,
+    button:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+      outline: none;
+      border-color: #d45d1f;
+      box-shadow: inset 0 0 0 1px #d45d1f;
     }
     button {
       border: 0;
@@ -160,25 +181,43 @@ HTML_PAGE = """<!doctype html>
       display: grid;
       gap: 10px;
       align-content: start;
-      max-height: 100%;
+      min-height: 0;
+      overflow: auto;
+    }
+    #modelsPanel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      max-height: calc(100vh - 255px);
+      overflow: hidden;
+    }
+    #models {
+      flex: 1 1 auto;
+      min-height: 0;
       overflow: auto;
     }
     .model-pane {
       border: 1px solid var(--line);
       border-radius: 10px;
       background: #fffefb;
-      overflow: hidden;
+      overflow: visible;
     }
     .model-head {
-      padding: 8px 10px;
+      padding: 6px 8px;
       border-bottom: 1px solid var(--line);
       font-weight: 700;
-      font-size: 13px;
+      font-size: 12px;
       display: flex;
       justify-content: space-between;
     }
+    .model-head .toggle-dump-btn {
+      margin: 0;
+      width: auto;
+      padding: 4px 8px;
+      font-size: 11px;
+    }
     .model-controls {
-      padding: 8px 10px;
+      padding: 6px 8px;
       border-bottom: 1px solid var(--line);
       display: grid;
       grid-template-columns: 96px 92px 1fr auto;
@@ -251,9 +290,10 @@ HTML_PAGE = """<!doctype html>
     }
     pre {
       margin: 0;
-      padding: 10px;
-      overflow: auto;
-      max-height: 300px;
+      padding: 8px;
+      overflow-x: auto;
+      overflow-y: visible;
+      max-height: none;
       line-height: 1.4;
       font-size: 12px;
       font-family: "SFMono-Regular", "Menlo", monospace;
@@ -291,6 +331,16 @@ HTML_PAGE = """<!doctype html>
       align-items: center;
       gap: 6px;
     }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .checkbox-row input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+    }
     #resultsOutput {
       margin: 0;
       border: 1px solid #dcc8aa;
@@ -306,6 +356,9 @@ HTML_PAGE = """<!doctype html>
       .main { grid-template-columns: 1fr; }
       .left-stack { height: auto; grid-template-rows: auto auto; }
       .right-stack { height: auto; grid-template-rows: auto auto; }
+      #modelsPanel {
+        max-height: none;
+      }
     }
   </style>
 </head>
@@ -316,12 +369,12 @@ HTML_PAGE = """<!doctype html>
     </div>
     <div class=\"main\">
       <div class=\"left-stack\">
-        <div class=\"card picker-card\">
+        <div id=\"transformsPanel\" class=\"card picker-card focus-scope\" tabindex=\"0\">
           <h2 class=\"title\">Transforms</h2>
           <input id=\"transformSearch\" placeholder=\"Search transforms (e.g. load)\" />
           <div id=\"transformList\" class=\"transform-list\"></div>
         </div>
-        <div class=\"card\">
+        <div id=\"optionsPanel\" class=\"card focus-scope\" tabindex=\"0\">
           <div class=\"panel-row\">
             <h2 class=\"title\">Transform Options</h2>
             <div class=\"results-actions\">
@@ -348,11 +401,11 @@ HTML_PAGE = """<!doctype html>
         </div>
       </div>
       <div class=\"right-stack\">
-        <div class=\"card\">
+        <div id=\"modelsPanel\" class=\"card focus-scope\" tabindex=\"0\">
           <h2 class=\"title\">Current Models</h2>
           <div id=\"models\" class=\"models\"></div>
         </div>
-        <div class=\"card\">
+        <div id=\"resultsPanel\" class=\"card focus-scope\" tabindex=\"0\">
           <div class=\"panel-row\">
             <h2 class=\"title\">Results</h2>
             <div class=\"results-actions\">
@@ -386,6 +439,10 @@ HTML_PAGE = """<!doctype html>
     const clearOptionsBtn = document.getElementById("clearOptionsBtn");
     const optionsToggleBtn = document.getElementById("optionsToggleBtn");
     const optionsPanelBody = document.getElementById("optionsPanelBody");
+    const optionsPanel = document.getElementById("optionsPanel");
+    const transformsPanel = document.getElementById("transformsPanel");
+    const modelsPanel = document.getElementById("modelsPanel");
+    const resultsPanel = document.getElementById("resultsPanel");
     const resultsToggleBtn = document.getElementById("resultsToggleBtn");
     const copyResultsBtn = document.getElementById("copyResultsBtn");
     const clearResultsBtn = document.getElementById("clearResultsBtn");
@@ -397,8 +454,51 @@ HTML_PAGE = """<!doctype html>
     const modelViewState = {};
     const transformConfigByName = {};
     let latestModels = [];
+    let latestRuntimeFlags = { dry_run: false, verbose: false };
+    const panelScopes = [transformsPanel, optionsPanel, modelsPanel, resultsPanel];
 
     function setStatus(text) { statusEl.textContent = text; }
+    function setFocusedPanel(panel) {
+      for (const scope of panelScopes) {
+        if (!scope) continue;
+        scope.classList.toggle("focused", scope === panel);
+      }
+    }
+    function getFocusableInPanel(panel) {
+      if (!panel) return [];
+      const all = panel.querySelectorAll("input, select, textarea, button, [tabindex]:not([tabindex='-1'])");
+      const out = [];
+      for (const el of all) {
+        if (el.disabled) continue;
+        if (el.offsetParent === null) continue;
+        out.push(el);
+      }
+      return out;
+    }
+    function runCurrentTransformFromKeyboard() {
+      if (selectedTransform === "load") {
+        loadBtn.click();
+        return;
+      }
+      if (isRunnableTransform(selectedTransform)) {
+        transformRunBtn.click();
+      }
+    }
+    function focusPanelRelative(current, delta) {
+      const count = panelScopes.length;
+      if (!count) return;
+      const idx = panelScopes.indexOf(current);
+      const nextIdx = ((idx >= 0 ? idx : 0) + delta + count) % count;
+      const target = panelScopes[nextIdx];
+      if (!target) return;
+      const focusable = getFocusableInPanel(target);
+      if (focusable.length) {
+        focusable[0].focus();
+      } else {
+        target.focus();
+      }
+      setFocusedPanel(target);
+    }
     function appendResultBlock(title, text) {
       const block = "[" + title + "]\\n" + ((text && text.trim()) ? text : "(no output)") + "\\n\\n";
       if (resultsOutput.textContent === "(no transform output yet)") {
@@ -520,10 +620,24 @@ HTML_PAGE = """<!doctype html>
       const required = new Set(Array.isArray(meta.required_keys) ? meta.required_keys : []);
       const refKeys = Array.isArray(meta.reference_keys) ? meta.reference_keys : [];
       const refSet = new Set(refKeys);
+      const booleanKeys = new Set(Array.isArray(meta.boolean_keys) ? meta.boolean_keys : []);
       const orderedKeys = [...refKeys, ...allowed.filter((k) => !refSet.has(k))];
       transformTitle.textContent = selectedTransform;
       transformFields.innerHTML = "";
       transformRunBtn.textContent = "Run " + selectedTransform;
+
+      if (selectedTransform === "set") {
+        const current = document.createElement("div");
+        current.className = "binary-summary";
+        const line = document.createElement("div");
+        line.className = "value";
+        line.style.marginBottom = "0";
+        line.textContent =
+          "dry-run=" + String(Boolean(latestRuntimeFlags.dry_run)) +
+          ", verbose=" + String(Boolean(latestRuntimeFlags.verbose));
+        current.appendChild(line);
+        transformFields.appendChild(current);
+      }
 
       for (const key of orderedKeys) {
         if (selectedTransform === "dump" && key === "format") {
@@ -548,6 +662,31 @@ HTML_PAGE = """<!doctype html>
           if (!["shape", "stat", "full"].includes(verbositySelect.value)) verbositySelect.value = "shape";
           verbositySelect.addEventListener("change", () => { cfg.fields.verbosity = verbositySelect.value; });
           transformFields.appendChild(verbositySelect);
+          continue;
+        }
+        if (booleanKeys.has(key)) {
+          const boolLabel = document.createElement("label");
+          boolLabel.className = "checkbox-row";
+          const boolInput = document.createElement("input");
+          boolInput.type = "checkbox";
+          const current = cfg.fields[key];
+          if (typeof current === "boolean") {
+            boolInput.checked = current;
+            boolInput.indeterminate = false;
+          } else {
+            boolInput.checked = false;
+            boolInput.indeterminate = true;
+          }
+          boolInput.addEventListener("change", () => {
+            boolInput.indeterminate = false;
+            cfg.fields[key] = boolInput.checked;
+          });
+          const boolText = document.createElement("span");
+          const suffix = required.has(key) ? "required" : "optional";
+          boolText.textContent = key + " (" + suffix + ")";
+          boolLabel.appendChild(boolInput);
+          boolLabel.appendChild(boolText);
+          transformFields.appendChild(boolLabel);
           continue;
         }
         const input = document.createElement("input");
@@ -709,6 +848,7 @@ HTML_PAGE = """<!doctype html>
       for (const item of items) {
         const row = document.createElement("div");
         row.className = "transform-item" + (item.enabled ? "" : " planned") + (selectedTransform === item.name ? " selected" : "");
+        row.tabIndex = item.enabled ? 0 : -1;
         const name = document.createElement("span");
         name.textContent = item.name;
         const badge = document.createElement("span");
@@ -722,6 +862,11 @@ HTML_PAGE = """<!doctype html>
             renderTransforms();
             updatePanels();
             renderModels(latestModels);
+          });
+          row.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            row.click();
           });
         }
         transformsEl.appendChild(row);
@@ -740,7 +885,13 @@ HTML_PAGE = """<!doctype html>
 
       for (const model of models) {
         if (!modelViewState[model.alias]) {
-          modelViewState[model.alias] = { format: "compact", verbosity: "shape", filter: "", valid: true };
+          modelViewState[model.alias] = {
+            format: "compact",
+            verbosity: "shape",
+            filter: "",
+            valid: true,
+            dump_collapsed: false
+          };
         }
         const state = modelViewState[model.alias];
         const pane = document.createElement("div");
@@ -756,7 +907,11 @@ HTML_PAGE = """<!doctype html>
         right.style.gap = "6px";
         const count = document.createElement("span");
         count.textContent = tensorCountText(model.matched_count || model.tensor_count, model.total_count || model.tensor_count, state.filter || "");
+        const dumpToggleBtn = document.createElement("button");
+        dumpToggleBtn.className = "secondary-btn toggle-dump-btn";
+        dumpToggleBtn.textContent = state.dump_collapsed ? "Show Dump" : "Hide Dump";
         right.appendChild(count);
+        right.appendChild(dumpToggleBtn);
         head.appendChild(left);
         head.appendChild(right);
 
@@ -796,6 +951,13 @@ HTML_PAGE = """<!doctype html>
         const pre = document.createElement("pre");
         const dumps = { compact: model.dump_compact || "", tree: model.dump_tree || model.dump_compact || "" };
         pre.textContent = dumps[formatSelect.value] || "";
+        pre.classList.toggle("hidden", !!state.dump_collapsed);
+
+        dumpToggleBtn.addEventListener("click", () => {
+          state.dump_collapsed = !state.dump_collapsed;
+          pre.classList.toggle("hidden", !!state.dump_collapsed);
+          dumpToggleBtn.textContent = state.dump_collapsed ? "Show Dump" : "Hide Dump";
+        });
 
         let debounceHandle = null;
         const requestDump = async () => {
@@ -871,7 +1033,15 @@ HTML_PAGE = """<!doctype html>
           }
         }
         renderTransforms();
-        if (stateData.ok) latestModels = stateData.models || [];
+        if (stateData.ok) {
+          latestModels = stateData.models || [];
+          if (stateData.runtime_flags && typeof stateData.runtime_flags === "object") {
+            latestRuntimeFlags = {
+              dry_run: Boolean(stateData.runtime_flags.dry_run),
+              verbose: Boolean(stateData.runtime_flags.verbose),
+            };
+          }
+        }
         renderModels(latestModels);
         updatePanels();
       } catch (err) {
@@ -911,6 +1081,12 @@ HTML_PAGE = """<!doctype html>
         const data = await response.json();
         if (!response.ok || !data.ok) { setStatus("Load failed: " + (data.error || "unknown error")); return; }
         latestModels = data.models || [];
+        if (data.runtime_flags && typeof data.runtime_flags === "object") {
+          latestRuntimeFlags = {
+            dry_run: Boolean(data.runtime_flags.dry_run),
+            verbose: Boolean(data.runtime_flags.verbose),
+          };
+        }
         renderModels(latestModels);
         resetTransformSearch();
         renderTransforms();
@@ -933,7 +1109,12 @@ HTML_PAGE = """<!doctype html>
       let payload = {};
 
       for (const key of allowed) {
-        const parsed = parseFieldValue(cfg.fields[key] == null ? "" : String(cfg.fields[key]));
+        const rawValue = cfg.fields[key];
+        if (typeof rawValue === "boolean") {
+          payload[key] = rawValue;
+          continue;
+        }
+        const parsed = parseFieldValue(rawValue == null ? "" : String(rawValue));
         if (parsed === undefined) {
           if (required.has(key)) { setStatus("Missing required parameter: " + key); return; }
           continue;
@@ -989,6 +1170,12 @@ HTML_PAGE = """<!doctype html>
         const data = await response.json();
         if (!response.ok || !data.ok) { setStatus("Apply failed: " + (data.error || "unknown error")); return; }
         latestModels = data.models || [];
+        if (data.runtime_flags && typeof data.runtime_flags === "object") {
+          latestRuntimeFlags = {
+            dry_run: Boolean(data.runtime_flags.dry_run),
+            verbose: Boolean(data.runtime_flags.verbose),
+          };
+        }
         renderModels(latestModels);
         resetTransformSearch();
         renderTransforms();
@@ -1042,6 +1229,48 @@ HTML_PAGE = """<!doctype html>
       const copied = await copyTextToClipboard(text);
       setStatus(copied ? "Copied results to clipboard." : "Could not copy results.");
     });
+    for (const panel of panelScopes) {
+      if (!panel) continue;
+      panel.addEventListener("focusin", () => setFocusedPanel(panel));
+      panel.addEventListener("mousedown", () => setFocusedPanel(panel));
+      panel.addEventListener("keydown", (event) => {
+        if (panel === transformsPanel && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+          const rows = Array.from(
+            transformsEl.querySelectorAll(".transform-item:not(.planned)")
+          ).filter((row) => row instanceof HTMLElement);
+          if (rows.length) {
+            event.preventDefault();
+            const currentIndex = rows.indexOf(document.activeElement);
+            const delta = event.key === "ArrowDown" ? 1 : -1;
+            const nextIndex = (currentIndex + delta + rows.length) % rows.length;
+            rows[nextIndex].focus();
+            rows[nextIndex].click();
+          }
+          return;
+        }
+        if (event.key === "Tab") {
+          if (event.shiftKey) {
+            event.preventDefault();
+            focusPanelRelative(panel, -1);
+            return;
+          }
+          const focusable = getFocusableInPanel(panel);
+          if (!focusable.length) return;
+          const idx = focusable.indexOf(document.activeElement);
+          if (idx === -1 || idx >= focusable.length - 1) {
+            event.preventDefault();
+            focusable[0].focus();
+          }
+          return;
+        }
+        if (panel === optionsPanel && event.key === "Enter" && event.shiftKey) {
+          const target = event.target;
+          if (!target) return;
+          event.preventDefault();
+          runCurrentTransformFromKeyboard();
+        }
+      });
+    }
     resultsToggleBtn.addEventListener("click", () => {
       const collapsing = !resultsPanelBody.classList.contains("hidden");
       resultsPanelBody.classList.toggle("hidden", collapsing);

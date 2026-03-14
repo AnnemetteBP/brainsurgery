@@ -22,6 +22,7 @@ from .backend import (
     render_dump_for_alias,
     render_execution_summary,
     require_string,
+    serialize_runtime_flags,
     serialize_models,
     transform_items,
 )
@@ -43,7 +44,13 @@ def handler_factory(session: SessionState):
                 return
             if self.path == "/api/state":
                 with session.lock:
-                    self._send_json({"ok": True, "models": serialize_models(session.provider)})
+                    self._send_json(
+                        {
+                            "ok": True,
+                            "models": serialize_models(session.provider),
+                            "runtime_flags": serialize_runtime_flags(),
+                        }
+                    )
                 return
             self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
 
@@ -88,7 +95,13 @@ def handler_factory(session: SessionState):
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                         return
 
-                self._send_json({"ok": True, "models": models})
+                self._send_json(
+                    {
+                        "ok": True,
+                        "models": models,
+                        "runtime_flags": serialize_runtime_flags(),
+                    }
+                )
                 return
 
             if self.path == "/api/apply_transform":
@@ -133,7 +146,14 @@ def handler_factory(session: SessionState):
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                         return
-                self._send_json({"ok": True, "models": models, "output": output})
+                self._send_json(
+                    {
+                        "ok": True,
+                        "models": models,
+                        "output": output,
+                        "runtime_flags": serialize_runtime_flags(),
+                    }
+                )
                 return
 
             if self.path == "/api/save_download":
@@ -161,6 +181,7 @@ def handler_factory(session: SessionState):
                         "ok": True,
                         "models": models,
                         "output": output,
+                        "runtime_flags": serialize_runtime_flags(),
                         "download_filename": filename,
                         "download_mime": mime,
                         "download_b64": content_b64,

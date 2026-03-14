@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+from dataclasses import is_dataclass
 from pathlib import Path
 from typing import Any
+from typing import get_args, get_origin, get_type_hints
 
 from omegaconf import OmegaConf
 from ..core import (
@@ -18,6 +20,7 @@ from ..core import (
     parse_model_expr,
 )
 from ..engine import list_model_aliases, reset_runtime_flags, use_output_emitter
+from ..engine import get_runtime_flags
 
 
 DISABLED_TRANSFORMS: set[str] = set()
@@ -44,6 +47,7 @@ def transform_items() -> list[dict[str, Any]]:
                 "help_subcommands": spec["help_subcommands"] if spec else {},
                 "assert_expressions": spec["assert_expressions"] if spec else [],
                 "assert_expression_meta": spec["assert_expression_meta"] if spec else {},
+                "boolean_keys": spec["boolean_keys"] if spec else [],
             }
         )
     return items
@@ -78,8 +82,47 @@ def _transform_specs() -> dict[str, dict[str, Any]]:
             "help_subcommands": {"assert": sorted(get_assert_expr_names())} if name == "help" else {},
             "assert_expressions": sorted(get_assert_expr_names()) if name == "assert" else [],
             "assert_expression_meta": _assert_expression_meta() if name == "assert" else {},
+            "boolean_keys": _boolean_keys_for_transform(transform, allowed),
         }
     return specs
+
+
+def _is_boolean_annotation(annotation: Any) -> bool:
+    if annotation is bool:
+        return True
+    origin = get_origin(annotation)
+    if origin is None:
+        return False
+    args = [arg for arg in get_args(annotation) if arg is not type(None)]
+    return bool(args) and all(arg is bool for arg in args)
+
+
+def _boolean_keys_for_transform(transform: Any, allowed_keys: list[str]) -> list[str]:
+    out: set[str] = set()
+    allowed = set(allowed_keys)
+
+    spec_type = getattr(transform, "spec_type", None)
+    if spec_type is not None and is_dataclass(spec_type):
+        try:
+            type_hints = get_type_hints(spec_type)
+        except Exception:
+            type_hints = {}
+        for field_name, annotation in type_hints.items():
+            if _is_boolean_annotation(annotation):
+                key = field_name.replace("_", "-")
+                if key in allowed:
+                    out.add(key)
+
+    help_text = str(getattr(transform, "help_text", "") or "")
+    for line in help_text.splitlines():
+        text = line.strip()
+        if not text.startswith("-") or "(boolean)" not in text.lower():
+            continue
+        key = text[1:].split("(", 1)[0].strip()
+        if key in allowed:
+            out.add(key)
+
+    return sorted(out)
 
 
 def _assert_expression_meta() -> dict[str, dict[str, Any]]:
@@ -187,6 +230,14 @@ def apply_load_transform(*, provider: Any, path: Path, alias: str) -> None:
         default_model=None,
     )
     transform.apply(spec, provider)
+
+
+def serialize_runtime_flags() -> dict[str, bool]:
+    flags = get_runtime_flags()
+    return {
+        "dry_run": bool(flags.dry_run),
+        "verbose": bool(flags.verbose),
+    }
 
 
 def render_dump_for_alias(
