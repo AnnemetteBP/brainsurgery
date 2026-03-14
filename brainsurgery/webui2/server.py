@@ -15,6 +15,8 @@ import uuid
 from ..core import (
     BinaryMappingTransform,
     DestinationPolicy,
+    TernaryMappingTransform,
+    UnaryTransform,
     get_transform,
     list_transforms,
     match_expr_names,
@@ -29,6 +31,7 @@ from ..engine import (
 
 
 logger = logging.getLogger("brainsurgery")
+_DISABLED_TRANSFORMS = {"dump", "help", "exit"}
 
 
 @dataclass
@@ -111,35 +114,31 @@ def _handler_factory(session: _SessionState):
                 self._send_json({"ok": True, "models": models})
                 return
 
-            if self.path == "/api/apply_binary_transform":
+            if self.path == "/api/apply_transform":
                 try:
                     body = self._read_json_body()
                     transform_name = _require_string(body.get("transform"), "transform")
-                    from_ref = _require_committed_ref(body.get("from_ref"), field="from_ref")
-                    to_ref = _require_committed_ref(body.get("to_ref"), field="to_ref")
-                    extras = body.get("extras")
-                    if extras is None:
-                        extras = {}
-                    if not isinstance(extras, dict):
-                        raise ValueError("extras must be an object.")
+                    payload = body.get("payload")
+                    if payload is None:
+                        payload = {}
+                    if not isinstance(payload, dict):
+                        raise ValueError("payload must be an object.")
                 except Exception as exc:
                     self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                     return
 
                 with session.lock:
                     try:
-                        _apply_binary_transform(
+                        output = _apply_transform(
                             provider=session.provider,
                             transform_name=transform_name,
-                            from_ref=from_ref,
-                            to_ref=to_ref,
-                            extras=extras,
+                            payload=payload,
                         )
                         models = _serialize_models(session.provider)
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                         return
-                self._send_json({"ok": True, "models": models})
+                self._send_json({"ok": True, "models": models, "output": output})
                 return
 
             if self.path == "/api/model_dump":
@@ -149,6 +148,9 @@ def _handler_factory(session: _SessionState):
                     format_name = _require_string(body.get("format"), "format").strip().lower()
                     if format_name not in {"compact", "tree"}:
                         raise ValueError("format must be 'compact' or 'tree'.")
+                    verbosity = _require_string(body.get("verbosity", "shape"), "verbosity").strip().lower()
+                    if verbosity not in {"shape", "stat"}:
+                        raise ValueError("verbosity must be 'shape' or 'stat'.")
                     target = _parse_filter_expr(body.get("filter"), alias=alias)
                 except Exception as exc:
                     self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -162,6 +164,7 @@ def _handler_factory(session: _SessionState):
                             provider=session.provider,
                             alias=alias,
                             format_name=format_name,
+                            verbosity=verbosity,
                             target=target,
                         )
                     except Exception as exc:
@@ -217,37 +220,51 @@ def _handler_factory(session: _SessionState):
 
 
 def _transform_items() -> list[dict[str, Any]]:
-    binary_specs = _binary_transform_specs()
-    enabled = {"load", *binary_specs.keys()}
+    specs = _transform_specs()
     items: list[dict[str, Any]] = []
     for name in list_transforms():
-        spec = binary_specs.get(name)
+        if name in _DISABLED_TRANSFORMS:
+            continue
+        spec = specs.get(name)
         items.append(
             {
                 "name": name,
-                "enabled": name in enabled,
+                "enabled": bool(spec and spec["enabled"]),
                 "binary": bool(spec),
-                "extra_keys": spec["extra_keys"] if spec else [],
-                "required_extra_keys": spec["required_extra_keys"] if spec else [],
+                "kind": spec["kind"] if spec else "other",
+                "allowed_keys": spec["allowed_keys"] if spec else [],
+                "required_keys": spec["required_keys"] if spec else [],
+                "reference_keys": spec["reference_keys"] if spec else [],
+                "to_must_exist": bool(spec and spec["to_must_exist"]),
             }
         )
     return items
 
 
-def _binary_transform_specs() -> dict[str, dict[str, list[str]]]:
+def _transform_specs() -> dict[str, dict[str, Any]]:
     specs: dict[str, dict[str, Any]] = {}
     for name in list_transforms():
         transform = get_transform(name)
-        if not isinstance(transform, BinaryMappingTransform):
-            continue
-        allowed = getattr(transform, "allowed_keys", {"from", "to"})
-        required = getattr(transform, "required_keys", {"from", "to"})
+        allowed = sorted(getattr(transform, "allowed_keys", set()) or set())
+        required = sorted(getattr(transform, "required_keys", set()) or set())
+        ref_keys = [key for key in transform.completion_reference_keys() if isinstance(key, str)]
+        if allowed:
+            ref_keys = [key for key in ref_keys if key in set(allowed)]
+        if isinstance(transform, BinaryMappingTransform):
+            kind = "binary"
+        elif isinstance(transform, UnaryTransform):
+            kind = "unary"
+        elif isinstance(transform, TernaryMappingTransform):
+            kind = "ternary"
+        else:
+            kind = "other"
         destination_policy = getattr(transform, "destination_policy", DestinationPolicy.ANY)
-        extra_keys = sorted(k for k in allowed if k not in {"from", "to"})
-        required_extra_keys = sorted(k for k in required if k not in {"from", "to"})
         specs[name] = {
-            "extra_keys": extra_keys,
-            "required_extra_keys": required_extra_keys,
+            "enabled": name not in _DISABLED_TRANSFORMS,
+            "kind": kind,
+            "allowed_keys": allowed,
+            "required_keys": required,
+            "reference_keys": ref_keys,
             "to_must_exist": destination_policy is DestinationPolicy.MUST_EXIST,
         }
     return specs
@@ -257,16 +274,6 @@ def _require_string(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty string.")
     return value
-
-
-def _require_committed_ref(value: Any, *, field: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise ValueError(f"{field} must be an object with alias and filter.")
-    alias = _require_string(value.get("alias"), f"{field}.alias")
-    raw_filter = value.get("filter")
-    if raw_filter is not None and not isinstance(raw_filter, (str, list)):
-        raise ValueError(f"{field}.filter must be a string, list, or null.")
-    return {"alias": alias, "filter": raw_filter}
 
 
 def _default_alias(provider: Any) -> str:
@@ -304,47 +311,22 @@ def _parse_filter_expr(raw: Any, *, alias: str) -> str | list[Any]:
     return ref.expr
 
 
-def _parse_binary_ref_payload(raw: dict[str, Any]) -> tuple[str | list[Any], str, bool]:
-    alias = _require_string(raw.get("alias"), "alias")
-    expr = _parse_filter_expr(raw.get("filter"), alias=alias)
-    if isinstance(expr, str):
-        return f"{alias}::{expr}", alias, False
-    return expr, alias, True
-
-
-def _apply_binary_transform(
+def _apply_transform(
     *,
     provider: Any,
     transform_name: str,
-    from_ref: dict[str, Any],
-    to_ref: dict[str, Any],
-    extras: dict[str, Any],
-) -> None:
+    payload: dict[str, Any],
+) -> str:
     transform = get_transform(transform_name)
-    if not isinstance(transform, BinaryMappingTransform):
-        raise ValueError(f"transform {transform_name!r} is not a binary mapping transform.")
-
-    from_payload, from_alias, from_is_list = _parse_binary_ref_payload(from_ref)
-    to_payload, to_alias, to_is_list = _parse_binary_ref_payload(to_ref)
-
-    default_model: str | None = None
-    if from_is_list or to_is_list:
-        aliases = set()
-        if from_is_list:
-            aliases.add(from_alias)
-        if to_is_list:
-            aliases.add(to_alias)
-        if len(aliases) > 1:
-            raise ValueError("Structured path filters for from/to must use the same model alias.")
-        default_model = next(iter(aliases))
-
-    payload: dict[str, Any] = {"from": from_payload, "to": to_payload}
-    for key, value in extras.items():
-        payload[key] = value
+    if transform_name in _DISABLED_TRANSFORMS:
+        raise ValueError(f"transform {transform_name!r} is disabled in webui2.")
 
     reset_runtime_flags()
-    spec = transform.compile(payload, default_model=default_model)
-    transform.apply(spec, provider)
+    lines: list[str] = []
+    with use_output_emitter(lines.append):
+        spec = transform.compile(payload, default_model=None)
+        transform.apply(spec, provider)
+    return "\n".join(lines)
 
 
 def _apply_load_transform(*, provider: Any, path: Path, alias: str) -> None:
@@ -365,6 +347,7 @@ def _render_dump_for_alias(
     provider: Any,
     alias: str,
     format_name: str,
+    verbosity: str,
     target: str | list[Any],
 ) -> tuple[str, int, int]:
     names = provider.get_state_dict(alias).keys()
@@ -384,7 +367,7 @@ def _render_dump_for_alias(
         {
             "target": target,
             "format": format_name,
-            "verbosity": "shape",
+            "verbosity": verbosity,
         },
         default_model=alias,
     )
@@ -402,12 +385,14 @@ def _serialize_models(provider: Any) -> list[dict[str, Any]]:
             provider=provider,
             alias=alias,
             format_name="compact",
+            verbosity="shape",
             target=".*",
         )
         dump_tree, _, _ = _render_dump_for_alias(
             provider=provider,
             alias=alias,
             format_name="tree",
+            verbosity="shape",
             target=".*",
         )
         models.append(
@@ -474,6 +459,13 @@ _HTML_PAGE = """<!doctype html>
       gap: 12px;
       padding: 12px;
       align-items: start;
+    }
+    .right-stack {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-content: start;
+      height: calc(100vh - 165px);
     }
     .left-stack {
       display: grid;
@@ -576,6 +568,8 @@ _HTML_PAGE = """<!doctype html>
       display: grid;
       gap: 10px;
       align-content: start;
+      max-height: 100%;
+      overflow: auto;
     }
     .model-pane {
       border: 1px solid var(--line);
@@ -595,7 +589,7 @@ _HTML_PAGE = """<!doctype html>
       padding: 8px 10px;
       border-bottom: 1px solid var(--line);
       display: grid;
-      grid-template-columns: 100px 1fr auto auto auto;
+      grid-template-columns: 96px 92px 1fr auto;
       gap: 6px;
       align-items: center;
       background: #fffaf2;
@@ -622,6 +616,21 @@ _HTML_PAGE = """<!doctype html>
       white-space: nowrap;
     }
     .mini-btn.hidden { display: none; }
+    .commit-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+    .secondary-btn {
+      color: #4b3a24;
+      border: 1px solid #d8c4a4;
+      background: linear-gradient(130deg, #fdf2dd, #f5e4c6);
+    }
+    .secondary-btn:hover {
+      background: linear-gradient(130deg, #fbeccb, #f1ddb8);
+    }
     .binary-summary {
       margin: 0 0 8px 0;
       padding: 8px;
@@ -665,9 +674,45 @@ _HTML_PAGE = """<!doctype html>
       color: var(--muted);
       background: #fffdf9;
     }
+    .panel-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .panel-row .title {
+      margin: 0;
+    }
+    #clearOptionsBtn,
+    #optionsToggleBtn,
+    #resultsToggleBtn,
+    #clearResultsBtn {
+      margin: 0;
+      width: auto;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+    .results-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #resultsOutput {
+      margin: 0;
+      border: 1px solid #dcc8aa;
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 120px;
+      max-height: 220px;
+      overflow: auto;
+      white-space: pre-wrap;
+      background: #fffdfa;
+    }
     @media (max-width: 980px) {
       .main { grid-template-columns: 1fr; }
       .left-stack { height: auto; grid-template-rows: auto auto; }
+      .right-stack { height: auto; grid-template-rows: auto auto; }
     }
   </style>
 </head>
@@ -685,31 +730,47 @@ _HTML_PAGE = """<!doctype html>
           <div id=\"transformList\" class=\"transform-list\"></div>
         </div>
         <div class=\"card\">
-          <h2 class=\"title\">Transform Options</h2>
-          <div id=\"optionsEmpty\" class=\"options-placeholder\">Select a transform from the list above to configure it.</div>
-          <div id=\"loadPanel\" class=\"hidden\">
-            <h2 class=\"title\">Load</h2>
-            <input id=\"aliasInput\" placeholder=\"Alias (optional, defaults to model/model_2/...)\" />
-            <input id=\"fileInput\" type=\"file\" />
-            <button id=\"loadBtn\">Load Selected File</button>
-          </div>
-          <div id=\"binaryPanel\" class=\"hidden\">
-            <h2 id=\"binaryTitle\" class=\"title\">Transform</h2>
-            <div class=\"binary-summary\">
-              <div class=\"label\">from</div>
-              <div id=\"binaryFromSummary\" class=\"value\">(not committed)</div>
-              <div class=\"label\">to</div>
-              <div id=\"binaryToSummary\" class=\"value\">(not committed)</div>
+          <div class=\"panel-row\">
+            <h2 class=\"title\">Transform Options</h2>
+            <div class=\"results-actions\">
+              <button id=\"clearOptionsBtn\" class=\"secondary-btn\">Clear</button>
+              <button id=\"optionsToggleBtn\" class=\"secondary-btn\">Collapse</button>
             </div>
-            <div id=\"binaryExtras\"></div>
-            <button id=\"binaryRunBtn\">Run Transform</button>
           </div>
-          <div id=\"status\">Ready.</div>
+          <div id=\"optionsPanelBody\">
+            <div id=\"optionsEmpty\" class=\"options-placeholder hidden\"></div>
+            <div id=\"loadPanel\" class=\"hidden\">
+              <h2 class=\"title\">Load</h2>
+              <input id=\"aliasInput\" placeholder=\"Alias (optional, defaults to model/model_2/...)\" />
+              <input id=\"fileInput\" type=\"file\" />
+              <button id=\"loadBtn\">Load Selected File</button>
+            </div>
+            <div id=\"transformPanel\" class=\"hidden\">
+              <h2 id=\"transformTitle\" class=\"title\">Transform</h2>
+              <div id=\"transformFields\"></div>
+              <button id=\"transformRunBtn\">Run Transform</button>
+            </div>
+            <div id=\"status\">Ready.</div>
+          </div>
         </div>
       </div>
-      <div class=\"card\">
-        <h2 class=\"title\">Current Models</h2>
-        <div id=\"models\" class=\"models\"></div>
+      <div class=\"right-stack\">
+        <div class=\"card\">
+          <h2 class=\"title\">Current Models</h2>
+          <div id=\"models\" class=\"models\"></div>
+        </div>
+        <div class=\"card\">
+          <div class=\"panel-row\">
+            <h2 class=\"title\">Results</h2>
+            <div class=\"results-actions\">
+              <button id=\"resultsToggleBtn\" class=\"secondary-btn\">Collapse</button>
+              <button id=\"clearResultsBtn\" class=\"secondary-btn\">Clear</button>
+            </div>
+          </div>
+          <div id=\"resultsPanelBody\">
+            <pre id=\"resultsOutput\">(no transform output yet)</pre>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -723,68 +784,60 @@ _HTML_PAGE = """<!doctype html>
     const loadBtn = document.getElementById("loadBtn");
     const loadPanel = document.getElementById("loadPanel");
     const optionsEmpty = document.getElementById("optionsEmpty");
-    const binaryPanel = document.getElementById("binaryPanel");
-    const binaryTitle = document.getElementById("binaryTitle");
-    const binaryFromSummary = document.getElementById("binaryFromSummary");
-    const binaryToSummary = document.getElementById("binaryToSummary");
-    const binaryExtras = document.getElementById("binaryExtras");
-    const binaryRunBtn = document.getElementById("binaryRunBtn");
+    const transformPanel = document.getElementById("transformPanel");
+    const transformTitle = document.getElementById("transformTitle");
+    const transformFields = document.getElementById("transformFields");
+    const transformRunBtn = document.getElementById("transformRunBtn");
+    const clearOptionsBtn = document.getElementById("clearOptionsBtn");
+    const optionsToggleBtn = document.getElementById("optionsToggleBtn");
+    const optionsPanelBody = document.getElementById("optionsPanelBody");
+    const resultsToggleBtn = document.getElementById("resultsToggleBtn");
+    const clearResultsBtn = document.getElementById("clearResultsBtn");
+    const resultsPanelBody = document.getElementById("resultsPanelBody");
+    const resultsOutput = document.getElementById("resultsOutput");
 
-    let allTransforms = [{ name: "load", enabled: true, binary: false, extra_keys: [], required_extra_keys: [], to_must_exist: false }];
+    let allTransforms = [{ name: "load", enabled: true, kind: "other", allowed_keys: [], required_keys: [], reference_keys: [], to_must_exist: false }];
     let selectedTransform = "load";
     const modelViewState = {};
-    const binaryConfigByTransform = {};
+    const transformConfigByName = {};
     let latestModels = [];
 
     function setStatus(text) { statusEl.textContent = text; }
+    function appendResultBlock(title, text) {
+      const block = "[" + title + "]\\n" + ((text && text.trim()) ? text : "(no output)") + "\\n\\n";
+      if (resultsOutput.textContent === "(no transform output yet)") {
+        resultsOutput.textContent = "";
+      }
+      resultsOutput.textContent += block;
+      resultsOutput.scrollTop = resultsOutput.scrollHeight;
+    }
     function tensorCountText(shown, total, filterText) {
       return filterText.trim() ? (shown + " out of " + total + " tensors") : (total + " tensors");
+    }
+    function parseFieldValue(raw) {
+      const text = (raw || "").trim();
+      if (!text) return undefined;
+      try { return JSON.parse(text); } catch (_err) { return text; }
     }
     function getTransformMeta(name) {
       return allTransforms.find((t) => t.name === name) || null;
     }
     function isReadyTransform(name) {
-      const item = getTransformMeta(name);
-      return !!(item && item.enabled);
+      const meta = getTransformMeta(name);
+      return !!(meta && meta.enabled);
     }
-    function isBinaryTransform(name) {
-      const item = getTransformMeta(name);
-      return !!(item && item.enabled && item.binary);
+    function isRunnableTransform(name) {
+      return !!name && name !== "load" && isReadyTransform(name);
     }
-    function toMustExist(name) {
-      const item = getTransformMeta(name);
-      return !!(item && item.enabled && item.binary && item.to_must_exist);
-    }
-    function getBinaryConfig(name) {
-      if (!binaryConfigByTransform[name]) {
-        binaryConfigByTransform[name] = {
-          from_ref: { alias: "", filter: "" },
-          to_ref: { alias: "", filter: "" },
-          extras: {}
-        };
+    function getTransformConfig(name) {
+      if (!transformConfigByName[name]) {
+        transformConfigByName[name] = { fields: {} };
       }
-      return binaryConfigByTransform[name];
+      return transformConfigByName[name];
     }
-    function ensureRefObject(ref) {
-      if (!ref || typeof ref !== "object") return { alias: "", filter: "" };
-      return {
-        alias: typeof ref.alias === "string" ? ref.alias : "",
-        filter: typeof ref.filter === "string" ? ref.filter : ""
-      };
-    }
-    function describeCommit(ref) {
-      if (!ref || !ref.alias.trim()) return "(not set)";
-      const f = (ref.filter || "").trim();
-      return ref.alias + "::" + (f ? f : ".*");
-    }
-    function parseExtraValue(raw) {
-      const text = (raw || "").trim();
-      if (!text) return undefined;
-      try {
-        return JSON.parse(text);
-      } catch (_err) {
-        return text;
-      }
+    function resetTransformSearch() {
+      transformSearchEl.value = "";
+      renderTransforms();
     }
     function regexToBackrefTemplate(raw) {
       let count = 0;
@@ -793,69 +846,35 @@ _HTML_PAGE = """<!doctype html>
       let inClass = false;
       for (let i = 0; i < raw.length; i += 1) {
         const ch = raw[i];
-        if (escaped) {
-          out += "\\\\" + ch;
-          escaped = false;
-          continue;
-        }
-        if (ch === "\\\\") {
-          escaped = true;
-          continue;
-        }
-        if (ch === "[") {
-          inClass = true;
-          out += ch;
-          continue;
-        }
-        if (ch === "]") {
-          inClass = false;
-          out += ch;
-          continue;
-        }
+        if (escaped) { out += "\\\\" + ch; escaped = false; continue; }
+        if (ch === "\\\\") { escaped = true; continue; }
+        if (ch === "[") { inClass = true; out += ch; continue; }
+        if (ch === "]") { inClass = false; out += ch; continue; }
         if (!inClass && ch === "(") {
           const next = raw.slice(i + 1, i + 3);
-          if (next === "?:" || next === "?=" || next === "?!" || next === "?<" || next === "?>") {
-            out += ch;
-            continue;
-          }
+          if (next === "?:" || next === "?=" || next === "?!" || next === "?<" || next === "?>") { out += ch; continue; }
           count += 1;
           out += "\\\\" + String(count);
           let depth = 1;
           let j = i + 1;
-          let innerEscaped = false;
-          let innerClass = false;
+          let esc2 = false;
+          let cls2 = false;
           for (; j < raw.length; j += 1) {
             const c2 = raw[j];
-            if (innerEscaped) {
-              innerEscaped = false;
-              continue;
-            }
-            if (c2 === "\\\\") {
-              innerEscaped = true;
-              continue;
-            }
-            if (c2 === "[") {
-              innerClass = true;
-              continue;
-            }
-            if (c2 === "]") {
-              innerClass = false;
-              continue;
-            }
-            if (innerClass) continue;
+            if (esc2) { esc2 = false; continue; }
+            if (c2 === "\\\\") { esc2 = true; continue; }
+            if (c2 === "[") { cls2 = true; continue; }
+            if (c2 === "]") { cls2 = false; continue; }
+            if (cls2) continue;
             if (c2 === "(") depth += 1;
-            if (c2 === ")") {
-              depth -= 1;
-              if (depth === 0) break;
-            }
+            if (c2 === ")") { depth -= 1; if (depth === 0) break; }
           }
           i = j;
           continue;
         }
         out += ch;
       }
-      if (!count) return raw;
-      return out;
+      return count ? out : raw;
     }
     function copyFromFilterToToTemplate(raw) {
       const text = (raw || "").trim();
@@ -863,109 +882,86 @@ _HTML_PAGE = """<!doctype html>
       if (text.startsWith("[")) return text;
       return regexToBackrefTemplate(text);
     }
-    function updateRunButtonLabel() {
-      binaryRunBtn.textContent = "Run " + selectedTransform;
+    function buildReferenceFromModel(alias, filterText) {
+      const expr = (filterText || "").trim() || ".*";
+      return alias + "::" + expr;
     }
-    function resetTransformSearch() {
-      transformSearchEl.value = "";
-      renderTransforms();
+    function commitRefFromModel(key, alias, filterText) {
+      const meta = getTransformMeta(selectedTransform);
+      if (!meta) return;
+      const cfg = getTransformConfig(selectedTransform);
+      cfg.fields[key] = buildReferenceFromModel(alias, filterText);
+      if (meta.kind === "binary" && key === "from" && !meta.to_must_exist) {
+        const templ = copyFromFilterToToTemplate((filterText || "").trim());
+        cfg.fields.to = alias + "::" + (templ || ".*");
+      }
+      renderTransformPanel();
+      setStatus("Committed " + key + " for " + selectedTransform + " from " + alias + ".");
     }
 
-    function renderBinaryPanel() {
-      if (!isBinaryTransform(selectedTransform)) {
-        binaryPanel.classList.add("hidden");
+    function renderTransformPanel() {
+      if (!isRunnableTransform(selectedTransform)) {
+        transformPanel.classList.add("hidden");
         return;
       }
       const meta = getTransformMeta(selectedTransform);
-      const cfg = getBinaryConfig(selectedTransform);
-      cfg.from_ref = ensureRefObject(cfg.from_ref);
-      cfg.to_ref = ensureRefObject(cfg.to_ref);
-      binaryTitle.textContent = selectedTransform;
-      binaryFromSummary.textContent = describeCommit(cfg.from_ref);
-      binaryToSummary.textContent = describeCommit(cfg.to_ref);
-      updateRunButtonLabel();
-      binaryExtras.innerHTML = "";
+      const cfg = getTransformConfig(selectedTransform);
+      const allowed = Array.isArray(meta.allowed_keys) ? meta.allowed_keys : [];
+      const required = new Set(Array.isArray(meta.required_keys) ? meta.required_keys : []);
+      const refKeys = Array.isArray(meta.reference_keys) ? meta.reference_keys : [];
+      const refSet = new Set(refKeys);
+      const orderedKeys = [...refKeys, ...allowed.filter((k) => !refSet.has(k))];
+      transformTitle.textContent = selectedTransform;
+      transformFields.innerHTML = "";
+      transformRunBtn.textContent = "Run " + selectedTransform;
 
-      const fromAliasInput = document.createElement("input");
-      fromAliasInput.placeholder = "from alias";
-      fromAliasInput.value = cfg.from_ref.alias;
-      fromAliasInput.addEventListener("input", () => {
-        cfg.from_ref.alias = fromAliasInput.value;
-        binaryFromSummary.textContent = describeCommit(cfg.from_ref);
-      });
-      binaryExtras.appendChild(fromAliasInput);
+      for (const key of orderedKeys) {
+        const input = document.createElement("input");
+        const suffix = required.has(key) ? "required" : "optional";
+        input.placeholder = key + " (" + suffix + ")";
+        input.value = cfg.fields[key] == null ? "" : String(cfg.fields[key]);
+        input.addEventListener("input", () => { cfg.fields[key] = input.value; });
+        transformFields.appendChild(input);
+      }
 
-      const fromFilterInput = document.createElement("input");
-      fromFilterInput.placeholder = "from filter (regex or JSON list)";
-      fromFilterInput.value = cfg.from_ref.filter;
-      fromFilterInput.addEventListener("input", () => {
-        cfg.from_ref.filter = fromFilterInput.value;
-        binaryFromSummary.textContent = describeCommit(cfg.from_ref);
-      });
-      binaryExtras.appendChild(fromFilterInput);
-
-      const toAliasInput = document.createElement("input");
-      toAliasInput.placeholder = "to alias";
-      toAliasInput.value = cfg.to_ref.alias;
-      toAliasInput.addEventListener("input", () => {
-        cfg.to_ref.alias = toAliasInput.value;
-        binaryToSummary.textContent = describeCommit(cfg.to_ref);
-      });
-      binaryExtras.appendChild(toAliasInput);
-
-      const toFilterInput = document.createElement("input");
-      toFilterInput.placeholder = "to filter (regex or JSON list)";
-      toFilterInput.value = cfg.to_ref.filter;
-      toFilterInput.addEventListener("input", () => {
-        cfg.to_ref.filter = toFilterInput.value;
-        binaryToSummary.textContent = describeCommit(cfg.to_ref);
-      });
-      binaryExtras.appendChild(toFilterInput);
-
-      if (!meta.to_must_exist) {
+      if (meta.kind === "binary" && !meta.to_must_exist && refSet.has("from") && refSet.has("to")) {
         const copyBtn = document.createElement("button");
+        copyBtn.className = "secondary-btn";
         copyBtn.textContent = "Copy from filter to to";
         copyBtn.addEventListener("click", () => {
-          const next = copyFromFilterToToTemplate(cfg.from_ref.filter);
-          cfg.to_ref.filter = next;
-          if (!cfg.to_ref.alias.trim()) {
-            cfg.to_ref.alias = cfg.from_ref.alias;
-            toAliasInput.value = cfg.to_ref.alias;
+          const fromRaw = String(cfg.fields.from || "");
+          const sep = fromRaw.indexOf("::");
+          if (sep < 0) {
+            setStatus("Set from as alias::regex first.");
+            return;
           }
-          toFilterInput.value = next;
-          binaryToSummary.textContent = describeCommit(cfg.to_ref);
+          const alias = fromRaw.slice(0, sep);
+          const expr = fromRaw.slice(sep + 2);
+          const templ = copyFromFilterToToTemplate(expr);
+          cfg.fields.to = alias + "::" + (templ || ".*");
+          renderTransformPanel();
           setStatus("Copied from filter into to for " + selectedTransform + ".");
         });
-        binaryExtras.appendChild(copyBtn);
+        transformFields.appendChild(copyBtn);
       }
 
-      const extraKeys = Array.isArray(meta.extra_keys) ? meta.extra_keys : [];
-      const required = new Set(Array.isArray(meta.required_extra_keys) ? meta.required_extra_keys : []);
-      for (const key of extraKeys) {
-        const input = document.createElement("input");
-        input.placeholder = key + (required.has(key) ? " (required)" : " (optional)");
-        input.value = cfg.extras[key] == null ? "" : String(cfg.extras[key]);
-        input.addEventListener("input", () => {
-          cfg.extras[key] = input.value;
-        });
-        binaryExtras.appendChild(input);
-      }
-      binaryPanel.classList.remove("hidden");
+      transformPanel.classList.remove("hidden");
     }
 
     function updatePanels() {
       const showLoad = selectedTransform === "load";
-      const showBinary = isBinaryTransform(selectedTransform);
+      const showTransform = isRunnableTransform(selectedTransform);
+      const hasSelection = !!selectedTransform;
       loadPanel.classList.toggle("hidden", !showLoad);
-      binaryPanel.classList.toggle("hidden", !showBinary);
-      optionsEmpty.classList.toggle("hidden", showLoad || showBinary);
-      renderBinaryPanel();
+      transformPanel.classList.toggle("hidden", !showTransform);
+      optionsEmpty.classList.toggle("hidden", hasSelection);
+      renderTransformPanel();
       if (selectedTransform === "load") {
         setStatus("Load is selected. Pick a file to import a model.");
       } else if (!isReadyTransform(selectedTransform)) {
         setStatus("Selected " + selectedTransform + " is planned and not interactive yet.");
-      } else if (showBinary) {
-        setStatus("Selected " + selectedTransform + ".");
+      } else if (!hasSelection) {
+        setStatus("Ready.");
       } else {
         setStatus("Selected " + selectedTransform + ".");
       }
@@ -1016,10 +1012,9 @@ _HTML_PAGE = """<!doctype html>
 
       for (const model of models) {
         if (!modelViewState[model.alias]) {
-          modelViewState[model.alias] = { format: "compact", filter: "", valid: true };
+          modelViewState[model.alias] = { format: "compact", verbosity: "shape", filter: "", valid: true };
         }
         const state = modelViewState[model.alias];
-
         const pane = document.createElement("div");
         pane.className = "model-pane";
 
@@ -1032,11 +1027,7 @@ _HTML_PAGE = """<!doctype html>
         right.style.alignItems = "center";
         right.style.gap = "6px";
         const count = document.createElement("span");
-        count.textContent = tensorCountText(
-          model.matched_count || model.tensor_count,
-          model.total_count || model.tensor_count,
-          state.filter || ""
-        );
+        count.textContent = tensorCountText(model.matched_count || model.tensor_count, model.total_count || model.tensor_count, state.filter || "");
         right.appendChild(count);
         head.appendChild(left);
         head.appendChild(right);
@@ -1046,56 +1037,42 @@ _HTML_PAGE = """<!doctype html>
         const formatSelect = document.createElement("select");
         formatSelect.innerHTML = "<option value='compact'>compact</option><option value='tree'>tree</option>";
         formatSelect.value = state.format;
+        const verbositySelect = document.createElement("select");
+        verbositySelect.innerHTML = "<option value='shape'>shape</option><option value='stat'>stat</option>";
+        verbositySelect.value = state.verbosity || "shape";
         const filterInput = document.createElement("input");
         filterInput.placeholder = "regex or JSON list";
         filterInput.value = state.filter;
         const livePill = document.createElement("span");
         livePill.className = "live-pill";
         livePill.textContent = "live";
-        const fromBtn = document.createElement("button");
-        fromBtn.className = "mini-btn";
-        fromBtn.textContent = "from";
-        const toBtn = document.createElement("button");
-        toBtn.className = "mini-btn";
-        toBtn.textContent = "to";
+        const commitWrap = document.createElement("div");
+        commitWrap.className = "commit-wrap";
 
-        const updateCommitButtons = () => {
-          const canCommit = isBinaryTransform(selectedTransform) && state.valid;
-          fromBtn.classList.toggle("hidden", !canCommit);
-          toBtn.classList.toggle("hidden", !(canCommit && toMustExist(selectedTransform)));
-        };
-
-        fromBtn.addEventListener("click", () => {
-          if (!isBinaryTransform(selectedTransform) || !state.valid) return;
+        const renderCommitButtons = () => {
+          commitWrap.innerHTML = "";
           const meta = getTransformMeta(selectedTransform);
-          const cfg = getBinaryConfig(selectedTransform);
-          cfg.from_ref = { alias: model.alias, filter: filterInput.value };
-          if (!meta.to_must_exist) {
-            cfg.to_ref = ensureRefObject(cfg.to_ref);
-            if (!cfg.to_ref.alias.trim()) cfg.to_ref.alias = model.alias;
-            cfg.to_ref.filter = copyFromFilterToToTemplate(filterInput.value);
+          const canCommit = !!meta && isRunnableTransform(selectedTransform) && state.valid;
+          if (!canCommit) return;
+          const keys = Array.isArray(meta.reference_keys) ? meta.reference_keys : [];
+          for (const key of keys) {
+            if (meta.kind === "binary" && key === "to" && !meta.to_must_exist) continue;
+            const btn = document.createElement("button");
+            btn.className = "mini-btn";
+            btn.textContent = key;
+            btn.addEventListener("click", () => commitRefFromModel(key, model.alias, filterInput.value));
+            commitWrap.appendChild(btn);
           }
-          renderBinaryPanel();
-          setStatus("Committed from for " + selectedTransform + " from " + model.alias + ".");
-        });
-        toBtn.addEventListener("click", () => {
-          if (!isBinaryTransform(selectedTransform) || !state.valid || !toMustExist(selectedTransform)) return;
-          const cfg = getBinaryConfig(selectedTransform);
-          cfg.to_ref = { alias: model.alias, filter: filterInput.value };
-          renderBinaryPanel();
-          setStatus("Committed to for " + selectedTransform + " from " + model.alias + ".");
-        });
+        };
 
         const pre = document.createElement("pre");
-        const dumps = {
-          compact: model.dump_compact || "",
-          tree: model.dump_tree || model.dump_compact || ""
-        };
+        const dumps = { compact: model.dump_compact || "", tree: model.dump_tree || model.dump_compact || "" };
         pre.textContent = dumps[formatSelect.value] || "";
 
         let debounceHandle = null;
         const requestDump = async () => {
           state.format = formatSelect.value;
+          state.verbosity = verbositySelect.value;
           state.filter = filterInput.value;
           setStatus("Applying filter for " + model.alias + "...");
           try {
@@ -1105,6 +1082,7 @@ _HTML_PAGE = """<!doctype html>
               body: JSON.stringify({
                 alias: model.alias,
                 format: formatSelect.value,
+                verbosity: verbositySelect.value,
                 filter: filterInput.value
               })
             });
@@ -1112,40 +1090,37 @@ _HTML_PAGE = """<!doctype html>
             if (!response.ok || !data.ok) {
               state.valid = false;
               filterInput.classList.add("invalid-field");
-              updateCommitButtons();
+              renderCommitButtons();
               setStatus("Dump failed for " + model.alias + ": " + (data.error || "unknown error"));
               return;
             }
             state.valid = true;
             filterInput.classList.remove("invalid-field");
             pre.textContent = data.dump || "";
-            count.textContent = tensorCountText(
-              data.matched_count || 0,
-              data.total_count || 0,
-              filterInput.value
-            );
-            updateCommitButtons();
+            count.textContent = tensorCountText(data.matched_count || 0, data.total_count || 0, filterInput.value);
+            renderCommitButtons();
             setStatus("Updated dump for " + model.alias + ".");
           } catch (err) {
             state.valid = false;
             filterInput.classList.add("invalid-field");
-            updateCommitButtons();
+            renderCommitButtons();
             setStatus("Dump failed for " + model.alias + ": " + String(err));
           }
         };
 
         formatSelect.addEventListener("change", () => requestDump());
+        verbositySelect.addEventListener("change", () => requestDump());
         filterInput.addEventListener("input", () => {
           clearTimeout(debounceHandle);
           debounceHandle = setTimeout(requestDump, 220);
         });
 
         controls.appendChild(formatSelect);
+        controls.appendChild(verbositySelect);
         controls.appendChild(filterInput);
         controls.appendChild(livePill);
-        controls.appendChild(fromBtn);
-        controls.appendChild(toBtn);
-        updateCommitButtons();
+        controls.appendChild(commitWrap);
+        renderCommitButtons();
 
         pane.appendChild(head);
         pane.appendChild(controls);
@@ -1156,26 +1131,19 @@ _HTML_PAGE = """<!doctype html>
 
     async function refresh() {
       try {
-        const [transformsRes, stateRes] = await Promise.all([
-          fetch("/api/transforms"),
-          fetch("/api/state")
-        ]);
+        const [transformsRes, stateRes] = await Promise.all([fetch("/api/transforms"), fetch("/api/state")]);
         const transformsData = await transformsRes.json();
         const stateData = await stateRes.json();
-
         if (transformsData.ok && Array.isArray(transformsData.transforms)) {
           allTransforms = transformsData.transforms;
-          if (!allTransforms.some((item) => item.name === selectedTransform && item.enabled)) {
+          if (selectedTransform && !allTransforms.some((item) => item.name === selectedTransform && item.enabled)) {
             selectedTransform = allTransforms.some((item) => item.name === "load" && item.enabled)
               ? "load"
-              : (allTransforms.find((item) => item.enabled)?.name || "load");
+              : (allTransforms.find((item) => item.enabled)?.name || "");
           }
         }
         renderTransforms();
-
-        if (stateData.ok) {
-          latestModels = stateData.models || [];
-        }
+        if (stateData.ok) latestModels = stateData.models || [];
         renderModels(latestModels);
         updatePanels();
       } catch (err) {
@@ -1186,15 +1154,9 @@ _HTML_PAGE = """<!doctype html>
     }
 
     loadBtn.addEventListener("click", async () => {
-      if (selectedTransform !== "load") {
-        setStatus("Select load first.");
-        return;
-      }
+      if (selectedTransform !== "load") { setStatus("Select load first."); return; }
       const file = fileInput.files && fileInput.files[0];
-      if (!file) {
-        setStatus("Pick a model file first.");
-        return;
-      }
+      if (!file) { setStatus("Pick a model file first."); return; }
 
       setStatus("Reading file...");
       loadBtn.disabled = true;
@@ -1203,9 +1165,7 @@ _HTML_PAGE = """<!doctype html>
         const bytes = new Uint8Array(await file.arrayBuffer());
         let binary = "";
         const chunk = 0x8000;
-        for (let i = 0; i < bytes.length; i += chunk) {
-          binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-        }
+        for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
         payload.filename = file.name;
         payload.content_b64 = btoa(binary);
 
@@ -1216,13 +1176,12 @@ _HTML_PAGE = """<!doctype html>
           body: JSON.stringify(payload)
         });
         const data = await response.json();
-        if (!response.ok || !data.ok) {
-          setStatus("Load failed: " + (data.error || "unknown error"));
-          return;
-        }
+        if (!response.ok || !data.ok) { setStatus("Load failed: " + (data.error || "unknown error")); return; }
         latestModels = data.models || [];
         renderModels(latestModels);
         resetTransformSearch();
+        renderTransforms();
+        updatePanels();
         setStatus("Load completed successfully.");
       } catch (err) {
         setStatus("Load failed: " + String(err));
@@ -1231,65 +1190,80 @@ _HTML_PAGE = """<!doctype html>
       }
     });
 
-    binaryRunBtn.addEventListener("click", async () => {
-      if (!isBinaryTransform(selectedTransform)) {
-        setStatus("Select a READY transform first.");
-        return;
-      }
-      const meta = getTransformMeta(selectedTransform);
-      const cfg = getBinaryConfig(selectedTransform);
-      cfg.from_ref = ensureRefObject(cfg.from_ref);
-      cfg.to_ref = ensureRefObject(cfg.to_ref);
-      if (!cfg.from_ref.alias.trim() || !cfg.to_ref.alias.trim()) {
-        setStatus("Set both from and to aliases before running " + selectedTransform + ".");
-        return;
-      }
+    transformRunBtn.addEventListener("click", async () => {
+      if (!isRunnableTransform(selectedTransform)) { setStatus("Select a READY transform first."); return; }
+      const runTransformName = selectedTransform;
+      const meta = getTransformMeta(runTransformName);
+      const cfg = getTransformConfig(runTransformName);
+      const allowed = Array.isArray(meta.allowed_keys) ? meta.allowed_keys : [];
+      const required = new Set(Array.isArray(meta.required_keys) ? meta.required_keys : []);
+      const payload = {};
 
-      const required = new Set(Array.isArray(meta.required_extra_keys) ? meta.required_extra_keys : []);
-      const extrasPayload = {};
-      for (const key of (Array.isArray(meta.extra_keys) ? meta.extra_keys : [])) {
-        const parsed = parseExtraValue(cfg.extras[key] == null ? "" : String(cfg.extras[key]));
+      for (const key of allowed) {
+        const parsed = parseFieldValue(cfg.fields[key] == null ? "" : String(cfg.fields[key]));
         if (parsed === undefined) {
-          if (required.has(key)) {
-            setStatus("Missing required parameter: " + key);
-            return;
-          }
+          if (required.has(key)) { setStatus("Missing required parameter: " + key); return; }
           continue;
         }
-        extrasPayload[key] = parsed;
+        payload[key] = parsed;
       }
 
-      setStatus("Applying " + selectedTransform + "...");
-      binaryRunBtn.disabled = true;
+      setStatus("Applying " + runTransformName + "...");
+      transformRunBtn.disabled = true;
       try {
-        const response = await fetch("/api/apply_binary_transform", {
+        const response = await fetch("/api/apply_transform", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            transform: selectedTransform,
-            from_ref: cfg.from_ref,
-            to_ref: cfg.to_ref,
-            extras: extrasPayload
-          })
+          body: JSON.stringify({ transform: runTransformName, payload: payload })
         });
         const data = await response.json();
-        if (!response.ok || !data.ok) {
-          setStatus("Apply failed: " + (data.error || "unknown error"));
-          return;
-        }
+        if (!response.ok || !data.ok) { setStatus("Apply failed: " + (data.error || "unknown error")); return; }
         latestModels = data.models || [];
         renderModels(latestModels);
         resetTransformSearch();
-        setStatus("Applied " + selectedTransform + " successfully.");
+        renderTransforms();
+        updatePanels();
+        setStatus("Applied " + runTransformName + " successfully.");
+        appendResultBlock(runTransformName, data.output || "");
       } catch (err) {
         setStatus("Apply failed: " + String(err));
       } finally {
-        binaryRunBtn.disabled = false;
+        transformRunBtn.disabled = false;
       }
     });
 
-    transformSearchEl.addEventListener("input", () => renderTransforms());
+    clearResultsBtn.addEventListener("click", () => {
+      resultsOutput.textContent = "(no transform output yet)";
+      setStatus("Results cleared.");
+    });
+    resultsToggleBtn.addEventListener("click", () => {
+      const collapsing = !resultsPanelBody.classList.contains("hidden");
+      resultsPanelBody.classList.toggle("hidden", collapsing);
+      resultsToggleBtn.textContent = collapsing ? "Expand" : "Collapse";
+    });
+    optionsToggleBtn.addEventListener("click", () => {
+      const collapsing = !optionsPanelBody.classList.contains("hidden");
+      optionsPanelBody.classList.toggle("hidden", collapsing);
+      optionsToggleBtn.textContent = collapsing ? "Expand" : "Collapse";
+    });
+    clearOptionsBtn.addEventListener("click", () => {
+      if (selectedTransform === "load") {
+        aliasInput.value = "";
+        fileInput.value = "";
+        setStatus("Cleared load options.");
+        return;
+      }
+      if (isRunnableTransform(selectedTransform)) {
+        const cfg = getTransformConfig(selectedTransform);
+        cfg.fields = {};
+        renderTransformPanel();
+        setStatus("Cleared " + selectedTransform + " options.");
+        return;
+      }
+      setStatus("Nothing to clear.");
+    });
 
+    transformSearchEl.addEventListener("input", () => renderTransforms());
     transformSearchEl.value = "";
     renderTransforms();
     updatePanels();
