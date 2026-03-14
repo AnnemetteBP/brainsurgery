@@ -995,7 +995,7 @@ HTML_PAGE = """<!doctype html>
         updatePanels();
         if (runTransformName === "exit") {
           const exitText = (data.output && data.output.trim()) ? data.output : "(no output)";
-          resultsOutput.textContent = exitText;
+          appendResultBlock(runTransformName, exitText);
           if (cfg.fields.exit_auto_copy && exitText !== "(no output)") {
             const copied = await copyTextToClipboard(exitText);
             setStatus(

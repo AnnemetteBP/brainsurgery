@@ -142,7 +142,8 @@ def apply_transform(
     provider: Any,
     transform_name: str,
     payload: Any,
-) -> str:
+    default_model: str | None = None,
+) -> tuple[str, str | None]:
     transform = get_transform(transform_name)
     if transform_name in DISABLED_TRANSFORMS:
         raise ValueError(f"transform {transform_name!r} is disabled in webui.")
@@ -157,15 +158,22 @@ def apply_transform(
         except Exception as exc:
             raise ValueError(f"invalid assert YAML payload: {exc}") from exc
 
-    aliases = sorted(list_model_aliases(provider))
-    default_model = aliases[0] if len(aliases) == 1 else None
+    if default_model is None:
+        aliases = sorted(list_model_aliases(provider))
+        default_model = aliases[0] if len(aliases) == 1 else None
 
     reset_runtime_flags()
     lines: list[str] = []
     with use_output_emitter(lines.append):
         spec = transform.compile(payload, default_model=default_model)
         transform.apply(spec, provider)
-    return "\n".join(lines)
+    next_default_model = default_model
+    try:
+        if transform.contributes_output_model(spec):
+            next_default_model = transform.infer_output_model(spec)
+    except Exception:
+        next_default_model = default_model
+    return "\n".join(lines), next_default_model
 
 
 def apply_load_transform(*, provider: Any, path: Path, alias: str) -> None:

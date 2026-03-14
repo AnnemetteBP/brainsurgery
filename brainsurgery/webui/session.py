@@ -12,6 +12,7 @@ class SessionState:
     lock: threading.Lock
     upload_root: Path
     executed_transforms: list[dict[str, Any]] = field(default_factory=list)
+    default_model: str | None = None
 
 
 __all__ = ["SessionState"]

@@ -79,6 +79,7 @@ def handler_factory(session: SessionState):
                     try:
                         chosen_alias = alias_clean or default_alias(session.provider)
                         apply_load_transform(provider=session.provider, path=load_path, alias=chosen_alias)
+                        session.default_model = chosen_alias
                         session.executed_transforms.append(
                             {"load": {"path": str(load_path), "alias": chosen_alias}}
                         )
@@ -114,11 +115,13 @@ def handler_factory(session: SessionState):
                                 payload = OmegaConf.to_container(parsed, resolve=True)
                             except Exception as exc:
                                 raise ValueError(f"invalid assert YAML payload: {exc}") from exc
-                        output = apply_transform(
+                        output, next_default_model = apply_transform(
                             provider=session.provider,
                             transform_name=transform_name,
                             payload=payload,
+                            default_model=session.default_model,
                         )
+                        session.default_model = next_default_model
                         session.executed_transforms.append({transform_name: copy.deepcopy(payload)})
                         if transform_name == "exit":
                             summary = render_execution_summary(
@@ -227,11 +230,13 @@ def handler_factory(session: SessionState):
                 out_path = tmp_root / requested_name
                 payload_copy["path"] = str(out_path)
 
-                output = apply_transform(
+                output, next_default_model = apply_transform(
                     provider=session.provider,
                     transform_name="save",
                     payload=payload_copy,
+                    default_model=session.default_model,
                 )
+                session.default_model = next_default_model
 
                 if out_path.is_dir():
                     raise ValueError(
