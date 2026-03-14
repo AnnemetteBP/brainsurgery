@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from ..engine import get_runtime_flags
 from ..core import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..core import ResolvedMapping

@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Literal
 
-import torch
+import torch as torch_lib
 
 from .dcp import (
     _detect_layout as detect_torch_distributed_checkpoint_layout,
@@ -57,7 +55,7 @@ def load_tensor_from_path(
     path: Path,
     *,
     format: TensorLoadFormat = "auto",
-) -> torch.Tensor:
+) -> torch_lib.Tensor:
     format_name = infer_tensor_file_format(path) if format == "auto" else format
 
     if format_name == "numpy":
@@ -69,7 +67,7 @@ def load_tensor_from_path(
 
 def save_tensor_to_path(
     tensor_name: str,
-    tensor: torch.Tensor,
+    tensor: torch_lib.Tensor,
     path: Path,
     *,
     format: Literal["safetensors", "torch", "numpy"],

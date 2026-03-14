@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from ..core import ResolvedMapping
 from ..core import ResolvedTernaryMapping
 from .flags import get_runtime_flags

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from ..core import UnarySpec, UnaryTransform
 from ..core import TensorRef, must_model
 from ..core import register_transform

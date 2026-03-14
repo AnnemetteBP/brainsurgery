@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .plan import SurgeryPlan
 from ..core import StateDictProvider, TransformError
 

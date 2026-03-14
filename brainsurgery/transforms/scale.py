@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor

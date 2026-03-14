@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from ..core import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
 from ..core import ResolvedMapping
 from ..core import TensorRef, parse_slice, select_tensor

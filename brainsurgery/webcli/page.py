@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 HTML_PAGE = """<!doctype html>
 <html lang="en">
 <head>
