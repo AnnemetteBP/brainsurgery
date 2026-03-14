@@ -5,13 +5,13 @@ import webbrowser
 
 import typer
 
-from .server import serve_webui
+from .server import serve_webcli
 
 
 logger = logging.getLogger("brainsurgery")
 _ALLOWED_LOG_LEVELS = {"debug", "info", "warning", "error", "critical"}
 
-app = typer.Typer(help="Brain surgery web UI.")
+app = typer.Typer(help="Brain surgery web CLI UI.")
 
 
 def configure_logging(log_level: str) -> None:
@@ -26,14 +26,14 @@ def configure_logging(log_level: str) -> None:
 
 
 @app.callback(invoke_without_command=True)
-def webui(
+def webcli(
     host: str = typer.Option(
         "127.0.0.1",
-        help="Host interface to bind the web UI server.",
+        help="Host interface to bind the web CLI server.",
     ),
     port: int = typer.Option(
         8765,
-        help="Port for the web UI server.",
+        help="Port for the web CLI server.",
     ),
     log_level: str = typer.Option(
         "info",
@@ -43,19 +43,19 @@ def webui(
     open_browser: bool = typer.Option(
         True,
         "--open-browser/--no-open-browser",
-        help="Open the web UI URL in the default browser on startup.",
+        help="Open the web CLI URL in the default browser on startup.",
     ),
 ) -> None:
     configure_logging(log_level)
     url_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
     url = f"http://{url_host}:{port}"
-    logger.info("Launching BrainSurgery web UI on %s", url)
+    logger.info("Launching BrainSurgery web CLI on %s", url)
     if open_browser:
         try:
             webbrowser.open(url)
         except Exception as exc:
             logger.warning("Could not open browser automatically: %s", exc)
-    serve_webui(host=host, port=port)
+    serve_webcli(host=host, port=port)
 
 
-__all__ = ["app", "configure_logging", "webui", "logger"]
+__all__ = ["app", "configure_logging", "webcli", "logger"]
