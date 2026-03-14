@@ -1,9 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Protocol, runtime_checkable
 
-from ..core import CompiledTransform, get_transform
-from ..core import TransformError
+from ..core import CompiledTransform, TransformError, get_transform
+from .execution import _execute_transform_pairs
 
 
 class PlanLoaderError(RuntimeError):
@@ -17,12 +17,117 @@ class _OutputSpec:
     shard: Optional[str] = None
 
 
-@dataclass(frozen=True)
-class _SurgeryPlan:
+@dataclass
+class PlanStep:
+    raw: dict[str, Any]
+    compiled: CompiledTransform | None = None
+    status: Literal["pending", "running", "done", "failed", "skipped"] = "pending"
+    error: str | None = None
+
+
+@dataclass
+class SurgeryPlan:
     inputs: Dict[str, Path]
     output: _OutputSpec | None
-    transforms: List[CompiledTransform]
+    steps: list[PlanStep] = field(default_factory=list)
 
+    @property
+    def transforms(self) -> List[CompiledTransform]:
+        return [step.compiled for step in self.steps if step.compiled is not None]
+
+    @property
+    def executed_raw_transforms(self) -> list[dict[str, Any]]:
+        return [step.raw for step in self.steps if step.status == "done"]
+
+    def append_raw_transform(self, raw: dict[str, Any]) -> PlanStep:
+        step = PlanStep(raw=raw)
+        self.steps.append(step)
+        return step
+
+    def append_raw_transforms(self, raws: list[dict[str, Any]]) -> None:
+        for raw in raws:
+            self.append_raw_transform(raw)
+
+    def record_executed_raw(self, raw: dict[str, Any]) -> PlanStep:
+        step = self.append_raw_transform(raw)
+        step.status = "done"
+        return step
+
+    def compile_pending(
+        self,
+        *,
+        extra_known_models: set[str] | None = None,
+        default_model: str | None = None,
+    ) -> None:
+        if default_model is None and len(self.inputs) == 1:
+            default_model = next(iter(self.inputs.keys()))
+
+        known_models = set(self.inputs.keys())
+        if extra_known_models is not None:
+            known_models.update(extra_known_models)
+
+        for index, step in enumerate(self.steps):
+            if step.compiled is None:
+                step.compiled = parse_transform_entry(
+                    step.raw,
+                    index,
+                    known_models,
+                    default_model,
+                )
+                step.status = "pending"
+                step.error = None
+
+            try:
+                output_model = step.compiled.transform._infer_output_model(step.compiled.spec)
+            except TransformError:
+                output_model = None
+            if output_model:
+                known_models.add(output_model)
+
+    def execute_pending(self, state_dict_provider: Any, *, interactive: bool) -> bool:
+        pending_steps = [step for step in self.steps if step.compiled is not None and step.status == "pending"]
+        pairs = [(step.raw, step.compiled) for step in pending_steps if step.compiled is not None]
+
+        for step in pending_steps:
+            step.status = "running"
+            step.error = None
+
+        should_continue, executed = _execute_transform_pairs(
+            pairs,
+            state_dict_provider,
+            interactive=interactive,
+        )
+
+        executed_count = len(executed)
+        for index, step in enumerate(pending_steps):
+            if index < executed_count:
+                step.status = "done"
+                continue
+            if step.status == "running":
+                step.status = "failed" if interactive else "pending"
+                if interactive:
+                    step.error = "interactive execution stopped on transform error"
+            break
+
+        return should_continue
+
+    def to_raw_plan(self, *, executed_only: bool) -> dict[str, Any]:
+        transforms = self.executed_raw_transforms if executed_only else [step.raw for step in self.steps]
+        raw: dict[str, Any] = {
+            "inputs": [f"{alias}::{path}" for alias, path in self.inputs.items()],
+            "transforms": transforms,
+        }
+        if self.output is not None:
+            if self.output.format is None and self.output.shard is None:
+                raw["output"] = str(self.output.path)
+            else:
+                output: dict[str, Any] = {"path": str(self.output.path)}
+                if self.output.format is not None:
+                    output["format"] = self.output.format
+                if self.output.shard is not None:
+                    output["shard"] = self.output.shard
+                raw["output"] = output
+        return raw
 
 @runtime_checkable
 class ModelCollectingSpec(Protocol):
@@ -30,15 +135,21 @@ class ModelCollectingSpec(Protocol):
         ...
 
 
-def compile_plan(raw: Any) -> _SurgeryPlan:
+def compile_plan(raw: Any) -> SurgeryPlan:
     if not isinstance(raw, dict):
         raise PlanLoaderError("plan must be a YAML mapping")
 
     inputs = parse_inputs(raw.get("inputs"))
     output = parse_output(raw.get("output"))
-    transforms = parse_transforms(raw.get("transforms"), inputs)
+    raw_transforms = parse_raw_transforms(raw.get("transforms"))
+    compiled_transforms = parse_transforms(raw.get("transforms"), inputs)
 
-    return _SurgeryPlan(inputs=inputs, output=output, transforms=transforms)
+    steps = [
+        PlanStep(raw=raw_transform, compiled=compiled_transform)
+        for raw_transform, compiled_transform in zip(raw_transforms, compiled_transforms, strict=False)
+    ]
+    plan = SurgeryPlan(inputs=inputs, output=output, steps=steps)
+    return plan
 
 
 def parse_inputs(raw: Any) -> Dict[str, Path]:
@@ -134,20 +245,25 @@ def parse_output_mapping(raw: Dict[str, Any]) -> _OutputSpec:
     )
 
 
-def parse_transforms(raw: Any, inputs: Dict[str, Path]) -> List[CompiledTransform]:
+def parse_raw_transforms(raw: Any) -> list[dict[str, Any]]:
     if raw is None:
         return []
 
     if not isinstance(raw, list):
         raise PlanLoaderError("transforms must be a list when provided")
 
+    return [parse_raw_transform_entry(item, index=i) for i, item in enumerate(raw)]
+
+
+def parse_transforms(raw: Any, inputs: Dict[str, Path]) -> List[CompiledTransform]:
+    raw_transforms = parse_raw_transforms(raw)
     default_model: Optional[str] = None
     if len(inputs) == 1:
         default_model = next(iter(inputs.keys()))
 
     parsed: List[CompiledTransform] = []
     known_models = set(inputs.keys())
-    for idx, item in enumerate(raw):
+    for idx, item in enumerate(raw_transforms):
         compiled = parse_transform_entry(item, idx, known_models, default_model)
         parsed.append(compiled)
 
@@ -161,19 +277,24 @@ def parse_transforms(raw: Any, inputs: Dict[str, Path]) -> List[CompiledTransfor
     return parsed
 
 
+def parse_raw_transform_entry(raw: Any, *, index: int) -> dict[str, Any]:
+    if not isinstance(raw, dict) or len(raw) != 1:
+        raise PlanLoaderError(f"transform #{index} must be a single-key mapping")
+
+    op_name, _payload = next(iter(raw.items()))
+    if not isinstance(op_name, str) or not op_name:
+        raise PlanLoaderError(f"transform #{index}: operation name must be a non-empty string")
+
+    return raw
+
+
 def parse_transform_entry(
-    raw: Any,
+    raw: dict[str, Any],
     index: int,
     known_models: set[str],
     default_model: Optional[str],
 ) -> CompiledTransform:
-    if not isinstance(raw, dict) or len(raw) != 1:
-        raise PlanLoaderError(f"transform #{index} must be a single-key mapping")
-
     op_name, payload = next(iter(raw.items()))
-
-    if not isinstance(op_name, str) or not op_name:
-        raise PlanLoaderError(f"transform #{index}: operation name must be a non-empty string")
 
     try:
         transform = get_transform(op_name)

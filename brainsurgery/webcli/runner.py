@@ -9,7 +9,6 @@ from ..cli import normalize_transform_specs, build_raw_plan
 from ..engine import (
     compile_plan,
     create_state_dict_provider,
-    execute_transform_pairs,
     get_runtime_flags,
     reset_runtime_flags,
     use_output_emitter,
@@ -36,6 +35,13 @@ def _run_web_plan(
         raw = {}
     if not isinstance(raw, dict):
         raise ValueError("Plan YAML root must be a mapping.")
+    normalized_transforms = normalize_transform_specs(raw.get("transforms"))
+    planned_raw = {
+        "inputs": raw.get("inputs", []),
+        "transforms": normalized_transforms,
+    }
+    if "output" in raw:
+        planned_raw["output"] = raw.get("output")
 
     _configure_logging(log_level=log_level)
     reset_runtime_flags()
@@ -54,7 +60,7 @@ def _run_web_plan(
 
     state_dict_provider = None
     try:
-        surgery_plan = compile_plan(raw)
+        surgery_plan = compile_plan(planned_raw)
         state_dict_provider = create_state_dict_provider(
             provider=provider,
             model_paths=surgery_plan.inputs,
@@ -62,18 +68,12 @@ def _run_web_plan(
             arena_root=arena_root,
             arena_segment_size=arena_segment_size,
         )
-        configured_pairs = zip(
-            normalize_transform_specs(raw.get("transforms")),
-            surgery_plan.transforms,
-            strict=False,
-        )
-
         with use_output_emitter(output_lines.append):
-            _, executed_transforms = execute_transform_pairs(
-                configured_pairs,
+            surgery_plan.execute_pending(
                 state_dict_provider,
                 interactive=False,
             )
+            executed_transforms = surgery_plan.executed_raw_transforms
 
             if surgery_plan.output is None:
                 logger.info("No output configured; execution finished without save.")
@@ -128,4 +128,3 @@ class _ListLogHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         self._sink.append(self.format(record))
-

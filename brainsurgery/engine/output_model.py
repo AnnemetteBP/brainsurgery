@@ -1,9 +1,9 @@
-from .plan import _SurgeryPlan
+from .plan import SurgeryPlan
 from ..core import StateDictProvider, TransformError
 
 
 def _infer_output_model(
-    plan: _SurgeryPlan,
+    plan: SurgeryPlan,
     provider: StateDictProvider | None = None,
 ) -> str:
     destination_models = set()

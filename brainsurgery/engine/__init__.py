@@ -1,4 +1,3 @@
-from .execution import execute_transform_pairs
 from .arena import ProviderError
 from .providers import (
     BaseStateDictProvider,
@@ -14,7 +13,10 @@ from .provider_utils import (
     resolve_single_model_alias,
 )
 from .render import render_tree, summarize_tensor
-from .plan import compile_plan
+from .plan import (
+    compile_plan,
+    SurgeryPlan,
+)
 from .frontend import emit_line, use_output_emitter
 from .checkpoint_io import persist_state_dict, tqdm
 from .tensor_files import load_tensor_from_path, save_tensor_to_path

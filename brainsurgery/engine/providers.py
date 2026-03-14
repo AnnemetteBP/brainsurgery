@@ -6,7 +6,7 @@ from .arena import ProviderError, _SegmentedFileBackedArena
 from .checkpoint_io import _load_state_dict_from_path, persist_state_dict
 from .output_model import _infer_output_model
 from .output_paths import parse_shard_size, _resolve_output_destination
-from .plan import _SurgeryPlan
+from .plan import SurgeryPlan
 from .state_dicts import _ArenaStateDict, _InMemoryStateDict
 from ..core import StateDictLike
 
@@ -81,7 +81,7 @@ class BaseStateDictProvider:
 
     def save_output(
         self,
-        plan: _SurgeryPlan,
+        plan: SurgeryPlan,
         *,
         default_shard_size: str,
         max_io_workers: int,

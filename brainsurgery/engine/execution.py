@@ -6,7 +6,7 @@ from ..core import CompiledTransform, TransformControl, apply_transform
 logger = logging.getLogger("brainsurgery")
 
 
-def execute_transform_pairs(
+def _execute_transform_pairs(
     pairs: Iterable[tuple[dict[str, Any], CompiledTransform]],
     state_dict_provider: Any,
     *,

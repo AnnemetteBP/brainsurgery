@@ -85,9 +85,7 @@ def _handler_factory(session: _SessionState):
                         chosen_alias = alias_clean or _default_alias(session.provider)
                         _apply_load_transform(provider=session.provider, path=load_path, alias=chosen_alias)
                         session.default_model = chosen_alias
-                        session.executed_transforms.append(
-                            {"load": {"path": str(load_path), "alias": chosen_alias}}
-                        )
+                        session.plan.record_executed_raw({"load": {"path": str(load_path), "alias": chosen_alias}})
                         models = _serialize_models(session.provider)
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -133,11 +131,11 @@ def _handler_factory(session: _SessionState):
                             default_model=session.default_model,
                         )
                         session.default_model = next_default_model
-                        session.executed_transforms.append({transform_name: copy.deepcopy(payload)})
+                        session.plan.record_executed_raw({transform_name: copy.deepcopy(payload)})
                         if transform_name == "exit":
                             summary = _render_execution_summary(
                                 provider=session.provider,
-                                executed_transforms=session.executed_transforms,
+                                executed_transforms=session.plan.executed_raw_transforms,
                             )
                             output = f"{output}\n\n{summary}".strip() if output else summary
                         models = _serialize_models(session.provider)
@@ -169,7 +167,7 @@ def _handler_factory(session: _SessionState):
                 with session.lock:
                     try:
                         output, filename, mime, content_b64 = self._run_save_download(payload)
-                        session.executed_transforms.append({"save": copy.deepcopy(payload)})
+                        session.plan.record_executed_raw({"save": copy.deepcopy(payload)})
                         models = _serialize_models(session.provider)
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
