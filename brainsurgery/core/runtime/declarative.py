@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Callable, TypeVar
 import re
 
-from .refs import TensorRef, parse_slice
+from ..specs import TensorRef, parse_slice
 from .transform import (
     BinaryMappingSpec,
     BinaryMappingTransform,
@@ -14,8 +14,8 @@ from .transform import (
     UnarySpec,
     UnaryTransform,
 )
-from .types import StateDictProvider, TransformError
-from .validation import ensure_mapping_payload, validate_payload_keys
+from ..specs import StateDictProvider, TransformError
+from ..specs import ensure_mapping_payload, validate_payload_keys
 
 UnarySpecT = TypeVar("UnarySpecT", bound=UnarySpec)
 BinarySpecT = TypeVar("BinarySpecT", bound=BinaryMappingSpec)

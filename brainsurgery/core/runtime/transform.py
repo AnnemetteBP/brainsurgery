@@ -6,7 +6,7 @@ from typing import Dict, Generic, Iterable, List, Literal, TypeVar
 
 from tqdm import tqdm
 
-from .name_mapping import (
+from ..compile import (
     _match_structured_expr,
     _rewrite_structured_expr,
     ResolvedMapping,
@@ -15,10 +15,10 @@ from .name_mapping import (
     _require_dest_present,
     resolve_name_mappings,
 )
-from .refs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
-from .resolver import _resolve_target_names as resolve_target_names_generic
-from .types import StateDictProvider, TransformError
-from .validation import ensure_mapping_payload, require_expr, validate_payload_keys
+from ..specs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
+from ..compile import _resolve_target_names as resolve_target_names_generic
+from ..specs import StateDictProvider, TransformError
+from ..specs import ensure_mapping_payload, require_expr, validate_payload_keys
 
 
 class TransformControl(Enum):

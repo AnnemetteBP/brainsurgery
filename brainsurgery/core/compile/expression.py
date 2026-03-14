@@ -4,14 +4,14 @@ from typing import Any, Callable, Protocol
 import torch
 
 from .name_mapping import match_expr_names
-from .refs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
+from ..specs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
 from .resolver import (
     _resolve_tensor_mappings as resolve_tensor_mappings_generic,
     _resolve_tensors as resolve_tensors_generic,
     _resolve_target_names as resolve_target_names_generic,
 )
-from .types import StateDictProvider, TransformError
-from .validation import ensure_mapping_payload, validate_payload_keys
+from ..specs import StateDictProvider, TransformError
+from ..specs import ensure_mapping_payload, validate_payload_keys
 
 
 class Expression(Protocol):

@@ -5,8 +5,8 @@ from typing import List
 import re
 
 from .matching import _MatchError, _StructuredPathMatcher
-from .refs import _Expr, TensorRef, _validate_expr_kind, format_tensor_ref, must_model, parse_slice
-from .types import StateDictProvider, TransformError
+from ..specs import _Expr, TensorRef, _validate_expr_kind, format_tensor_ref, must_model, parse_slice
+from ..specs import StateDictProvider, TransformError
 
 
 _MATCHER = _StructuredPathMatcher()
