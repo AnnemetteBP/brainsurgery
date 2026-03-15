@@ -1,7 +1,7 @@
 import logging
 import re
+import shutil
 import sys
-from dataclasses import dataclass
 from typing import Any
 
 from ..core import get_transform, list_transforms
@@ -9,206 +9,19 @@ from ..engine import (
     list_loaded_tensor_names as list_loaded_tensor_names_from_provider,
     list_model_aliases as list_model_aliases_from_provider,
 )
+from .payload_scan import (
+    _PayloadCursorState,
+    _current_value_fragment,
+    _current_value_key,
+    _find_top_level_colon,
+    _parse_key_from_segment,
+    _payload_context,
+    _payload_cursor_state,
+    _split_top_level_segments,
+)
 
 
 logger = logging.getLogger("brainsurgery")
-_KEY_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
-
-
-@dataclass(frozen=True)
-class _PayloadCursorState:
-    context: str
-    current_key: str | None
-    raw_value_fragment: str | None
-    used_keys: set[str]
-
-
-def _find_top_level_colon(segment: str) -> int | None:
-    brace_depth = 0
-    bracket_depth = 0
-    paren_depth = 0
-    in_single = False
-    in_double = False
-    escaped = False
-
-    for index, ch in enumerate(segment):
-        if in_single:
-            if ch == "'":
-                in_single = False
-            continue
-        if in_double:
-            if escaped:
-                escaped = False
-                continue
-            if ch == "\\":
-                escaped = True
-                continue
-            if ch == '"':
-                in_double = False
-            continue
-        if ch == "'":
-            in_single = True
-            continue
-        if ch == '"':
-            in_double = True
-            continue
-        if ch == "(":
-            paren_depth += 1
-            continue
-        if ch == ")" and paren_depth > 0:
-            paren_depth -= 1
-            continue
-        if ch == "[":
-            bracket_depth += 1
-            continue
-        if ch == "]" and bracket_depth > 0:
-            bracket_depth -= 1
-            continue
-        if ch == "{":
-            brace_depth += 1
-            continue
-        if ch == "}" and brace_depth > 0:
-            brace_depth -= 1
-            continue
-        if ch == ":" and brace_depth == 0 and bracket_depth == 0 and paren_depth == 0:
-            return index
-    return None
-
-
-def _parse_key_from_segment(segment: str) -> str | None:
-    colon_index = _find_top_level_colon(segment)
-    if colon_index is None:
-        return None
-    key = segment[:colon_index].strip()
-    if not _KEY_IDENT_RE.fullmatch(key):
-        return None
-    return key
-
-
-def _split_top_level_segments(payload: str) -> tuple[list[str], str]:
-    working = payload
-    stripped = payload.lstrip()
-    if stripped.startswith("{"):
-        brace_index = payload.find("{")
-        if brace_index >= 0:
-            working = payload[brace_index + 1 :]
-
-    segments: list[str] = []
-    start = 0
-    brace_depth = 0
-    bracket_depth = 0
-    paren_depth = 0
-    in_single = False
-    in_double = False
-    escaped = False
-
-    for index, ch in enumerate(working):
-        if in_single:
-            if ch == "'":
-                in_single = False
-            continue
-        if in_double:
-            if escaped:
-                escaped = False
-                continue
-            if ch == "\\":
-                escaped = True
-                continue
-            if ch == '"':
-                in_double = False
-            continue
-        if ch == "'":
-            in_single = True
-            continue
-        if ch == '"':
-            in_double = True
-            continue
-        if ch == "(":
-            paren_depth += 1
-            continue
-        if ch == ")" and paren_depth > 0:
-            paren_depth -= 1
-            continue
-        if ch == "[":
-            bracket_depth += 1
-            continue
-        if ch == "]" and bracket_depth > 0:
-            bracket_depth -= 1
-            continue
-        if ch == "{":
-            brace_depth += 1
-            continue
-        if ch == "}":
-            if brace_depth == 0:
-                segments.append(working[start:index])
-                return segments[:-1], segments[-1]
-            brace_depth -= 1
-            continue
-        if (
-            ch == ","
-            and brace_depth == 0
-            and bracket_depth == 0
-            and paren_depth == 0
-        ):
-            segments.append(working[start:index])
-            start = index + 1
-
-    segments.append(working[start:])
-    return segments[:-1], segments[-1]
-
-
-def _payload_cursor_state(before_cursor: str) -> _PayloadCursorState:
-    transform_match = re.match(
-        r"^\s*(?:-\s*)?[A-Za-z_][A-Za-z0-9_-]*\s*:(.*)$",
-        before_cursor,
-        re.DOTALL,
-    )
-    if transform_match is None:
-        context = "key" if not before_cursor.strip() else "any"
-        return _PayloadCursorState(
-            context=context,
-            current_key=None,
-            raw_value_fragment=None,
-            used_keys=set(),
-        )
-
-    payload = transform_match.group(1)
-    if not payload.strip():
-        return _PayloadCursorState(
-            context="value",
-            current_key=None,
-            raw_value_fragment="",
-            used_keys=set(),
-        )
-    completed_segments, current_segment = _split_top_level_segments(payload)
-
-    used_keys = {
-        key
-        for key in (_parse_key_from_segment(segment) for segment in completed_segments)
-        if key is not None
-    }
-
-    current_key = _parse_key_from_segment(current_segment)
-    if current_key is not None:
-        used_keys.add(current_key)
-    colon_index = _find_top_level_colon(current_segment)
-    raw_value_fragment: str | None = None
-    if colon_index is not None:
-        raw_value_fragment = current_segment[colon_index + 1 :]
-
-    if not current_segment.strip():
-        context = "key"
-    elif colon_index is None:
-        context = "key"
-    else:
-        context = "value"
-
-    return _PayloadCursorState(
-        context=context,
-        current_key=current_key,
-        raw_value_fragment=raw_value_fragment,
-        used_keys=used_keys,
-    )
 
 
 def _collect_completion_candidates(state_dict_provider: Any | None) -> list[str]:
@@ -293,21 +106,6 @@ def _collect_payload_candidates(
             candidates.add(f"{alias}::{name}")
 
     return sorted(candidate for candidate in candidates if candidate)
-
-
-def _payload_context(before_cursor: str) -> str:
-    state = _payload_cursor_state(before_cursor)
-    return state.context
-
-
-def _current_value_key(before_cursor: str) -> str | None:
-    state = _payload_cursor_state(before_cursor)
-    return state.current_key
-
-
-def _current_value_fragment(before_cursor: str) -> str | None:
-    state = _payload_cursor_state(before_cursor)
-    return state.raw_value_fragment
 
 
 def _is_committed_value_fragment(raw_fragment: str) -> bool:
@@ -397,6 +195,48 @@ def _match_payload_candidates(
         return None
 
     def _reference_candidates(prefix_text: str, value_key: str | None) -> list[str]:
+        def _collapse_large_reference_matches(
+            *,
+            prefix: str,
+            matches: list[str],
+            threshold: int = 24,
+        ) -> list[str]:
+            if len(matches) <= threshold:
+                return matches
+
+            grouped: list[str] = []
+            seen: set[str] = set()
+            for match in matches:
+                if not match.startswith(prefix):
+                    continue
+                suffix = match[len(prefix) :]
+                if not suffix:
+                    candidate = match
+                else:
+                    lead = suffix[0]
+                    tail = suffix[1:] if lead in {".", "["} else suffix
+                    split_at = -1
+                    for sep in (".", "["):
+                        idx = tail.find(sep)
+                        if idx >= 0 and (split_at < 0 or idx < split_at):
+                            split_at = idx
+                    if split_at < 0:
+                        candidate = match
+                    else:
+                        if lead in {".", "["}:
+                            candidate = prefix + lead + tail[: split_at + 1]
+                        else:
+                            candidate = prefix + tail[: split_at + 1]
+                if candidate in seen:
+                    continue
+                seen.add(candidate)
+                grouped.append(candidate)
+
+            # Prefer grouped navigation when it actually reduces noise.
+            if 1 < len(grouped) < len(matches):
+                return grouped
+            return matches
+
         alias_prefix_candidates = [
             candidate
             for candidate in payload_candidates
@@ -420,6 +260,7 @@ def _match_payload_candidates(
             candidate for candidate in ref_candidates if not (f"{candidate}::" in ref_candidates)
         ]
         ref_matches = [candidate for candidate in ref_candidates if candidate.startswith(prefix_text)]
+        ref_matches = _collapse_large_reference_matches(prefix=prefix_text, matches=ref_matches)
         next_key = _next_reference_key(before_cursor, value_key)
         if (
             next_key
@@ -574,13 +415,24 @@ def _match_payload_candidates(
     return [candidate for candidate in payload_candidates if candidate.startswith(prefix)]
 
 
-def _render_completion_preview(matches: list[str], limit: int = 16) -> str:
+def _render_completion_preview(
+    matches: list[str],
+    limit: int = 16,
+    max_width: int | None = None,
+) -> str:
     if not matches:
         return ""
     shown = matches[:limit]
     remaining = len(matches) - len(shown)
     suffix = f" (+{remaining} more)" if remaining > 0 else ""
-    return "  ".join(shown) + suffix
+    preview = "  ".join(shown) + suffix
+    if max_width is None or max_width <= 0:
+        return preview
+    if len(preview) <= max_width:
+        return preview
+    if max_width <= 1:
+        return preview[:max_width]
+    return preview[: max_width - 1] + "…"
 
 
 def _completion_display_hook(
@@ -590,10 +442,15 @@ def _completion_display_hook(
     readline_module: Any | None,
 ) -> None:
     del substitution, longest_match_length
-    preview = _render_completion_preview(matches)
+    columns = shutil.get_terminal_size(fallback=(120, 24)).columns
+    label = "Completions: "
+    preview = _render_completion_preview(
+        matches,
+        max_width=max(20, columns - len(label) - 1),
+    )
     if not preview:
         return
-    sys.stdout.write(f"\nCompletions: {preview}\n")
+    sys.stdout.write(f"\n{label}{preview}\n")
     try:
         if readline_module is not None:
             readline_module.redisplay()
@@ -621,19 +478,8 @@ def _configure_readline_completion_bindings(readline_module: Any | None) -> None
         except Exception:
             logger.debug("Could not apply readline command %r", command, exc_info=True)
 
-    set_display_hook = getattr(readline_module, "set_completion_display_matches_hook", None)
-    if callable(set_display_hook):
-        try:
-            set_display_hook(
-                lambda substitution, matches, longest_match_length: _completion_display_hook(
-                    substitution,
-                    matches,
-                    longest_match_length,
-                    readline_module,
-                )
-            )
-        except Exception:
-            logger.debug("Could not configure readline display hook", exc_info=True)
+    # Use native readline match rendering so the active edit line is preserved
+    # consistently across terminals.
 
 
 def _is_top_level_completion_position(line_buffer: str, begidx: int) -> bool:
