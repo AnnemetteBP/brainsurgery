@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!--
+    BrainSurgery WebUI
+    - `styles.css` imports split CSS modules.
+    - `app.js` is a module entrypoint that bootstraps `js/main.js`.
+  -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BrainSurgery WebUI</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <!-- App Shell -->
+  <div class="shell">
+    <!-- Header -->
+    <div class="head">
+      <h1>BrainSurgery WebUI</h1>
+      <div class="head-art" aria-hidden="true">
+        <svg viewBox="0 0 160 56" role="img" focusable="false">
+          <defs>
+            <linearGradient id="brainFill" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffd7b5" />
+              <stop offset="100%" stop-color="#f3b98b" />
+            </linearGradient>
+          </defs>
+          <path d="M24,31 C17,31 13,26 13,20 C13,14 17,10 22,10 C24,6 28,4 33,4 C37,4 41,6 44,9 C47,7 51,6 55,7 C61,8 65,13 65,19 C65,24 62,28 58,30 C58,37 52,42 45,42 C41,42 37,40 34,37 C31,40 27,42 23,42 C16,42 10,37 10,30 C10,27 11,24 13,22" fill="url(#brainFill)" stroke="#c2733b" stroke-width="1.4" />
+          <path d="M22,14 C27,17 27,23 22,26" fill="none" stroke="#a85f31" stroke-width="1.1" />
+          <path d="M32,10 C37,13 37,19 32,22" fill="none" stroke="#a85f31" stroke-width="1.1" />
+          <path d="M42,11 C47,14 47,20 42,24" fill="none" stroke="#a85f31" stroke-width="1.1" />
+          <path d="M51,14 C55,17 55,22 51,25" fill="none" stroke="#a85f31" stroke-width="1.1" />
+          <path d="M86,15 L142,15" stroke="#5f6f86" stroke-width="2" />
+          <path d="M122,15 L142,35" stroke="#5f6f86" stroke-width="2" />
+          <rect x="90" y="12" width="16" height="6" rx="2" fill="#9cb0c9" />
+          <path d="M137,30 L146,39 L139,46 L130,37 Z" fill="#d45d1f" stroke="#a44515" stroke-width="1" />
+          <circle cx="128" cy="17" r="2.2" fill="#d45d1f" />
+        </svg>
+      </div>
+    </div>
+    <!-- Main Workspace -->
+    <div class="main">
+      <!-- Left Column: Transform Picker + Options -->
+      <div class="left-stack">
+        <div id="transformsPanel" class="card picker-card focus-scope" tabindex="0">
+          <h2 class="title">Transforms</h2>
+          <input id="transformSearch" placeholder="Search transforms (e.g. load)" />
+          <div id="transformList" class="transform-list"></div>
+        </div>
+        <div id="optionsPanel" class="card focus-scope" tabindex="0">
+          <div class="panel-row">
+            <h2 class="title">Transform Options</h2>
+            <div class="results-actions">
+              <button id="clearOptionsBtn" class="secondary-btn">Clear</button>
+              <button id="optionsToggleBtn" class="secondary-btn">Collapse</button>
+            </div>
+          </div>
+          <div id="optionsPanelBody">
+            <div id="optionsEmpty" class="options-placeholder hidden"></div>
+            <div id="loadPanel" class="hidden">
+              <h2 class="title">Load</h2>
+              <input id="aliasInput" placeholder="Alias (optional, defaults to model/model_2/...)" />
+              <input id="serverPathInput" placeholder="Server path (alternative to upload)" />
+              <input id="fileInput" type="file" />
+              <button id="loadBtn">Load Model</button>
+            </div>
+            <div id="transformPanel" class="hidden">
+              <h2 id="transformTitle" class="title">Transform</h2>
+              <div id="transformFields"></div>
+              <button id="transformRunBtn">Run Transform</button>
+            </div>
+            <div id="status">Ready.</div>
+            <div id="iteratingProgress" class="hidden" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Right Column: Model Views + Results -->
+      <div class="right-stack">
+        <div id="modelsPanel" class="card focus-scope" tabindex="0">
+          <h2 class="title">Current Models</h2>
+          <div id="models" class="models"></div>
+        </div>
+        <div id="resultsPanel" class="card focus-scope" tabindex="0">
+          <div class="panel-row">
+            <h2 class="title">Results</h2>
+            <div class="results-actions">
+              <button id="copyResultsBtn" class="secondary-btn">Copy</button>
+              <button id="resultsToggleBtn" class="secondary-btn">Collapse</button>
+              <button id="clearResultsBtn" class="secondary-btn">Clear</button>
+            </div>
+          </div>
+          <div id="resultsPanelBody">
+            <pre id="resultsOutput">(no transform output yet)</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

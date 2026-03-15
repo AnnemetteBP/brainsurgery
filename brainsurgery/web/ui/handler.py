@@ -1,6 +1,7 @@
 import base64
 from http import HTTPStatus
 from pathlib import Path
+from urllib.parse import unquote
 import tempfile
 import time
 from typing import Any
@@ -24,7 +25,7 @@ from .backend import (
     _serialize_models,
     _transform_items,
 )
-from .page import _HTML_PAGE
+from .page import _HTML_PAGE, _STATIC_DIR
 from .session import _SessionState
 
 
@@ -81,6 +82,12 @@ def _finish_progress(session: _SessionState, *, error: str | None = None) -> Non
 
 
 def _handler_factory(session: _SessionState):
+    static_content_types = {
+        ".html": "text/html; charset=utf-8",
+        ".css": "text/css; charset=utf-8",
+        ".js": "application/javascript; charset=utf-8",
+    }
+
     class Handler(JsonRequestHandler):
         request_log_prefix = "webui"
 
@@ -93,6 +100,27 @@ def _handler_factory(session: _SessionState):
         def do_GET(self) -> None:  # noqa: N802
             if self.path == "/" or self.path.startswith("/?"):
                 self._send_html(_HTML_PAGE)
+                return
+            if self.path.startswith("/static/"):
+                static_rel = unquote(self.path[len("/static/") :].split("?", 1)[0]).lstrip("/")
+                static_path = (_STATIC_DIR / static_rel).resolve()
+                try:
+                    static_path.relative_to(_STATIC_DIR.resolve())
+                except ValueError:
+                    self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
+                    return
+                if not static_path.is_file():
+                    self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
+                    return
+                content_type = static_content_types.get(static_path.suffix.lower(), "application/octet-stream")
+                encoded = static_path.read_bytes()
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", content_type)
+                for key, value in self._cache_headers():
+                    self.send_header(key, value)
+                self.send_header("Content-Length", str(len(encoded)))
+                self.end_headers()
+                self.wfile.write(encoded)
                 return
             if self.path == "/api/transforms":
                 self._send_json({"ok": True, "transforms": _transform_items()})

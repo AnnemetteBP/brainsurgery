@@ -1,0 +1,237 @@
+.transform-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 180px;
+  overflow: auto;
+}
+
+#transformSearch {
+  margin-bottom: 8px;
+}
+
+.transform-item {
+  border: 1px solid #c8b08b;
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-family: "SFMono-Regular", "Menlo", monospace;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  cursor: pointer;
+}
+
+.transform-item.planned {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.transform-item.selected,
+.transform-item:focus-visible {
+  border-color: #d45d1f;
+  box-shadow: inset 0 0 0 1px #d45d1f;
+}
+
+.transform-item.selected {
+  background: #fff5eb;
+}
+
+.transform-item:focus-visible {
+  outline: none;
+}
+
+.pill {
+  font-size: 10px;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 2px 6px;
+  border: 1px solid #bdc6d2;
+  color: #445063;
+  background: #f7fbff;
+}
+
+.pill.enabled {
+  border-color: #b3d1be;
+  color: #145b31;
+  background: #edfdf2;
+}
+
+#status {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 18px;
+  margin-top: 4px;
+}
+
+#iteratingProgress {
+  font-size: 12px;
+  color: #7b542f;
+  min-height: 18px;
+  margin-top: 4px;
+  font-family: "SFMono-Regular", "Menlo", monospace;
+}
+
+.options-placeholder,
+.empty {
+  border-radius: 10px;
+  color: var(--muted);
+  background: #fffdf9;
+}
+
+.options-placeholder {
+  border: 1px dashed #cab18a;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.empty {
+  border: 1px dashed #cab18a;
+  padding: 16px;
+}
+
+.model-pane {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffefb;
+  overflow: visible;
+}
+
+.model-head {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.model-head .toggle-dump-btn {
+  margin: 0;
+  width: auto;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.model-controls {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 96px 92px 1fr auto;
+  gap: 6px;
+  align-items: center;
+  background: #fffaf2;
+}
+
+.model-controls input,
+.model-controls select {
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.live-pill {
+  font-size: 11px;
+  color: #6d5a3f;
+  text-transform: uppercase;
+}
+
+.mini-btn {
+  margin: 0;
+  width: auto;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+
+.mini-btn.hidden {
+  display: none;
+}
+
+.commit-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.secondary-btn {
+  color: #4b3a24;
+  border: 1px solid #d8c4a4;
+  background: linear-gradient(130deg, #fdf2dd, #f5e4c6);
+}
+
+.secondary-btn:hover {
+  background: linear-gradient(130deg, #fbeccb, #f1ddb8);
+}
+
+.binary-summary {
+  margin: 0 0 8px 0;
+  padding: 8px;
+  border: 1px solid #dcc8aa;
+  border-radius: 8px;
+  background: #fffdf8;
+  font-family: "SFMono-Regular", "Menlo", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.binary-summary .label {
+  color: #6d5a3f;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.binary-summary .value {
+  color: #1f2f3e;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+
+.invalid-field {
+  border-color: #b52b2b !important;
+  box-shadow: inset 0 0 0 1px #b52b2b;
+  background: #fff2f2;
+}
+
+#clearOptionsBtn,
+#optionsToggleBtn,
+#copyResultsBtn,
+#resultsToggleBtn,
+#clearResultsBtn {
+  margin: 0;
+  width: auto;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+#resultsOutput {
+  margin: 0;
+  border: 1px solid #dcc8aa;
+  border-radius: 10px;
+  padding: 10px;
+  min-height: 120px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  background: #fffdfa;
+}

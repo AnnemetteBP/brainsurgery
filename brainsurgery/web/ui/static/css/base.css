@@ -1,0 +1,68 @@
+:root {
+  --ink: #1a2229;
+  --muted: #4f5a68;
+  --paper: #fcf7ef;
+  --panel: #fffdf9;
+  --line: #d8c4a4;
+  --accent: #d45d1f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  background: radial-gradient(circle at 100% 0%, #ffe5c3, transparent 40%), linear-gradient(120deg, #fff8ed, #f8fff8);
+  min-height: 100vh;
+  height: 100vh;
+  padding: 0;
+}
+
+input,
+button,
+select,
+textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #c7af8a;
+  padding: 8px 10px;
+  font-size: 13px;
+  margin-bottom: 8px;
+  background: #fff;
+}
+
+input:focus-visible,
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: #d45d1f;
+  box-shadow: inset 0 0 0 1px #d45d1f;
+}
+
+button {
+  border: 0;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  background: linear-gradient(130deg, var(--accent), #eb844b);
+}
+
+pre {
+  margin: 0;
+  padding: 8px;
+  overflow-x: auto;
+  overflow-y: visible;
+  max-height: none;
+  line-height: 1.4;
+  font-size: 12px;
+  font-family: "SFMono-Regular", "Menlo", monospace;
+  background: #fffdfa;
+}
+
+.hidden {
+  display: none;
+}
