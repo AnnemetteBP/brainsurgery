@@ -61,8 +61,8 @@ class SurgeryPlan:
         extra_known_models: set[str] | None = None,
         default_model: str | None = None,
     ) -> None:
-        if default_model is None and len(self.inputs) == 1:
-            default_model = next(iter(self.inputs.keys()))
+        if default_model is None:
+            default_model = _default_model_for_inputs(self.inputs)
 
         known_models = set(self.inputs.keys())
         if extra_known_models is not None:
@@ -70,21 +70,17 @@ class SurgeryPlan:
 
         for index, step in enumerate(self.steps):
             if step.compiled is None:
-                step.compiled = parse_transform_entry(
-                    step.raw,
-                    index,
-                    known_models,
-                    default_model,
+                raw_entry = parse_raw_transform_entry(step.raw, index=index)
+                compiled_pairs = _compile_indexed_raw_transforms(
+                    [(index, raw_entry)],
+                    known_models=known_models,
+                    default_model=default_model,
                 )
+                step.compiled = compiled_pairs[0][1]
                 step.status = "pending"
                 step.error = None
-
-            try:
-                output_model = step.compiled.transform._infer_output_model(step.compiled.spec)
-            except TransformError:
-                output_model = None
-            if output_model:
-                known_models.add(output_model)
+            elif step.compiled is not None:
+                _register_inferred_output_model(step.compiled, known_models)
 
     def execute_pending(self, state_dict_provider: Any, *, interactive: bool) -> bool:
         pending_steps = [step for step in self.steps if step.compiled is not None and step.status == "pending"]
@@ -126,6 +122,35 @@ class ModelCollectingSpec(Protocol):
         ...
 
 
+def _default_model_for_inputs(inputs: Dict[str, Path]) -> str | None:
+    if len(inputs) == 1:
+        return next(iter(inputs.keys()))
+    return None
+
+
+def _register_inferred_output_model(compiled: CompiledTransform, known_models: set[str]) -> None:
+    try:
+        output_model = compiled.transform._infer_output_model(compiled.spec)
+    except TransformError:
+        output_model = None
+    if output_model:
+        known_models.add(output_model)
+
+
+def _compile_indexed_raw_transforms(
+    indexed_raw_transforms: list[tuple[int, dict[str, Any]]],
+    *,
+    known_models: set[str],
+    default_model: str | None,
+) -> list[tuple[int, CompiledTransform]]:
+    parsed: list[tuple[int, CompiledTransform]] = []
+    for index, raw in indexed_raw_transforms:
+        compiled = parse_transform_entry(raw, index, known_models, default_model)
+        parsed.append((index, compiled))
+        _register_inferred_output_model(compiled, known_models)
+    return parsed
+
+
 def compile_plan(raw: Any) -> SurgeryPlan:
     if not isinstance(raw, dict):
         raise PlanLoaderError("plan must be a YAML mapping")
@@ -133,7 +158,14 @@ def compile_plan(raw: Any) -> SurgeryPlan:
     inputs = parse_inputs(raw.get("inputs"))
     output = parse_output(raw.get("output"))
     raw_transforms = parse_raw_transforms(raw.get("transforms"))
-    compiled_transforms = parse_transforms(raw.get("transforms"), inputs)
+    compiled_transforms = [
+        compiled
+        for _, compiled in _compile_indexed_raw_transforms(
+            list(enumerate(raw_transforms)),
+            known_models=set(inputs.keys()),
+            default_model=_default_model_for_inputs(inputs),
+        )
+    ]
 
     steps = [
         PlanStep(raw=raw_transform, compiled=compiled_transform)
@@ -250,28 +282,6 @@ def parse_raw_transforms(raw: Any) -> list[dict[str, Any]]:
         raise PlanLoaderError("transforms must be a list when provided")
 
     return [parse_raw_transform_entry(item, index=i) for i, item in enumerate(raw)]
-
-
-def parse_transforms(raw: Any, inputs: Dict[str, Path]) -> List[CompiledTransform]:
-    raw_transforms = parse_raw_transforms(raw)
-    default_model: Optional[str] = None
-    if len(inputs) == 1:
-        default_model = next(iter(inputs.keys()))
-
-    parsed: List[CompiledTransform] = []
-    known_models = set(inputs.keys())
-    for idx, item in enumerate(raw_transforms):
-        compiled = parse_transform_entry(item, idx, known_models, default_model)
-        parsed.append(compiled)
-
-        try:
-            output_model = compiled.transform._infer_output_model(compiled.spec)
-        except TransformError:
-            output_model = None
-        if output_model:
-            known_models.add(output_model)
-
-    return parsed
 
 
 def parse_raw_transform_entry(raw: Any, *, index: int) -> dict[str, Any]:

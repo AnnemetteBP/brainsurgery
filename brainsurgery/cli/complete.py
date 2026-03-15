@@ -1,7 +1,5 @@
 import logging
 import re
-import shutil
-import sys
 from typing import Any
 
 from ..core import get_transform, list_transforms
@@ -413,49 +411,6 @@ def _match_payload_candidates(
         ]
 
     return [candidate for candidate in payload_candidates if candidate.startswith(prefix)]
-
-
-def _render_completion_preview(
-    matches: list[str],
-    limit: int = 16,
-    max_width: int | None = None,
-) -> str:
-    if not matches:
-        return ""
-    shown = matches[:limit]
-    remaining = len(matches) - len(shown)
-    suffix = f" (+{remaining} more)" if remaining > 0 else ""
-    preview = "  ".join(shown) + suffix
-    if max_width is None or max_width <= 0:
-        return preview
-    if len(preview) <= max_width:
-        return preview
-    if max_width <= 1:
-        return preview[:max_width]
-    return preview[: max_width - 1] + "…"
-
-
-def _completion_display_hook(
-    substitution: str,
-    matches: list[str],
-    longest_match_length: int,
-    readline_module: Any | None,
-) -> None:
-    del substitution, longest_match_length
-    columns = shutil.get_terminal_size(fallback=(120, 24)).columns
-    label = "Completions: "
-    preview = _render_completion_preview(
-        matches,
-        max_width=max(20, columns - len(label) - 1),
-    )
-    if not preview:
-        return
-    sys.stdout.write(f"\n{label}{preview}\n")
-    try:
-        if readline_module is not None:
-            readline_module.redisplay()
-    except Exception:
-        pass
 
 
 def _configure_readline_completion_bindings(readline_module: Any | None) -> None:
