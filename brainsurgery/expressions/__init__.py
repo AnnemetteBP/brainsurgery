@@ -4,11 +4,29 @@ from pkgutil import iter_modules
 from ..core import Expression, ExpressionHelp, TransformError, compile_assert_expr, get_assert_expr_help, get_assert_expr_names, register_assert_expr
 
 
-for module_info in iter_modules(__path__):  # type: ignore[name-defined]
-    module_name = module_info.name
-    if module_name.startswith("_"):
-        continue
-    import_module(f"{__name__}.{module_name}")
+def _discovered_module_names() -> list[str]:
+    module_names = sorted(
+        module_info.name
+        for module_info in iter_modules(__path__)  # type: ignore[name-defined]
+        if not module_info.name.startswith("_")
+    )
+    duplicates = sorted({name for name in module_names if module_names.count(name) > 1})
+    if duplicates:
+        names = ", ".join(duplicates)
+        raise RuntimeError(f"Duplicate expression module names discovered in {__name__}: {names}")
+    return module_names
+
+
+def _load_discovered_modules() -> None:
+    for module_name in _discovered_module_names():
+        qualified_name = f"{__name__}.{module_name}"
+        try:
+            import_module(qualified_name)
+        except Exception as exc:
+            raise RuntimeError(f"Failed to import discovered expression module: {qualified_name}") from exc
+
+
+_load_discovered_modules()
 
 
 __all__ = [
