@@ -9,6 +9,7 @@ from omegaconf import OmegaConf
 from brainsurgery.core import (
     BinaryMappingTransform,
     DestinationPolicy,
+    IteratingTransform,
     TernaryMappingTransform,
     UnaryTransform,
     get_assert_expr_help,
@@ -27,6 +28,7 @@ from brainsurgery.engine import (
     reset_runtime_flags,
     use_output_emitter,
 )
+from brainsurgery.core.runtime.transform import use_progress_callback
 
 
 DISABLED_TRANSFORMS: set[str] = set()
@@ -45,6 +47,7 @@ def _transform_items() -> list[dict[str, Any]]:
                 "enabled": bool(spec and spec["enabled"]),
                 "binary": bool(spec),
                 "kind": spec["kind"] if spec else "other",
+                "iterating": bool(spec and spec["iterating"]),
                 "allowed_keys": spec["allowed_keys"] if spec else [],
                 "required_keys": spec["required_keys"] if spec else [],
                 "reference_keys": spec["reference_keys"] if spec else [],
@@ -80,6 +83,7 @@ def _transform_specs() -> dict[str, dict[str, Any]]:
         specs[name] = {
             "enabled": name not in DISABLED_TRANSFORMS,
             "kind": kind,
+            "iterating": isinstance(transform, IteratingTransform),
             "allowed_keys": allowed,
             "required_keys": required,
             "reference_keys": ref_keys,
@@ -194,6 +198,7 @@ def _apply_transform(
     payload: Any,
     default_model: str | None = None,
     record_payload: Any | None = None,
+    progress_callback: Any | None = None,
 ) -> tuple[str, str | None]:
     if transform_name in DISABLED_TRANSFORMS:
         raise ValueError(f"transform {transform_name!r} is disabled in webui.")
@@ -223,6 +228,7 @@ def _apply_transform(
         raw_transform=raw_transform,
         recorded_transform=recorded_transform,
         default_model=default_model,
+        progress_callback=progress_callback,
     )
 
 
@@ -233,6 +239,7 @@ def _apply_load_transform(*, provider: Any, plan: SurgeryPlan, path: Path, alias
         raw_transform={"load": {"path": str(path), "alias": alias}},
         recorded_transform={"load": {"path": str(path), "alias": alias}},
         default_model=None,
+        progress_callback=None,
     )
 
 
@@ -243,16 +250,18 @@ def _execute_plan_transform(
     raw_transform: dict[str, Any],
     recorded_transform: dict[str, Any],
     default_model: str | None,
+    progress_callback: Any | None = None,
 ) -> tuple[str, str | None]:
     reset_runtime_flags()
     step = plan.append_raw_transform(raw_transform)
     lines: list[str] = []
     with use_output_emitter(lines.append):
-        plan.compile_pending(
-            extra_known_models=set(list_model_aliases(provider)),
-            default_model=default_model,
-        )
-        plan.execute_pending(provider, interactive=False)
+        with use_progress_callback(progress_callback):
+            plan.compile_pending(
+                extra_known_models=set(list_model_aliases(provider)),
+                default_model=default_model,
+            )
+            plan.execute_pending(provider, interactive=False)
 
     step.raw = recorded_transform
 

@@ -190,6 +190,13 @@ _HTML_PAGE = """<!doctype html>
       background: linear-gradient(130deg, var(--accent), #eb844b);
     }
     #status { font-size: 12px; color: var(--muted); min-height: 18px; margin-top: 4px; }
+    #iteratingProgress {
+      font-size: 12px;
+      color: #7b542f;
+      min-height: 18px;
+      margin-top: 4px;
+      font-family: "SFMono-Regular", "Menlo", monospace;
+    }
     .options-placeholder {
       border: 1px dashed #cab18a;
       border-radius: 10px;
@@ -453,6 +460,7 @@ _HTML_PAGE = """<!doctype html>
               <button id=\"transformRunBtn\">Run Transform</button>
             </div>
             <div id=\"status\">Ready.</div>
+            <div id=\"iteratingProgress\" class=\"hidden\" aria-live=\"polite\"></div>
           </div>
         </div>
       </div>
@@ -482,6 +490,7 @@ _HTML_PAGE = """<!doctype html>
     const transformSearchEl = document.getElementById("transformSearch");
     const modelsEl = document.getElementById("models");
     const statusEl = document.getElementById("status");
+    const iteratingProgressEl = document.getElementById("iteratingProgress");
     const fileInput = document.getElementById("fileInput");
     const serverPathInput = document.getElementById("serverPathInput");
     const aliasInput = document.getElementById("aliasInput");
@@ -505,15 +514,70 @@ _HTML_PAGE = """<!doctype html>
     const resultsPanelBody = document.getElementById("resultsPanelBody");
     const resultsOutput = document.getElementById("resultsOutput");
 
-    let allTransforms = [{ name: "load", enabled: true, kind: "other", allowed_keys: [], required_keys: [], reference_keys: [], to_must_exist: false }];
+    let allTransforms = [{ name: "load", enabled: true, kind: "other", iterating: false, allowed_keys: [], required_keys: [], reference_keys: [], to_must_exist: false }];
     let selectedTransform = "load";
     const modelViewState = {};
     const transformConfigByName = {};
     let latestModels = [];
     let latestRuntimeFlags = { dry_run: false, verbose: false };
     const panelScopes = [transformsPanel, optionsPanel, modelsPanel, resultsPanel];
+    let iteratingProgressTimer = null;
+    let iteratingProgressPollInFlight = false;
 
     function setStatus(text) { statusEl.textContent = text; }
+    function getIsIteratingTransform(name) {
+      const meta = getTransformMeta(name);
+      return !!(meta && meta.iterating);
+    }
+    function stopIteratingProgress() {
+      if (iteratingProgressTimer != null) {
+        clearInterval(iteratingProgressTimer);
+        iteratingProgressTimer = null;
+      }
+      iteratingProgressPollInFlight = false;
+      iteratingProgressEl.classList.add("hidden");
+      iteratingProgressEl.textContent = "";
+    }
+    async function pollIteratingProgressOnce(expectedTransformName) {
+      if (iteratingProgressPollInFlight) return;
+      iteratingProgressPollInFlight = true;
+      try {
+        const response = await fetch("/api/progress");
+        const data = await response.json();
+        if (!response.ok || !data.ok || !data.progress) return;
+        const progress = data.progress;
+        if (!progress.iterating || progress.transform !== expectedTransformName) return;
+        const completed = Number(progress.completed || 0);
+        const total = progress.total == null ? null : Number(progress.total);
+        const unit = String(progress.unit || "item");
+        const desc = String(progress.desc || expectedTransformName);
+        const active = Boolean(progress.active);
+        if (total != null && Number.isFinite(total) && total > 0) {
+          const pct = Math.min(100, Math.floor((completed / total) * 100));
+          iteratingProgressEl.textContent =
+            (active ? "Running " : "Completed ") +
+            desc + ": " + completed + "/" + total + " " + unit + " (" + pct + "%)";
+        } else {
+          iteratingProgressEl.textContent =
+            (active ? "Running " : "Completed ") +
+            desc + ": " + completed + " " + unit;
+        }
+      } catch (_err) {
+        // ignore polling errors; the main transform request handles final status
+      } finally {
+        iteratingProgressPollInFlight = false;
+      }
+    }
+    function startIteratingProgress(transformName) {
+      stopIteratingProgress();
+      if (!getIsIteratingTransform(transformName)) return;
+      iteratingProgressEl.textContent = "Preparing progress for " + transformName + "...";
+      iteratingProgressEl.classList.remove("hidden");
+      pollIteratingProgressOnce(transformName);
+      iteratingProgressTimer = setInterval(() => {
+        pollIteratingProgressOnce(transformName);
+      }, 250);
+    }
     function setFocusedPanel(panel) {
       for (const scope of panelScopes) {
         if (!scope) continue;
@@ -681,6 +745,56 @@ _HTML_PAGE = """<!doctype html>
       transformTitle.textContent = selectedTransform;
       transformFields.innerHTML = "";
       transformRunBtn.textContent = "Run " + selectedTransform;
+
+      if (selectedTransform === "prefixes") {
+        const modeSelect = document.createElement("select");
+        modeSelect.innerHTML =
+          "<option value='list'>mode: list aliases</option>" +
+          "<option value='add'>mode: add alias</option>" +
+          "<option value='remove'>mode: remove alias</option>" +
+          "<option value='rename'>mode: rename alias</option>";
+        const rawMode = String(cfg.fields.mode == null ? "list" : cfg.fields.mode).toLowerCase();
+        modeSelect.value = ["list", "add", "remove", "rename"].includes(rawMode) ? rawMode : "list";
+        cfg.fields.mode = modeSelect.value;
+        modeSelect.addEventListener("change", () => {
+          cfg.fields.mode = modeSelect.value;
+          if (modeSelect.value === "list") {
+            delete cfg.fields.alias;
+            delete cfg.fields.from;
+            delete cfg.fields.to;
+          } else if (modeSelect.value === "add" || modeSelect.value === "remove") {
+            delete cfg.fields.from;
+            delete cfg.fields.to;
+          } else if (modeSelect.value === "rename") {
+            delete cfg.fields.alias;
+          }
+          renderTransformPanel();
+        });
+        transformFields.appendChild(modeSelect);
+
+        if (modeSelect.value === "add" || modeSelect.value === "remove") {
+          const aliasInput = document.createElement("input");
+          aliasInput.placeholder = "alias (required)";
+          aliasInput.value = cfg.fields.alias == null ? "" : String(cfg.fields.alias);
+          aliasInput.addEventListener("input", () => { cfg.fields.alias = aliasInput.value; });
+          transformFields.appendChild(aliasInput);
+        } else if (modeSelect.value === "rename") {
+          const fromInput = document.createElement("input");
+          fromInput.placeholder = "from (required)";
+          fromInput.value = cfg.fields.from == null ? "" : String(cfg.fields.from);
+          fromInput.addEventListener("input", () => { cfg.fields.from = fromInput.value; });
+          transformFields.appendChild(fromInput);
+
+          const toInput = document.createElement("input");
+          toInput.placeholder = "to (required)";
+          toInput.value = cfg.fields.to == null ? "" : String(cfg.fields.to);
+          toInput.addEventListener("input", () => { cfg.fields.to = toInput.value; });
+          transformFields.appendChild(toInput);
+        }
+
+        transformPanel.classList.remove("hidden");
+        return;
+      }
 
       if (selectedTransform === "set") {
         const current = document.createElement("div");
@@ -889,10 +1003,13 @@ _HTML_PAGE = """<!doctype html>
       optionsEmpty.classList.toggle("hidden", hasSelection);
       renderTransformPanel();
       if (selectedTransform === "load") {
+        stopIteratingProgress();
         setStatus("Load is selected. Pick a file to import a model.");
       } else if (!isReadyTransform(selectedTransform)) {
+        stopIteratingProgress();
         setStatus("Selected " + selectedTransform + " is planned and not interactive yet.");
       } else if (!hasSelection) {
+        stopIteratingProgress();
         setStatus("Ready.");
       } else {
         setStatus("Selected " + selectedTransform + ".");
@@ -1173,18 +1290,39 @@ _HTML_PAGE = """<!doctype html>
       const required = new Set(Array.isArray(meta.required_keys) ? meta.required_keys : []);
       let payload = {};
 
-      for (const key of allowed) {
-        const rawValue = cfg.fields[key];
-        if (typeof rawValue === "boolean") {
-          payload[key] = rawValue;
-          continue;
+      if (runTransformName === "prefixes") {
+        const mode = String(cfg.fields.mode == null ? "list" : cfg.fields.mode).trim().toLowerCase();
+        if (!["list", "add", "remove", "rename"].includes(mode)) {
+          setStatus("Invalid prefixes mode: " + mode);
+          return;
         }
-        const parsed = parseFieldValue(rawValue == null ? "" : String(rawValue));
-        if (parsed === undefined) {
-          if (required.has(key)) { setStatus("Missing required parameter: " + key); return; }
-          continue;
+        if (mode === "list") {
+          payload = { mode: "list" };
+        } else if (mode === "add" || mode === "remove") {
+          const alias = String(cfg.fields.alias == null ? "" : cfg.fields.alias).trim();
+          if (!alias) { setStatus("Missing required parameter: alias"); return; }
+          payload = { mode: mode, alias: alias };
+        } else {
+          const fromAlias = String(cfg.fields.from == null ? "" : cfg.fields.from).trim();
+          const toAlias = String(cfg.fields.to == null ? "" : cfg.fields.to).trim();
+          if (!fromAlias) { setStatus("Missing required parameter: from"); return; }
+          if (!toAlias) { setStatus("Missing required parameter: to"); return; }
+          payload = { mode: "rename", from: fromAlias, to: toAlias };
         }
-        payload[key] = parsed;
+      } else {
+        for (const key of allowed) {
+          const rawValue = cfg.fields[key];
+          if (typeof rawValue === "boolean") {
+            payload[key] = rawValue;
+            continue;
+          }
+          const parsed = parseFieldValue(rawValue == null ? "" : String(rawValue));
+          if (parsed === undefined) {
+            if (required.has(key)) { setStatus("Missing required parameter: " + key); return; }
+            continue;
+          }
+          payload[key] = parsed;
+        }
       }
 
       if (runTransformName === "help") {
@@ -1218,6 +1356,7 @@ _HTML_PAGE = """<!doctype html>
 
       setStatus("Applying " + runTransformName + "...");
       transformRunBtn.disabled = true;
+      startIteratingProgress(runTransformName);
       try {
         const isSaveDownload = runTransformName === "save" && (cfg.save_mode || "server") === "download";
         const response = await fetch(
@@ -1283,6 +1422,7 @@ _HTML_PAGE = """<!doctype html>
       } catch (err) {
         setStatus("Apply failed: " + String(err));
       } finally {
+        stopIteratingProgress();
         transformRunBtn.disabled = false;
       }
     });

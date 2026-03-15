@@ -2,11 +2,14 @@ import base64
 from http import HTTPStatus
 from pathlib import Path
 import tempfile
+import time
 from typing import Any
 import uuid
 
 from omegaconf import OmegaConf
 
+from brainsurgery.core import IteratingTransform, get_transform
+from brainsurgery.core.runtime.transform import IterationProgress
 from brainsurgery.engine import list_model_aliases
 from ..http import JsonRequestHandler
 from .backend import (
@@ -23,6 +26,58 @@ from .backend import (
 )
 from .page import _HTML_PAGE
 from .session import _SessionState
+
+
+def _now_ms() -> int:
+    return int(time.time() * 1000)
+
+
+def _snapshot_progress(session: _SessionState) -> dict[str, Any]:
+    with session.progress_lock:
+        return dict(session.progress)
+
+
+def _begin_progress(session: _SessionState, *, transform: str, iterating: bool) -> None:
+    now = _now_ms()
+    with session.progress_lock:
+        session.progress = {
+            "active": True,
+            "iterating": iterating,
+            "transform": transform,
+            "desc": None,
+            "unit": "item",
+            "completed": 0,
+            "total": None,
+            "started_at": now,
+            "updated_at": now,
+            "error": None,
+        }
+
+
+def _update_progress_from_event(session: _SessionState, event: IterationProgress) -> None:
+    now = _now_ms()
+    with session.progress_lock:
+        session.progress["iterating"] = True
+        session.progress["desc"] = event.desc
+        session.progress["unit"] = event.unit
+        session.progress["completed"] = int(event.completed)
+        session.progress["total"] = int(event.total) if event.total is not None else None
+        session.progress["updated_at"] = now
+
+
+def _make_progress_callback(session: _SessionState):
+    def _callback(event: IterationProgress) -> None:
+        _update_progress_from_event(session, event)
+
+    return _callback
+
+
+def _finish_progress(session: _SessionState, *, error: str | None = None) -> None:
+    now = _now_ms()
+    with session.progress_lock:
+        session.progress["active"] = False
+        session.progress["updated_at"] = now
+        session.progress["error"] = error
 
 
 def _handler_factory(session: _SessionState):
@@ -51,6 +106,9 @@ def _handler_factory(session: _SessionState):
                             "runtime_flags": _serialize_runtime_flags(),
                         }
                     )
+                return
+            if self.path == "/api/progress":
+                self._send_json({"ok": True, "progress": _snapshot_progress(session)})
                 return
             self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
 
@@ -122,6 +180,13 @@ def _handler_factory(session: _SessionState):
                     self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                     return
 
+                try:
+                    iterating = isinstance(get_transform(transform_name), IteratingTransform)
+                except Exception as exc:
+                    self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                    return
+                _begin_progress(session, transform=transform_name, iterating=iterating)
+                progress_callback = _make_progress_callback(session) if iterating else None
                 with session.lock:
                     try:
                         if transform_name == "assert" and isinstance(payload, str):
@@ -139,6 +204,7 @@ def _handler_factory(session: _SessionState):
                             transform_name=transform_name,
                             payload=payload,
                             default_model=session.default_model,
+                            progress_callback=progress_callback,
                         )
                         session.default_model = next_default_model
                         if transform_name == "exit":
@@ -146,8 +212,10 @@ def _handler_factory(session: _SessionState):
                             output = f"{output}\n\n{summary}".strip() if output else summary
                         models = _serialize_models(session.provider)
                     except Exception as exc:
+                        _finish_progress(session, error=str(exc))
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                         return
+                _finish_progress(session, error=None)
                 self._send_json(
                     {
                         "ok": True,
@@ -170,13 +238,16 @@ def _handler_factory(session: _SessionState):
                     self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                     return
 
+                _begin_progress(session, transform="save", iterating=False)
                 with session.lock:
                     try:
                         output, filename, mime, content_b64 = self._run_save_download(payload)
                         models = _serialize_models(session.provider)
                     except Exception as exc:
+                        _finish_progress(session, error=str(exc))
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                         return
+                _finish_progress(session, error=None)
                 self._send_json(
                     {
                         "ok": True,

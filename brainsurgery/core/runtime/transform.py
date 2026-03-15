@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from enum import Enum
 import re
-from typing import Dict, Generic, Iterable, List, Literal, TypeVar
+from typing import Callable, Dict, Generic, Iterable, Iterator, List, Literal, TypeVar
 
 from tqdm import tqdm
 
@@ -84,6 +86,30 @@ class BaseTransform(ABC):
 SpecT = TypeVar("SpecT")
 
 
+@dataclass(frozen=True)
+class IterationProgress:
+    desc: str
+    unit: str
+    completed: int
+    total: int | None
+
+
+ProgressCallback = Callable[[IterationProgress], None]
+_progress_callback: ContextVar[ProgressCallback | None] = ContextVar(
+    "brainsurgery_iterating_progress_callback",
+    default=None,
+)
+
+
+@contextmanager
+def use_progress_callback(callback: ProgressCallback | None):
+    token = _progress_callback.set(callback)
+    try:
+        yield
+    finally:
+        _progress_callback.reset(token)
+
+
 class TypedTransform(BaseTransform, ABC, Generic[SpecT]):
     error_type: type[TransformError] = TransformError
     spec_type: type[SpecT]
@@ -149,9 +175,37 @@ class IteratingTransform(TypedTransform[SpecT], ABC, Generic[SpecT, ItemT]):
         return TransformResult(name=self.name, count=len(items))
 
     def iter_items(self, items: list[ItemT]) -> Iterable[ItemT]:
-        if self.progress_desc is None:
+        callback = _progress_callback.get()
+        if callback is None and self.progress_desc is None:
             return items
-        return tqdm(items, desc=self.progress_desc, unit=self.progress_unit)
+        if callback is None:
+            return tqdm(items, desc=self.progress_desc, unit=self.progress_unit)
+        total = len(items)
+        desc = self.progress_desc or self.name
+        callback(
+            IterationProgress(
+                desc=desc,
+                unit=self.progress_unit,
+                completed=0,
+                total=total,
+            )
+        )
+
+        def _iter() -> Iterator[ItemT]:
+            completed = 0
+            for item in items:
+                yield item
+                completed += 1
+                callback(
+                    IterationProgress(
+                        desc=desc,
+                        unit=self.progress_unit,
+                        completed=completed,
+                        total=total,
+                    )
+                )
+
+        return _iter()
 
     @abstractmethod
     def resolve_items(
