@@ -329,28 +329,13 @@ def _serialize_models(provider: Any) -> list[dict[str, Any]]:
     models: list[dict[str, Any]] = []
     for alias in sorted(list_model_aliases(provider)):
         state_dict = provider.get_state_dict(alias)
-        dump_compact, matched_count, total_count = _render_dump_for_alias(
-            provider=provider,
-            alias=alias,
-            format_name="compact",
-            verbosity="shape",
-            target=".*",
-        )
-        dump_tree, _, _ = _render_dump_for_alias(
-            provider=provider,
-            alias=alias,
-            format_name="tree",
-            verbosity="shape",
-            target=".*",
-        )
+        tensor_count = len(state_dict)
         models.append(
             {
                 "alias": alias,
-                "tensor_count": len(state_dict),
-                "matched_count": matched_count,
-                "total_count": total_count,
-                "dump_compact": dump_compact,
-                "dump_tree": dump_tree,
+                "tensor_count": tensor_count,
+                "matched_count": tensor_count,
+                "total_count": tensor_count,
             }
         )
     return models

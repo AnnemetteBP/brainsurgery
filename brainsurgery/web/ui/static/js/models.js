@@ -26,9 +26,21 @@ function createModelsRenderer({
           filter: "",
           valid: true,
           dump_collapsed: false,
+          lastDumpText: "",
+          lastDumpSignature: "",
+          lastMatchedCount: null,
+          lastTotalCount: null,
+          sourceTensorCount: null,
         };
       }
       const state = modelViewState[model.alias];
+      if (state.sourceTensorCount !== model.tensor_count) {
+        state.sourceTensorCount = model.tensor_count;
+        state.lastDumpText = "";
+        state.lastDumpSignature = "";
+        state.lastMatchedCount = null;
+        state.lastTotalCount = null;
+      }
       const pane = document.createElement("div");
       pane.className = "model-pane";
 
@@ -40,8 +52,18 @@ function createModelsRenderer({
       right.style.display = "flex";
       right.style.alignItems = "center";
       right.style.gap = "6px";
+      const currentSignature = state.format + "|" + String(state.verbosity || "shape") + "|" + state.filter;
+      const hasCachedForCurrentView = state.lastDumpSignature === currentSignature && !!state.lastDumpText;
       const count = document.createElement("span");
-      count.textContent = tensorCountText(model.matched_count || model.tensor_count, model.total_count || model.tensor_count, state.filter || "");
+      if (
+        hasCachedForCurrentView &&
+        typeof state.lastMatchedCount === "number" &&
+        typeof state.lastTotalCount === "number"
+      ) {
+        count.textContent = tensorCountText(state.lastMatchedCount, state.lastTotalCount, state.filter || "");
+      } else {
+        count.textContent = tensorCountText(model.matched_count || model.tensor_count, model.total_count || model.tensor_count, state.filter || "");
+      }
       const dumpToggleBtn = document.createElement("button");
       dumpToggleBtn.className = "secondary-btn toggle-dump-btn";
       dumpToggleBtn.textContent = state.dump_collapsed ? "Show Dump" : "Hide Dump";
@@ -85,8 +107,7 @@ function createModelsRenderer({
       };
 
       const pre = document.createElement("pre");
-      const dumps = { compact: model.dump_compact || "", tree: model.dump_tree || model.dump_compact || "" };
-      pre.textContent = dumps[formatSelect.value] || "";
+      pre.textContent = hasCachedForCurrentView ? state.lastDumpText : "";
       pre.classList.toggle("hidden", !!state.dump_collapsed);
 
       dumpToggleBtn.addEventListener("click", () => {
@@ -123,6 +144,10 @@ function createModelsRenderer({
           state.valid = true;
           filterInput.classList.remove("invalid-field");
           pre.textContent = data.dump || "";
+          state.lastDumpText = pre.textContent;
+          state.lastDumpSignature = state.format + "|" + String(state.verbosity || "shape") + "|" + state.filter;
+          state.lastMatchedCount = data.matched_count || 0;
+          state.lastTotalCount = data.total_count || 0;
           count.textContent = tensorCountText(data.matched_count || 0, data.total_count || 0, filterInput.value);
           renderCommitButtons();
           setStatus("Updated dump for " + model.alias + ".");
@@ -140,6 +165,11 @@ function createModelsRenderer({
         clearTimeout(debounceHandle);
         debounceHandle = setTimeout(requestDump, 220);
       });
+
+      if (!pre.textContent) {
+        pre.textContent = "(loading dump...)";
+        requestDump();
+      }
 
       controls.appendChild(formatSelect);
       controls.appendChild(verbositySelect);
