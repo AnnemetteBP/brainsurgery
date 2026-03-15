@@ -30,6 +30,8 @@ class SurgeryPlan:
     inputs: Dict[str, Path]
     output: _OutputSpec | None
     steps: list[PlanStep] = field(default_factory=list)
+    raw_inputs: Any = field(default_factory=list)
+    raw_output: Any = None
 
     @property
     def transforms(self) -> List[CompiledTransform]:
@@ -113,20 +115,9 @@ class SurgeryPlan:
 
     def to_raw_plan(self, *, executed_only: bool) -> dict[str, Any]:
         transforms = self.executed_raw_transforms if executed_only else [step.raw for step in self.steps]
-        raw: dict[str, Any] = {
-            "inputs": [f"{alias}::{path}" for alias, path in self.inputs.items()],
-            "transforms": transforms,
-        }
-        if self.output is not None:
-            if self.output.format is None and self.output.shard is None:
-                raw["output"] = str(self.output.path)
-            else:
-                output: dict[str, Any] = {"path": str(self.output.path)}
-                if self.output.format is not None:
-                    output["format"] = self.output.format
-                if self.output.shard is not None:
-                    output["shard"] = self.output.shard
-                raw["output"] = output
+        raw: dict[str, Any] = {"inputs": self.raw_inputs, "transforms": transforms}
+        if self.raw_output is not None:
+            raw["output"] = self.raw_output
         return raw
 
 @runtime_checkable
@@ -148,7 +139,13 @@ def compile_plan(raw: Any) -> SurgeryPlan:
         PlanStep(raw=raw_transform, compiled=compiled_transform)
         for raw_transform, compiled_transform in zip(raw_transforms, compiled_transforms, strict=False)
     ]
-    plan = SurgeryPlan(inputs=inputs, output=output, steps=steps)
+    plan = SurgeryPlan(
+        inputs=inputs,
+        output=output,
+        steps=steps,
+        raw_inputs=raw.get("inputs", []),
+        raw_output=raw.get("output"),
+    )
     return plan
 
 

@@ -1,35 +1,20 @@
 import logging
 from pathlib import Path
-from typing import Any
 
 import typer
 from omegaconf import OmegaConf
 
+from ..engine import SurgeryPlan
+
 logger = logging.getLogger("brainsurgery")
-
-
-def build_raw_plan(
-    inputs: Any,
-    output: Any,
-    transforms: list[dict[str, Any]],
-) -> dict[str, Any]:
-    raw: dict[str, Any] = {
-        "inputs": inputs,
-        "transforms": transforms,
-    }
-    if output is not None:
-        raw["output"] = output
-    return raw
 
 
 def _write_executed_plan_summary(
     *,
-    inputs: Any,
-    output: Any,
-    transforms: list[dict[str, Any]],
+    plan: SurgeryPlan,
     destination: Path | None,
 ) -> None:
-    summary_doc = build_raw_plan(inputs=inputs, output=output, transforms=transforms)
+    summary_doc = plan.to_raw_plan(executed_only=True)
 
     if destination is None:
         typer.echo(OmegaConf.to_yaml(summary_doc))

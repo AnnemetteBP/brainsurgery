@@ -6,10 +6,12 @@ import typer
 
 from .config import _load_cli_config
 from .history import _configure_history
-from .interactive import normalize_transform_specs, _prompt_interactive_transform
-from .summary import build_raw_plan, _write_executed_plan_summary
+from .interactive import _prompt_interactive_transform
+from .summary import _write_executed_plan_summary
 from ..engine import (
+    apply_log_level,
     compile_plan,
+    normalize_raw_plan,
     ProviderError,
     create_state_dict_provider,
     get_runtime_flags,
@@ -21,45 +23,41 @@ from ..engine import (
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger("brainsurgery")
-_ALLOWED_LOG_LEVELS = {"debug", "info", "warning", "error", "critical"}
 
 app = typer.Typer(help="Brain surgery CLI.")
 
 
 def configure_logging(log_level: str) -> None:
-    level_name = log_level.strip().lower()
-    if level_name not in _ALLOWED_LOG_LEVELS:
+    try:
+        apply_log_level(log_level)
+    except ValueError:
         raise typer.BadParameter(
-            f"log-level must be one of: {', '.join(sorted(_ALLOWED_LOG_LEVELS))}"
+            "log-level must be one of: critical, debug, error, info, warning"
         )
-
-    level = getattr(logging, level_name.upper())
-    logging.getLogger().setLevel(level)
-    logger.setLevel(level)
 
 
 def _execute_configured_transforms(
     *,
     surgery_plan: Any,
     state_dict_provider: Any,
-) -> tuple[bool, list[dict[str, Any]]]:
+) -> bool:
     should_continue = surgery_plan.execute_pending(
         state_dict_provider,
         interactive=False,
     )
-    return should_continue, surgery_plan.executed_raw_transforms
+    return should_continue
 
 
 def _run_interactive_session(
     *,
     surgery_plan: Any,
     state_dict_provider: Any,
-) -> tuple[bool, list[dict[str, Any]]]:
+) -> bool:
     while True:
         extra_specs = _prompt_interactive_transform(state_dict_provider=state_dict_provider)
         if extra_specs is None:
             logger.info("Interactive session complete")
-            return True, surgery_plan.executed_raw_transforms
+            return True
 
         before_count = len(surgery_plan.steps)
         try:
@@ -78,7 +76,7 @@ def _run_interactive_session(
         )
         if not should_continue:
             logger.info("Leaving interactive mode")
-            return False, surgery_plan.executed_raw_transforms
+            return False
 
 
 @app.callback(invoke_without_command=True)
@@ -139,12 +137,7 @@ def run(
     reset_runtime_flags()
 
     raw_plan = _load_cli_config(config_items or [])
-    normalized_transforms = normalize_transform_specs(raw_plan.get("transforms"))
-    planned_raw = build_raw_plan(
-        inputs=raw_plan.get("inputs", []),
-        output=raw_plan.get("output"),
-        transforms=normalized_transforms,
-    )
+    planned_raw = normalize_raw_plan(raw_plan)
 
     logger.info(
         "Scrubbing in. Surgical plan assembled from %d config item(s)",
@@ -173,14 +166,14 @@ def run(
 
     try:
         with use_output_emitter(typer.echo):
-            should_continue, executed_transforms = _execute_configured_transforms(
+            should_continue = _execute_configured_transforms(
                 surgery_plan=surgery_plan,
                 state_dict_provider=state_dict_provider,
             )
 
             if should_continue and interactive:
                 logger.info("Entering interactive mode after configured procedures")
-                should_continue, executed_transforms = _run_interactive_session(
+                should_continue = _run_interactive_session(
                     surgery_plan=surgery_plan,
                     state_dict_provider=state_dict_provider,
                 )
@@ -202,9 +195,7 @@ def run(
                     logger.info("Dry-run enabled; skipping summary file write to %s", summarize_path)
                 else:
                     _write_executed_plan_summary(
-                        inputs=raw_plan.get("inputs", []),
-                        output=raw_plan.get("output"),
-                        transforms=executed_transforms,
+                        plan=surgery_plan,
                         destination=summarize_path,
                     )
 

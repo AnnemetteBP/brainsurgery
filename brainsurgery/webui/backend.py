@@ -17,7 +17,7 @@ from ..core import (
     match_expr_names,
     parse_model_expr,
 )
-from ..engine import list_model_aliases, reset_runtime_flags, use_output_emitter
+from ..engine import SurgeryPlan, list_model_aliases, reset_runtime_flags, use_output_emitter
 from ..engine import get_runtime_flags
 
 
@@ -304,10 +304,10 @@ def _serialize_models(provider: Any) -> list[dict[str, Any]]:
     return models
 
 
-def _render_execution_summary(*, provider: Any, executed_transforms: list[dict[str, Any]]) -> str:
+def _render_execution_summary(*, provider: Any, plan: SurgeryPlan) -> str:
     del provider
     summary_doc = {
-        "transforms": [_normalize_summary_node(item) for item in executed_transforms],
+        "transforms": [_normalize_summary_node(item) for item in plan.executed_raw_transforms],
     }
     return OmegaConf.to_yaml(summary_doc)
 
@@ -320,4 +320,3 @@ def _normalize_summary_node(value: Any) -> Any:
     if isinstance(value, list):
         return [_normalize_summary_node(item) for item in value]
     return value
-

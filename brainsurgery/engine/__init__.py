@@ -32,3 +32,8 @@ from .verbosity import (
     emit_verbose_ternary_activity,
     emit_verbose_event,
 )
+from .config import (
+    apply_log_level,
+    normalize_raw_plan,
+    normalize_transform_specs,
+)

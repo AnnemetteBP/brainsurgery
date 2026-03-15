@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
+from ..engine import normalize_transform_specs
 from .complete import (
     _collect_completion_candidates,
     _collect_payload_candidates,
@@ -23,7 +24,7 @@ from .complete import (
 )
 from .history import _add_history_entry
 from .oly import _parse_oly_line
-from .parse import normalize_transform_specs, _parse_transform_block
+from .parse import _parse_transform_block
 
 logger = logging.getLogger("brainsurgery")
 console = Console()

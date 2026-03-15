@@ -1,15 +1,15 @@
 import logging
 from pathlib import Path
-from typing import Any
 
 from omegaconf import OmegaConf
 import yaml
 
-from ..cli import normalize_transform_specs, build_raw_plan
 from ..engine import (
+    apply_log_level,
     compile_plan,
     create_state_dict_provider,
     get_runtime_flags,
+    normalize_raw_plan,
     reset_runtime_flags,
     use_output_emitter,
 )
@@ -35,20 +35,13 @@ def _run_web_plan(
         raw = {}
     if not isinstance(raw, dict):
         raise ValueError("Plan YAML root must be a mapping.")
-    normalized_transforms = normalize_transform_specs(raw.get("transforms"))
-    planned_raw = {
-        "inputs": raw.get("inputs", []),
-        "transforms": normalized_transforms,
-    }
-    if "output" in raw:
-        planned_raw["output"] = raw.get("output")
+    planned_raw = normalize_raw_plan(raw)
 
     _configure_logging(log_level=log_level)
     reset_runtime_flags()
 
     logs: list[str] = []
     output_lines: list[str] = []
-    executed_transforms: list[dict[str, Any]] = []
     summary_yaml: str | None = None
     written_path: str | None = None
 
@@ -73,7 +66,6 @@ def _run_web_plan(
                 state_dict_provider,
                 interactive=False,
             )
-            executed_transforms = surgery_plan.executed_raw_transforms
 
             if surgery_plan.output is None:
                 logger.info("No output configured; execution finished without save.")
@@ -89,18 +81,13 @@ def _run_web_plan(
                 logger.info("Output saved to %s", written_path)
 
         if summarize:
-            summary_doc = build_raw_plan(
-                inputs=raw.get("inputs", []),
-                output=raw.get("output"),
-                transforms=executed_transforms,
-            )
+            summary_doc = surgery_plan.to_raw_plan(executed_only=True)
             summary_yaml = OmegaConf.to_yaml(summary_doc)
 
         return _WebRunResult(
             ok=True,
             logs=logs,
             output_lines=output_lines,
-            executed_transforms=executed_transforms,
             summary_yaml=summary_yaml,
             written_path=written_path,
         )
@@ -112,13 +99,7 @@ def _run_web_plan(
 
 
 def _configure_logging(*, log_level: str) -> None:
-    allowed = {"debug", "info", "warning", "error", "critical"}
-    level_name = log_level.strip().lower()
-    if level_name not in allowed:
-        raise ValueError(f"log_level must be one of: {', '.join(sorted(allowed))}")
-    level = getattr(logging, level_name.upper())
-    logging.getLogger().setLevel(level)
-    logger.setLevel(level)
+    apply_log_level(log_level)
 
 
 class _ListLogHandler(logging.Handler):

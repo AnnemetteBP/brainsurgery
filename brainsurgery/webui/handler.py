@@ -135,7 +135,7 @@ def _handler_factory(session: _SessionState):
                         if transform_name == "exit":
                             summary = _render_execution_summary(
                                 provider=session.provider,
-                                executed_transforms=session.plan.executed_raw_transforms,
+                                plan=session.plan,
                             )
                             output = f"{output}\n\n{summary}".strip() if output else summary
                         models = _serialize_models(session.provider)

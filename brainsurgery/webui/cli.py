@@ -3,24 +3,22 @@ import webbrowser
 
 import typer
 
+from ..engine import apply_log_level
 from .server import _serve_webui
 
 
 logger = logging.getLogger("brainsurgery")
-_ALLOWED_LOG_LEVELS = {"debug", "info", "warning", "error", "critical"}
 
 app = typer.Typer(help="Brain surgery web UI.")
 
 
 def configure_logging(log_level: str) -> None:
-    level_name = log_level.strip().lower()
-    if level_name not in _ALLOWED_LOG_LEVELS:
+    try:
+        apply_log_level(log_level)
+    except ValueError:
         raise typer.BadParameter(
-            f"log-level must be one of: {', '.join(sorted(_ALLOWED_LOG_LEVELS))}"
+            "log-level must be one of: critical, debug, error, info, warning"
         )
-    level = getattr(logging, level_name.upper())
-    logging.getLogger().setLevel(level)
-    logger.setLevel(level)
 
 
 @app.callback(invoke_without_command=True)

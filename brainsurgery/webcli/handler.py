@@ -58,7 +58,6 @@ def _handler_factory():
                     "ok": result.ok,
                     "logs": result.logs,
                     "output_lines": result.output_lines,
-                    "executed_transforms": result.executed_transforms,
                     "summary_yaml": result.summary_yaml,
                     "written_path": result.written_path,
                     "error": result.error,
