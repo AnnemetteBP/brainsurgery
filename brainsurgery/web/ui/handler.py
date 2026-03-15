@@ -7,8 +7,6 @@ import time
 from typing import Any
 import uuid
 
-from omegaconf import OmegaConf
-
 from brainsurgery.core import IteratingTransform, IterationProgress, get_transform
 from brainsurgery.engine import list_model_aliases
 from ..http import JsonRequestHandler
@@ -216,15 +214,6 @@ def _handler_factory(session: _SessionState):
                 progress_callback = _make_progress_callback(session) if iterating else None
                 with session.lock:
                     try:
-                        if transform_name == "assert" and isinstance(payload, str):
-                            text = payload.strip()
-                            if not text:
-                                raise ValueError("assert payload cannot be empty.")
-                            try:
-                                parsed = OmegaConf.create(text)
-                                payload = OmegaConf.to_container(parsed, resolve=True)
-                            except Exception as exc:
-                                raise ValueError(f"invalid assert YAML payload: {exc}") from exc
                         output, next_default_model = _apply_transform(
                             provider=session.provider,
                             plan=session.plan,

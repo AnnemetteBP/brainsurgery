@@ -25,6 +25,12 @@ Enable interactive mode after configured transforms:
 brainsurgery -i examples/gpt2.yaml
 ```
 
+Launch the browser-based Web UI:
+
+```bash
+brainsurgery webui
+```
+
 ## Documentation
 Detailed project documentation is in `docs/`:
 

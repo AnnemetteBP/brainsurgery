@@ -34,6 +34,19 @@ from brainsurgery.engine import (
 DISABLED_TRANSFORMS: set[str] = set()
 
 
+def _normalize_assert_payload(payload: Any) -> Any:
+    if not isinstance(payload, str):
+        return payload
+    text = payload.strip()
+    if not text:
+        raise ValueError("assert payload cannot be empty.")
+    try:
+        parsed = OmegaConf.create(text)
+        return OmegaConf.to_container(parsed, resolve=True)
+    except Exception as exc:
+        raise ValueError(f"invalid assert YAML payload: {exc}") from exc
+
+
 def _transform_items() -> list[dict[str, Any]]:
     specs = _transform_specs()
     items: list[dict[str, Any]] = []
@@ -203,15 +216,8 @@ def _apply_transform(
     if transform_name in DISABLED_TRANSFORMS:
         raise ValueError(f"transform {transform_name!r} is disabled in webui.")
 
-    if transform_name == "assert" and isinstance(payload, str):
-        text = payload.strip()
-        if not text:
-            raise ValueError("assert payload cannot be empty.")
-        try:
-            parsed = OmegaConf.create(text)
-            payload = OmegaConf.to_container(parsed, resolve=True)
-        except Exception as exc:
-            raise ValueError(f"invalid assert YAML payload: {exc}") from exc
+    if transform_name == "assert":
+        payload = _normalize_assert_payload(payload)
 
     if default_model is None:
         aliases = sorted(list_model_aliases(provider))
