@@ -3,7 +3,7 @@ from pathlib import Path
 import threading
 from typing import Any
 
-from ..engine import SurgeryPlan
+from brainsurgery.engine import SurgeryPlan
 
 
 @dataclass

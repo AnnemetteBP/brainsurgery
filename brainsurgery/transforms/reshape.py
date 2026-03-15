@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from ..core import BinaryMappingSpec, DestinationPolicy, UnarySpec
-from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError, must_model, select_tensor
+from ..core import StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
 from ..core import register_transform
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, DeclarativeUnaryTransform, UnaryRefs
 from ..engine import emit_verbose_binary_activity
@@ -23,17 +23,18 @@ def _build_reshape_spec(
 
 
 def _reshape_apply(
-    spec: ReshapeSpec, item: ResolvedMapping, provider: StateDictProvider
+    spec: ReshapeSpec, src_name: str, dst_name: str, provider: StateDictProvider
 ) -> None:
-    src_sd = provider.get_state_dict(item.src_model)
-    dst_sd = provider.get_state_dict(item.dst_model)
-    src_view = select_tensor(src_sd[item.src_name], item.src_slice)
+    src_sd = provider.get_state_dict(must_model(spec.from_ref))
+    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
+    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
+    src_view = select_tensor(src_sd[src_name], src_slice)
     try:
-        dst_sd[item.dst_name] = src_view.reshape(spec.shape).clone()
-        emit_verbose_binary_activity("reshape", item)
+        dst_sd[dst_name] = src_view.reshape(spec.shape).clone()
+        emit_verbose_binary_activity("reshape", src_name, dst_name)
     except RuntimeError as exc:
         raise TransformError(
-            f"reshape failed for {item.src_name} -> {item.dst_name}: {exc}"
+            f"reshape failed for {src_name} -> {dst_name}: {exc}"
         ) from exc
 
 

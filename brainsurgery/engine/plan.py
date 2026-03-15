@@ -21,7 +21,7 @@ class _OutputSpec:
 class PlanStep:
     raw: dict[str, Any]
     compiled: CompiledTransform | None = None
-    status: Literal["pending", "running", "done", "failed", "skipped"] = "pending"
+    status: Literal["pending", "running", "done", "failed"] = "pending"
     error: str | None = None
 
 

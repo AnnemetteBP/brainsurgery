@@ -1,29 +1,30 @@
 from ..core import BinaryMappingSpec, DestinationPolicy
-from ..core import ResolvedMapping, StateDictProvider, TransformError, select_tensor
+from ..core import StateDictProvider, TransformError, must_model, parse_slice, select_tensor
 from ..core import register_transform
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs
 from ..engine import emit_verbose_binary_activity
 
 
 def _copy_apply(
-    _spec: BinaryMappingSpec, item: ResolvedMapping, provider: StateDictProvider
+    spec: BinaryMappingSpec, src_name: str, dst_name: str, provider: StateDictProvider
 ) -> None:
-    src_sd = provider.get_state_dict(item.src_model)
-    dst_sd = provider.get_state_dict(item.dst_model)
+    src_sd = provider.get_state_dict(must_model(spec.from_ref))
+    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
+    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
 
-    copied = src_sd[item.src_name]
-    if item.src_slice is not None:
-        copied = select_tensor(copied, item.src_slice)
+    copied = src_sd[src_name]
+    if src_slice is not None:
+        copied = select_tensor(copied, src_slice)
     copied = copied.clone()
 
-    if item.dst_name in dst_sd:
+    if dst_name in dst_sd:
         raise TransformError(
             f"copy destination already exists during apply: "
-            f"{item.dst_model}::{item.dst_name}"
+            f"{must_model(spec.to_ref)}::{dst_name}"
         )
 
-    dst_sd[item.dst_name] = copied
-    emit_verbose_binary_activity("copy", item)
+    dst_sd[dst_name] = copied
+    emit_verbose_binary_activity("copy", src_name, dst_name)
 
 
 class CopyTransform(DeclarativeBinaryTransform[BinaryMappingSpec]):

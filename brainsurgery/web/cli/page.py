@@ -100,6 +100,12 @@ output:
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
           <button id="runBtn">Run</button>
           <label style="display:flex; align-items:center; gap:6px;"><input id="summarize" type="checkbox" checked style="width:auto;"/>Summary</label>
+          <label style="display:flex; align-items:center; gap:6px;">Mode
+            <select id="summaryMode" style="width:auto;">
+              <option value="raw" selected>raw</option>
+              <option value="resolve">resolve</option>
+            </select>
+          </label>
           <span id="status" class="status"></span>
         </div>
         <label>Output</label><pre id="outputPane"></pre>
@@ -132,6 +138,7 @@ output:
         arena_root: document.getElementById("arenaRoot").value,
         arena_segment_size: document.getElementById("arenaSegmentSize").value,
         summarize: document.getElementById("summarize").checked,
+        summary_mode: document.getElementById("summaryMode").value,
         log_level: document.getElementById("logLevel").value
       };
       try {

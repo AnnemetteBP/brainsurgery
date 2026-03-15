@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from ..core import BinaryMappingSpec, DestinationPolicy
-from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError, select_tensor
+from ..core import StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
 from ..core import register_transform
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs
 from ..engine import emit_verbose_binary_activity
@@ -20,23 +20,24 @@ def _build_permute_spec(
 
 
 def _permute_apply(
-    spec: PermuteSpec, item: ResolvedMapping, provider: StateDictProvider
+    spec: PermuteSpec, src_name: str, dst_name: str, provider: StateDictProvider
 ) -> None:
-    src_sd = provider.get_state_dict(item.src_model)
-    dst_sd = provider.get_state_dict(item.dst_model)
-    src_view = select_tensor(src_sd[item.src_name], item.src_slice)
+    src_sd = provider.get_state_dict(must_model(spec.from_ref))
+    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
+    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
+    src_view = select_tensor(src_sd[src_name], src_slice)
     order = spec.order
     if src_view.dim() != len(order):
         raise TransformError(
-            f"permute.order rank mismatch for {item.src_name}: "
+            f"permute.order rank mismatch for {src_name}: "
             f"tensor rank {src_view.dim()} vs order length {len(order)}"
         )
     if sorted(order) != list(range(src_view.dim())):
         raise TransformError(
             f"permute.order must be a permutation of [0..{src_view.dim() - 1}], got {list(order)}"
         )
-    dst_sd[item.dst_name] = src_view.permute(*order).clone()
-    emit_verbose_binary_activity("permute", item)
+    dst_sd[dst_name] = src_view.permute(*order).clone()
+    emit_verbose_binary_activity("permute", src_name, dst_name)
 
 
 class PermuteTransform(DeclarativeBinaryTransform[PermuteSpec]):

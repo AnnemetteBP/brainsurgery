@@ -1,10 +1,10 @@
-from http.server import ThreadingHTTPServer
 import logging
 from pathlib import Path
 import tempfile
 import threading
 
-from ..engine import create_state_dict_provider
+from brainsurgery.engine import create_state_dict_provider
+from ..http import serve_http
 from .handler import _handler_factory
 from .session import _SessionState
 
@@ -26,15 +26,12 @@ def _serve_webui(*, host: str, port: int) -> None:
         upload_root=Path(tempfile.gettempdir()) / "brainsurgery-webui-uploads",
     )
     session.upload_root.mkdir(parents=True, exist_ok=True)
-
-    handler = _handler_factory(session)
-    server = ThreadingHTTPServer((host, port), handler)
-    logger.info("Brain surgery web UI available at http://%s:%d", host, port)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        logger.info("Shutting down web UI server")
-    finally:
-        server.server_close()
-        provider.close()
-
+    serve_http(
+        host=host,
+        port=port,
+        handler_factory=lambda: _handler_factory(session),
+        startup_message="Brain surgery web UI available at http://%s:%d",
+        shutdown_message="Shutting down web UI server",
+        logger=logger,
+        on_close=provider.close,
+    )

@@ -824,6 +824,15 @@ _HTML_PAGE = """<!doctype html>
         copyLabel.appendChild(copyCheckbox);
         copyLabel.appendChild(copyText);
         transformFields.appendChild(copyLabel);
+
+        const summaryModeSelect = document.createElement("select");
+        summaryModeSelect.innerHTML =
+          "<option value='raw'>summary mode: raw</option>" +
+          "<option value='resolve'>summary mode: resolve</option>";
+        summaryModeSelect.value = cfg.fields.exit_summary_mode == null ? "raw" : String(cfg.fields.exit_summary_mode).toLowerCase();
+        if (!["raw", "resolve"].includes(summaryModeSelect.value)) summaryModeSelect.value = "raw";
+        summaryModeSelect.addEventListener("change", () => { cfg.fields.exit_summary_mode = summaryModeSelect.value; });
+        transformFields.appendChild(summaryModeSelect);
       }
 
       if (selectedTransform === "save") {
@@ -1219,7 +1228,13 @@ _HTML_PAGE = """<!doctype html>
             body: JSON.stringify(
               isSaveDownload
                 ? { payload: payload }
-                : { transform: runTransformName, payload: payload }
+                : {
+                  transform: runTransformName,
+                  payload: payload,
+                  summary_mode: runTransformName === "exit"
+                    ? (String(cfg.fields.exit_summary_mode || "raw").toLowerCase())
+                    : undefined
+                }
             )
           }
         );

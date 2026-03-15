@@ -4,11 +4,11 @@ from ..core import (
     DeclarativeBinaryTransform,
     DestinationPolicy,
     Docs,
-    ResolvedTernaryMapping,
-    ResolvedMapping,
     StateDictProvider,
     TernaryMappingSpec,
     TransformError,
+    must_model,
+    parse_slice,
     require_same_shape_dtype_device,
     select_tensor,
 )
@@ -20,31 +20,36 @@ from ..engine import emit_verbose_ternary_activity
 
 
 def _add_apply(
-    _spec: TernaryMappingSpec,
-    item: ResolvedTernaryMapping,
+    spec: TernaryMappingSpec,
+    src_a_name: str,
+    src_b_name: str,
+    dst_name: str,
     provider: StateDictProvider,
 ) -> None:
-    src_a_sd = provider.get_state_dict(item.src_a_model)
-    src_b_sd = provider.get_state_dict(item.src_b_model)
-    dst_sd = provider.get_state_dict(item.dst_model)
+    src_a_sd = provider.get_state_dict(must_model(spec.from_a_ref))
+    src_b_sd = provider.get_state_dict(must_model(spec.from_b_ref))
+    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
+    src_a_slice = parse_slice(spec.from_a_ref.slice_spec) if spec.from_a_ref.slice_spec is not None else None
+    src_b_slice = parse_slice(spec.from_b_ref.slice_spec) if spec.from_b_ref.slice_spec is not None else None
+    dst_slice = parse_slice(spec.to_ref.slice_spec) if spec.to_ref.slice_spec is not None else None
 
-    src_a_view = select_tensor(src_a_sd[item.src_a_name], item.src_a_slice)
-    src_b_view = select_tensor(src_b_sd[item.src_b_name], item.src_b_slice)
-    dst_view = select_tensor(dst_sd[item.dst_name], item.dst_slice)
+    src_a_view = select_tensor(src_a_sd[src_a_name], src_a_slice)
+    src_b_view = select_tensor(src_b_sd[src_b_name], src_b_slice)
+    dst_view = select_tensor(dst_sd[dst_name], dst_slice)
 
     require_same_shape_dtype_device3(
         src_a_view,
         src_b_view,
         dst_view,
         op_name="adding",
-        first_name=item.src_a_name,
-        second_name=item.src_b_name,
-        dest_name=item.dst_name,
+        first_name=src_a_name,
+        second_name=src_b_name,
+        dest_name=dst_name,
         symbol="+",
     )
     dst_view.copy_(src_a_view + src_b_view)
-    dst_sd.mark_write(item.dst_name)
-    emit_verbose_ternary_activity("add", item)
+    dst_sd.mark_write(dst_name)
+    emit_verbose_ternary_activity("add", src_a_name, src_b_name, dst_name)
 
 
 class AddTransform(DeclarativeTernaryTransform[TernaryMappingSpec]):
@@ -66,26 +71,29 @@ register_transform(AddTransform())
 
 
 def _add_in_place_apply(
-    _spec: BinaryMappingSpec,
-    item: ResolvedMapping,
+    spec: BinaryMappingSpec,
+    src_name: str,
+    dst_name: str,
     provider: StateDictProvider,
 ) -> None:
-    src_sd = provider.get_state_dict(item.src_model)
-    dst_sd = provider.get_state_dict(item.dst_model)
+    src_sd = provider.get_state_dict(must_model(spec.from_ref))
+    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
+    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
+    dst_slice = parse_slice(spec.to_ref.slice_spec) if spec.to_ref.slice_spec is not None else None
 
-    src_view = select_tensor(src_sd[item.src_name], item.src_slice)
-    dst_view = select_tensor(dst_sd[item.dst_name], item.dst_slice)
+    src_view = select_tensor(src_sd[src_name], src_slice)
+    dst_view = select_tensor(dst_sd[dst_name], dst_slice)
     require_same_shape_dtype_device(
         src_view,
         dst_view,
         op_name="adding",
-        left_name=item.src_name,
-        right_name=item.dst_name,
+        left_name=src_name,
+        right_name=dst_name,
     )
 
     dst_view.add_(src_view)
-    dst_sd.mark_write(item.dst_name)
-    emit_verbose_binary_activity("add_", item)
+    dst_sd.mark_write(dst_name)
+    emit_verbose_binary_activity("add_", src_name, dst_name)
 
 
 class AddInPlaceTransform(DeclarativeBinaryTransform[BinaryMappingSpec]):

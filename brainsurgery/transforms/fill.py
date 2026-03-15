@@ -1,10 +1,10 @@
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Literal
 
 import torch
 
 from ..core import BinaryMappingSpec, DestinationPolicy, UnarySpec
-from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
+from ..core import StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
 from ..core import register_transform
 from ..core import require_numeric
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, DeclarativeUnaryTransform, UnaryRefs
@@ -39,15 +39,16 @@ def _build_fill_spec(from_ref: TensorRef, to_ref: TensorRef, payload: dict) -> F
 
 
 def _fill_apply(
-    spec: FillSpec, item: ResolvedMapping, provider: StateDictProvider
+    spec: FillSpec, src_name: str, dst_name: str, provider: StateDictProvider
 ) -> None:
-    src_sd = provider.get_state_dict(item.src_model)
-    dst_sd = provider.get_state_dict(item.dst_model)
-    template = select_tensor(src_sd[item.src_name], item.src_slice)
-    dst_sd[item.dst_name] = build_filled_tensor_like(
+    src_sd = provider.get_state_dict(must_model(spec.from_ref))
+    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
+    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
+    template = select_tensor(src_sd[src_name], src_slice)
+    dst_sd[dst_name] = build_filled_tensor_like(
         template, spec.config, TransformError
     )
-    emit_verbose_binary_activity("fill", item)
+    emit_verbose_binary_activity("fill", src_name, dst_name)
 
 
 class FillTransform(DeclarativeBinaryTransform[FillSpec]):

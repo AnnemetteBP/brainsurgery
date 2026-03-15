@@ -1,9 +1,8 @@
 from ..core import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
-from ..core import ResolvedMapping
-from ..core import TensorRef, parse_slice, select_tensor
+from ..core import TensorRef, must_model, parse_slice, select_tensor
 from ..core import require_same_shape_dtype_device
 from ..core import register_transform
-from ..core import StateDictProvider, TransformError
+from ..core import StateDictProvider
 from ..engine import emit_verbose_binary_activity
 
 
@@ -29,23 +28,25 @@ class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
         if to_ref.slice_spec is not None:
             parse_slice(to_ref.slice_spec)
 
-    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
-        src_sd = provider.get_state_dict(item.src_model)
-        dst_sd = provider.get_state_dict(item.dst_model)
+    def apply_mapping(self, spec: BinaryMappingSpec, src_name: str, dst_name: str, provider: StateDictProvider) -> None:
+        src_sd = provider.get_state_dict(must_model(spec.from_ref))
+        dst_sd = provider.get_state_dict(must_model(spec.to_ref))
+        src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
+        dst_slice = parse_slice(spec.to_ref.slice_spec) if spec.to_ref.slice_spec is not None else None
 
-        src_view = select_tensor(src_sd[item.src_name], item.src_slice)
-        dst_view = select_tensor(dst_sd[item.dst_name], item.dst_slice)
+        src_view = select_tensor(src_sd[src_name], src_slice)
+        dst_view = select_tensor(dst_sd[dst_name], dst_slice)
         require_same_shape_dtype_device(
             src_view,
             dst_view,
             op_name="assigning",
-            left_name=item.src_name,
-            right_name=item.dst_name,
+            left_name=src_name,
+            right_name=dst_name,
         )
 
         dst_view.copy_(src_view)
-        dst_sd.mark_write(item.dst_name)
-        emit_verbose_binary_activity(self.name, item)
+        dst_sd.mark_write(dst_name)
+        emit_verbose_binary_activity(self.name, src_name, dst_name)
 
 
 

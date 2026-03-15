@@ -9,10 +9,7 @@ from tqdm import tqdm
 from ..compile import (
     _match_structured_expr,
     _rewrite_structured_expr,
-    ResolvedMapping,
     match_expr_names,
-    _require_dest_missing,
-    _require_dest_present,
     resolve_name_mappings,
 )
 from ..specs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
@@ -291,7 +288,7 @@ class BinaryMappingSpec:
 BinarySpecT = TypeVar("BinarySpecT", bound=BinaryMappingSpec)
 
 
-class BinaryMappingTransform(IteratingTransform[BinarySpecT, ResolvedMapping], ABC, Generic[BinarySpecT]):
+class BinaryMappingTransform(IteratingTransform[BinarySpecT, tuple[str, str]], ABC, Generic[BinarySpecT]):
     error_type: type[TransformError] = TransformError
     spec_type: type[BinarySpecT]
     destination_policy: DestinationPolicy = DestinationPolicy.ANY
@@ -344,13 +341,14 @@ class BinaryMappingTransform(IteratingTransform[BinarySpecT, ResolvedMapping], A
         self,
         spec: BinarySpecT,
         provider: StateDictProvider,
-    ) -> list[ResolvedMapping]:
-        return resolve_name_mappings(
+    ) -> list[tuple[str, str]]:
+        mappings = resolve_name_mappings(
             from_ref=spec.from_ref,
             to_ref=spec.to_ref,
             provider=provider,
             op_name=self.name,
         )
+        return [(item.src_name, item.dst_name) for item in mappings]
 
     @abstractmethod
     def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
@@ -359,32 +357,35 @@ class BinaryMappingTransform(IteratingTransform[BinarySpecT, ResolvedMapping], A
     def validate_resolved_items(
         self,
         spec: BinarySpecT,
-        mappings: list[ResolvedMapping],
+        mappings: list[tuple[str, str]],
         provider: StateDictProvider,
     ) -> None:
-        del spec
+        dst_model = must_model(spec.to_ref)
+        dst_sd = provider.get_state_dict(dst_model)
+        dst_names = [dst_name for _, dst_name in mappings]
+
         if self.destination_policy is DestinationPolicy.MUST_EXIST:
-            _require_dest_present(
-                mappings=mappings,
-                provider=provider,
-                op_name=self.name,
-            )
+            missing = [name for name in dst_names if name not in dst_sd]
+            if missing:
+                raise self.error_type(
+                    f"{self.name} destination missing: {dst_model}::{missing[0]}"
+                )
             return
 
         if self.destination_policy is DestinationPolicy.MUST_NOT_EXIST:
-            _require_dest_missing(
-                mappings=mappings,
-                provider=provider,
-                op_name=self.name,
-            )
+            existing = [name for name in dst_names if name in dst_sd]
+            if existing:
+                raise self.error_type(
+                    f"{self.name} destination already exists: {dst_model}::{existing[0]}"
+                )
 
-    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
-        del item, provider
+    def apply_mapping(self, spec: BinarySpecT, src_name: str, dst_name: str, provider: StateDictProvider) -> None:
+        del spec, src_name, dst_name, provider
         raise NotImplementedError
 
-    def apply_item(self, spec: BinarySpecT, item: ResolvedMapping, provider: StateDictProvider) -> None:
-        del spec
-        self.apply_mapping(item, provider)
+    def apply_item(self, spec: BinarySpecT, item: tuple[str, str], provider: StateDictProvider) -> None:
+        src_name, dst_name = item
+        self.apply_mapping(spec, src_name, dst_name, provider)
 
 
 @dataclass(frozen=True)
@@ -401,23 +402,10 @@ class TernaryMappingSpec:
         }
 
 
-@dataclass(frozen=True)
-class ResolvedTernaryMapping:
-    src_a_model: str
-    src_a_name: str
-    src_a_slice: tuple[object, ...] | None
-    src_b_model: str
-    src_b_name: str
-    src_b_slice: tuple[object, ...] | None
-    dst_model: str
-    dst_name: str
-    dst_slice: tuple[object, ...] | None
-
-
 TernarySpecT = TypeVar("TernarySpecT", bound=TernaryMappingSpec)
 
 
-class TernaryMappingTransform(IteratingTransform[TernarySpecT, ResolvedTernaryMapping], ABC, Generic[TernarySpecT]):
+class TernaryMappingTransform(IteratingTransform[TernarySpecT, tuple[str, str, str]], ABC, Generic[TernarySpecT]):
     error_type: type[TransformError] = TransformError
     spec_type: type[TernarySpecT]
     destination_policy: DestinationPolicy = DestinationPolicy.ANY
@@ -477,14 +465,10 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, ResolvedTernaryMa
         self,
         spec: TernarySpecT,
         provider: StateDictProvider,
-    ) -> list[ResolvedTernaryMapping]:
+    ) -> list[tuple[str, str, str]]:
         from_a_ref = spec.from_a_ref
         from_b_ref = spec.from_b_ref
         to_ref = spec.to_ref
-
-        a_slice = parse_slice(from_a_ref.slice_spec) if from_a_ref.slice_spec is not None else None
-        b_slice = parse_slice(from_b_ref.slice_spec) if from_b_ref.slice_spec is not None else None
-        dst_slice = parse_slice(to_ref.slice_spec) if to_ref.slice_spec is not None else None
 
         src_a_model = must_model(from_a_ref)
         src_b_model = must_model(from_b_ref)
@@ -508,7 +492,7 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, ResolvedTernaryMa
                     f"{format_tensor_ref(from_a_ref)}; available tensors: {sorted(src_a_sd.keys())}"
                 )
 
-            resolved: list[ResolvedTernaryMapping] = []
+            resolved: list[tuple[str, str, str]] = []
             dst_names_seen: set[str] = set()
             for src_a_name in src_a_names:
                 try:
@@ -527,23 +511,11 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, ResolvedTernaryMa
                     raise self.error_type(f"{self.name} destination collision: {dst_model}::{dst_name}")
                 dst_names_seen.add(dst_name)
 
-                resolved.append(
-                    ResolvedTernaryMapping(
-                        src_a_model=src_a_model,
-                        src_a_name=src_a_name,
-                        src_a_slice=a_slice,
-                        src_b_model=src_b_model,
-                        src_b_name=src_b_name,
-                        src_b_slice=b_slice,
-                        dst_model=dst_model,
-                        dst_name=dst_name,
-                        dst_slice=dst_slice,
-                    )
-                )
+                resolved.append((src_a_name, src_b_name, dst_name))
             return resolved
 
         if isinstance(a_expr, list) and isinstance(b_expr, list) and isinstance(to_expr, list):
-            resolved: list[ResolvedTernaryMapping] = []
+            resolved: list[tuple[str, str, str]] = []
             dst_names_seen: set[str] = set()
             matched_any = False
             for src_a_name in sorted(src_a_sd.keys()):
@@ -578,19 +550,7 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, ResolvedTernaryMa
                     raise self.error_type(f"{self.name} destination collision: {dst_model}::{dst_name}")
                 dst_names_seen.add(dst_name)
 
-                resolved.append(
-                    ResolvedTernaryMapping(
-                        src_a_model=src_a_model,
-                        src_a_name=src_a_name,
-                        src_a_slice=a_slice,
-                        src_b_model=src_b_model,
-                        src_b_name=src_b_name,
-                        src_b_slice=b_slice,
-                        dst_model=dst_model,
-                        dst_name=dst_name,
-                        dst_slice=dst_slice,
-                    )
-                )
+                resolved.append((src_a_name, src_b_name, dst_name))
 
             if not matched_any:
                 raise self.error_type(
@@ -607,38 +567,46 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, ResolvedTernaryMa
     def validate_resolved_items(
         self,
         spec: TernarySpecT,
-        mappings: list[ResolvedTernaryMapping],
+        mappings: list[tuple[str, str, str]],
         provider: StateDictProvider,
     ) -> None:
-        del spec
+        dst_model = must_model(spec.to_ref)
+        dst_sd = provider.get_state_dict(dst_model)
+
         if self.destination_policy is DestinationPolicy.ANY:
             return
 
-        for item in mappings:
-            dst_sd = provider.get_state_dict(item.dst_model)
-            exists = item.dst_name in dst_sd
+        for _, _, dst_name in mappings:
+            exists = dst_name in dst_sd
 
             if self.destination_policy is DestinationPolicy.MUST_EXIST and not exists:
                 raise self.error_type(
-                    f"{self.name} destination missing: {item.dst_model}::{item.dst_name}"
+                    f"{self.name} destination missing: {dst_model}::{dst_name}"
                 )
             if self.destination_policy is DestinationPolicy.MUST_NOT_EXIST and exists:
                 raise self.error_type(
-                    f"{self.name} destination already exists: {item.dst_model}::{item.dst_name}"
+                    f"{self.name} destination already exists: {dst_model}::{dst_name}"
                 )
 
     @abstractmethod
-    def apply_mapping(self, item: ResolvedTernaryMapping, provider: StateDictProvider) -> None:
+    def apply_mapping(
+        self,
+        spec: TernarySpecT,
+        src_a_name: str,
+        src_b_name: str,
+        dst_name: str,
+        provider: StateDictProvider,
+    ) -> None:
         ...
 
     def apply_item(
         self,
         spec: TernarySpecT,
-        item: ResolvedTernaryMapping,
+        item: tuple[str, str, str],
         provider: StateDictProvider,
     ) -> None:
-        del spec
-        self.apply_mapping(item, provider)
+        src_a_name, src_b_name, dst_name = item
+        self.apply_mapping(spec, src_a_name, src_b_name, dst_name, provider)
 
 
 __all__ = [
@@ -648,7 +616,6 @@ __all__ = [
     "CompiledTransform",
     "DestinationPolicy",
     "IteratingTransform",
-    "ResolvedTernaryMapping",
     "TernaryMappingSpec",
     "TernaryMappingTransform",
     "TransformControl",

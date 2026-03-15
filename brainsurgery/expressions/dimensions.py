@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
 
-import torch
-
 from ..core import TransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, resolve_tensors, require_mapping_assert_payload
 from ..core import TensorRef
 from ..core import StateDictProvider

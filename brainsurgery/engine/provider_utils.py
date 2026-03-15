@@ -1,5 +1,4 @@
 from collections.abc import Mapping
-from typing import Any
 
 from ..core import StateDictLike, StateDictProvider, TransformError
 

@@ -12,15 +12,11 @@ from ..engine import normalize_transform_specs
 from .complete import (
     _collect_completion_candidates,
     _collect_payload_candidates,
-    _completion_display_hook,
     _configure_readline_completion_bindings as _configure_readline_completion_bindings_impl,
     _infer_active_transform,
     _is_top_level_completion_position,
     _match_payload_candidates,
     _list_model_aliases,
-    _payload_context,
-    _render_completion_preview,
-    _is_transform_payload_start,
 )
 from .history import _add_history_entry
 from .oly import _parse_oly_line

@@ -1,7 +1,8 @@
 from ..core import (
     DestinationPolicy,
-    ResolvedTernaryMapping,
     TernaryMappingSpec,
+    must_model,
+    parse_slice,
 )
 from ..core import select_tensor
 from ..core import require_same_shape_dtype_device3
@@ -12,31 +13,36 @@ from ..engine import emit_verbose_ternary_activity
 
 
 def _multiply_apply(
-    _spec: TernaryMappingSpec,
-    item: ResolvedTernaryMapping,
+    spec: TernaryMappingSpec,
+    src_a_name: str,
+    src_b_name: str,
+    dst_name: str,
     provider: StateDictProvider,
 ) -> None:
-    src_a_sd = provider.get_state_dict(item.src_a_model)
-    src_b_sd = provider.get_state_dict(item.src_b_model)
-    dst_sd = provider.get_state_dict(item.dst_model)
+    src_a_sd = provider.get_state_dict(must_model(spec.from_a_ref))
+    src_b_sd = provider.get_state_dict(must_model(spec.from_b_ref))
+    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
+    src_a_slice = parse_slice(spec.from_a_ref.slice_spec) if spec.from_a_ref.slice_spec is not None else None
+    src_b_slice = parse_slice(spec.from_b_ref.slice_spec) if spec.from_b_ref.slice_spec is not None else None
+    dst_slice = parse_slice(spec.to_ref.slice_spec) if spec.to_ref.slice_spec is not None else None
 
-    src_a_view = select_tensor(src_a_sd[item.src_a_name], item.src_a_slice)
-    src_b_view = select_tensor(src_b_sd[item.src_b_name], item.src_b_slice)
-    dst_view = select_tensor(dst_sd[item.dst_name], item.dst_slice)
+    src_a_view = select_tensor(src_a_sd[src_a_name], src_a_slice)
+    src_b_view = select_tensor(src_b_sd[src_b_name], src_b_slice)
+    dst_view = select_tensor(dst_sd[dst_name], dst_slice)
 
     require_same_shape_dtype_device3(
         src_a_view,
         src_b_view,
         dst_view,
         op_name="multiplying",
-        first_name=item.src_a_name,
-        second_name=item.src_b_name,
-        dest_name=item.dst_name,
+        first_name=src_a_name,
+        second_name=src_b_name,
+        dest_name=dst_name,
         symbol="*",
     )
     dst_view.copy_(src_a_view * src_b_view)
-    dst_sd.mark_write(item.dst_name)
-    emit_verbose_ternary_activity("multiply", item)
+    dst_sd.mark_write(dst_name)
+    emit_verbose_ternary_activity("multiply", src_a_name, src_b_name, dst_name)
 
 
 class MultiplyTransform(DeclarativeTernaryTransform[TernaryMappingSpec]):

@@ -1,11 +1,12 @@
 import json
+import copy
 from dataclasses import is_dataclass
 from pathlib import Path
 from typing import Any
 from typing import get_args, get_origin, get_type_hints
 
 from omegaconf import OmegaConf
-from ..core import (
+from brainsurgery.core import (
     BinaryMappingTransform,
     DestinationPolicy,
     TernaryMappingTransform,
@@ -17,8 +18,15 @@ from ..core import (
     match_expr_names,
     parse_model_expr,
 )
-from ..engine import SurgeryPlan, list_model_aliases, reset_runtime_flags, use_output_emitter
-from ..engine import get_runtime_flags
+from brainsurgery.engine import (
+    SurgeryPlan,
+    executed_plan_summary_yaml,
+    get_runtime_flags,
+    list_model_aliases,
+    parse_summary_mode,
+    reset_runtime_flags,
+    use_output_emitter,
+)
 
 
 DISABLED_TRANSFORMS: set[str] = set()
@@ -181,11 +189,12 @@ def _parse_filter_expr(raw: Any, *, alias: str) -> str | list[Any]:
 def _apply_transform(
     *,
     provider: Any,
+    plan: SurgeryPlan,
     transform_name: str,
     payload: Any,
     default_model: str | None = None,
+    record_payload: Any | None = None,
 ) -> tuple[str, str | None]:
-    transform = get_transform(transform_name)
     if transform_name in DISABLED_TRANSFORMS:
         raise ValueError(f"transform {transform_name!r} is disabled in webui.")
 
@@ -203,31 +212,59 @@ def _apply_transform(
         aliases = sorted(list_model_aliases(provider))
         default_model = aliases[0] if len(aliases) == 1 else None
 
+    raw_transform = {transform_name: copy.deepcopy(payload)}
+    recorded_transform = {
+        transform_name: copy.deepcopy(payload if record_payload is None else record_payload),
+    }
+
+    return _execute_plan_transform(
+        provider=provider,
+        plan=plan,
+        raw_transform=raw_transform,
+        recorded_transform=recorded_transform,
+        default_model=default_model,
+    )
+
+
+def _apply_load_transform(*, provider: Any, plan: SurgeryPlan, path: Path, alias: str) -> None:
+    _execute_plan_transform(
+        provider=provider,
+        plan=plan,
+        raw_transform={"load": {"path": str(path), "alias": alias}},
+        recorded_transform={"load": {"path": str(path), "alias": alias}},
+        default_model=None,
+    )
+
+
+def _execute_plan_transform(
+    *,
+    provider: Any,
+    plan: SurgeryPlan,
+    raw_transform: dict[str, Any],
+    recorded_transform: dict[str, Any],
+    default_model: str | None,
+) -> tuple[str, str | None]:
     reset_runtime_flags()
+    step = plan.append_raw_transform(raw_transform)
     lines: list[str] = []
     with use_output_emitter(lines.append):
-        spec = transform.compile(payload, default_model=default_model)
-        transform.apply(spec, provider)
+        plan.compile_pending(
+            extra_known_models=set(list_model_aliases(provider)),
+            default_model=default_model,
+        )
+        plan.execute_pending(provider, interactive=False)
+
+    step.raw = recorded_transform
+
     next_default_model = default_model
     try:
-        if transform.contributes_output_model(spec):
-            next_default_model = transform._infer_output_model(spec)
+        if step.compiled is not None:
+            output_alias = step.compiled.transform._infer_output_model(step.compiled.spec)
+            if output_alias:
+                next_default_model = output_alias
     except Exception:
         next_default_model = default_model
     return "\n".join(lines), next_default_model
-
-
-def _apply_load_transform(*, provider: Any, path: Path, alias: str) -> None:
-    reset_runtime_flags()
-    transform = get_transform("load")
-    spec = transform.compile(
-        {
-            "path": str(path),
-            "alias": alias,
-        },
-        default_model=None,
-    )
-    transform.apply(spec, provider)
 
 
 def _serialize_runtime_flags() -> dict[str, bool]:
@@ -304,19 +341,6 @@ def _serialize_models(provider: Any) -> list[dict[str, Any]]:
     return models
 
 
-def _render_execution_summary(*, provider: Any, plan: SurgeryPlan) -> str:
-    del provider
-    summary_doc = {
-        "transforms": [_normalize_summary_node(item) for item in plan.executed_raw_transforms],
-    }
-    return OmegaConf.to_yaml(summary_doc)
-
-
-def _normalize_summary_node(value: Any) -> Any:
-    if value is None:
-        return {}
-    if isinstance(value, dict):
-        return {key: _normalize_summary_node(item) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_normalize_summary_node(item) for item in value]
-    return value
+def _render_execution_summary(*, plan: SurgeryPlan, mode: str = "raw") -> str:
+    summary_mode = parse_summary_mode(mode)
+    return executed_plan_summary_yaml(plan, mode=summary_mode)

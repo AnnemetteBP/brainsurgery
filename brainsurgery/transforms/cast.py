@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from ..core import BinaryMappingSpec, DestinationPolicy, UnarySpec
 import torch
-from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError, must_model, select_tensor
+from ..core import StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
 from ..core import register_transform
 from ..core import require_nonempty_string
 from ..core import (
@@ -30,13 +30,14 @@ def _build_cast_spec(from_ref: TensorRef, to_ref: TensorRef, payload: dict) -> C
 
 
 def _cast_apply(
-    spec: CastSpec, item: ResolvedMapping, provider: StateDictProvider
+    spec: CastSpec, src_name: str, dst_name: str, provider: StateDictProvider
 ) -> None:
-    src_sd = provider.get_state_dict(item.src_model)
-    dst_sd = provider.get_state_dict(item.dst_model)
-    src_view = select_tensor(src_sd[item.src_name], item.src_slice)
-    dst_sd[item.dst_name] = src_view.to(dtype=spec.dtype)
-    emit_verbose_binary_activity("cast", item)
+    src_sd = provider.get_state_dict(must_model(spec.from_ref))
+    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
+    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
+    src_view = select_tensor(src_sd[src_name], src_slice)
+    dst_sd[dst_name] = src_view.to(dtype=spec.dtype)
+    emit_verbose_binary_activity("cast", src_name, dst_name)
 
 
 class CastTransform(DeclarativeBinaryTransform[CastSpec]):

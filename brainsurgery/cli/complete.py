@@ -621,6 +621,20 @@ def _configure_readline_completion_bindings(readline_module: Any | None) -> None
         except Exception:
             logger.debug("Could not apply readline command %r", command, exc_info=True)
 
+    set_display_hook = getattr(readline_module, "set_completion_display_matches_hook", None)
+    if callable(set_display_hook):
+        try:
+            set_display_hook(
+                lambda substitution, matches, longest_match_length: _completion_display_hook(
+                    substitution,
+                    matches,
+                    longest_match_length,
+                    readline_module,
+                )
+            )
+        except Exception:
+            logger.debug("Could not configure readline display hook", exc_info=True)
+
 
 def _is_top_level_completion_position(line_buffer: str, begidx: int) -> bool:
     if begidx > len(line_buffer):

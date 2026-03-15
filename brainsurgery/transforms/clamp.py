@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from ..core import BinaryMappingSpec, DestinationPolicy, UnarySpec
-from ..core import ResolvedMapping, StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
+from ..core import StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
 from ..core import register_transform
 from ..core import require_numeric
 from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, DeclarativeUnaryTransform, UnaryRefs
@@ -25,15 +25,16 @@ def _build_clamp_spec(
 
 
 def _clamp_apply(
-    spec: ClampSpec, item: ResolvedMapping, provider: StateDictProvider
+    spec: ClampSpec, src_name: str, dst_name: str, provider: StateDictProvider
 ) -> None:
-    src_sd = provider.get_state_dict(item.src_model)
-    dst_sd = provider.get_state_dict(item.dst_model)
-    src_view = select_tensor(src_sd[item.src_name], item.src_slice)
-    dst_sd[item.dst_name] = src_view.clamp(
+    src_sd = provider.get_state_dict(must_model(spec.from_ref))
+    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
+    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
+    src_view = select_tensor(src_sd[src_name], src_slice)
+    dst_sd[dst_name] = src_view.clamp(
         min=spec.min_value, max=spec.max_value
     ).clone()
-    emit_verbose_binary_activity("clamp", item)
+    emit_verbose_binary_activity("clamp", src_name, dst_name)
 
 
 class ClampTransform(DeclarativeBinaryTransform[ClampSpec]):

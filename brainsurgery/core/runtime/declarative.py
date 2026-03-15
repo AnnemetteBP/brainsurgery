@@ -7,8 +7,6 @@ from .transform import (
     BinaryMappingSpec,
     BinaryMappingTransform,
     DestinationPolicy,
-    ResolvedMapping,
-    ResolvedTernaryMapping,
     TernaryMappingSpec,
     TernaryMappingTransform,
     UnarySpec,
@@ -135,7 +133,7 @@ class DeclarativeBinaryTransform(BinaryMappingTransform[BinarySpecT]):
     refs = BinaryRefs()
     spec_builder: Callable[[TensorRef, TensorRef, dict], BinarySpecT] | None = None
     progress_desc: str | None = None
-    apply_fn: Callable[[BinarySpecT, ResolvedMapping, StateDictProvider], None]
+    apply_fn: Callable[[BinarySpecT, str, str, StateDictProvider], None]
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
@@ -183,11 +181,15 @@ class DeclarativeBinaryTransform(BinaryMappingTransform[BinarySpecT]):
         )
 
     def apply_item(
-        self, spec: BinarySpecT, item: ResolvedMapping, provider: StateDictProvider
+        self, spec: BinarySpecT, item: tuple[str, str], provider: StateDictProvider
     ) -> None:
-        self.apply_fn(spec, item, provider)
+        src_name, dst_name = item
+        self.apply_fn(spec, src_name, dst_name, provider)
 
-    def apply_mapping(self, item: ResolvedMapping, provider: StateDictProvider) -> None:
+    def apply_mapping(
+        self, spec: BinarySpecT, src_name: str, dst_name: str, provider: StateDictProvider
+    ) -> None:
+        del spec, src_name, dst_name, provider
         raise NotImplementedError
 
 
@@ -198,7 +200,7 @@ class DeclarativeTernaryTransform(TernaryMappingTransform[TernarySpecT]):
     docs: Docs
     refs = TernaryRefs()
     progress_desc: str | None = None
-    apply_fn: Callable[[TernarySpecT, ResolvedTernaryMapping, StateDictProvider], None]
+    apply_fn: Callable[[TernarySpecT, str, str, str, StateDictProvider], None]
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
@@ -243,14 +245,21 @@ class DeclarativeTernaryTransform(TernaryMappingTransform[TernarySpecT]):
     def apply_item(
         self,
         spec: TernarySpecT,
-        item: ResolvedTernaryMapping,
+        item: tuple[str, str, str],
         provider: StateDictProvider,
     ) -> None:
-        self.apply_fn(spec, item, provider)
+        src_a_name, src_b_name, dst_name = item
+        self.apply_fn(spec, src_a_name, src_b_name, dst_name, provider)
 
     def apply_mapping(
-        self, item: ResolvedTernaryMapping, provider: StateDictProvider
+        self,
+        spec: TernarySpecT,
+        src_a_name: str,
+        src_b_name: str,
+        dst_name: str,
+        provider: StateDictProvider,
     ) -> None:
+        del spec, src_a_name, src_b_name, dst_name, provider
         raise NotImplementedError
 
 

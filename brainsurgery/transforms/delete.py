@@ -1,5 +1,5 @@
 from ..core import UnarySpec, UnaryTransform
-from ..core import TensorRef, must_model
+from ..core import must_model
 from ..core import register_transform
 from ..core import StateDictProvider, TransformError
 from ..engine import emit_verbose_unary_activity

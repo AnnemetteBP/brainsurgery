@@ -1,9 +1,5 @@
 import base64
-import copy
-import json
-import logging
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 import tempfile
 from typing import Any
@@ -11,7 +7,8 @@ import uuid
 
 from omegaconf import OmegaConf
 
-from ..engine import list_model_aliases
+from brainsurgery.engine import list_model_aliases
+from ..http import JsonRequestHandler
 from .backend import (
     _apply_load_transform,
     _apply_transform,
@@ -28,11 +25,16 @@ from .page import _HTML_PAGE
 from .session import _SessionState
 
 
-logger = logging.getLogger("brainsurgery")
-
-
 def _handler_factory(session: _SessionState):
-    class Handler(BaseHTTPRequestHandler):
+    class Handler(JsonRequestHandler):
+        request_log_prefix = "webui"
+
+        def _cache_headers(self) -> list[tuple[str, str]]:
+            return [
+                ("Cache-Control", "no-store, max-age=0"),
+                ("Pragma", "no-cache"),
+            ]
+
         def do_GET(self) -> None:  # noqa: N802
             if self.path == "/" or self.path.startswith("/?"):
                 self._send_html(_HTML_PAGE)
@@ -83,9 +85,13 @@ def _handler_factory(session: _SessionState):
                 with session.lock:
                     try:
                         chosen_alias = alias_clean or _default_alias(session.provider)
-                        _apply_load_transform(provider=session.provider, path=load_path, alias=chosen_alias)
+                        _apply_load_transform(
+                            provider=session.provider,
+                            plan=session.plan,
+                            path=load_path,
+                            alias=chosen_alias,
+                        )
                         session.default_model = chosen_alias
-                        session.plan.record_executed_raw({"load": {"path": str(load_path), "alias": chosen_alias}})
                         models = _serialize_models(session.provider)
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -105,10 +111,13 @@ def _handler_factory(session: _SessionState):
                     body = self._read_json_body()
                     transform_name = _require_string(body.get("transform"), "transform")
                     payload = body.get("payload")
+                    summary_mode_raw = body.get("summary_mode", "raw")
                     if payload is None:
                         payload = {}
                     if transform_name not in {"help", "assert"} and not isinstance(payload, dict):
                         raise ValueError("payload must be an object.")
+                    if not isinstance(summary_mode_raw, str):
+                        raise ValueError("summary_mode must be a string when provided.")
                 except Exception as exc:
                     self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                     return
@@ -126,17 +135,14 @@ def _handler_factory(session: _SessionState):
                                 raise ValueError(f"invalid assert YAML payload: {exc}") from exc
                         output, next_default_model = _apply_transform(
                             provider=session.provider,
+                            plan=session.plan,
                             transform_name=transform_name,
                             payload=payload,
                             default_model=session.default_model,
                         )
                         session.default_model = next_default_model
-                        session.plan.record_executed_raw({transform_name: copy.deepcopy(payload)})
                         if transform_name == "exit":
-                            summary = _render_execution_summary(
-                                provider=session.provider,
-                                plan=session.plan,
-                            )
+                            summary = _render_execution_summary(plan=session.plan, mode=summary_mode_raw)
                             output = f"{output}\n\n{summary}".strip() if output else summary
                         models = _serialize_models(session.provider)
                     except Exception as exc:
@@ -167,7 +173,6 @@ def _handler_factory(session: _SessionState):
                 with session.lock:
                     try:
                         output, filename, mime, content_b64 = self._run_save_download(payload)
-                        session.plan.record_executed_raw({"save": copy.deepcopy(payload)})
                         models = _serialize_models(session.provider)
                     except Exception as exc:
                         self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -227,16 +232,6 @@ def _handler_factory(session: _SessionState):
 
             self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
 
-        def _read_json_body(self) -> dict[str, Any]:
-            content_length = self.headers.get("Content-Length")
-            if content_length is None:
-                raise ValueError("Missing Content-Length.")
-            size = int(content_length)
-            body = json.loads(self.rfile.read(size).decode("utf-8"))
-            if not isinstance(body, dict):
-                raise ValueError("Request body must be a JSON object.")
-            return body
-
         def _run_save_download(self, payload: dict[str, Any]) -> tuple[str, str, str, str]:
             requested_path = _require_string(payload.get("path"), "payload.path")
             requested_name = Path(requested_path).name or "model"
@@ -249,9 +244,11 @@ def _handler_factory(session: _SessionState):
 
                 output, next_default_model = _apply_transform(
                     provider=session.provider,
+                    plan=session.plan,
                     transform_name="save",
                     payload=payload_copy,
                     default_model=session.default_model,
+                    record_payload=payload,
                 )
                 session.default_model = next_default_model
 
@@ -272,29 +269,6 @@ def _handler_factory(session: _SessionState):
                     return output, filename, mime, base64.b64encode(raw).decode("ascii")
 
                 raise ValueError("save did not produce a file or directory to download.")
-
-        def _send_html(self, body: str) -> None:
-            encoded = body.encode("utf-8")
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Cache-Control", "no-store, max-age=0")
-            self.send_header("Pragma", "no-cache")
-            self.send_header("Content-Length", str(len(encoded)))
-            self.end_headers()
-            self.wfile.write(encoded)
-
-        def _send_json(self, payload: dict[str, Any], *, status: HTTPStatus = HTTPStatus.OK) -> None:
-            encoded = json.dumps(payload).encode("utf-8")
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Cache-Control", "no-store, max-age=0")
-            self.send_header("Pragma", "no-cache")
-            self.send_header("Content-Length", str(len(encoded)))
-            self.end_headers()
-            self.wfile.write(encoded)
-
-        def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
-            logger.debug("webui request: " + format, *args)
 
     return Handler
 

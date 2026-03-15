@@ -4,12 +4,14 @@ from pathlib import Path
 from omegaconf import OmegaConf
 import yaml
 
-from ..engine import (
+from brainsurgery.engine import (
     apply_log_level,
     compile_plan,
     create_state_dict_provider,
+    executed_plan_summary_doc,
     get_runtime_flags,
     normalize_raw_plan,
+    parse_summary_mode,
     reset_runtime_flags,
     use_output_emitter,
 )
@@ -28,6 +30,7 @@ def _run_web_plan(
     arena_root: Path,
     arena_segment_size: str,
     summarize: bool,
+    summary_mode: str = "raw",
     log_level: str,
 ) -> _WebRunResult:
     raw = yaml.safe_load(plan_yaml) if plan_yaml.strip() else {}
@@ -81,8 +84,8 @@ def _run_web_plan(
                 logger.info("Output saved to %s", written_path)
 
         if summarize:
-            summary_doc = surgery_plan.to_raw_plan(executed_only=True)
-            summary_yaml = OmegaConf.to_yaml(summary_doc)
+            mode = parse_summary_mode(summary_mode)
+            summary_yaml = OmegaConf.to_yaml(executed_plan_summary_doc(surgery_plan, mode=mode))
 
         return _WebRunResult(
             ok=True,

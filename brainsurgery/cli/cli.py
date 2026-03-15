@@ -125,6 +125,11 @@ def run(
         None,
         help="Destination for the executed-plan summary. Defaults to stdout if not set.",
     ),
+    summary_mode: str = typer.Option(
+        "raw",
+        "--summary-mode",
+        help="Summary representation mode: 'raw' (original transform payloads) or 'resolve' (compiled/canonical plan).",
+    ),
     log_level: str = typer.Option(
         "info",
         "--log-level",
@@ -197,6 +202,7 @@ def run(
                     _write_executed_plan_summary(
                         plan=surgery_plan,
                         destination=summarize_path,
+                        mode=summary_mode,
                     )
 
     finally:

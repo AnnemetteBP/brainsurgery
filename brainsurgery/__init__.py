@@ -4,8 +4,8 @@ import typer
 
 from . import transforms
 from .cli import app as cli_app
-from .webcli import app as webcli_app
-from .webui import app as webui_app
+from .web.cli import app as webcli_app
+from .web.ui import app as webui_app
 
 
 app = typer.Typer(help="Brain surgery command suite.")
@@ -21,6 +21,7 @@ _CLI_OPTIONS_WITH_VALUE = {
     "--arena-root",
     "--arena-segment-size",
     "--summarize-path",
+    "--summary-mode",
     "--log-level",
 }
 
