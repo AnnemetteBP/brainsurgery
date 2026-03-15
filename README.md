@@ -25,6 +25,22 @@ Enable interactive mode after configured transforms:
 brainsurgery -i examples/gpt2.yaml
 ```
 
+## Documentation
+Detailed project documentation is in `docs/`:
+
+- [Documentation Index](/Users/petersk/Nobackup/brainsurgery/docs/README.md)
+  - Jump point for all project documentation pages.
+- [Codebase Reference](/Users/petersk/Nobackup/brainsurgery/docs/codebase-reference.md)
+  - Architecture, core classes/protocols, execution processes, extension points, and module map.
+- [Interfaces Reference](/Users/petersk/Nobackup/brainsurgery/docs/interfaces-reference.md)
+  - Batch CLI, interactive CLI, OLY, webcli, webui, and when to use each interface.
+- [OLY Specification](/Users/petersk/Nobackup/brainsurgery/docs/oly-spec.md)
+  - One-line command grammar and mapping semantics.
+- [OLY YAML Grammar](/Users/petersk/Nobackup/brainsurgery/docs/oly-yaml-grammar.md)
+  - Exact YAML data model representable through OLY.
+- [OLY Conformance Matrix](/Users/petersk/Nobackup/brainsurgery/docs/oly-conformance.md)
+  - Acceptance/rejection cases and round-trip guarantees.
+
 ## CLI
 `brainsurgery [OPTIONS] [CONFIG_ITEMS]...`
 
@@ -127,7 +143,7 @@ Special transforms:
 History is stored in `~/.brainsurgery_history`.
 
 ## Commands (transforms)
-All registered transforms:
+All registered transforms (see [Interfaces Reference](/Users/petersk/Nobackup/brainsurgery/docs/interfaces-reference.md) and command-specific `help` output for operational details):
 
 - `help`: show command/assert help (`help`, `help: copy`, `help: assert`, `help: { assert: equal }`).
   OLY shorthand also works (for example `help: assert: equal`).
