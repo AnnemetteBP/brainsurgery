@@ -12,6 +12,7 @@ from brainsurgery.core import (
     IteratingTransform,
     TernaryMappingTransform,
     UnaryTransform,
+    use_progress_callback,
     get_assert_expr_help,
     get_transform,
     get_assert_expr_names,
@@ -28,7 +29,6 @@ from brainsurgery.engine import (
     reset_runtime_flags,
     use_output_emitter,
 )
-from brainsurgery.core.runtime.transform import use_progress_callback
 
 
 DISABLED_TRANSFORMS: set[str] = set()

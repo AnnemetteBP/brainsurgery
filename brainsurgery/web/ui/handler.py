@@ -9,8 +9,7 @@ import uuid
 
 from omegaconf import OmegaConf
 
-from brainsurgery.core import IteratingTransform, get_transform
-from brainsurgery.core.runtime.transform import IterationProgress
+from brainsurgery.core import IteratingTransform, IterationProgress, get_transform
 from brainsurgery.engine import list_model_aliases
 from ..http import JsonRequestHandler
 from .backend import (

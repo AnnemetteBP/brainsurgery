@@ -13,6 +13,7 @@ from .transform import (
     BinaryMappingTransform,
     CompiledTransform,
     DestinationPolicy,
+    IterationProgress,
     IteratingTransform,
     REGISTRY,
     TernaryMappingSpec,
@@ -26,6 +27,7 @@ from .transform import (
     get_transform,
     list_transforms,
     register_transform,
+    use_progress_callback,
 )
 
 __all__ = [
@@ -41,6 +43,7 @@ __all__ = [
     "BinaryMappingTransform",
     "CompiledTransform",
     "DestinationPolicy",
+    "IterationProgress",
     "IteratingTransform",
     "REGISTRY",
     "TernaryMappingSpec",
@@ -54,4 +57,5 @@ __all__ = [
     "get_transform",
     "list_transforms",
     "register_transform",
+    "use_progress_callback",
 ]

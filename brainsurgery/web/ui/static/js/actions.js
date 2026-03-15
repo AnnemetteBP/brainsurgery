@@ -1,0 +1,255 @@
+function createActions({
+  appState,
+  setStatus,
+  progressController,
+  getIsIteratingTransform,
+  getTransformMeta,
+  getTransformConfig,
+  isRunnableTransform,
+  resetTransformSearch,
+  renderTransforms,
+  updatePanels,
+  renderModels,
+  appendResultBlock,
+  copyTextToClipboard,
+  parseFieldValue,
+  loadBtn,
+  aliasInput,
+  serverPathInput,
+  fileInput,
+  transformRunBtn,
+}) {
+  async function refresh() {
+    try {
+      const [transformsRes, stateRes] = await Promise.all([fetch("/api/transforms"), fetch("/api/state")]);
+      const transformsData = await transformsRes.json();
+      const stateData = await stateRes.json();
+      if (transformsData.ok && Array.isArray(transformsData.transforms)) {
+        appState.allTransforms = transformsData.transforms;
+        if (appState.selectedTransform && !appState.allTransforms.some((item) => item.name === appState.selectedTransform && item.enabled)) {
+          appState.selectedTransform = appState.allTransforms.some((item) => item.name === "load" && item.enabled)
+            ? "load"
+            : (appState.allTransforms.find((item) => item.enabled)?.name || "");
+        }
+      }
+      renderTransforms();
+      if (stateData.ok) {
+        appState.latestModels = stateData.models || [];
+        if (stateData.runtime_flags && typeof stateData.runtime_flags === "object") {
+          appState.latestRuntimeFlags = {
+            dry_run: Boolean(stateData.runtime_flags.dry_run),
+            verbose: Boolean(stateData.runtime_flags.verbose),
+          };
+        }
+      }
+      renderModels(appState.latestModels);
+      updatePanels();
+    } catch (err) {
+      setStatus("Refresh failed: " + String(err));
+      renderTransforms();
+      updatePanels();
+    }
+  }
+
+  function bindLoad() {
+    loadBtn.addEventListener("click", async () => {
+      if (appState.selectedTransform !== "load") { setStatus("Select load first."); return; }
+      const serverPath = (serverPathInput.value || "").trim();
+      const file = fileInput.files && fileInput.files[0];
+      if (!serverPath && !file) { setStatus("Provide a server path or pick a model file first."); return; }
+
+      loadBtn.disabled = true;
+      try {
+        const payload = { alias: aliasInput.value || null };
+        if (serverPath) {
+          payload.server_path = serverPath;
+        } else {
+          setStatus("Reading file...");
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          let binary = "";
+          const chunk = 0x8000;
+          for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+          payload.filename = file.name;
+          payload.content_b64 = btoa(binary);
+        }
+
+        setStatus("Loading model via transform...");
+        const response = await fetch("/api/load", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) { setStatus("Load failed: " + (data.error || "unknown error")); return; }
+        appState.latestModels = data.models || [];
+        if (data.runtime_flags && typeof data.runtime_flags === "object") {
+          appState.latestRuntimeFlags = {
+            dry_run: Boolean(data.runtime_flags.dry_run),
+            verbose: Boolean(data.runtime_flags.verbose),
+          };
+        }
+        renderModels(appState.latestModels);
+        resetTransformSearch();
+        renderTransforms();
+        updatePanels();
+        setStatus("Load completed successfully.");
+      } catch (err) {
+        setStatus("Load failed: " + String(err));
+      } finally {
+        loadBtn.disabled = false;
+      }
+    });
+  }
+
+  function bindRun() {
+    transformRunBtn.addEventListener("click", async () => {
+      if (!isRunnableTransform(appState.selectedTransform)) { setStatus("Select a READY transform first."); return; }
+      const runTransformName = appState.selectedTransform;
+      const meta = getTransformMeta(runTransformName);
+      const cfg = getTransformConfig(runTransformName);
+      const allowed = Array.isArray(meta.allowed_keys) ? meta.allowed_keys : [];
+      const required = new Set(Array.isArray(meta.required_keys) ? meta.required_keys : []);
+      let payload = {};
+
+      if (runTransformName === "prefixes") {
+        const mode = String(cfg.fields.mode == null ? "list" : cfg.fields.mode).trim().toLowerCase();
+        if (!["list", "add", "remove", "rename"].includes(mode)) {
+          setStatus("Invalid prefixes mode: " + mode);
+          return;
+        }
+        if (mode === "list") {
+          payload = { mode: "list" };
+        } else if (mode === "add" || mode === "remove") {
+          const alias = String(cfg.fields.alias == null ? "" : cfg.fields.alias).trim();
+          if (!alias) { setStatus("Missing required parameter: alias"); return; }
+          payload = { mode: mode, alias: alias };
+        } else {
+          const fromAlias = String(cfg.fields.from == null ? "" : cfg.fields.from).trim();
+          const toAlias = String(cfg.fields.to == null ? "" : cfg.fields.to).trim();
+          if (!fromAlias) { setStatus("Missing required parameter: from"); return; }
+          if (!toAlias) { setStatus("Missing required parameter: to"); return; }
+          payload = { mode: "rename", from: fromAlias, to: toAlias };
+        }
+      } else {
+        for (const key of allowed) {
+          const rawValue = cfg.fields[key];
+          if (typeof rawValue === "boolean") {
+            payload[key] = rawValue;
+            continue;
+          }
+          const parsed = parseFieldValue(rawValue == null ? "" : String(rawValue));
+          if (parsed === undefined) {
+            if (required.has(key)) { setStatus("Missing required parameter: " + key); return; }
+            continue;
+          }
+          payload[key] = parsed;
+        }
+      }
+
+      if (runTransformName === "help") {
+        const command = String(cfg.fields.help_command || "").trim();
+        const subcommand = String(cfg.fields.help_subcommand || "").trim();
+        if (!command && subcommand) {
+          setStatus("Set command before subcommand for help.");
+          return;
+        }
+        if (!command) {
+          payload = {};
+        } else if (!subcommand) {
+          payload = command;
+        } else {
+          payload = { [command]: subcommand };
+        }
+      }
+
+      if (runTransformName === "assert") {
+        const yamlExpr = String(cfg.fields.assert_yaml || "").trim();
+        if (!yamlExpr) {
+          setStatus("Provide an assert YAML expression.");
+          return;
+        }
+        payload = yamlExpr;
+      }
+
+      if (runTransformName === "save" && (cfg.save_mode || "server") === "download") {
+        payload.format = cfg.save_download_format || "safetensors";
+      }
+
+      setStatus("Applying " + runTransformName + "...");
+      transformRunBtn.disabled = true;
+      progressController.start(runTransformName, getIsIteratingTransform(runTransformName));
+      try {
+        const isSaveDownload = runTransformName === "save" && (cfg.save_mode || "server") === "download";
+        const response = await fetch(
+          isSaveDownload ? "/api/save_download" : "/api/_apply_transform",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+              isSaveDownload
+                ? { payload: payload }
+                : {
+                  transform: runTransformName,
+                  payload: payload,
+                  summary_mode: runTransformName === "exit"
+                    ? (String(cfg.fields.exit_summary_mode || "raw").toLowerCase())
+                    : undefined,
+                }
+            ),
+          }
+        );
+        const data = await response.json();
+        if (!response.ok || !data.ok) { setStatus("Apply failed: " + (data.error || "unknown error")); return; }
+        appState.latestModels = data.models || [];
+        if (data.runtime_flags && typeof data.runtime_flags === "object") {
+          appState.latestRuntimeFlags = {
+            dry_run: Boolean(data.runtime_flags.dry_run),
+            verbose: Boolean(data.runtime_flags.verbose),
+          };
+        }
+        renderModels(appState.latestModels);
+        resetTransformSearch();
+        renderTransforms();
+        updatePanels();
+        if (runTransformName === "exit") {
+          const exitText = (data.output && data.output.trim()) ? data.output : "(no output)";
+          appendResultBlock(runTransformName, exitText);
+          if (cfg.fields.exit_auto_copy && exitText !== "(no output)") {
+            const copied = await copyTextToClipboard(exitText);
+            setStatus(
+              copied
+                ? "Applied exit successfully. Copied plan to clipboard."
+                : "Applied exit successfully. Could not copy automatically."
+            );
+          } else {
+            setStatus("Applied exit successfully.");
+          }
+        } else {
+          setStatus("Applied " + runTransformName + " successfully.");
+          appendResultBlock(runTransformName, data.output || "");
+        }
+        if (isSaveDownload) {
+          const raw = atob(data.download_b64 || "");
+          const bytes = new Uint8Array(raw.length);
+          for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+          const blob = new Blob([bytes], { type: data.download_mime || "application/octet-stream" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = data.download_filename || "brainsurgery-save.bin";
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      } catch (err) {
+        setStatus("Apply failed: " + String(err));
+      } finally {
+        progressController.stop();
+        transformRunBtn.disabled = false;
+      }
+    });
+  }
+
+  return { bindLoad, bindRun, refresh };
+}
+
+export { createActions };
