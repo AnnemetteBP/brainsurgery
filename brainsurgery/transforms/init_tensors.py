@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, cast
 
 import torch
 
@@ -168,17 +168,20 @@ class RandTransform(_ShapeCreateUnaryTransform):
             seed=seed,
         )
 
-    def apply_to_target(self, spec: RandSpec, name: str, provider: StateDictProvider) -> None:
-        sd = state_dict_for_ref(provider, spec.target_ref)
-        out = torch.empty(spec.shape, dtype=torch.float32)
+    def apply_to_target(
+        self, spec: ShapeCreateSpec, name: str, provider: StateDictProvider
+    ) -> None:
+        typed = cast(RandSpec, spec)
+        sd = state_dict_for_ref(provider, typed.target_ref)
+        out = torch.empty(typed.shape, dtype=torch.float32)
         generator = None
-        if spec.seed is not None:
+        if typed.seed is not None:
             generator = torch.Generator(device=out.device)
-            generator.manual_seed(spec.seed)
-        if spec.distribution == "uniform":
-            out.uniform_(spec.low, spec.high, generator=generator)
+            generator.manual_seed(typed.seed)
+        if typed.distribution == "uniform":
+            out.uniform_(typed.low, typed.high, generator=generator)
         else:
-            out.normal_(spec.mean, spec.std, generator=generator)
+            out.normal_(typed.mean, typed.std, generator=generator)
         sd[name] = out
         emit_verbose_unary_activity(self.name, name)
 

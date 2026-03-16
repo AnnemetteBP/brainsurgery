@@ -25,7 +25,9 @@ def _save_state_dict(state_dict: dict[str, torch.Tensor], output_dir: Path) -> N
     try:
         from torch.distributed.checkpoint import save as save_dcp
     except Exception as exc:
-        raise RuntimeError("torch distributed checkpoint support requires torch.distributed.checkpoint") from exc
+        raise RuntimeError(
+            "torch distributed checkpoint support requires torch.distributed.checkpoint"
+        ) from exc
 
     output_dir.mkdir(parents=True, exist_ok=True)
     with _suppress_warnings():
@@ -35,7 +37,10 @@ def _save_state_dict(state_dict: dict[str, torch.Tensor], output_dir: Path) -> N
 def _detect_layout(path: Path) -> Literal["full", "sharded", "mixed", "unknown"]:
     try:
         from torch.distributed.checkpoint import FileSystemReader
-        from torch.distributed.checkpoint.metadata import BytesStorageMetadata, TensorStorageMetadata
+        from torch.distributed.checkpoint.metadata import (
+            BytesStorageMetadata,
+            TensorStorageMetadata,
+        )
     except Exception:
         return "unknown"
 
@@ -83,7 +88,8 @@ def _is_full_tensor_storage_metadata(entry: Any) -> bool:
 
 
 def _load_state_dict_direct(path: Path) -> dict[str, torch.Tensor]:
-    from torch.distributed.checkpoint import FileSystemReader, load as load_dcp
+    from torch.distributed.checkpoint import FileSystemReader
+    from torch.distributed.checkpoint import load as load_dcp
     from torch.distributed.checkpoint.metadata import TensorStorageMetadata
 
     reader = FileSystemReader(str(path))
@@ -95,13 +101,17 @@ def _load_state_dict_direct(path: Path) -> dict[str, torch.Tensor]:
     loaded: dict[str, torch.Tensor] = {}
     for key, entry in entries.items():
         if not isinstance(key, str):
-            raise RuntimeError(f"invalid torch distributed checkpoint tensor key in {path}: {key!r}")
+            raise RuntimeError(
+                f"invalid torch distributed checkpoint tensor key in {path}: {key!r}"
+            )
         if not isinstance(entry, TensorStorageMetadata):
             raise RuntimeError(f"torch distributed checkpoint contains non-tensor entry: {key!r}")
         properties = getattr(entry, "properties", None)
         dtype = getattr(properties, "dtype", None)
         if not isinstance(dtype, torch.dtype):
-            raise RuntimeError(f"torch distributed checkpoint tensor entry is missing dtype: {key!r}")
+            raise RuntimeError(
+                f"torch distributed checkpoint tensor entry is missing dtype: {key!r}"
+            )
         loaded[key] = torch.empty(tuple(entry.size), dtype=dtype, device="cpu")
 
     with _suppress_warnings():
@@ -125,7 +135,11 @@ def _load_state_dict_via_conversion(path: Path) -> tuple[dict[str, torch.Tensor]
             dcp_to_torch_save(path, tmp_path)
         loaded = torch.load(tmp_path, map_location="cpu")
         wrapped = False
-        if isinstance(loaded, dict) and "state_dict" in loaded and isinstance(loaded["state_dict"], dict):
+        if (
+            isinstance(loaded, dict)
+            and "state_dict" in loaded
+            and isinstance(loaded["state_dict"], dict)
+        ):
             wrapped = True
             loaded = loaded["state_dict"]
         return _validate_state_dict_mapping(loaded, path), wrapped

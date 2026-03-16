@@ -1,13 +1,22 @@
 from importlib import import_module
 from pkgutil import iter_modules
 
-from ..core import Expression, ExpressionHelp, TransformError, compile_assert_expr, get_assert_expr_help, get_assert_expr_names, register_assert_expr
+from ..core import (
+    Expression,
+    ExpressionHelp,
+    TransformError,
+    compile_assert_expr,
+    get_assert_expr_help,
+    get_assert_expr_names,
+    register_assert_expr,
+)
 
 
 def _discovered_module_names() -> list[str]:
+    package_path = globals().get("__path__", [])
     module_names = sorted(
         module_info.name
-        for module_info in iter_modules(__path__)  # type: ignore[name-defined]
+        for module_info in iter_modules(package_path)
         if not module_info.name.startswith("_")
     )
     duplicates = sorted({name for name in module_names if module_names.count(name) > 1})
@@ -23,7 +32,9 @@ def _load_discovered_modules() -> None:
         try:
             import_module(qualified_name)
         except Exception as exc:
-            raise RuntimeError(f"Failed to import discovered expression module: {qualified_name}") from exc
+            raise RuntimeError(
+                f"Failed to import discovered expression module: {qualified_name}"
+            ) from exc
 
 
 _load_discovered_modules()

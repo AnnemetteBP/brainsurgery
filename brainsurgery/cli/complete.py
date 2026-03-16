@@ -1,14 +1,16 @@
 import logging
 import re
+from collections.abc import Iterable
 from typing import Any
 
 from ..core import get_transform, list_transforms
 from ..engine import (
     list_loaded_tensor_names as list_loaded_tensor_names_from_provider,
+)
+from ..engine import (
     list_model_aliases as list_model_aliases_from_provider,
 )
 from .payload_scan import (
-    _PayloadCursorState,
     _current_value_fragment,
     _current_value_key,
     _find_top_level_colon,
@@ -18,6 +20,12 @@ from .payload_scan import (
     _split_top_level_segments,
 )
 
+# Keep scanner helper symbols visible on this module for test/tooling introspection.
+(
+    _find_top_level_colon,
+    _parse_key_from_segment,
+    _split_top_level_segments,
+)
 
 logger = logging.getLogger("brainsurgery")
 
@@ -176,7 +184,7 @@ def _match_payload_candidates(
     def _ordered_transform_keys() -> list[str]:
         if transform is None:
             return []
-        keys = getattr(transform, "completion_reference_keys", lambda: [])()
+        keys: Iterable[Any] = getattr(transform, "completion_reference_keys", lambda: [])()
         return [key for key in keys if isinstance(key, str) and key]
 
     def _next_reference_key(before_cursor: str, current_key: str | None) -> str | None:
@@ -242,22 +250,23 @@ def _match_payload_candidates(
         ]
         if "::" not in prefix_text and len(alias_prefix_candidates) > 1:
             alias_matches = [
-                candidate for candidate in alias_prefix_candidates if candidate.startswith(prefix_text)
+                candidate
+                for candidate in alias_prefix_candidates
+                if candidate.startswith(prefix_text)
             ]
             return _dedupe_preserve_order(alias_matches)
 
         ref_candidates = [
             candidate
             for candidate in payload_candidates
-            if (
-                not candidate.endswith(": ")
-                and candidate not in {"{ ", "}", "[ ", "]", ", "}
-            )
+            if (not candidate.endswith(": ") and candidate not in {"{ ", "}", "[ ", "]", ", "})
         ]
         ref_candidates = [
-            candidate for candidate in ref_candidates if not (f"{candidate}::" in ref_candidates)
+            candidate for candidate in ref_candidates if f"{candidate}::" not in ref_candidates
         ]
-        ref_matches = [candidate for candidate in ref_candidates if candidate.startswith(prefix_text)]
+        ref_matches = [
+            candidate for candidate in ref_candidates if candidate.startswith(prefix_text)
+        ]
         ref_matches = _collapse_large_reference_matches(prefix=prefix_text, matches=ref_matches)
         next_key = _next_reference_key(before_cursor, value_key)
         if (
@@ -278,10 +287,14 @@ def _match_payload_candidates(
             return None
         return transform.completion_key_candidates(before_cursor, prefix_text)
 
-    def _value_candidates_for_transform(value_key: str | None, prefix_text: str) -> list[str] | None:
+    def _value_candidates_for_transform(
+        value_key: str | None, prefix_text: str
+    ) -> list[str] | None:
         if transform is None:
             return None
-        return transform.completion_value_candidates(value_key, prefix_text, sorted(model_aliases or []))
+        return transform.completion_value_candidates(
+            value_key, prefix_text, sorted(model_aliases or [])
+        )
 
     def _committed_next_candidates(value_key: str | None) -> list[str] | None:
         if transform is None:
@@ -323,14 +336,20 @@ def _match_payload_candidates(
     value_key = _current_value_key(before_cursor)
     raw_value_fragment = _current_value_fragment(before_cursor) or ""
     if ctx == "key":
-        key_candidates = _key_candidates_for_transform(before_cursor=before_cursor, prefix_text=prefix)
+        key_candidates = _key_candidates_for_transform(
+            before_cursor=before_cursor, prefix_text=prefix
+        )
         if key_candidates is not None:
             if raw_text.rstrip().endswith("{"):
-                return [f"{raw_text} {candidate}" for candidate in key_candidates if candidate != "}"]
+                return [
+                    f"{raw_text} {candidate}" for candidate in key_candidates if candidate != "}"
+                ]
             if before_cursor.rstrip().endswith(",") and not before_cursor.endswith(", "):
                 if raw_text.rstrip().endswith(","):
                     return [
-                        f"{raw_text} {candidate}" for candidate in key_candidates if candidate != "}"
+                        f"{raw_text} {candidate}"
+                        for candidate in key_candidates
+                        if candidate != "}"
                     ] + (["}"] if "}" in key_candidates else [])
                 return [f" {candidate}" for candidate in key_candidates if candidate != "}"] + (
                     ["}"] if "}" in key_candidates else []
@@ -343,10 +362,7 @@ def _match_payload_candidates(
             key_candidates = [
                 candidate
                 for candidate in payload_candidates
-                if (
-                    candidate.endswith(": ")
-                    and candidate[:-2] not in used_keys
-                )
+                if (candidate.endswith(": ") and candidate[:-2] not in used_keys)
             ]
             if before_cursor.rstrip().endswith(",") and not before_cursor.endswith(", "):
                 if raw_text.rstrip().endswith(","):  # pragma: no cover
@@ -355,13 +371,17 @@ def _match_payload_candidates(
             return key_candidates
         if ctx == "value":
             if _is_committed_value_fragment(raw_value_fragment):
-                return _committed_next_candidates(value_key) or _remaining_key_candidates(before_cursor)
+                return _committed_next_candidates(value_key) or _remaining_key_candidates(
+                    before_cursor
+                )
             transform_value_candidates = _value_candidates_for_transform(value_key, "")
             if transform_value_candidates is not None:
                 return transform_value_candidates
             if value_key in _ordered_transform_keys():
                 return _reference_candidates("", value_key)
-            return [candidate for candidate in payload_candidates if candidate in {"{ ", "[ ", "]", "}"}]
+            return [
+                candidate for candidate in payload_candidates if candidate in {"{ ", "[ ", "]", "}"}
+            ]
         return payload_candidates
 
     if "::" in prefix:
@@ -370,7 +390,11 @@ def _match_payload_candidates(
             return _value_candidates_for_transform(value_key, prefix) or []
         if ctx == "value" and value_key in _ordered_transform_keys():
             return _reference_candidates(prefix, value_key)
-        return [candidate for candidate in payload_candidates if "::" in candidate and candidate.startswith(prefix)]
+        return [
+            candidate
+            for candidate in payload_candidates
+            if "::" in candidate and candidate.startswith(prefix)
+        ]
 
     if prefix[0] in "{[]},:":
         return [candidate for candidate in payload_candidates if candidate.startswith(prefix)]
@@ -397,7 +421,9 @@ def _match_payload_candidates(
         value_key = _current_value_key(before_cursor)
         raw_value_fragment = _current_value_fragment(before_cursor) or ""
         if _is_committed_value_fragment(raw_value_fragment):
-            committed_next = _committed_next_candidates(value_key) or _remaining_key_candidates(before_cursor)
+            committed_next = _committed_next_candidates(value_key) or _remaining_key_candidates(
+                before_cursor
+            )
             return [candidate for candidate in committed_next if candidate.startswith(prefix)]
         transform_value_candidates = _value_candidates_for_transform(value_key, prefix)
         if transform_value_candidates is not None:

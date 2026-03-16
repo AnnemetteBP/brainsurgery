@@ -25,14 +25,17 @@ def list_model_aliases(provider: StateDictProvider | None) -> set[str]:
         return set()
 
     if _is_base_provider_instance(provider):
-        return provider.list_model_aliases()
+        list_aliases = getattr(provider, "list_model_aliases", None)
+        if callable(list_aliases):
+            return {str(alias) for alias in list_aliases()}
+        return set()
 
     list_aliases = getattr(provider, "list_model_aliases", None)
     if callable(list_aliases):
-        aliases = list_aliases()
-        if isinstance(aliases, set):
-            return {str(alias) for alias in aliases}
-        return {str(alias) for alias in aliases}
+        loaded_aliases = list_aliases()
+        if isinstance(loaded_aliases, set):
+            return {str(alias) for alias in loaded_aliases}
+        return {str(alias) for alias in loaded_aliases}
 
     aliases: set[str] = set()
     for _, mapping in iter_alias_mappings(provider):
@@ -42,7 +45,10 @@ def list_model_aliases(provider: StateDictProvider | None) -> set[str]:
 
 def _has_model_alias(provider: StateDictProvider, alias: str) -> bool:
     if _is_base_provider_instance(provider):
-        return provider.has_model_alias(alias)
+        has_model_alias = getattr(provider, "has_model_alias", None)
+        if callable(has_model_alias):
+            return bool(has_model_alias(alias))
+        return alias in list_model_aliases(provider)
     return alias in list_model_aliases(provider)
 
 
@@ -54,7 +60,10 @@ def get_or_create_alias_state_dict(
     op_name: str,
 ) -> StateDictLike:
     if _is_base_provider_instance(provider):
-        return provider.get_or_create_alias_state_dict(alias)
+        get_or_create = getattr(provider, "get_or_create_alias_state_dict", None)
+        if callable(get_or_create):
+            return get_or_create(alias)
+        return provider.get_state_dict(alias)
     if _has_model_alias(provider, alias):
         return provider.get_state_dict(alias)
     raise error_type(f"{op_name} requires a provider that supports creating new aliases")
@@ -65,7 +74,10 @@ def list_loaded_tensor_names(provider: StateDictProvider | None) -> dict[str, se
         return {}
 
     if _is_base_provider_instance(provider):
-        items: Mapping[str, StateDictLike] = provider.state_dicts
+        raw_state_dicts = getattr(provider, "state_dicts", None)
+        if not isinstance(raw_state_dicts, Mapping):
+            return {}
+        items: Mapping[str, StateDictLike] = raw_state_dicts
     else:
         state_dicts = getattr(provider, "state_dicts", None)
         if not isinstance(state_dicts, dict):

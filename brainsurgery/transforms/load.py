@@ -1,20 +1,28 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
+from ..core import (
+    StateDictLike,
+    StateDictProvider,
+    TransformError,
+    TransformResult,
+    TypedTransform,
+    complete_filesystem_paths,
+    ensure_mapping_payload,
+    parse_model_expr,
+    register_transform,
+    require_nonempty_string,
+    validate_payload_keys,
+)
 from ..engine import (
     BaseStateDictProvider,
     ProviderError,
+    emit_verbose_event,
     get_or_create_alias_state_dict,
     get_runtime_flags,
     load_tensor_from_path,
 )
-from ..core import parse_model_expr
-from ..core import StateDictProvider, TransformError
-from ..core import TypedTransform, TransformResult, register_transform
-from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
-from ..core import complete_filesystem_paths
-from ..engine import emit_verbose_event
 
 
 class LoadTransformError(TransformError):
@@ -66,7 +74,8 @@ class LoadTransform(TypedTransform[LoadSpec]):
             return [alias for alias in model_aliases if alias.startswith(prefix_text)]
         if value_key == "format":
             return [
-                name for name in ("auto", "torch", "safetensors", "numpy")
+                name
+                for name in ("auto", "torch", "safetensors", "numpy")
                 if name.startswith(prefix_text)
             ]
         return None
@@ -111,7 +120,9 @@ class LoadTransform(TypedTransform[LoadSpec]):
             alias_default = target_ref.model
             tensor_name = target_ref.expr
         elif fmt != "auto":
-            raise LoadTransformError("load.format is only supported for tensor loads (with load.to)")
+            raise LoadTransformError(
+                "load.format is only supported for tensor loads (with load.to)"
+            )
 
         return LoadSpec(path=path, alias=alias_default, tensor_name=tensor_name, format=fmt)
 
@@ -121,26 +132,32 @@ class LoadTransform(TypedTransform[LoadSpec]):
 
         if typed.tensor_name is None:
             if not isinstance(provider, BaseStateDictProvider):
-                raise LoadTransformError("load requires a provider that supports creating new aliases")
+                raise LoadTransformError(
+                    "load requires a provider that supports creating new aliases"
+                )
             try:
                 if dry_run:
-                    state_dict = provider.load_state_dict_from_checkpoint_path(typed.path)
+                    loaded_state_dict = provider.load_state_dict_from_checkpoint_path(typed.path)
                 else:
-                    state_dict = provider.load_alias_from_path(typed.alias, typed.path)
+                    loaded_state_dict = provider.load_alias_from_path(typed.alias, typed.path)
             except ProviderError as exc:
                 message = str(exc).replace("model alias", "load alias")
                 raise LoadTransformError(message) from exc
             except RuntimeError as exc:
                 raise LoadTransformError(str(exc)) from exc
             emit_verbose_event(self.name, f"{typed.path} -> alias {typed.alias}")
-            return TransformResult(name=self.name, count=len(state_dict))
+            return TransformResult(name=self.name, count=len(loaded_state_dict))
 
         try:
             tensor = load_tensor_from_path(typed.path, format=typed.format)  # type: ignore[arg-type]
         except RuntimeError as exc:
             raise LoadTransformError(str(exc)) from exc
-        if dry_run and isinstance(provider, BaseStateDictProvider) and not provider.has_model_alias(typed.alias):
-            state_dict: dict[str, object] = {}
+        if (
+            dry_run
+            and isinstance(provider, BaseStateDictProvider)
+            and not provider.has_model_alias(typed.alias)
+        ):
+            state_dict: StateDictLike = cast(StateDictLike, {})
         else:
             state_dict = get_or_create_alias_state_dict(
                 provider,
@@ -159,14 +176,6 @@ class LoadTransform(TypedTransform[LoadSpec]):
 
     def _infer_output_model(self, spec: object) -> str:
         return self.require_spec(spec).alias
-
-
-
-
-
-
-
-
 
 
 register_transform(LoadTransform())

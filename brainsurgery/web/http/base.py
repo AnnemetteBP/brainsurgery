@@ -1,7 +1,7 @@
-from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler
 import json
 import logging
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler
 from typing import Any
 
 
@@ -54,4 +54,6 @@ class JsonRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(encoded)
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
-        logging.getLogger("brainsurgery").debug(self.request_log_prefix + " request: " + format, *args)
+        logging.getLogger("brainsurgery").debug(
+            self.request_log_prefix + " request: " + format, *args
+        )

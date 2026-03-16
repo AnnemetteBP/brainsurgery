@@ -1,9 +1,17 @@
 from dataclasses import dataclass
 from typing import Any
 
-from ..core import Expression, TransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, resolve_matches
-from ..core import TensorRef
-from ..core import StateDictProvider
+from ..core import (
+    Expression,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    collect_ref_models,
+    compile_tensor_ref_expr,
+    format_ref,
+    register_assert_expr,
+    resolve_matches,
+)
 
 
 @dataclass(frozen=True)

@@ -146,7 +146,8 @@ def _load_cli_config(tokens: list[str]) -> dict[str, Any]:
                 loaded = {}
             if not isinstance(loaded, dict):
                 raise typer.BadParameter(f"YAML file must contain a mapping: {token}")
-            merged = deep_merge_dicts(merged, loaded)
+            loaded_mapping: dict[str, Any] = {str(key): value for key, value in loaded.items()}
+            merged = deep_merge_dicts(merged, loaded_mapping)
             continue
 
         if is_yaml_like_arg(token):

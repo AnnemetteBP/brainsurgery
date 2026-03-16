@@ -8,14 +8,14 @@ from .declarative import (
     UnaryRefs,
 )
 from .transform import (
+    REGISTRY,
     BaseTransform,
     BinaryMappingSpec,
     BinaryMappingTransform,
     CompiledTransform,
     DestinationPolicy,
-    IterationProgress,
     IteratingTransform,
-    REGISTRY,
+    IterationProgress,
     TernaryMappingSpec,
     TernaryMappingTransform,
     TransformControl,

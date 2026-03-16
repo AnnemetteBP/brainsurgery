@@ -7,7 +7,6 @@ from .cli import app as cli_app
 from .web.cli import app as webcli_app
 from .web.ui import app as webui_app
 
-
 app = typer.Typer(help="Brain surgery command suite.")
 app.add_typer(cli_app, name="cli")
 app.add_typer(webcli_app, name="webcli")
@@ -66,7 +65,15 @@ def _normalize_cli_args(raw_args: list[str]) -> list[str]:
 
 def main(argv: list[str] | None = None) -> None:
     args = list(sys.argv[1:] if argv is None else argv)
-    top_level = {"cli", "webcli", "webui", "-h", "--help", "--install-completion", "--show-completion"}
+    top_level = {
+        "cli",
+        "webcli",
+        "webui",
+        "-h",
+        "--help",
+        "--install-completion",
+        "--show-completion",
+    }
     if args and args[0] in top_level:
         if args[0] == "cli":
             app(args=["cli", *_normalize_cli_args(args[1:])], prog_name="brainsurgery")

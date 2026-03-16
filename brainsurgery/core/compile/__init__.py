@@ -15,7 +15,7 @@ from .expression import (
     resolve_tensor_mappings,
     resolve_tensors,
 )
-from .matching import _MatchError, StructuredMatch, _StructuredPathMatcher
+from .matching import StructuredMatch, _MatchError, _StructuredPathMatcher
 from .name_mapping import (
     ResolvedMapping,
     _match_structured_expr,

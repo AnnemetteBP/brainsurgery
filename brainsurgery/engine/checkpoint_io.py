@@ -3,26 +3,43 @@ import logging
 from contextlib import nullcontext
 from pathlib import Path
 from threading import Lock
-from typing import Dict, Literal, TypeVar
+from typing import Literal, TypeVar
 
 import torch
 
 from ..core import StateDictLike
 from ..io import (
     detect_torch_distributed_checkpoint_layout as io_detect_torch_distributed_checkpoint_layout,
+)
+from ..io import (
     is_torch_distributed_checkpoint_directory as io_is_torch_distributed_checkpoint_directory,
+)
+from ..io import (
     load_safetensors_state_dict as io_load_safetensors_state_dict,
+)
+from ..io import (
     load_torch_distributed_checkpoint_state_dict_direct as io_load_torch_distributed_checkpoint_state_dict_direct,
+)
+from ..io import (
     load_torch_distributed_checkpoint_state_dict_via_conversion as io_load_torch_distributed_checkpoint_state_dict_via_conversion,
+)
+from ..io import (
     load_torch_state_dict as io_load_torch_state_dict,
+)
+from ..io import (
     resolve_torch_distributed_checkpoint_output_directory as io_resolve_torch_distributed_checkpoint_output_directory,
+)
+from ..io import (
     save_safetensors_state_dict as io_save_safetensors_state_dict,
+)
+from ..io import (
     save_torch_distributed_checkpoint_state_dict as io_save_torch_distributed_checkpoint_state_dict,
+)
+from ..io import (
     save_torch_state_dict as io_save_torch_state_dict,
 )
 from .output_paths import _resolve_sharded_output_directory
 from .workers import _choose_num_io_workers, _run_threadpool_tasks_with_progress
-
 
 try:
     from tqdm import tqdm
@@ -44,7 +61,7 @@ except ImportError:  # pragma: no cover
         def close(self):
             pass
 
-    def tqdm(iterable=None, **kwargs):  # type: ignore
+    def tqdm(iterable=None, **kwargs):
         return _TqdmDummy(iterable, **kwargs)
 
 
@@ -56,7 +73,7 @@ def tensor_nbytes(tensor: torch.Tensor) -> int:
 
 
 def shard_state_dict(
-    state_dict: Dict[str, torch.Tensor],
+    state_dict: dict[str, torch.Tensor],
     max_shard_size: int,
 ) -> list[dict[str, torch.Tensor]]:
     if max_shard_size <= 0:
@@ -92,7 +109,7 @@ def shard_state_dict(
 
 
 def save_sharded_safetensors(
-    state_dict: Dict[str, torch.Tensor],
+    state_dict: dict[str, torch.Tensor],
     output_dir: Path,
     max_shard_size: int,
     *,
@@ -167,7 +184,7 @@ def _save_safetensors_shard(path: Path, shard: dict[str, torch.Tensor]) -> None:
 
 
 def save_state_dict_to_path(
-    state_dict: Dict[str, torch.Tensor],
+    state_dict: dict[str, torch.Tensor],
     path: Path,
     *,
     format: Literal["safetensors", "torch", "dcp"],
@@ -185,7 +202,7 @@ def save_state_dict_to_path(
 
 
 def persist_state_dict(
-    state_dict: Dict[str, torch.Tensor],
+    state_dict: dict[str, torch.Tensor],
     *,
     output_path: Path,
     output_format: Literal["safetensors", "torch", "dcp"],
@@ -219,23 +236,28 @@ def resolve_dcp_output_directory(path: Path) -> Path:
 
 
 def save_state_dict_to_torch_distributed_checkpoint(
-    state_dict: Dict[str, torch.Tensor],
+    state_dict: dict[str, torch.Tensor],
     output_dir: Path,
 ) -> None:
     io_save_torch_distributed_checkpoint_state_dict(state_dict, output_dir)
 
 
-def _load_state_dict_from_path(path: Path, global_state_dict: StateDictLike, *, max_io_workers: int) -> None:
+def _load_state_dict_from_path(
+    path: Path, global_state_dict: StateDictLike, *, max_io_workers: int
+) -> None:
     if not path.exists():
         raise RuntimeError(f"checkpoint path does not exist: {path}")
     if path.is_dir():
         logger.info("CT scan shows a model directory at %s", path)
-        return load_state_dict_from_directory(path, global_state_dict, max_io_workers=max_io_workers)
+        load_state_dict_from_directory(path, global_state_dict, max_io_workers=max_io_workers)
+        return
     logger.info("CT scan shows a single checkpoint file at %s", path)
-    return load_state_dict_from_file(path, global_state_dict)
+    load_state_dict_from_file(path, global_state_dict)
 
 
-def load_state_dict_from_directory(path: Path, global_state_dict: StateDictLike, *, max_io_workers: int) -> None:
+def load_state_dict_from_directory(
+    path: Path, global_state_dict: StateDictLike, *, max_io_workers: int
+) -> None:
     if is_torch_distributed_checkpoint_directory(path):
         logger.info("Detected torch distributed checkpoint directory at %s", path)
         return load_state_dict_from_torch_distributed_checkpoint(path, global_state_dict)
@@ -335,15 +357,21 @@ def load_state_dict_from_torch_distributed_checkpoint(
     logger.info("Cranial assembly complete for %s: %d tensor(s)", path, len(global_state_dict))
 
 
-def detect_torch_distributed_checkpoint_layout(path: Path) -> Literal["full", "sharded", "mixed", "unknown"]:
+def detect_torch_distributed_checkpoint_layout(
+    path: Path,
+) -> Literal["full", "sharded", "mixed", "unknown"]:
     return io_detect_torch_distributed_checkpoint_layout(path)
 
 
-def _load_state_dict_from_torch_distributed_checkpoint_direct(path: Path) -> Dict[str, torch.Tensor]:
+def _load_state_dict_from_torch_distributed_checkpoint_direct(
+    path: Path,
+) -> dict[str, torch.Tensor]:
     return io_load_torch_distributed_checkpoint_state_dict_direct(path)
 
 
-def _load_state_dict_from_torch_distributed_checkpoint_via_conversion(path: Path) -> Dict[str, torch.Tensor]:
+def _load_state_dict_from_torch_distributed_checkpoint_via_conversion(
+    path: Path,
+) -> dict[str, torch.Tensor]:
     loaded, wrapped = io_load_torch_distributed_checkpoint_state_dict_via_conversion(path)
     if wrapped:
         logger.info("Detected wrapped state_dict payload while converting DCP in %s", path)
@@ -375,9 +403,7 @@ def resolve_safetensor_shards_from_index(index_file: Path, base_dir: Path) -> li
             )
         shard_path = base_dir / name
         if not shard_path.exists():
-            raise RuntimeError(
-                f"safetensors index references missing shard {name!r} in {base_dir}"
-            )
+            raise RuntimeError(f"safetensors index references missing shard {name!r} in {base_dir}")
         shard_paths.append(shard_path)
 
     return shard_paths
@@ -401,7 +427,7 @@ def load_state_dict_from_file(
 
 
 def _merge_loaded_state_dict(
-    loaded: Dict[str, torch.Tensor],
+    loaded: dict[str, torch.Tensor],
     global_state_dict: StateDictLike,
     *,
     path: Path,

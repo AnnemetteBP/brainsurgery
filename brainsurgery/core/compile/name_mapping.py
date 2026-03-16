@@ -1,13 +1,18 @@
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import List
 
-import re
-
+from ..specs import (
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    _Expr,
+    _validate_expr_kind,
+    format_tensor_ref,
+    must_model,
+    parse_slice,
+)
 from .matching import _MatchError, _StructuredPathMatcher
-from ..specs import _Expr, TensorRef, _validate_expr_kind, format_tensor_ref, must_model, parse_slice
-from ..specs import StateDictProvider, TransformError
-
 
 _MATCHER = _StructuredPathMatcher()
 
@@ -78,7 +83,7 @@ def _resolve_name_mappings_regex(
     to_ref: TensorRef,
     provider: StateDictProvider,
     op_name: str,
-) -> List[ResolvedMapping]:
+) -> list[ResolvedMapping]:
     if not isinstance(from_ref.expr, str) or not isinstance(to_ref.expr, str):
         raise TransformError(
             f"{op_name} internal error: regex resolver expected string expressions"
@@ -104,7 +109,7 @@ def _resolve_name_mappings_regex(
     dst_slice = parse_slice(to_ref.slice_spec) if to_ref.slice_spec else None
 
     dst_names_seen: set[str] = set()
-    resolved: List[ResolvedMapping] = []
+    resolved: list[ResolvedMapping] = []
 
     for src_name in src_names:
         try:
@@ -138,7 +143,7 @@ def _resolve_name_mappings_structured(
     to_ref: TensorRef,
     provider: StateDictProvider,
     op_name: str,
-) -> List[ResolvedMapping]:
+) -> list[ResolvedMapping]:
     if not isinstance(from_ref.expr, list) or not isinstance(to_ref.expr, list):
         raise TransformError(
             f"{op_name} internal error: structured resolver expected list expressions"
@@ -153,7 +158,7 @@ def _resolve_name_mappings_structured(
 
     matched_any = False
     dst_names_seen: set[str] = set()
-    resolved: List[ResolvedMapping] = []
+    resolved: list[ResolvedMapping] = []
 
     for src_name in sorted(src_sd.keys()):
         match = _match_structured_expr(
@@ -204,7 +209,7 @@ def resolve_name_mappings(
     to_ref: TensorRef,
     provider: StateDictProvider,
     op_name: str,
-) -> List[ResolvedMapping]:
+) -> list[ResolvedMapping]:
     src_slice = from_ref.slice_spec
     dst_slice = to_ref.slice_spec
 
@@ -243,26 +248,30 @@ def resolve_name_mappings(
 
 def _require_dest_missing(
     *,
-    mappings: List[ResolvedMapping],
+    mappings: list[ResolvedMapping],
     provider: StateDictProvider,
     op_name: str,
 ) -> None:
     for item in mappings:
         dst_sd = provider.get_state_dict(item.dst_model)
         if item.dst_name in dst_sd:
-            raise TransformError(f"{op_name} destination already exists: {item.dst_model}::{item.dst_name}")
+            raise TransformError(
+                f"{op_name} destination already exists: {item.dst_model}::{item.dst_name}"
+            )
 
 
 def _require_dest_present(
     *,
-    mappings: List[ResolvedMapping],
+    mappings: list[ResolvedMapping],
     provider: StateDictProvider,
     op_name: str,
 ) -> None:
     for item in mappings:
         dst_sd = provider.get_state_dict(item.dst_model)
         if item.dst_name not in dst_sd:
-            raise TransformError(f"{op_name} destination missing: {item.dst_model}::{item.dst_name}")
+            raise TransformError(
+                f"{op_name} destination missing: {item.dst_model}::{item.dst_name}"
+            )
 
 
 __all__ = [

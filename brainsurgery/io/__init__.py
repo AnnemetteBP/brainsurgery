@@ -36,7 +36,6 @@ from .torch import _load_state_dict as load_torch_state_dict
 from .torch import _save_single_tensor as save_torch_tensor
 from .torch import _save_state_dict as save_torch_state_dict
 
-
 TensorFileFormat = Literal["numpy", "safetensors", "torch"]
 TensorLoadFormat = Literal["auto", "numpy", "safetensors", "torch"]
 

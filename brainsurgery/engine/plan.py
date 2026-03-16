@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Protocol, runtime_checkable
+from typing import Any, Literal, Protocol, cast, runtime_checkable
 
 from ..core import CompiledTransform, TransformError, get_transform
 from .execution import _execute_transform_pairs
@@ -13,8 +13,8 @@ class PlanLoaderError(RuntimeError):
 @dataclass(frozen=True)
 class _OutputSpec:
     path: Path
-    format: Optional[Literal["safetensors", "torch", "dcp"]] = None
-    shard: Optional[str] = None
+    format: Literal["safetensors", "torch", "dcp"] | None = None
+    shard: str | None = None
 
 
 @dataclass
@@ -27,14 +27,14 @@ class PlanStep:
 
 @dataclass
 class SurgeryPlan:
-    inputs: Dict[str, Path]
+    inputs: dict[str, Path]
     output: _OutputSpec | None
     steps: list[PlanStep] = field(default_factory=list)
     raw_inputs: Any = field(default_factory=list)
     raw_output: Any = None
 
     @property
-    def transforms(self) -> List[CompiledTransform]:
+    def transforms(self) -> list[CompiledTransform]:
         return [step.compiled for step in self.steps if step.compiled is not None]
 
     @property
@@ -83,7 +83,9 @@ class SurgeryPlan:
                 _register_inferred_output_model(step.compiled, known_models)
 
     def execute_pending(self, state_dict_provider: Any, *, interactive: bool) -> bool:
-        pending_steps = [step for step in self.steps if step.compiled is not None and step.status == "pending"]
+        pending_steps = [
+            step for step in self.steps if step.compiled is not None and step.status == "pending"
+        ]
         pairs = [(step.raw, step.compiled) for step in pending_steps if step.compiled is not None]
 
         for step in pending_steps:
@@ -110,19 +112,21 @@ class SurgeryPlan:
         return should_continue
 
     def to_raw_plan(self, *, executed_only: bool) -> dict[str, Any]:
-        transforms = self.executed_raw_transforms if executed_only else [step.raw for step in self.steps]
+        transforms = (
+            self.executed_raw_transforms if executed_only else [step.raw for step in self.steps]
+        )
         raw: dict[str, Any] = {"inputs": self.raw_inputs, "transforms": transforms}
         if self.raw_output is not None:
             raw["output"] = self.raw_output
         return raw
 
+
 @runtime_checkable
 class ModelCollectingSpec(Protocol):
-    def collect_models(self) -> set[str]:
-        ...
+    def collect_models(self) -> set[str]: ...
 
 
-def _default_model_for_inputs(inputs: Dict[str, Path]) -> str | None:
+def _default_model_for_inputs(inputs: dict[str, Path]) -> str | None:
     if len(inputs) == 1:
         return next(iter(inputs.keys()))
     return None
@@ -169,7 +173,9 @@ def compile_plan(raw: Any) -> SurgeryPlan:
 
     steps = [
         PlanStep(raw=raw_transform, compiled=compiled_transform)
-        for raw_transform, compiled_transform in zip(raw_transforms, compiled_transforms, strict=False)
+        for raw_transform, compiled_transform in zip(
+            raw_transforms, compiled_transforms, strict=False
+        )
     ]
     plan = SurgeryPlan(
         inputs=inputs,
@@ -181,7 +187,7 @@ def compile_plan(raw: Any) -> SurgeryPlan:
     return plan
 
 
-def parse_inputs(raw: Any) -> Dict[str, Path]:
+def parse_inputs(raw: Any) -> dict[str, Path]:
     if raw is None:
         return {}
 
@@ -191,7 +197,7 @@ def parse_inputs(raw: Any) -> Dict[str, Path]:
     if not raw:
         return {}
 
-    parsed: Dict[str, Path] = {}
+    parsed: dict[str, Path] = {}
     single_input = len(raw) == 1
 
     for item in raw:
@@ -241,7 +247,7 @@ def parse_output(raw: Any) -> _OutputSpec | None:
     raise PlanLoaderError("output must be either empty, a non-empty string, or a mapping")
 
 
-def parse_output_mapping(raw: Dict[str, Any]) -> _OutputSpec:
+def parse_output_mapping(raw: dict[str, Any]) -> _OutputSpec:
     allowed_keys = {"path", "format", "shard"}
 
     unknown = set(raw) - allowed_keys
@@ -269,7 +275,7 @@ def parse_output_mapping(raw: Dict[str, Any]) -> _OutputSpec:
 
     return _OutputSpec(
         path=Path(path_value),
-        format=format_value,
+        format=cast(Literal["safetensors", "torch", "dcp"] | None, format_value),
         shard=shard_value,
     )
 
@@ -299,7 +305,7 @@ def parse_transform_entry(
     raw: dict[str, Any],
     index: int,
     known_models: set[str],
-    default_model: Optional[str],
+    default_model: str | None,
 ) -> CompiledTransform:
     op_name, payload = next(iter(raw.items()))
 

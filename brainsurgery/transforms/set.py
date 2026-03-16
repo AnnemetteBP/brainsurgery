@@ -1,11 +1,16 @@
 from dataclasses import dataclass
 from typing import Any
 
-from ..core import StateDictProvider, TransformError
-from ..core import TypedTransform, TransformResult, register_transform
-from ..core import ensure_mapping_payload, validate_payload_keys
-from ..engine import set_runtime_flag
-from ..engine import emit_verbose_event
+from ..core import (
+    StateDictProvider,
+    TransformError,
+    TransformResult,
+    TypedTransform,
+    ensure_mapping_payload,
+    register_transform,
+    validate_payload_keys,
+)
+from ..engine import emit_verbose_event, set_runtime_flag
 
 
 class SetTransformError(TransformError):
@@ -128,9 +133,7 @@ def _parse_bool(value: object, *, field_name: str) -> bool:
         if lowered in {"f", "false"}:
             return False
 
-    raise SetTransformError(
-        f"set.{field_name} must be a boolean (T, true, True, F, false, False)"
-    )
+    raise SetTransformError(f"set.{field_name} must be a boolean (T, true, True, F, false, False)")
 
 
 register_transform(SetTransform())

@@ -1,14 +1,29 @@
 from dataclasses import dataclass
 
-from ..core import IteratingTransform, UnarySpec, UnaryTransform
-from ..algorithms import PhloraSvdCache, compute_phlora_factors, reconstruct_phlora_rank, require_positive_rank
-from ..core import ResolvedMapping, resolve_name_mappings
-from ..core import TensorRef, must_model, parse_model_expr
-from ..core import register_transform
-from ..core import ensure_mapping_payload, require_expr, require_numeric, validate_payload_keys
-from ..core import StateDictProvider, TransformError
-from ..engine import emit_verbose_unary_activity
-from ..engine import emit_verbose_event
+from ..algorithms import (
+    PhloraSvdCache,
+    compute_phlora_factors,
+    reconstruct_phlora_rank,
+    require_positive_rank,
+)
+from ..core import (
+    IteratingTransform,
+    ResolvedMapping,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    UnarySpec,
+    UnaryTransform,
+    ensure_mapping_payload,
+    must_model,
+    parse_model_expr,
+    register_transform,
+    require_expr,
+    require_numeric,
+    resolve_name_mappings,
+    validate_payload_keys,
+)
+from ..engine import emit_verbose_event, emit_verbose_unary_activity
 
 
 class PhloraTransformError(TransformError):
@@ -136,7 +151,9 @@ class PhloraTransform(IteratingTransform[PhloraSpec, ResolvedPhloraMapping]):
             require_missing_outputs=require_missing_outputs,
         )
 
-    def validate_refs(self, from_a_ref: TensorRef, from_b_ref: TensorRef, to_ref: TensorRef) -> None:
+    def validate_refs(
+        self, from_a_ref: TensorRef, from_b_ref: TensorRef, to_ref: TensorRef
+    ) -> None:
         if from_a_ref.slice_spec is not None:
             raise PhloraTransformError("phlora target must not be sliced")
         if from_b_ref.slice_spec is not None:
@@ -260,8 +277,6 @@ def _require_boolean(payload: dict, *, op_name: str, key: str, default: bool) ->
     if not isinstance(value, bool):
         raise PhloraTransformError(f"{op_name}.{key} must be a boolean when provided")
     return value
-
-
 
 
 register_transform(PhloraTransform())

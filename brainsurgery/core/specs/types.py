@@ -28,7 +28,7 @@ class StateDictLike(MutableMapping[str, torch.Tensor]):
 
 
 class StateDictProvider(Protocol):
-    def get_state_dict(self, model: str) -> StateDictLike:
-        ...
+    def get_state_dict(self, model: str) -> StateDictLike: ...
+
 
 __all__ = ["StateDictLike", "StateDictProvider", "TransformError"]

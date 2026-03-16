@@ -1,12 +1,11 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Dict
 
 import torch
 
+from ..core import StateDictLike
 from .arena import ProviderError, _SegmentedFileBackedArena, _TensorSlot
 from .flags import get_runtime_flags
-from ..core import StateDictLike
 
 
 @dataclass
@@ -17,9 +16,9 @@ class TensorAccessCounts:
 
 class SlotBackedStateDict(StateDictLike):
     def __init__(self) -> None:
-        self._slots: Dict[str, object] = {}
-        self._access_counts: Dict[str, TensorAccessCounts] = {}
-        self._dry_run_slots: Dict[str, object] = {}
+        self._slots: dict[str, torch.Tensor | _TensorSlot] = {}
+        self._access_counts: dict[str, TensorAccessCounts] = {}
+        self._dry_run_slots: dict[str, torch.Tensor] = {}
         self._dry_run_deleted: set[str] = set()
 
     def __delitem__(self, key: str) -> None:
@@ -99,16 +98,18 @@ class _InMemoryStateDict(SlotBackedStateDict):
             if key in self._dry_run_deleted:
                 raise KeyError(key)
             if key not in self._dry_run_slots:
-                value = self._slots[key].clone()
+                slot_value = self._slots[key]
+                assert isinstance(slot_value, torch.Tensor)
+                value = slot_value.clone()
                 self._dry_run_slots[key] = value
             value = self._dry_run_slots[key]
             assert isinstance(value, torch.Tensor)
             return value
 
-        value = self._slots[key]
-        assert isinstance(value, torch.Tensor)
+        slot_value = self._slots[key]
+        assert isinstance(slot_value, torch.Tensor)
         self._mark_read(key)
-        return value
+        return slot_value
 
     def __setitem__(self, key: str, value: torch.Tensor) -> None:
         if not torch.is_tensor(value):
@@ -176,7 +177,9 @@ class _ArenaStateDict(SlotBackedStateDict):
 
     def slot(self, key: str) -> _TensorSlot:
         try:
-            return self._slots[key]
+            slot = self._slots[key]
+            assert isinstance(slot, _TensorSlot)
+            return slot
         except KeyError as exc:
             raise KeyError(key) from exc
 

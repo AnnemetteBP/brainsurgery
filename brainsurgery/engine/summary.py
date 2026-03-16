@@ -5,8 +5,8 @@ from typing import Any, Literal, cast
 
 from omegaconf import OmegaConf
 
-from .plan import SurgeryPlan
 from ..core import TensorRef
+from .plan import SurgeryPlan
 
 SummaryMode = Literal["raw", "resolve"]
 
@@ -46,7 +46,9 @@ def _serialize_scalar(value: Any) -> Any:
     if isinstance(value, TensorRef):
         return _serialize_tensor_ref(value)
     if is_dataclass(value):
-        return {field.name: _serialize_scalar(getattr(value, field.name)) for field in fields(value)}
+        return {
+            field.name: _serialize_scalar(getattr(value, field.name)) for field in fields(value)
+        }
     if isinstance(value, Path):
         return str(value)
     if isinstance(value, Enum):
@@ -104,12 +106,12 @@ def _serialize_assert_expr(expr: Any) -> dict[str, Any]:
             payload["eps"] = float(eps)
         return {"equal": payload}
     if class_name == "IsZeroExpr":
-        payload: dict[str, Any] = {"of": _serialize_tensor_ref(getattr(expr, "ref"))}
+        payload_iszero: dict[str, Any] = {"of": _serialize_tensor_ref(getattr(expr, "ref"))}
         eps = getattr(expr, "eps", None)
         if eps is None:
-            return {"iszero": payload["of"]}
-        payload["eps"] = float(eps)
-        return {"iszero": payload}
+            return {"iszero": payload_iszero["of"]}
+        payload_iszero["eps"] = float(eps)
+        return {"iszero": payload_iszero}
     if class_name == "DtypeExpr":
         return {
             "dtype": {
@@ -144,8 +146,7 @@ def _serialize_assert_expr(expr: Any) -> dict[str, Any]:
     if is_dataclass(expr):
         return {
             class_name.removesuffix("Expr").lower(): {
-                field.name: _serialize_scalar(getattr(expr, field.name))
-                for field in fields(expr)
+                field.name: _serialize_scalar(getattr(expr, field.name)) for field in fields(expr)
             }
         }
     return {"expr": _serialize_scalar(expr)}

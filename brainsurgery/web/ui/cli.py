@@ -4,8 +4,8 @@ import webbrowser
 import typer
 
 from brainsurgery.engine import apply_log_level
-from .server import _serve_webui
 
+from .server import _serve_webui
 
 logger = logging.getLogger("brainsurgery")
 
@@ -16,9 +16,7 @@ def configure_logging(log_level: str) -> None:
     try:
         apply_log_level(log_level)
     except ValueError:
-        raise typer.BadParameter(
-            "log-level must be one of: critical, debug, error, info, warning"
-        )
+        raise typer.BadParameter("log-level must be one of: critical, debug, error, info, warning")
 
 
 @app.callback(invoke_without_command=True)

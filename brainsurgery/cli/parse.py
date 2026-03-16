@@ -1,6 +1,7 @@
 from typing import Any
 
 from omegaconf import OmegaConf
+
 from .oly import _parse_oly_line
 
 
@@ -19,9 +20,7 @@ def _normalize_single_transform_spec(raw: Any) -> dict[str, Any]:
             raise ValueError("transform name must be a non-empty string")
         return {name: {}}
 
-    raise ValueError(
-        "transform spec must be either a YAML mapping or a bare transform name"
-    )
+    raise ValueError("transform spec must be either a YAML mapping or a bare transform name")
 
 
 def normalize_transform_specs(raw: Any) -> list[dict[str, Any]]:

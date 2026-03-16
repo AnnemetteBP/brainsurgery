@@ -15,6 +15,8 @@ def _resolve_output_destination(
     shard_size = resolve_shard_size(output, default_shard_size=default_shard_size)
 
     if format_value is not None:
+        resolved_path: Path
+        resolved_format: Literal["safetensors", "torch", "dcp"]
         if format_value == "safetensors":
             resolved_path, resolved_format = _resolve_explicit_safetensors_destination(path)
         elif format_value == "torch":

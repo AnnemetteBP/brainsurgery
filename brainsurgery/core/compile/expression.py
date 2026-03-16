@@ -1,17 +1,30 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 
 import torch
 
+from ..specs import (
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    ensure_mapping_payload,
+    format_tensor_ref,
+    must_model,
+    parse_model_expr,
+    parse_slice,
+    validate_payload_keys,
+)
 from .name_mapping import match_expr_names
-from ..specs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
 from .resolver import (
-    _resolve_tensor_mappings as resolve_tensor_mappings_generic,
-    _resolve_tensors as resolve_tensors_generic,
     _resolve_target_names as resolve_target_names_generic,
 )
-from ..specs import StateDictProvider, TransformError
-from ..specs import ensure_mapping_payload, validate_payload_keys
+from .resolver import (
+    _resolve_tensor_mappings as resolve_tensor_mappings_generic,
+)
+from .resolver import (
+    _resolve_tensors as resolve_tensors_generic,
+)
 
 
 class Expression(Protocol):

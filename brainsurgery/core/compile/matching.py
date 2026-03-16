@@ -1,6 +1,5 @@
-from dataclasses import dataclass
 import re
-from typing import Optional
+from dataclasses import dataclass
 
 
 class _MatchError(RuntimeError):
@@ -42,7 +41,7 @@ class _StructuredPathMatcher:
     def join_name(self, parts: list[str]) -> str:
         return ".".join(parts)
 
-    def match(self, pattern: list[str], name: str) -> Optional[StructuredMatch]:
+    def match(self, pattern: list[str], name: str) -> StructuredMatch | None:
         segments = self.split_name(name)
         env = self._match_pattern(pattern, segments)
         if env is None:
@@ -58,7 +57,7 @@ class _StructuredPathMatcher:
         from_pattern: list[str],
         to_pattern: list[str],
         name: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         matched = self.match(from_pattern, name)
         if matched is None:
             return None
@@ -185,8 +184,8 @@ class _StructuredPathMatcher:
         self,
         pattern: list[str],
         segments: list[str],
-    ) -> Optional[dict[str, object]]:
-        def rec(i: int, j: int, env: dict[str, object]) -> Optional[dict[str, object]]:
+    ) -> dict[str, object] | None:
+        def rec(i: int, j: int, env: dict[str, object]) -> dict[str, object] | None:
             if i == len(pattern) and j == len(segments):
                 return env
 
@@ -259,12 +258,16 @@ class _StructuredPathMatcher:
                 if not isinstance(value, list):
                     raise _MatchError(f"output variable {name!r} is not variadic")
                 if not all(isinstance(part, str) for part in value):
-                    raise _MatchError(f"output variadic variable {name!r} contains non-string segments")
+                    raise _MatchError(
+                        f"output variadic variable {name!r} contains non-string segments"
+                    )
                 out.extend(value)
                 continue
 
             if self._is_regex_token(token):
-                raise _MatchError(f"regex token not allowed in structured output pattern: {token!r}")
+                raise _MatchError(
+                    f"regex token not allowed in structured output pattern: {token!r}"
+                )
 
             out.append(self._interpolate_segment(token, env))
 

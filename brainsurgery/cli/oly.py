@@ -1,9 +1,11 @@
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from typing import Any
 
 _INT_RE = re.compile(r"^-?(0|[1-9][0-9]*)$")
-_FLOAT_RE = re.compile(r"^-?(?:[0-9]+\.[0-9]*|\.[0-9]+|[0-9]+(?:[eE][+-]?[0-9]+)|[0-9]+\.[0-9]*[eE][+-]?[0-9]+)$")
+_FLOAT_RE = re.compile(
+    r"^-?(?:[0-9]+\.[0-9]*|\.[0-9]+|[0-9]+(?:[eE][+-]?[0-9]+)|[0-9]+\.[0-9]*[eE][+-]?[0-9]+)$"
+)
 
 
 class OlyParseError(ValueError):
@@ -54,7 +56,7 @@ class _Parser:
                 self.index += 1
                 continue
             break
-        return self.text[start:self.index]
+        return self.text[start : self.index]
 
     def _parse_single_quoted(self) -> str:
         self._expect("'")
@@ -119,7 +121,7 @@ class _Parser:
             elif ch == "}" and brace_depth > 0:
                 brace_depth -= 1
             self.index += 1
-        token = self.text[start:self.index]
+        token = self.text[start : self.index]
         if not token:
             raise self._error("expected value")
         return _coerce_bare_scalar(token)

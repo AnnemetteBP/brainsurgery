@@ -1,10 +1,11 @@
+import re
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from enum import Enum
-import re
-from typing import Callable, Dict, Generic, Iterable, Iterator, List, Literal, TypeVar
+from typing import Generic, Literal, TypeVar
 
 from tqdm import tqdm
 
@@ -14,10 +15,19 @@ from ..compile import (
     match_expr_names,
     resolve_name_mappings,
 )
-from ..specs import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice
 from ..compile import _resolve_target_names as resolve_target_names_generic
-from ..specs import StateDictProvider, TransformError
-from ..specs import ensure_mapping_payload, require_expr, validate_payload_keys
+from ..specs import (
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    ensure_mapping_payload,
+    format_tensor_ref,
+    must_model,
+    parse_model_expr,
+    parse_slice,
+    require_expr,
+    validate_payload_keys,
+)
 
 
 class TransformControl(Enum):
@@ -122,7 +132,7 @@ class TypedTransform(BaseTransform, ABC, Generic[SpecT]):
         return spec
 
 
-REGISTRY: Dict[str, BaseTransform] = {}
+REGISTRY: dict[str, BaseTransform] = {}
 
 
 def register_transform(transform: BaseTransform) -> None:
@@ -141,7 +151,7 @@ def get_transform(name: str) -> BaseTransform:
         raise TransformError(f"unknown transform: {name}") from exc
 
 
-def list_transforms() -> List[str]:
+def list_transforms() -> list[str]:
     return sorted(REGISTRY.keys())
 
 
@@ -212,8 +222,7 @@ class IteratingTransform(TypedTransform[SpecT], ABC, Generic[SpecT, ItemT]):
         self,
         spec: SpecT,
         provider: StateDictProvider,
-    ) -> list[ItemT]:
-        ...
+    ) -> list[ItemT]: ...
 
     def validate_resolved_items(
         self,
@@ -229,8 +238,7 @@ class IteratingTransform(TypedTransform[SpecT], ABC, Generic[SpecT, ItemT]):
         spec: SpecT,
         item: ItemT,
         provider: StateDictProvider,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -296,7 +304,7 @@ class UnaryTransform(IteratingTransform[UnarySpecT, str], ABC, Generic[UnarySpec
             raise self.error_type(f"{self.name} output model missing")
         return model
 
-    def require_target_expr(self, payload: dict) -> str | list[object]:
+    def require_target_expr(self, payload: dict) -> str | list[str]:
         return require_expr(payload, op_name=self.name, key=self.target_key)
 
     def build_spec(self, target_ref: TensorRef, payload: dict) -> UnarySpecT:
@@ -323,8 +331,7 @@ class UnaryTransform(IteratingTransform[UnarySpecT, str], ABC, Generic[UnarySpec
         return self.resolve_items(spec, provider)
 
     @abstractmethod
-    def apply_to_target(self, spec: UnarySpecT, name: str, provider: StateDictProvider) -> None:
-        ...
+    def apply_to_target(self, spec: UnarySpecT, name: str, provider: StateDictProvider) -> None: ...
 
     def apply_item(self, spec: UnarySpecT, item: str, provider: StateDictProvider) -> None:
         self.apply_to_target(spec, item, provider)
@@ -342,7 +349,9 @@ class BinaryMappingSpec:
 BinarySpecT = TypeVar("BinarySpecT", bound=BinaryMappingSpec)
 
 
-class BinaryMappingTransform(IteratingTransform[BinarySpecT, tuple[str, str]], ABC, Generic[BinarySpecT]):
+class BinaryMappingTransform(
+    IteratingTransform[BinarySpecT, tuple[str, str]], ABC, Generic[BinarySpecT]
+):
     error_type: type[TransformError] = TransformError
     spec_type: type[BinarySpecT]
     destination_policy: DestinationPolicy = DestinationPolicy.ANY
@@ -405,8 +414,7 @@ class BinaryMappingTransform(IteratingTransform[BinarySpecT, tuple[str, str]], A
         return [(item.src_name, item.dst_name) for item in mappings]
 
     @abstractmethod
-    def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None:
-        ...
+    def validate_refs(self, from_ref: TensorRef, to_ref: TensorRef) -> None: ...
 
     def validate_resolved_items(
         self,
@@ -421,9 +429,7 @@ class BinaryMappingTransform(IteratingTransform[BinarySpecT, tuple[str, str]], A
         if self.destination_policy is DestinationPolicy.MUST_EXIST:
             missing = [name for name in dst_names if name not in dst_sd]
             if missing:
-                raise self.error_type(
-                    f"{self.name} destination missing: {dst_model}::{missing[0]}"
-                )
+                raise self.error_type(f"{self.name} destination missing: {dst_model}::{missing[0]}")
             return
 
         if self.destination_policy is DestinationPolicy.MUST_NOT_EXIST:
@@ -433,11 +439,15 @@ class BinaryMappingTransform(IteratingTransform[BinarySpecT, tuple[str, str]], A
                     f"{self.name} destination already exists: {dst_model}::{existing[0]}"
                 )
 
-    def apply_mapping(self, spec: BinarySpecT, src_name: str, dst_name: str, provider: StateDictProvider) -> None:
+    def apply_mapping(
+        self, spec: BinarySpecT, src_name: str, dst_name: str, provider: StateDictProvider
+    ) -> None:
         del spec, src_name, dst_name, provider
         raise NotImplementedError
 
-    def apply_item(self, spec: BinarySpecT, item: tuple[str, str], provider: StateDictProvider) -> None:
+    def apply_item(
+        self, spec: BinarySpecT, item: tuple[str, str], provider: StateDictProvider
+    ) -> None:
         src_name, dst_name = item
         self.apply_mapping(spec, src_name, dst_name, provider)
 
@@ -459,7 +469,9 @@ class TernaryMappingSpec:
 TernarySpecT = TypeVar("TernarySpecT", bound=TernaryMappingSpec)
 
 
-class TernaryMappingTransform(IteratingTransform[TernarySpecT, tuple[str, str, str]], ABC, Generic[TernarySpecT]):
+class TernaryMappingTransform(
+    IteratingTransform[TernarySpecT, tuple[str, str, str]], ABC, Generic[TernarySpecT]
+):
     error_type: type[TransformError] = TransformError
     spec_type: type[TernarySpecT]
     destination_policy: DestinationPolicy = DestinationPolicy.ANY
@@ -508,12 +520,15 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, tuple[str, str, s
         to_ref = parse_model_expr(raw_to, default_model=default_model)
         return from_a_ref, from_b_ref, to_ref
 
-    def build_spec(self, from_a_ref: TensorRef, from_b_ref: TensorRef, to_ref: TensorRef) -> TernarySpecT:
+    def build_spec(
+        self, from_a_ref: TensorRef, from_b_ref: TensorRef, to_ref: TensorRef
+    ) -> TernarySpecT:
         return self.spec_type(from_a_ref=from_a_ref, from_b_ref=from_b_ref, to_ref=to_ref)
 
     @abstractmethod
-    def validate_refs(self, from_a_ref: TensorRef, from_b_ref: TensorRef, to_ref: TensorRef) -> None:
-        ...
+    def validate_refs(
+        self, from_a_ref: TensorRef, from_b_ref: TensorRef, to_ref: TensorRef
+    ) -> None: ...
 
     def resolve_items(
         self,
@@ -546,8 +561,8 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, tuple[str, str, s
                     f"{format_tensor_ref(from_a_ref)}; available tensors: {sorted(src_a_sd.keys())}"
                 )
 
-            resolved: list[tuple[str, str, str]] = []
-            dst_names_seen: set[str] = set()
+            resolved_regex: list[tuple[str, str, str]] = []
+            dst_names_seen_regex: set[str] = set()
             for src_a_name in src_a_names:
                 try:
                     src_b_name = re.sub(a_expr, b_expr, src_a_name)
@@ -561,16 +576,18 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, tuple[str, str, s
                     raise self.error_type(
                         f"{self.name} source_b missing: {src_b_model}::{src_b_name}"
                     )
-                if dst_name in dst_names_seen:
-                    raise self.error_type(f"{self.name} destination collision: {dst_model}::{dst_name}")
-                dst_names_seen.add(dst_name)
+                if dst_name in dst_names_seen_regex:
+                    raise self.error_type(
+                        f"{self.name} destination collision: {dst_model}::{dst_name}"
+                    )
+                dst_names_seen_regex.add(dst_name)
 
-                resolved.append((src_a_name, src_b_name, dst_name))
-            return resolved
+                resolved_regex.append((src_a_name, src_b_name, dst_name))
+            return resolved_regex
 
         if isinstance(a_expr, list) and isinstance(b_expr, list) and isinstance(to_expr, list):
-            resolved: list[tuple[str, str, str]] = []
-            dst_names_seen: set[str] = set()
+            resolved_structured: list[tuple[str, str, str]] = []
+            dst_names_seen_structured: set[str] = set()
             matched_any = False
             for src_a_name in sorted(src_a_sd.keys()):
                 match = _match_structured_expr(
@@ -600,18 +617,20 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, tuple[str, str, s
                     raise self.error_type(
                         f"{self.name} source_b missing: {src_b_model}::{src_b_name}"
                     )
-                if dst_name in dst_names_seen:
-                    raise self.error_type(f"{self.name} destination collision: {dst_model}::{dst_name}")
-                dst_names_seen.add(dst_name)
+                if dst_name in dst_names_seen_structured:
+                    raise self.error_type(
+                        f"{self.name} destination collision: {dst_model}::{dst_name}"
+                    )
+                dst_names_seen_structured.add(dst_name)
 
-                resolved.append((src_a_name, src_b_name, dst_name))
+                resolved_structured.append((src_a_name, src_b_name, dst_name))
 
             if not matched_any:
                 raise self.error_type(
                     f"{self.name} source_a matched zero tensors: "
                     f"{format_tensor_ref(from_a_ref)}; available tensors: {sorted(src_a_sd.keys())}"
                 )
-            return resolved
+            return resolved_structured
 
         raise self.error_type(
             f"{self.name} requires from_a/from_b/to expressions of the same kind: "
@@ -634,9 +653,7 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, tuple[str, str, s
             exists = dst_name in dst_sd
 
             if self.destination_policy is DestinationPolicy.MUST_EXIST and not exists:
-                raise self.error_type(
-                    f"{self.name} destination missing: {dst_model}::{dst_name}"
-                )
+                raise self.error_type(f"{self.name} destination missing: {dst_model}::{dst_name}")
             if self.destination_policy is DestinationPolicy.MUST_NOT_EXIST and exists:
                 raise self.error_type(
                     f"{self.name} destination already exists: {dst_model}::{dst_name}"
@@ -650,8 +667,7 @@ class TernaryMappingTransform(IteratingTransform[TernarySpecT, tuple[str, str, s
         src_b_name: str,
         dst_name: str,
         provider: StateDictProvider,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def apply_item(
         self,

@@ -3,7 +3,6 @@ import logging
 from ..http import serve_http
 from .handler import _handler_factory
 
-
 logger = logging.getLogger("brainsurgery")
 
 

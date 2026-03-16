@@ -12,11 +12,13 @@ from ..engine import normalize_transform_specs
 from .complete import (
     _collect_completion_candidates,
     _collect_payload_candidates,
-    _configure_readline_completion_bindings as _configure_readline_completion_bindings_impl,
     _infer_active_transform,
     _is_top_level_completion_position,
-    _match_payload_candidates,
     _list_model_aliases,
+    _match_payload_candidates,
+)
+from .complete import (
+    _configure_readline_completion_bindings as _configure_readline_completion_bindings_impl,
 )
 from .history import _add_history_entry
 from .oly import _parse_oly_line
@@ -25,8 +27,11 @@ from .parse import _parse_transform_block
 logger = logging.getLogger("brainsurgery")
 console = Console()
 
+readline: Any | None
 try:
-    import readline
+    import readline as _readline
+
+    readline = _readline
 except ImportError:  # pragma: no cover
     readline = None
 
@@ -130,7 +135,9 @@ def _interactive_completion(
             logger.debug("Could not restore readline completion", exc_info=True)
 
 
-def _prompt_interactive_transform(state_dict_provider: Any | None = None) -> list[dict[str, Any]] | None:
+def _prompt_interactive_transform(
+    state_dict_provider: Any | None = None,
+) -> list[dict[str, Any]] | None:
     console.print()
     console.print(
         Panel.fit(
@@ -151,7 +158,9 @@ def _prompt_interactive_transform(state_dict_provider: Any | None = None) -> lis
 
     while True:
         lines: list[str] = []
-        prompt = _readline_safe_prompt(typer.style("brainsurgery> ", fg=typer.colors.CYAN, bold=True))
+        prompt = _readline_safe_prompt(
+            typer.style("brainsurgery> ", fg=typer.colors.CYAN, bold=True)
+        )
         continuation = _readline_safe_prompt(typer.style("... ", fg=typer.colors.BRIGHT_BLACK))
         top_level_candidates = _collect_completion_candidates(state_dict_provider)
 

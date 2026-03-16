@@ -1,10 +1,18 @@
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import torch
 
+from ..specs import (
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    format_tensor_ref,
+    must_model,
+    parse_slice,
+    select_tensor,
+)
 from .name_mapping import ResolvedMapping, _require_dest_present, resolve_name_mappings
-from ..specs import TensorRef, format_tensor_ref, must_model, parse_slice, select_tensor
-from ..specs import StateDictProvider, TransformError
 
 
 def _resolve_target_names(
@@ -75,7 +83,9 @@ def _resolve_tensor_mappings(
 
     resolved: list[tuple[TensorRef, torch.Tensor, TensorRef, torch.Tensor]] = []
     for item in mappings:
-        resolved.append(_resolve_mapping_tensors(item, from_ref=from_ref, to_ref=to_ref, provider=provider))
+        resolved.append(
+            _resolve_mapping_tensors(item, from_ref=from_ref, to_ref=to_ref, provider=provider)
+        )
     return resolved
 
 

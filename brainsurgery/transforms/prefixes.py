@@ -1,20 +1,26 @@
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from typing import Any, Literal
 
+from ..core import (
+    StateDictProvider,
+    TransformError,
+    TransformResult,
+    TypedTransform,
+    ensure_mapping_payload,
+    register_transform,
+    require_nonempty_string,
+    validate_payload_keys,
+)
 from ..engine import (
+    emit_line,
+    emit_verbose_event,
     find_alias_mapping,
     get_or_create_alias_state_dict,
     iter_alias_mappings,
     list_model_aliases,
     new_empty_state_dict,
 )
-from ..engine import emit_line
-from ..core import TransformError
-from ..core import TypedTransform, TransformResult, register_transform
-from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
-from ..core import StateDictProvider
-from ..engine import emit_verbose_event
 
 
 class PrefixesTransformError(TransformError):
@@ -219,7 +225,9 @@ def _iter_alias_mappings(provider: StateDictProvider) -> list[tuple[str, dict[st
     return iter_alias_mappings(provider)
 
 
-def _find_alias_mapping(provider: StateDictProvider, alias: str) -> tuple[str, dict[str, object], object]:
+def _find_alias_mapping(
+    provider: StateDictProvider, alias: str
+) -> tuple[str, dict[str, object], object]:
     return find_alias_mapping(provider, alias, error_type=PrefixesTransformError)
 
 
@@ -240,7 +248,9 @@ def _create_empty_alias(provider: StateDictProvider, alias: str) -> None:
 
     mappings = _iter_alias_mappings(provider)
     if not mappings:
-        raise PrefixesTransformError("prefixes add requires a provider that supports editable aliases")
+        raise PrefixesTransformError(
+            "prefixes add requires a provider that supports editable aliases"
+        )
 
     _, mapping = mappings[-1]
     mapping[alias] = _new_empty_state_dict(mappings)
@@ -263,10 +273,6 @@ def _rename_alias(provider: StateDictProvider, *, source: str, dest: str) -> Non
     _, mapping, value = _find_alias_mapping(provider, source)
     del mapping[source]
     mapping[dest] = value
-
-
-
-
 
 
 register_transform(PrefixesTransform())

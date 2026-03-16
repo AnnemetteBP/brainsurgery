@@ -1,24 +1,24 @@
-import json
 import copy
+import json
 from dataclasses import is_dataclass
 from pathlib import Path
-from typing import Any
-from typing import get_args, get_origin, get_type_hints
+from typing import Any, get_args, get_origin, get_type_hints
 
 from omegaconf import OmegaConf
+
 from brainsurgery.core import (
     BinaryMappingTransform,
     DestinationPolicy,
     IteratingTransform,
     TernaryMappingTransform,
     UnaryTransform,
-    use_progress_callback,
     get_assert_expr_help,
-    get_transform,
     get_assert_expr_names,
+    get_transform,
     list_transforms,
     match_expr_names,
     parse_model_expr,
+    use_progress_callback,
 )
 from brainsurgery.engine import (
     SurgeryPlan,
@@ -29,7 +29,6 @@ from brainsurgery.engine import (
     reset_runtime_flags,
     use_output_emitter,
 )
-
 
 DISABLED_TRANSFORMS: set[str] = set()
 
@@ -102,7 +101,9 @@ def _transform_specs() -> dict[str, dict[str, Any]]:
             "reference_keys": ref_keys,
             "to_must_exist": destination_policy is DestinationPolicy.MUST_EXIST,
             "help_commands": sorted(list_transforms()) if name == "help" else [],
-            "help_subcommands": {"assert": sorted(get_assert_expr_names())} if name == "help" else {},
+            "help_subcommands": {"assert": sorted(get_assert_expr_names())}
+            if name == "help"
+            else {},
             "assert_expressions": sorted(get_assert_expr_names()) if name == "assert" else [],
             "assert_expression_meta": _assert_expression_meta() if name == "assert" else {},
             "boolean_keys": _boolean_keys_for_transform(transform, allowed),

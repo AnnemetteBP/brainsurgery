@@ -1,14 +1,14 @@
-from http import HTTPStatus
 import logging
-from pathlib import Path
 import threading
+from http import HTTPStatus
+from pathlib import Path
 from typing import Any
 
 from brainsurgery.engine import ProviderError
+
 from ..http import JsonRequestHandler, as_int, as_string
 from .page import _HTML_PAGE
 from .runner import _run_web_plan
-
 
 logger = logging.getLogger("brainsurgery")
 _run_lock = threading.Lock()
@@ -36,7 +36,9 @@ def _handler_factory():
                         shard_size=as_string(payload.get("shard_size", "5GB"), "shard_size"),
                         num_workers=as_int(payload.get("num_workers", 8), "num_workers"),
                         provider=as_string(payload.get("provider", "inmemory"), "provider"),
-                        arena_root=Path(as_string(payload.get("arena_root", ".brainsurgery"), "arena_root")),
+                        arena_root=Path(
+                            as_string(payload.get("arena_root", ".brainsurgery"), "arena_root")
+                        ),
                         arena_segment_size=as_string(
                             payload.get("arena_segment_size", "1GB"),
                             "arena_segment_size",
@@ -46,7 +48,9 @@ def _handler_factory():
                         log_level=as_string(payload.get("log_level", "info"), "log_level"),
                     )
             except ProviderError as exc:
-                self._send_json({"ok": False, "error": f"Provider error: {exc}"}, status=HTTPStatus.BAD_REQUEST)
+                self._send_json(
+                    {"ok": False, "error": f"Provider error: {exc}"}, status=HTTPStatus.BAD_REQUEST
+                )
                 return
             except ValueError as exc:
                 self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)

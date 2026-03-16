@@ -39,7 +39,7 @@ class DumpSpec:
         return {must_model(self.target_ref)}
 
 
-class DumpTransform(UnaryTransform[DumpSpec]):
+class DumpTransform(UnaryTransform[DumpSpec]):  # type: ignore[type-var]
     name = "dump"
     error_type = DumpTransformError
     spec_type = DumpSpec

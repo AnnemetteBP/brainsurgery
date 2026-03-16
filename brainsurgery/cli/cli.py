@@ -4,21 +4,21 @@ from typing import Any
 
 import typer
 
+from ..engine import (
+    ProviderError,
+    apply_log_level,
+    compile_plan,
+    create_state_dict_provider,
+    get_runtime_flags,
+    list_model_aliases,
+    normalize_raw_plan,
+    reset_runtime_flags,
+    use_output_emitter,
+)
 from .config import _load_cli_config
 from .history import _configure_history
 from .interactive import _prompt_interactive_transform
 from .summary import _write_executed_plan_summary
-from ..engine import (
-    apply_log_level,
-    compile_plan,
-    normalize_raw_plan,
-    ProviderError,
-    create_state_dict_provider,
-    get_runtime_flags,
-    list_model_aliases,
-    reset_runtime_flags,
-    use_output_emitter,
-)
 
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(message)s"
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
@@ -31,9 +31,7 @@ def configure_logging(log_level: str) -> None:
     try:
         apply_log_level(log_level)
     except ValueError:
-        raise typer.BadParameter(
-            "log-level must be one of: critical, debug, error, info, warning"
-        )
+        raise typer.BadParameter("log-level must be one of: critical, debug, error, info, warning")
 
 
 def _execute_configured_transforms(
@@ -197,7 +195,9 @@ def run(
 
             if summarize:
                 if get_runtime_flags().dry_run and summarize_path is not None:
-                    logger.info("Dry-run enabled; skipping summary file write to %s", summarize_path)
+                    logger.info(
+                        "Dry-run enabled; skipping summary file write to %s", summarize_path
+                    )
                 else:
                     _write_executed_plan_summary(
                         plan=surgery_plan,

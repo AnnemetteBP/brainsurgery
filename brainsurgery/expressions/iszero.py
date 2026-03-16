@@ -3,9 +3,18 @@ from typing import Any
 
 import torch
 
-from ..core import Expression, TransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_tensors
-from ..core import TensorRef
-from ..core import StateDictProvider
+from ..core import (
+    Expression,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    collect_ref_models,
+    compile_tensor_ref_expr,
+    format_ref,
+    register_assert_expr,
+    require_mapping_assert_payload,
+    resolve_tensors,
+)
 
 
 @dataclass(frozen=True)
@@ -41,8 +50,7 @@ class IsZeroExpr:
     allowed_keys={"of", "eps"},
     required_keys={"of"},
     description=(
-        "Succeeds if selected tensor(s) are all zeros, "
-        "or within optional absolute tolerance 'eps'."
+        "Succeeds if selected tensor(s) are all zeros, or within optional absolute tolerance 'eps'."
     ),
 )
 def compile_iszero_expr(payload: Any, default_model: str | None) -> Expression:

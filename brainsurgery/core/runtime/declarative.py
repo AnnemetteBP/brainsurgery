@@ -1,8 +1,16 @@
-from dataclasses import dataclass
-from typing import Callable, TypeVar
 import re
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import TypeVar, cast
 
-from ..specs import TensorRef, parse_slice
+from ..specs import (
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    ensure_mapping_payload,
+    parse_slice,
+    validate_payload_keys,
+)
 from .transform import (
     BinaryMappingSpec,
     BinaryMappingTransform,
@@ -12,8 +20,6 @@ from .transform import (
     UnarySpec,
     UnaryTransform,
 )
-from ..specs import StateDictProvider, TransformError
-from ..specs import ensure_mapping_payload, validate_payload_keys
 
 UnarySpecT = TypeVar("UnarySpecT", bound=UnarySpec)
 BinarySpecT = TypeVar("BinarySpecT", bound=BinaryMappingSpec)
@@ -65,9 +71,7 @@ def _lines(text: Docs, *rules: str) -> str:
 
 
 def _slice_rule(label: str, allowed: bool) -> str:
-    return (
-        f"{label} may include slicing." if allowed else f"{label} must not be sliced."
-    )
+    return f"{label} may include slicing." if allowed else f"{label} must not be sliced."
 
 
 def _destination_rule(policy: DestinationPolicy) -> str:
@@ -94,11 +98,12 @@ def _validate_slice(
 
 
 class DeclarativeUnaryTransform(UnaryTransform[UnarySpecT]):
-    spec_type = UnarySpec
+    spec_type: type[UnarySpecT] = cast(type[UnarySpecT], UnarySpec)
     allowed_keys = {"target"}
     required_keys = {"target"}
     docs: Docs
     refs = UnaryRefs()
+    help_text: str
     spec_builder: Callable[[TensorRef, dict], UnarySpecT] | None = None
     progress_desc: str | None = None
     apply_fn: Callable[[UnarySpecT, str, StateDictProvider], None]
@@ -110,27 +115,24 @@ class DeclarativeUnaryTransform(UnaryTransform[UnarySpecT]):
         if cls.progress_desc is None:
             cls.progress_desc = f"Applying {cls.name} transforms"
         cls.slice_policy = "allow" if cls.refs.target_slice else "forbid"
-        cls.help_text = _lines(
-            cls.docs, _slice_rule("Target tensors", cls.refs.target_slice)
-        )
+        cls.help_text = _lines(cls.docs, _slice_rule("Target tensors", cls.refs.target_slice))
 
     def build_spec(self, target_ref: TensorRef, payload: dict) -> UnarySpecT:
         if self.spec_builder is not None:
             return self.spec_builder(target_ref, payload)
         return self.spec_type(target_ref=target_ref)
 
-    def apply_to_target(
-        self, spec: UnarySpecT, name: str, provider: StateDictProvider
-    ) -> None:
+    def apply_to_target(self, spec: UnarySpecT, name: str, provider: StateDictProvider) -> None:
         self.apply_fn(spec, name, provider)
 
 
 class DeclarativeBinaryTransform(BinaryMappingTransform[BinarySpecT]):
-    spec_type = BinaryMappingSpec
+    spec_type: type[BinarySpecT] = cast(type[BinarySpecT], BinaryMappingSpec)
     allowed_keys = {"from", "to"}
     required_keys = {"from", "to"}
     docs: Docs
     refs = BinaryRefs()
+    help_text: str
     spec_builder: Callable[[TensorRef, TensorRef, dict], BinarySpecT] | None = None
     progress_desc: str | None = None
     apply_fn: Callable[[BinarySpecT, str, str, StateDictProvider], None]
@@ -194,11 +196,12 @@ class DeclarativeBinaryTransform(BinaryMappingTransform[BinarySpecT]):
 
 
 class DeclarativeTernaryTransform(TernaryMappingTransform[TernarySpecT]):
-    spec_type = TernaryMappingSpec
+    spec_type: type[TernarySpecT] = cast(type[TernarySpecT], TernaryMappingSpec)
     allowed_keys = {"from_a", "from_b", "to"}
     required_keys = {"from_a", "from_b", "to"}
     docs: Docs
     refs = TernaryRefs()
+    help_text: str
     progress_desc: str | None = None
     apply_fn: Callable[[TernarySpecT, str, str, str, StateDictProvider], None]
 

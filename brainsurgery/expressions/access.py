@@ -1,9 +1,18 @@
 from dataclasses import dataclass
 from typing import Any
 
-from ..core import TransformError, collect_ref_models, compile_tensor_ref_expr, format_ref, register_assert_expr, require_mapping_assert_payload, resolve_matches
-from ..core import StateDictProvider
-from ..core import ScalarComparison, parse_scalar_comparison
+from ..core import (
+    ScalarComparison,
+    StateDictProvider,
+    TransformError,
+    collect_ref_models,
+    compile_tensor_ref_expr,
+    format_ref,
+    parse_scalar_comparison,
+    register_assert_expr,
+    require_mapping_assert_payload,
+    resolve_matches,
+)
 
 
 @dataclass(frozen=True)
@@ -18,11 +27,15 @@ class TensorAccessExpr:
         state_dict = provider.get_state_dict(model)
         access_counts = getattr(state_dict, "access_counts", None)
         if not callable(access_counts):
-            raise TransformError(f"{self.field} assertions require an instrumented state_dict backend")
+            raise TransformError(
+                f"{self.field} assertions require an instrumented state_dict backend"
+            )
 
         matches = resolve_matches(self.ref, provider, op_name=self.field)
         if not matches:
-            raise TransformError(f"{self.field} failed: {format_ref(self.ref)} matched zero tensors")
+            raise TransformError(
+                f"{self.field} failed: {format_ref(self.ref)} matched zero tensors"
+            )
 
         expected = self.comparison.describe()
         for name in matches:
@@ -36,7 +49,9 @@ class TensorAccessExpr:
         return collect_ref_models(self.ref)
 
 
-def _compile_tensor_access_expr(payload: Any, default_model: str | None, *, field: str) -> TensorAccessExpr:
+def _compile_tensor_access_expr(
+    payload: Any, default_model: str | None, *, field: str
+) -> TensorAccessExpr:
     mapping = require_mapping_assert_payload(
         payload,
         op_name=field,

@@ -1,8 +1,8 @@
 import logging
 from pathlib import Path
 
+import yaml  # type: ignore[import-untyped]
 from omegaconf import OmegaConf
-import yaml
 
 from brainsurgery.engine import (
     apply_log_level,
@@ -15,8 +15,8 @@ from brainsurgery.engine import (
     reset_runtime_flags,
     use_output_emitter,
 )
-from .models import _WebRunResult
 
+from .models import _WebRunResult
 
 logger = logging.getLogger("brainsurgery")
 

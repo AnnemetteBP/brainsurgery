@@ -1,6 +1,6 @@
+import logging
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-import logging
 
 
 def serve_http(

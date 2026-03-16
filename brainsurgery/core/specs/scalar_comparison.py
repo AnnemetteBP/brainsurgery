@@ -3,7 +3,6 @@ from typing import Any
 
 from .types import TransformError
 
-
 COMPARISON_KEYS = ("is", "ge", "gt", "le", "lt")
 
 

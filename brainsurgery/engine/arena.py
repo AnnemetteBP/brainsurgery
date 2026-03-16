@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from os import getpid
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Tuple
 
 import numpy as np
 import torch
@@ -233,7 +232,7 @@ def torch_element_size(dtype: torch.dtype) -> int:
         raise ProviderError(f"unsupported dtype for arena storage: {dtype}") from exc
 
 
-def prod(shape: Tuple[int, ...]) -> int:
+def prod(shape: tuple[int, ...]) -> int:
     out = 1
     for x in shape:
         out *= x

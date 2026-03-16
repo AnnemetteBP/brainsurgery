@@ -1,9 +1,14 @@
 from dataclasses import dataclass
 from typing import Any
 
-from ..core import TransformError
-from ..core import TypedTransform, TransformControl, TransformResult, register_transform
-from ..core import StateDictProvider
+from ..core import (
+    StateDictProvider,
+    TransformControl,
+    TransformError,
+    TransformResult,
+    TypedTransform,
+    register_transform,
+)
 from ..engine import emit_verbose_event
 
 
@@ -62,14 +67,6 @@ class ExitTransform(TypedTransform[ExitSpec]):
     def contributes_output_model(self, spec: object) -> bool:
         del spec
         return False
-
-
-
-
-
-
-
-
 
 
 register_transform(ExitTransform())

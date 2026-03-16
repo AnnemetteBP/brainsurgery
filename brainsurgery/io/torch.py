@@ -16,7 +16,11 @@ def _save_state_dict(state_dict: dict[str, torch.Tensor], path: Path) -> None:
 def _load_state_dict(path: Path) -> tuple[dict[str, torch.Tensor], bool]:
     loaded = _load_object(path)
     wrapped = False
-    if isinstance(loaded, dict) and "state_dict" in loaded and isinstance(loaded["state_dict"], dict):
+    if (
+        isinstance(loaded, dict)
+        and "state_dict" in loaded
+        and isinstance(loaded["state_dict"], dict)
+    ):
         wrapped = True
         loaded = loaded["state_dict"]
     return _validate_state_dict_mapping(loaded, path), wrapped

@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from ..core import CompiledTransform, TransformControl, apply_transform
 

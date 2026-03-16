@@ -1,6 +1,6 @@
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-import threading
 from typing import Any
 
 from brainsurgery.engine import SurgeryPlan

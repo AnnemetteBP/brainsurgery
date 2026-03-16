@@ -1,11 +1,16 @@
 from dataclasses import dataclass
 from typing import Any
 
-from ..expressions import Expression, compile_assert_expr, get_assert_expr_names
-from ..core import StateDictProvider, TransformError
-from ..core import TypedTransform, TransformResult, register_transform
-from ..core import ensure_mapping_payload
+from ..core import (
+    StateDictProvider,
+    TransformError,
+    TransformResult,
+    TypedTransform,
+    ensure_mapping_payload,
+    register_transform,
+)
 from ..engine import emit_verbose_event
+from ..expressions import Expression, compile_assert_expr, get_assert_expr_names
 
 
 @dataclass(frozen=True)

@@ -2,11 +2,18 @@ from dataclasses import dataclass
 from io import StringIO
 from typing import Any
 
-from ..expressions import get_assert_expr_help, get_assert_expr_names
-from ..core import TransformError
-from ..core import TypedTransform, TransformControl, TransformResult, get_transform, list_transforms, register_transform
-from ..core import StateDictProvider
+from ..core import (
+    StateDictProvider,
+    TransformControl,
+    TransformError,
+    TransformResult,
+    TypedTransform,
+    get_transform,
+    list_transforms,
+    register_transform,
+)
 from ..engine import emit_line, emit_verbose_event
+from ..expressions import get_assert_expr_help, get_assert_expr_names
 
 
 class HelpTransformError(TransformError):
@@ -70,9 +77,7 @@ class HelpTransform(TypedTransform[HelpSpec]):
                 return HelpSpec(command=command, subcommand=None)
 
             if not isinstance(subpayload, str) or not subpayload.strip():
-                raise HelpTransformError(
-                    "help subcommand must be a non-empty string when provided"
-                )
+                raise HelpTransformError("help subcommand must be a non-empty string when provided")
 
             return HelpSpec(command=command, subcommand=subpayload.strip())
 
@@ -109,9 +114,7 @@ class HelpTransform(TypedTransform[HelpSpec]):
             return
 
         if spec.subcommand is not None:
-            raise HelpTransformError(
-                f"command {spec.command!r} does not support subcommand help"
-            )
+            raise HelpTransformError(f"command {spec.command!r} does not support subcommand help")
         self._print_command_help(spec.command)
 
     def _infer_output_model(self, spec: object) -> str:
@@ -213,6 +216,8 @@ class HelpTransform(TypedTransform[HelpSpec]):
         lines.append("Supported assert expression operators:")
         for name in get_assert_expr_names():
             meta = get_assert_expr_help(name)
+            if isinstance(meta, dict):
+                continue
             if meta.description:
                 lines.append(f"  {name}: {meta.description}")
             else:
@@ -226,6 +231,8 @@ class HelpTransform(TypedTransform[HelpSpec]):
 
     def _print_assert_expr_help(self, expr_name: str) -> None:
         meta = get_assert_expr_help(expr_name)
+        if isinstance(meta, dict):
+            raise TransformError(f"unknown assert op: {expr_name!r}")
 
         lines: list[str] = [
             f"Assert expression: {meta.name}",
@@ -313,14 +320,6 @@ class HelpTransform(TypedTransform[HelpSpec]):
             allowed_keys=allowed_keys,
         ):
             emit_line(line)
-
-
-
-
-
-
-
-
 
 
 register_transform(HelpTransform())

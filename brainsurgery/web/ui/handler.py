@@ -1,14 +1,15 @@
 import base64
-from http import HTTPStatus
-from pathlib import Path
-from urllib.parse import unquote
 import tempfile
 import time
-from typing import Any
 import uuid
+from http import HTTPStatus
+from pathlib import Path
+from typing import Any
+from urllib.parse import unquote
 
 from brainsurgery.core import IteratingTransform, IterationProgress, get_transform
 from brainsurgery.engine import list_model_aliases
+
 from ..http import JsonRequestHandler
 from .backend import (
     _apply_load_transform,
@@ -18,8 +19,8 @@ from .backend import (
     _render_dump_for_alias,
     _render_execution_summary,
     _require_string,
-    _serialize_runtime_flags,
     _serialize_models,
+    _serialize_runtime_flags,
     _transform_items,
 )
 from .page import _HTML_PAGE, _STATIC_DIR
@@ -109,7 +110,9 @@ def _handler_factory(session: _SessionState):
                 if not static_path.is_file():
                     self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
                     return
-                content_type = static_content_types.get(static_path.suffix.lower(), "application/octet-stream")
+                content_type = static_content_types.get(
+                    static_path.suffix.lower(), "application/octet-stream"
+                )
                 encoded = static_path.read_bytes()
                 self.send_response(HTTPStatus.OK)
                 self.send_header("Content-Type", content_type)
@@ -159,7 +162,9 @@ def _handler_factory(session: _SessionState):
                         filename = _require_string(body.get("filename"), "filename")
                         content_b64 = _require_string(body.get("content_b64"), "content_b64")
                         raw = base64.b64decode(content_b64, validate=True)
-                        load_path = session.upload_root / f"{uuid.uuid4().hex}_{Path(filename).name}"
+                        load_path = (
+                            session.upload_root / f"{uuid.uuid4().hex}_{Path(filename).name}"
+                        )
                         load_path.write_bytes(raw)
                 except Exception as exc:
                     self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -177,7 +182,9 @@ def _handler_factory(session: _SessionState):
                         session.default_model = chosen_alias
                         models = _serialize_models(session.provider)
                     except Exception as exc:
-                        self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                        self._send_json(
+                            {"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST
+                        )
                         return
 
                 self._send_json(
@@ -224,12 +231,16 @@ def _handler_factory(session: _SessionState):
                         )
                         session.default_model = next_default_model
                         if transform_name == "exit":
-                            summary = _render_execution_summary(plan=session.plan, mode=summary_mode_raw)
+                            summary = _render_execution_summary(
+                                plan=session.plan, mode=summary_mode_raw
+                            )
                             output = f"{output}\n\n{summary}".strip() if output else summary
                         models = _serialize_models(session.provider)
                     except Exception as exc:
                         _finish_progress(session, error=str(exc))
-                        self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                        self._send_json(
+                            {"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST
+                        )
                         return
                 _finish_progress(session, error=None)
                 self._send_json(
@@ -261,7 +272,9 @@ def _handler_factory(session: _SessionState):
                         models = _serialize_models(session.provider)
                     except Exception as exc:
                         _finish_progress(session, error=str(exc))
-                        self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                        self._send_json(
+                            {"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST
+                        )
                         return
                 _finish_progress(session, error=None)
                 self._send_json(
@@ -284,7 +297,9 @@ def _handler_factory(session: _SessionState):
                     format_name = _require_string(body.get("format"), "format").strip().lower()
                     if format_name not in {"compact", "tree"}:
                         raise ValueError("format must be 'compact' or 'tree'.")
-                    verbosity = _require_string(body.get("verbosity", "shape"), "verbosity").strip().lower()
+                    verbosity = (
+                        _require_string(body.get("verbosity", "shape"), "verbosity").strip().lower()
+                    )
                     if verbosity not in {"shape", "stat"}:
                         raise ValueError("verbosity must be 'shape' or 'stat'.")
                     target = _parse_filter_expr(body.get("filter"), alias=alias)
@@ -304,7 +319,9 @@ def _handler_factory(session: _SessionState):
                             target=target,
                         )
                     except Exception as exc:
-                        self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                        self._send_json(
+                            {"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST
+                        )
                         return
 
                 self._send_json(
@@ -360,7 +377,9 @@ def _handler_factory(session: _SessionState):
     return Handler
 
 
-def _suggest_download_filename(*, requested_name: str, out_path: Path, payload: dict[str, Any]) -> str:
+def _suggest_download_filename(
+    *, requested_name: str, out_path: Path, payload: dict[str, Any]
+) -> str:
     if out_path.suffix:
         return out_path.name
 

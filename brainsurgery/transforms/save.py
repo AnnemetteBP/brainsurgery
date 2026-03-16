@@ -2,19 +2,26 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ..core import (
+    StateDictProvider,
+    TransformError,
+    TransformResult,
+    TypedTransform,
+    complete_filesystem_paths,
+    ensure_mapping_payload,
+    parse_model_expr,
+    register_transform,
+    require_nonempty_string,
+    validate_payload_keys,
+)
 from ..engine import (
+    emit_verbose_event,
     get_runtime_flags,
     parse_shard_size,
     persist_state_dict,
     resolve_single_model_alias,
     save_tensor_to_path,
 )
-from ..core import parse_model_expr
-from ..core import StateDictProvider, TransformError
-from ..core import TypedTransform, TransformResult, register_transform
-from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
-from ..core import complete_filesystem_paths
-from ..engine import emit_verbose_event
 
 
 class SaveTransformError(TransformError):
@@ -71,7 +78,8 @@ class SaveTransform(TypedTransform[SaveSpec]):
             return [alias for alias in model_aliases if alias.startswith(prefix_text)]
         if value_key == "format":
             return [
-                name for name in ("safetensors", "torch", "dcp", "numpy")
+                name
+                for name in ("safetensors", "torch", "dcp", "numpy")
                 if name.startswith(prefix_text)
             ]
         return None
@@ -127,9 +135,13 @@ class SaveTransform(TypedTransform[SaveSpec]):
                     "save.format for state_dict save must be one of: safetensors, torch, dcp"
                 )
             if shard_size is not None and fmt in {"torch", "dcp"}:
-                raise SaveTransformError("save.shard is only supported for safetensors state_dict save")
+                raise SaveTransformError(
+                    "save.shard is only supported for safetensors state_dict save"
+                )
 
-        return SaveSpec(path=path, alias=alias, tensor_name=tensor_name, format=fmt, shard_size=shard_size)
+        return SaveSpec(
+            path=path, alias=alias, tensor_name=tensor_name, format=fmt, shard_size=shard_size
+        )
 
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
         typed = self.require_spec(spec)
@@ -204,16 +216,6 @@ def _parse_save_shard(raw: object) -> int | None:
     except RuntimeError as exc:
         message = str(exc).replace("output.shard", "save.shard")
         raise SaveTransformError(message) from exc
-
-
-
-
-
-
-
-
-
-
 
 
 register_transform(SaveTransform())

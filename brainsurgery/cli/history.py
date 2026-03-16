@@ -1,11 +1,15 @@
 import atexit
 import logging
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger("brainsurgery")
 
+readline: Any | None
 try:
-    import readline
+    import readline as _readline
+
+    readline = _readline
 except ImportError:  # pragma: no cover
     readline = None
 

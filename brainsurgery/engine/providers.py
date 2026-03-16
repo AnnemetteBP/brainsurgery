@@ -1,24 +1,22 @@
 import logging
 from pathlib import Path
-from typing import Dict
 
+from ..core import StateDictLike
 from .arena import ProviderError, _SegmentedFileBackedArena
 from .checkpoint_io import _load_state_dict_from_path, persist_state_dict
 from .output_model import _infer_output_model
-from .output_paths import parse_shard_size, _resolve_output_destination
+from .output_paths import _resolve_output_destination, parse_shard_size
 from .plan import SurgeryPlan
 from .state_dicts import _ArenaStateDict, _InMemoryStateDict
-from ..core import StateDictLike
-
 
 logger = logging.getLogger("brainsurgery")
 
 
 class BaseStateDictProvider:
-    def __init__(self, model_paths: Dict[str, Path], max_io_workers: int):
+    def __init__(self, model_paths: dict[str, Path], max_io_workers: int):
         self.model_paths = model_paths
         self.max_io_workers = max_io_workers
-        self.state_dicts: Dict[str, StateDictLike] = {}
+        self.state_dicts: dict[str, StateDictLike] = {}
 
     def get_state_dict(self, model: str) -> StateDictLike:
         raise NotImplementedError
@@ -139,7 +137,7 @@ class InMemoryStateDictProvider(BaseStateDictProvider):
 class ArenaStateDictProvider(BaseStateDictProvider):
     def __init__(
         self,
-        model_paths: Dict[str, Path],
+        model_paths: dict[str, Path],
         *,
         arena: _SegmentedFileBackedArena,
         max_io_workers: int,
@@ -167,7 +165,7 @@ class ArenaStateDictProvider(BaseStateDictProvider):
 def create_state_dict_provider(
     *,
     provider: str,
-    model_paths: Dict[str, Path],
+    model_paths: dict[str, Path],
     max_io_workers: int,
     arena_root: Path,
     arena_segment_size: str,

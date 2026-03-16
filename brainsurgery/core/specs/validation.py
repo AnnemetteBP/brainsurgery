@@ -3,7 +3,6 @@ import torch
 from .refs import _Expr
 from .types import TransformError
 
-
 _DTYPE_ALIASES: dict[str, torch.dtype] = {
     "float16": torch.float16,
     "half": torch.float16,
@@ -108,6 +107,8 @@ def require_expr(payload: dict, *, op_name: str, key: str) -> _Expr:
 
 def require_numeric(payload: dict, *, op_name: str, key: str) -> float:
     value = payload.get(key)
+    if value is None:
+        raise TransformError(f"{op_name}.{key} must be numeric")
     try:
         return float(value)
     except (TypeError, ValueError) as exc:
@@ -129,8 +130,7 @@ def require_same_shape_dtype_device(
         )
     if left.dtype != right.dtype:
         raise TransformError(
-            f"dtype mismatch {op_name} {left_name} -> {right_name}: "
-            f"{left.dtype} != {right.dtype}"
+            f"dtype mismatch {op_name} {left_name} -> {right_name}: {left.dtype} != {right.dtype}"
         )
     if left.device != right.device:
         raise TransformError(

@@ -1,29 +1,30 @@
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Any, cast
 
 import torch
 
 from .types import TransformError
-
 
 _Expr = str | list[str]
 
 
 @dataclass(frozen=True)
 class TensorRef:
-    model: Optional[str]
+    model: str | None
     expr: _Expr
-    slice_spec: Optional[str] = None
+    slice_spec: str | None = None
 
 
-def parse_model_expr(raw: object, default_model: Optional[str] = None) -> TensorRef:
+def parse_model_expr(raw: object, default_model: str | None = None) -> TensorRef:
     if isinstance(raw, list):
         if default_model is None:
             raise TransformError("missing model alias for structured reference")
         if not raw:
             raise TransformError("structured reference must be a non-empty list")
         if not all(isinstance(item, str) and item for item in raw):
-            raise TransformError("structured reference must be a non-empty list of non-empty strings")
+            raise TransformError(
+                "structured reference must be a non-empty list of non-empty strings"
+            )
         return TensorRef(model=default_model, expr=raw, slice_spec=None)
 
     if not isinstance(raw, str) or not raw:
@@ -53,7 +54,7 @@ def parse_model_expr(raw: object, default_model: Optional[str] = None) -> Tensor
     raise TransformError(f"invalid reference syntax: {raw!r}")
 
 
-def parse_slice(raw: str) -> Tuple[object, ...]:
+def parse_slice(raw: str) -> tuple[object, ...]:
     if not _looks_like_slice(raw):
         raise TransformError(f"invalid slice syntax: {raw!r}")
 
@@ -85,11 +86,12 @@ def _parse_slice_component(raw: str) -> object:
     return slice(start, stop, step)
 
 
-def select_tensor(tensor: torch.Tensor, slice_spec: Optional[Tuple[object, ...]]) -> torch.Tensor:
+def select_tensor(tensor: torch.Tensor, slice_spec: tuple[object, ...] | None) -> torch.Tensor:
     if slice_spec is None:
         return tensor
     try:
-        return tensor[slice_spec]
+        index = cast(Any, slice_spec)
+        return tensor[index]
     except Exception as exc:  # pragma: no cover
         raise TransformError(
             f"failed to apply slice {slice_spec!r} to tensor with shape {tuple(tensor.shape)}"
@@ -103,7 +105,7 @@ def _parse_int(raw: str) -> int:
         raise TransformError(f"invalid integer in slice component: {raw!r}") from exc
 
 
-def _parse_optional_int(raw: str) -> Optional[int]:
+def _parse_optional_int(raw: str) -> int | None:
     return None if raw == "" else _parse_int(raw)
 
 

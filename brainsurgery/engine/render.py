@@ -17,56 +17,52 @@ def summarize_tensor(
 
     if verbosity == "full":
         values_tensor = t.cpu()
-        summary = {
+        summary_full: dict[str, Any] = {
             "shape": list(t.shape),
             "dtype": str(t.dtype),
             "device": str(t.device),
             "values": values_tensor.tolist(),
         }
         if access_counts is not None:
-            summary["reads"] = access_counts["reads"]
-            summary["writes"] = access_counts["writes"]
-        return summary
+            summary_full["reads"] = access_counts["reads"]
+            summary_full["writes"] = access_counts["writes"]
+        return summary_full
 
     if t.numel() == 0:
-        summary = {
+        summary_empty: dict[str, Any] = {
             "shape": list(t.shape),
             "min": None,
             "max": None,
             "mean": None,
         }
         if access_counts is not None:
-            summary["reads"] = access_counts["reads"]
-            summary["writes"] = access_counts["writes"]
-        return summary
+            summary_empty["reads"] = access_counts["reads"]
+            summary_empty["writes"] = access_counts["writes"]
+        return summary_empty
 
     stat_tensor = t
     if not stat_tensor.is_floating_point():
         stat_tensor = stat_tensor.to(torch.float32)
 
-    summary = {
+    summary_stats: dict[str, Any] = {
         "shape": list(t.shape),
         "min": float(stat_tensor.min().item()),
         "max": float(stat_tensor.max().item()),
         "mean": float(stat_tensor.mean().item()),
     }
     if access_counts is not None:
-        summary["reads"] = access_counts["reads"]
-        summary["writes"] = access_counts["writes"]
-    return summary
+        summary_stats["reads"] = access_counts["reads"]
+        summary_stats["writes"] = access_counts["writes"]
+    return summary_stats
 
 
 def _is_tensor_summary(node: Any) -> bool:
-    return (
-        isinstance(node, dict)
-        and set(node.keys())
-        in (
-            {"shape"},
-            {"shape", "min", "max", "mean"},
-            {"shape", "min", "max", "mean", "reads", "writes"},
-            {"shape", "dtype", "device", "values"},
-            {"shape", "dtype", "device", "values", "reads", "writes"},
-        )
+    return isinstance(node, dict) and set(node.keys()) in (
+        {"shape"},
+        {"shape", "min", "max", "mean"},
+        {"shape", "min", "max", "mean", "reads", "writes"},
+        {"shape", "dtype", "device", "values"},
+        {"shape", "dtype", "device", "values", "reads", "writes"},
     )
 
 
@@ -112,12 +108,7 @@ def _format_summary(summary: dict[str, Any], *, compact: bool) -> str:
             rendered += f" reads={summary['reads']} writes={summary['writes']}"
         return rendered
 
-    rendered = (
-        f"shape={shape} "
-        f"min={min_value:.6g} "
-        f"max={max_value:.6g} "
-        f"mean={mean_value:.6g}"
-    )
+    rendered = f"shape={shape} min={min_value:.6g} max={max_value:.6g} mean={mean_value:.6g}"
     if "reads" in summary and "writes" in summary:
         rendered += f" reads={summary['reads']} writes={summary['writes']}"
     return rendered

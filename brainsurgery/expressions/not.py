@@ -1,8 +1,13 @@
 from dataclasses import dataclass
 from typing import Any
 
-from ..core import Expression, TransformError, compile_assert_expr, register_assert_expr
-from ..core import StateDictProvider
+from ..core import (
+    Expression,
+    StateDictProvider,
+    TransformError,
+    compile_assert_expr,
+    register_assert_expr,
+)
 
 
 @dataclass(frozen=True)
