@@ -5,6 +5,12 @@ from .config import (
     normalize_raw_plan,
     normalize_transform_specs,
 )
+from .execution import (
+    execute_transform_pairs,
+    format_preview_impact,
+    preview_impact_for_transform,
+    preview_requires_confirmation,
+)
 from .flags import (
     get_runtime_flags,
     reset_runtime_flags,

@@ -18,6 +18,11 @@ import {
   optionsPanelBody,
   optionsToggleBtn,
   panelScopes,
+  previewConfirmDetails,
+  previewConfirmMessage,
+  previewConfirmModal,
+  previewGoBtn,
+  previewNoGoBtn,
   resultsOutput,
   resultsPanel,
   resultsPanelBody,
@@ -84,6 +89,25 @@ function showAssertFailureModal(data) {
   assertErrorMessage.textContent = message;
   assertErrorDetails.textContent = detailLines.join("\n");
   assertErrorModal.classList.remove("hidden");
+}
+
+let previewOnGo = null;
+let previewOnNoGo = null;
+
+function hidePreviewConfirmModal() {
+  previewConfirmModal.classList.add("hidden");
+  previewOnGo = null;
+  previewOnNoGo = null;
+}
+
+function showPreviewConfirmModal({ transformName, previewOutput, onGo, onNoGo }) {
+  previewConfirmMessage.textContent = "Preview indicates tensor-impacting changes. Proceed?";
+  previewConfirmDetails.textContent = (previewOutput && String(previewOutput).trim())
+    ? String(previewOutput)
+    : ("preview 1/1 " + transformName + ": no preview output");
+  previewOnGo = typeof onGo === "function" ? onGo : null;
+  previewOnNoGo = typeof onNoGo === "function" ? onNoGo : null;
+  previewConfirmModal.classList.remove("hidden");
 }
 
 function setFocusedPanel(panel) {
@@ -159,6 +183,7 @@ const actions = createActions({
   copyTextToClipboard,
   parseFieldValue,
   showAssertFailure: showAssertFailureModal,
+  showPreviewConfirm: showPreviewConfirmModal,
   loadBtn,
   aliasInput,
   serverPathInput,
@@ -241,5 +266,32 @@ assertErrorModal.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !assertErrorModal.classList.contains("hidden")) {
     hideAssertFailureModal();
+    return;
   }
+  if (event.key === "Escape" && !previewConfirmModal.classList.contains("hidden")) {
+    if (typeof previewOnNoGo === "function") {
+      const noGo = previewOnNoGo;
+      hidePreviewConfirmModal();
+      noGo();
+      return;
+    }
+    hidePreviewConfirmModal();
+  }
+});
+
+previewGoBtn.addEventListener("click", () => {
+  if (typeof previewOnGo !== "function") return;
+  const go = previewOnGo;
+  hidePreviewConfirmModal();
+  go();
+});
+
+previewNoGoBtn.addEventListener("click", () => {
+  if (typeof previewOnNoGo !== "function") {
+    hidePreviewConfirmModal();
+    return;
+  }
+  const noGo = previewOnNoGo;
+  hidePreviewConfirmModal();
+  noGo();
 });

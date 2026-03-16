@@ -29,6 +29,11 @@ const assertErrorModal = document.getElementById("assertErrorModal");
 const assertErrorMessage = document.getElementById("assertErrorMessage");
 const assertErrorDetails = document.getElementById("assertErrorDetails");
 const assertErrorCloseBtn = document.getElementById("assertErrorCloseBtn");
+const previewConfirmModal = document.getElementById("previewConfirmModal");
+const previewConfirmMessage = document.getElementById("previewConfirmMessage");
+const previewConfirmDetails = document.getElementById("previewConfirmDetails");
+const previewGoBtn = document.getElementById("previewGoBtn");
+const previewNoGoBtn = document.getElementById("previewNoGoBtn");
 
 const panelScopes = [transformsPanel, optionsPanel, modelsPanel, resultsPanel];
 
@@ -52,6 +57,11 @@ export {
   optionsPanelBody,
   optionsToggleBtn,
   panelScopes,
+  previewConfirmDetails,
+  previewConfirmMessage,
+  previewConfirmModal,
+  previewGoBtn,
+  previewNoGoBtn,
   resultsOutput,
   resultsPanel,
   resultsPanelBody,

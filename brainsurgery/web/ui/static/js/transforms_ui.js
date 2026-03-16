@@ -54,9 +54,15 @@ function createTransformsUI({
     if (!meta) return;
     const cfg = getTransformConfig(appState.selectedTransform);
     cfg.fields[key] = buildReferenceFromModel(alias, filterText);
-    if (meta.kind === "binary" && key === "from" && !meta.to_must_exist) {
+    if (meta.kind === "binary" && key === "from") {
       const templ = copyFromFilterToToTemplate((filterText || "").trim());
       cfg.fields.to = alias + "::" + (templ || ".*");
+    }
+    if (meta.kind === "ternary" && key === "from_a") {
+      const templ = copyFromFilterToToTemplate((filterText || "").trim());
+      const expr = templ || ".*";
+      cfg.fields.from_b = alias + "::" + expr;
+      cfg.fields.to = alias + "::" + expr;
     }
     renderTransformPanel();
     setStatus("Committed " + key + " for " + appState.selectedTransform + " from " + alias + ".");
@@ -137,6 +143,7 @@ function createTransformsUI({
       line.style.marginBottom = "0";
       line.textContent =
         "dry-run=" + String(Boolean(appState.latestRuntimeFlags.dry_run)) +
+        ", preview=" + String(Boolean(appState.latestRuntimeFlags.preview)) +
         ", verbose=" + String(Boolean(appState.latestRuntimeFlags.verbose));
       current.appendChild(line);
       transformFields.appendChild(current);
@@ -166,6 +173,25 @@ function createTransformsUI({
         if (!["shape", "stat", "full"].includes(verbositySelect.value)) verbositySelect.value = "shape";
         verbositySelect.addEventListener("change", () => { cfg.fields.verbosity = verbositySelect.value; });
         transformFields.appendChild(verbositySelect);
+        continue;
+      }
+      if (appState.selectedTransform === "execute" && key === "plan-yaml") {
+        const label = document.createElement("div");
+        label.className = "binary-summary";
+        label.innerHTML =
+          "<div class='label'>plan-yaml</div>" +
+          "<div class='value'>Paste a YAML plan or transforms list.</div>";
+        transformFields.appendChild(label);
+
+        const textarea = document.createElement("textarea");
+        textarea.placeholder =
+          "transforms:\n" +
+          "  - dump: { target: model::.*, format: compact }\n" +
+          "  - exit: {}";
+        textarea.rows = 8;
+        textarea.value = cfg.fields[key] == null ? "" : String(cfg.fields[key]);
+        textarea.addEventListener("input", () => { cfg.fields[key] = textarea.value; });
+        transformFields.appendChild(textarea);
         continue;
       }
       if (booleanKeys.has(key)) {
@@ -305,7 +331,7 @@ function createTransformsUI({
       }
     }
 
-    if (meta.kind === "binary" && !meta.to_must_exist && refSet.has("from") && refSet.has("to")) {
+    if (meta.kind === "binary" && refSet.has("from") && refSet.has("to")) {
       const copyBtn = document.createElement("button");
       copyBtn.className = "secondary-btn";
       copyBtn.textContent = "Copy from filter to to";
@@ -324,6 +350,53 @@ function createTransformsUI({
         setStatus("Copied from filter into to for " + appState.selectedTransform + ".");
       });
       transformFields.appendChild(copyBtn);
+    }
+
+    if (
+      meta.kind === "ternary"
+      && refSet.has("from_a")
+      && refSet.has("from_b")
+      && refSet.has("to")
+    ) {
+      const copyAButton = document.createElement("button");
+      copyAButton.className = "secondary-btn";
+      copyAButton.textContent = "Copy from_a filter to from_b + to";
+      copyAButton.addEventListener("click", () => {
+        const fromARaw = String(cfg.fields.from_a || "");
+        const sep = fromARaw.indexOf("::");
+        if (sep < 0) {
+          setStatus("Set from_a as alias::regex first.");
+          return;
+        }
+        const alias = fromARaw.slice(0, sep);
+        const expr = fromARaw.slice(sep + 2);
+        const templ = copyFromFilterToToTemplate(expr);
+        const rewritten = templ || ".*";
+        cfg.fields.from_b = alias + "::" + rewritten;
+        cfg.fields.to = alias + "::" + rewritten;
+        renderTransformPanel();
+        setStatus("Copied from_a filter into from_b and to for " + appState.selectedTransform + ".");
+      });
+      transformFields.appendChild(copyAButton);
+
+      const copyBButton = document.createElement("button");
+      copyBButton.className = "secondary-btn";
+      copyBButton.textContent = "Copy from_b filter to to";
+      copyBButton.addEventListener("click", () => {
+        const fromBRaw = String(cfg.fields.from_b || "");
+        const sep = fromBRaw.indexOf("::");
+        if (sep < 0) {
+          setStatus("Set from_b as alias::regex first.");
+          return;
+        }
+        const alias = fromBRaw.slice(0, sep);
+        const expr = fromBRaw.slice(sep + 2);
+        const templ = copyFromFilterToToTemplate(expr);
+        cfg.fields.to = alias + "::" + (templ || ".*");
+        renderTransformPanel();
+        setStatus("Copied from_b filter into to for " + appState.selectedTransform + ".");
+      });
+      transformFields.appendChild(copyBButton);
     }
 
     transformPanel.classList.remove("hidden");

@@ -183,6 +183,14 @@ Key POST endpoints:
 - `/api/save_download` -> run save and return downloadable file bytes
 - `/api/model_dump` -> render compact/tree dumps for alias/filter
 
+Preview confirmation behavior (Web UI):
+
+- When runtime `preview` is enabled and `dry-run` is disabled, tensor-impacting transforms require confirmation.
+- `/api/_apply_transform` returns `preview_confirmation_required: true` and preview output first.
+- UI shows a modal with `Go` / `No-go`:
+  - `Go` resubmits with `preview_decision: "go"` and applies.
+  - `No-go` resubmits with `preview_decision: "no-go"` and skips apply.
+
 Use this interface when:
 
 - You want iterative visual exploration.
@@ -205,10 +213,33 @@ Common categories:
 
 1. Control/inspection: `help`, `prefixes`, `set`, `exit`, `dump`, `diff`, `assert`
 2. IO: `load`, `save`
-3. Copy/move/delete/assign: `copy`, `move`, `delete`, `assign`
-4. Binary/ternary math: `add`, `subtract`, `multiply`, `matmul`, plus in-place variants
-5. Type/shape ops: `cast`, `reshape`, `permute`, `clamp`, `fill`, `scale`, split/concat
-6. Init and decomposition: `zeroes`, `ones`, `rand`, `phlora`, `phlora_`
+3. Batch runner: `execute`
+4. Copy/move/delete/assign: `copy`, `move`, `delete`, `assign`
+5. Binary/ternary math: `add`, `subtract`, `multiply`, `matmul`, plus in-place variants
+6. Type/shape ops: `cast`, `reshape`, `permute`, `clamp`, `fill`, `scale`, split/concat
+7. Init and decomposition: `zeroes`, `ones`, `rand`, `phlora`, `phlora_`
+
+Mapping note:
+
+- Binary mapping transforms (including `copy`, `move`, `assign`, `add_`, and `subtract_`) support destination synthesis from captures when `from` and `to` use the same expression kind:
+  - regex mode: both strings (`from` regex captures reused in `to`)
+  - structured mode: both lists (`$name` / `${name}` capture + rewrite tokens)
+- Ternary mapping transforms (including `add`, `multiply`, `subtract`, and `matmul`) support the same capture-based rewrite model across `from_a`, `from_b`, and `to`.
+- `assign` still requires synthesized destination tensors to already exist (`MUST_EXIST` policy).
+
+`execute` transform note:
+
+- `execute` runs a nested transform batch from one or more sources:
+  - `transforms`: inline transform object/list
+  - `plan`: YAML-like plan mapping/list
+  - `plan-yaml`: plan YAML string
+  - `path`: filesystem path to a YAML plan
+- If nested plan has `inputs`, they are translated into `load` transforms at the front.
+- If nested plan has `output`, it is translated into a trailing `save` transform.
+- Nested execution uses the same runtime flags as the current session:
+  - `dry-run` respected
+  - `preview` respected
+  - `verbose` respected
 
 For payload details, run:
 

@@ -14,6 +14,7 @@ function createActions({
   copyTextToClipboard,
   parseFieldValue,
   showAssertFailure,
+  showPreviewConfirm,
   loadBtn,
   aliasInput,
   serverPathInput,
@@ -39,6 +40,7 @@ function createActions({
         if (stateData.runtime_flags && typeof stateData.runtime_flags === "object") {
           appState.latestRuntimeFlags = {
             dry_run: Boolean(stateData.runtime_flags.dry_run),
+            preview: Boolean(stateData.runtime_flags.preview),
             verbose: Boolean(stateData.runtime_flags.verbose),
           };
         }
@@ -86,6 +88,7 @@ function createActions({
         if (data.runtime_flags && typeof data.runtime_flags === "object") {
           appState.latestRuntimeFlags = {
             dry_run: Boolean(data.runtime_flags.dry_run),
+            preview: Boolean(data.runtime_flags.preview),
             verbose: Boolean(data.runtime_flags.verbose),
           };
         }
@@ -179,7 +182,7 @@ function createActions({
       setStatus("Applying " + runTransformName + "...");
       transformRunBtn.disabled = true;
       progressController.start(runTransformName, getIsIteratingTransform(runTransformName));
-      try {
+      const executeApply = async (previewDecision) => {
         const isSaveDownload = runTransformName === "save" && (cfg.save_mode || "server") === "download";
         const response = await fetch(
           isSaveDownload ? "/api/save_download" : "/api/_apply_transform",
@@ -195,11 +198,81 @@ function createActions({
                   summary_mode: runTransformName === "exit"
                     ? (String(cfg.fields.exit_summary_mode || "raw").toLowerCase())
                     : undefined,
+                  preview_decision: previewDecision,
                 }
             ),
           }
         );
         const data = await response.json();
+        return { response, data, isSaveDownload };
+      };
+      try {
+        let { response, data, isSaveDownload } = await executeApply(undefined);
+        if (
+          !isSaveDownload
+          && response.ok
+          && data.ok
+          && data.preview_confirmation_required
+          && typeof showPreviewConfirm === "function"
+        ) {
+          progressController.stop();
+          transformRunBtn.disabled = false;
+          showPreviewConfirm({
+            transformName: runTransformName,
+            previewOutput: data.output || "",
+            onGo: async () => {
+              setStatus("Applying " + runTransformName + " (go)...");
+              transformRunBtn.disabled = true;
+              progressController.start(runTransformName, getIsIteratingTransform(runTransformName));
+              try {
+                const goResult = await executeApply("go");
+                const goResponse = goResult.response;
+                const goData = goResult.data;
+                const goIsSaveDownload = goResult.isSaveDownload;
+                if (!goResponse.ok || !goData.ok) {
+                  setStatus("Apply failed: " + (goData.error || "unknown error"));
+                  return;
+                }
+                appState.latestModels = goData.models || [];
+                if (goData.runtime_flags && typeof goData.runtime_flags === "object") {
+                  appState.latestRuntimeFlags = {
+                    dry_run: Boolean(goData.runtime_flags.dry_run),
+                    preview: Boolean(goData.runtime_flags.preview),
+                    verbose: Boolean(goData.runtime_flags.verbose),
+                  };
+                }
+                renderModels(appState.latestModels);
+                resetTransformSearch();
+                renderTransforms();
+                updatePanels();
+                setStatus("Applied " + runTransformName + " successfully.");
+                appendResultBlock(runTransformName, goData.output || "");
+                if (goIsSaveDownload) {
+                  const raw = atob(goData.download_b64 || "");
+                  const bytes = new Uint8Array(raw.length);
+                  for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+                  const blob = new Blob([bytes], { type: goData.download_mime || "application/octet-stream" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = goData.download_filename || "brainsurgery-save.bin";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }
+              } catch (err) {
+                setStatus("Apply failed: " + String(err));
+              } finally {
+                progressController.stop();
+                transformRunBtn.disabled = false;
+              }
+            },
+            onNoGo: () => {
+              setStatus("No-go: skipped " + runTransformName + ".");
+              appendResultBlock(runTransformName, data.output || "");
+            },
+          });
+          return;
+        }
         if (!response.ok || !data.ok) {
           if (
             runTransformName === "assert"
@@ -217,6 +290,7 @@ function createActions({
         if (data.runtime_flags && typeof data.runtime_flags === "object") {
           appState.latestRuntimeFlags = {
             dry_run: Boolean(data.runtime_flags.dry_run),
+            preview: Boolean(data.runtime_flags.preview),
             verbose: Boolean(data.runtime_flags.verbose),
           };
         }

@@ -213,12 +213,13 @@ DeclarativeTernaryTransform --> TernaryRefs
 - Modules auto-import at package import time; each module calls `register_transform(...)`.
 - Operation set spans:
   - utility/control (`help`, `prefixes`, `set`, `exit`, `dump`, `diff`, `assert`)
-  - IO (`load`, `save`)
+  - IO (`load`, `save`, `execute`)
   - mapping/data movement (`copy`, `move`, `delete`, `assign`, `split`, `concat`)
   - math and shape ops (`add`, `subtract`, `multiply`, `matmul`, `scale`, `cast`, `reshape`, `permute`, `clamp`, `fill`)
   - in-place variants (`add_`, `subtract_`, `scale_`, `cast_`, `reshape_`, `clamp_`, `fill_`, `phlora_`)
   - initialization ops (`zeroes`, `ones`, `rand`)
   - low-rank ops (`phlora`)
+  - batch plan execution (`execute` can run nested transform lists/plans; nested `inputs` become `load` and nested `output` becomes `save`)
 
 ### Assertions (`brainsurgery/expressions/`)
 
@@ -364,8 +365,10 @@ Saving:
 
 - `set` transform updates runtime flags:
   - `dry_run`: provider/state dict logic uses overlays and bypasses persistent writes.
+  - `preview`: emits impact summaries for changed/created/deleted refs; interactive mode asks go/no-go before tensor-impacting apply.
   - `verbose`: transform helper emitters can print richer activity lines.
-- Flags are reset at new CLI/web run start.
+- CLI/webcli reset flags at run start.
+- WebUI resets flags at session start and then preserves them across transforms in that session.
 
 ## 5. Interfaces and extension points inside code
 

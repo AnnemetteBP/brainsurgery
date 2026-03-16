@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import unquote
 
 from brainsurgery.core import IteratingTransform, IterationProgress, get_transform
-from brainsurgery.engine import list_model_aliases
+from brainsurgery.engine import list_model_aliases, reset_runtime_flags
 
 from ..http import JsonRequestHandler
 from .backend import (
@@ -17,6 +17,7 @@ from .backend import (
     _apply_transform,
     _default_alias,
     _parse_filter_expr,
+    _preview_transform,
     _render_dump_for_alias,
     _render_execution_summary,
     _require_string,
@@ -81,6 +82,7 @@ def _finish_progress(session: _SessionState, *, error: str | None = None) -> Non
 
 
 def _handler_factory(session: _SessionState):
+    reset_runtime_flags()
     static_content_types = {
         ".html": "text/html; charset=utf-8",
         ".css": "text/css; charset=utf-8",
@@ -200,17 +202,26 @@ def _handler_factory(session: _SessionState):
             if self.path == "/api/_apply_transform":
                 transform_name: str | None = None
                 payload: Any | None = None
+                preview_decision: str | None = None
                 try:
                     body = self._read_json_body()
                     transform_name = _require_string(body.get("transform"), "transform")
                     payload = body.get("payload")
                     summary_mode_raw = body.get("summary_mode", "raw")
+                    preview_decision_raw = body.get("preview_decision")
                     if payload is None:
                         payload = {}
                     if transform_name not in {"help", "assert"} and not isinstance(payload, dict):
                         raise ValueError("payload must be an object.")
                     if not isinstance(summary_mode_raw, str):
                         raise ValueError("summary_mode must be a string when provided.")
+                    if preview_decision_raw is not None:
+                        if not isinstance(preview_decision_raw, str):
+                            raise ValueError("preview_decision must be a string when provided.")
+                        normalized_preview_decision = preview_decision_raw.strip().lower()
+                        if normalized_preview_decision not in {"go", "no-go"}:
+                            raise ValueError("preview_decision must be 'go' or 'no-go'.")
+                        preview_decision = normalized_preview_decision
                 except Exception as exc:
                     self._send_json(
                         _api_error_payload(
@@ -240,6 +251,50 @@ def _handler_factory(session: _SessionState):
                 progress_callback = _make_progress_callback(session) if iterating else None
                 with session.lock:
                     try:
+                        flags = _serialize_runtime_flags()
+                        preview_enabled = bool(flags.get("preview"))
+                        dry_run_enabled = bool(flags.get("dry_run"))
+                        if (
+                            transform_name != "set"
+                            and preview_enabled
+                            and not dry_run_enabled
+                            and preview_decision != "go"
+                        ):
+                            preview_output, needs_confirmation = _preview_transform(
+                                provider=session.provider,
+                                transform_name=transform_name,
+                                payload=payload,
+                                default_model=session.default_model,
+                            )
+                            models = _serialize_models(session.provider)
+                            if needs_confirmation:
+                                _finish_progress(session, error=None)
+                                if preview_decision == "no-go":
+                                    self._send_json(
+                                        {
+                                            "ok": True,
+                                            "models": models,
+                                            "output": (
+                                                f"{preview_output}\n"
+                                                f"preview 1/1 {transform_name}: no-go, apply skipped"
+                                            ),
+                                            "runtime_flags": _serialize_runtime_flags(),
+                                            "preview_confirmation_required": False,
+                                            "preview_transform": transform_name,
+                                        }
+                                    )
+                                    return
+                                self._send_json(
+                                    {
+                                        "ok": True,
+                                        "models": models,
+                                        "output": preview_output,
+                                        "runtime_flags": _serialize_runtime_flags(),
+                                        "preview_confirmation_required": True,
+                                        "preview_transform": transform_name,
+                                    }
+                                )
+                                return
                         output, next_default_model = _apply_transform(
                             provider=session.provider,
                             plan=session.plan,
@@ -274,6 +329,7 @@ def _handler_factory(session: _SessionState):
                         "models": models,
                         "output": output,
                         "runtime_flags": _serialize_runtime_flags(),
+                        "preview_confirmation_required": False,
                     }
                 )
                 return

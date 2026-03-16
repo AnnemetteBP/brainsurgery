@@ -1,7 +1,8 @@
+import importlib
 import logging
 from pathlib import Path
+from typing import Any
 
-import yaml  # type: ignore[import-untyped]
 from omegaconf import OmegaConf
 
 from brainsurgery.engine import (
@@ -19,6 +20,7 @@ from brainsurgery.engine import (
 from .models import _WebRunResult
 
 logger = logging.getLogger("brainsurgery")
+yaml: Any = importlib.import_module("yaml")
 
 
 def _run_web_plan(

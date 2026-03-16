@@ -21,10 +21,15 @@ class AssignTransform(BinaryMappingTransform[BinaryMappingSpec]):
         "Copies tensor values from 'from' into 'to'. The destination tensor must "
         "already exist. Source and destination (after slicing) must have identical shapes.\n"
         "\n"
+        "Pattern-based destination synthesis is supported when 'from' and 'to' are both "
+        "regex strings or both structured lists.\n"
+        "\n"
         "Both references support slicing.\n"
         "\n"
         "Examples:\n"
         "  assign: { from: a.weight, to: b.weight }\n"
+        "  assign: { from: 'block\\.(\\d+)\\.weight', to: 'copy.\\1.weight' }\n"
+        "  assign: { from: ['block', '$i', 'weight'], to: ['copy', '${i}', 'weight'] }\n"
         "  assign: { from: 'a.weight::[:, :10]', to: 'b.weight::[:, :10]' }"
     )
 

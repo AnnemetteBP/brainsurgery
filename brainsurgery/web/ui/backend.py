@@ -8,6 +8,7 @@ from omegaconf import OmegaConf
 
 from brainsurgery.core import (
     BinaryMappingTransform,
+    CompiledTransform,
     DestinationPolicy,
     IteratingTransform,
     TernaryMappingTransform,
@@ -23,10 +24,12 @@ from brainsurgery.core import (
 from brainsurgery.engine import (
     SurgeryPlan,
     executed_plan_summary_yaml,
+    format_preview_impact,
     get_runtime_flags,
     list_model_aliases,
     parse_summary_mode,
-    reset_runtime_flags,
+    preview_impact_for_transform,
+    preview_requires_confirmation,
     use_output_emitter,
 )
 
@@ -287,6 +290,23 @@ def _apply_transform(
     )
 
 
+def _preview_transform(
+    *,
+    provider: Any,
+    transform_name: str,
+    payload: Any,
+    default_model: str | None,
+) -> tuple[str, bool]:
+    transform = get_transform(transform_name)
+    compiled = CompiledTransform(
+        transform=transform,
+        spec=transform.compile(copy.deepcopy(payload), default_model),
+    )
+    impact = preview_impact_for_transform(compiled, provider)
+    output = f"preview 1/1 {transform_name}: {format_preview_impact(impact)}"
+    return output, preview_requires_confirmation(transform_name, impact)
+
+
 def _apply_load_transform(*, provider: Any, plan: SurgeryPlan, path: Path, alias: str) -> None:
     _execute_plan_transform(
         provider=provider,
@@ -307,7 +327,6 @@ def _execute_plan_transform(
     default_model: str | None,
     progress_callback: Any | None = None,
 ) -> tuple[str, str | None]:
-    reset_runtime_flags()
     step = plan.append_raw_transform(raw_transform)
     lines: list[str] = []
     with use_output_emitter(lines.append):
@@ -335,6 +354,7 @@ def _serialize_runtime_flags() -> dict[str, bool]:
     flags = get_runtime_flags()
     return {
         "dry_run": bool(flags.dry_run),
+        "preview": bool(flags.preview),
         "verbose": bool(flags.verbose),
     }
 

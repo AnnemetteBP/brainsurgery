@@ -4,5 +4,5 @@ export const appState = {
   modelViewState: {},
   transformConfigByName: {},
   latestModels: [],
-  latestRuntimeFlags: { dry_run: false, verbose: false },
+  latestRuntimeFlags: { dry_run: false, preview: false, verbose: false },
 };

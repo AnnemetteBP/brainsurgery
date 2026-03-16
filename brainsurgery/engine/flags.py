@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 @dataclass(frozen=True)
 class RuntimeFlags:
     dry_run: bool = False
+    preview: bool = False
     verbose: bool = False
 
 
@@ -18,6 +19,9 @@ def set_runtime_flag(flag_name: str, flag_value: bool) -> RuntimeFlags:
     global _runtime_flags
     if flag_name == "dry_run":
         _runtime_flags = replace(_runtime_flags, dry_run=flag_value)
+        return _runtime_flags
+    if flag_name == "preview":
+        _runtime_flags = replace(_runtime_flags, preview=flag_value)
         return _runtime_flags
     if flag_name == "verbose":
         _runtime_flags = replace(_runtime_flags, verbose=flag_value)

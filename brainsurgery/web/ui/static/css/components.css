@@ -294,3 +294,16 @@
   background: #fff;
   white-space: pre-wrap;
 }
+
+.modal-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-actions button {
+  width: auto;
+  margin: 0;
+  padding: 8px 14px;
+}
