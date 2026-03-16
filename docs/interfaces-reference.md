@@ -189,6 +189,14 @@ Use this interface when:
 - You need progress feedback for iterating transforms.
 - You want model dump browsing without leaving browser.
 
+Keyboard navigation (Web UI):
+
+- `Tab` in the Transforms panel cycles between panel-level controls (search box and transform list).
+- `Shift+Tab` follows the same forward panel cycle behavior used in this UI.
+- `ArrowUp` / `ArrowDown` in the transform list moves selection through ready transforms.
+- `Enter` in the transform list activates the focused/selected transform and moves focus to Transform Options.
+- `Shift+Enter` in Transform Options runs the selected transform.
+
 ## 9. Transform command interface (runtime command surface)
 
 Transforms are discovered through runtime registry and auto-imported modules.
