@@ -1,5 +1,9 @@
 import {
   aliasInput,
+  assertErrorCloseBtn,
+  assertErrorDetails,
+  assertErrorMessage,
+  assertErrorModal,
   clearOptionsBtn,
   clearResultsBtn,
   copyResultsBtn,
@@ -46,6 +50,40 @@ const progressController = createIteratingProgressController({ iteratingProgress
 
 function setStatus(text) {
   statusEl.textContent = text;
+}
+
+function hideAssertFailureModal() {
+  assertErrorModal.classList.add("hidden");
+}
+
+function showAssertFailureModal(data) {
+  const info = (data && typeof data === "object" && data.error_info && typeof data.error_info === "object")
+    ? data.error_info
+    : {};
+  const context = (info.context && typeof info.context === "object") ? info.context : {};
+  const message = typeof info.message === "string" && info.message.trim()
+    ? info.message.trim()
+    : (typeof data.error === "string" ? data.error : "Assertion failed.");
+
+  const detailLines = [];
+  if (typeof context.expression === "string" && context.expression) {
+    detailLines.push("expression: " + context.expression);
+  }
+  if (Array.isArray(context.expression_keys) && context.expression_keys.length) {
+    detailLines.push("keys: " + context.expression_keys.join(", "));
+  }
+  if (typeof info.endpoint === "string" && info.endpoint) {
+    detailLines.push("endpoint: " + info.endpoint);
+  }
+  if (typeof context.raw_payload === "string" && context.raw_payload) {
+    detailLines.push("");
+    detailLines.push("payload:");
+    detailLines.push(context.raw_payload);
+  }
+
+  assertErrorMessage.textContent = message;
+  assertErrorDetails.textContent = detailLines.join("\n");
+  assertErrorModal.classList.remove("hidden");
 }
 
 function setFocusedPanel(panel) {
@@ -120,6 +158,7 @@ const actions = createActions({
   appendResultBlock,
   copyTextToClipboard,
   parseFieldValue,
+  showAssertFailure: showAssertFailureModal,
   loadBtn,
   aliasInput,
   serverPathInput,
@@ -192,3 +231,15 @@ transformSearchEl.value = "";
 transformsUI.renderTransforms();
 transformsUI.updatePanels();
 actions.refresh().catch((err) => setStatus("Initial load failed: " + String(err)));
+
+assertErrorCloseBtn.addEventListener("click", hideAssertFailureModal);
+assertErrorModal.addEventListener("click", (event) => {
+  if (event.target === assertErrorModal) {
+    hideAssertFailureModal();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !assertErrorModal.classList.contains("hidden")) {
+    hideAssertFailureModal();
+  }
+});

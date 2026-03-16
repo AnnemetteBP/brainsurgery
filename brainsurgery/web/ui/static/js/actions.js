@@ -13,6 +13,7 @@ function createActions({
   appendResultBlock,
   copyTextToClipboard,
   parseFieldValue,
+  showAssertFailure,
   loadBtn,
   aliasInput,
   serverPathInput,
@@ -199,7 +200,19 @@ function createActions({
           }
         );
         const data = await response.json();
-        if (!response.ok || !data.ok) { setStatus("Apply failed: " + (data.error || "unknown error")); return; }
+        if (!response.ok || !data.ok) {
+          if (
+            runTransformName === "assert"
+            && data
+            && data.error_info
+            && data.error_info.code === "assert_error"
+            && typeof showAssertFailure === "function"
+          ) {
+            showAssertFailure(data);
+          }
+          setStatus("Apply failed: " + (data.error || "unknown error"));
+          return;
+        }
         appState.latestModels = data.models || [];
         if (data.runtime_flags && typeof data.runtime_flags === "object") {
           appState.latestRuntimeFlags = {

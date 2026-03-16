@@ -25,11 +25,19 @@ const copyResultsBtn = document.getElementById("copyResultsBtn");
 const clearResultsBtn = document.getElementById("clearResultsBtn");
 const resultsPanelBody = document.getElementById("resultsPanelBody");
 const resultsOutput = document.getElementById("resultsOutput");
+const assertErrorModal = document.getElementById("assertErrorModal");
+const assertErrorMessage = document.getElementById("assertErrorMessage");
+const assertErrorDetails = document.getElementById("assertErrorDetails");
+const assertErrorCloseBtn = document.getElementById("assertErrorCloseBtn");
 
 const panelScopes = [transformsPanel, optionsPanel, modelsPanel, resultsPanel];
 
 export {
   aliasInput,
+  assertErrorCloseBtn,
+  assertErrorDetails,
+  assertErrorMessage,
+  assertErrorModal,
   clearOptionsBtn,
   clearResultsBtn,
   copyResultsBtn,

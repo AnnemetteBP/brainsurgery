@@ -96,6 +96,16 @@
       </div>
     </div>
   </div>
+  <div id="assertErrorModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="assertErrorTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="assertErrorTitle">Assertion Failed</h2>
+        <button id="assertErrorCloseBtn" class="secondary-btn modal-close-btn" type="button">Close</button>
+      </div>
+      <p id="assertErrorMessage" class="modal-message"></p>
+      <pre id="assertErrorDetails" class="modal-details"></pre>
+    </div>
+  </div>
   <script type="module" src="/static/js/main.js"></script>
 </body>
 </html>

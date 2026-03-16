@@ -12,6 +12,7 @@ from brainsurgery.engine import list_model_aliases
 
 from ..http import JsonRequestHandler
 from .backend import (
+    _api_error_payload,
     _apply_load_transform,
     _apply_transform,
     _default_alias,
@@ -197,6 +198,8 @@ def _handler_factory(session: _SessionState):
                 return
 
             if self.path == "/api/_apply_transform":
+                transform_name: str | None = None
+                payload: Any | None = None
                 try:
                     body = self._read_json_body()
                     transform_name = _require_string(body.get("transform"), "transform")
@@ -209,13 +212,29 @@ def _handler_factory(session: _SessionState):
                     if not isinstance(summary_mode_raw, str):
                         raise ValueError("summary_mode must be a string when provided.")
                 except Exception as exc:
-                    self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                    self._send_json(
+                        _api_error_payload(
+                            exc,
+                            endpoint="/api/_apply_transform",
+                            transform_name=transform_name,
+                            payload=payload,
+                        ),
+                        status=HTTPStatus.BAD_REQUEST,
+                    )
                     return
 
                 try:
                     iterating = isinstance(get_transform(transform_name), IteratingTransform)
                 except Exception as exc:
-                    self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                    self._send_json(
+                        _api_error_payload(
+                            exc,
+                            endpoint="/api/_apply_transform",
+                            transform_name=transform_name,
+                            payload=payload,
+                        ),
+                        status=HTTPStatus.BAD_REQUEST,
+                    )
                     return
                 _begin_progress(session, transform=transform_name, iterating=iterating)
                 progress_callback = _make_progress_callback(session) if iterating else None
@@ -239,7 +258,13 @@ def _handler_factory(session: _SessionState):
                     except Exception as exc:
                         _finish_progress(session, error=str(exc))
                         self._send_json(
-                            {"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST
+                            _api_error_payload(
+                                exc,
+                                endpoint="/api/_apply_transform",
+                                transform_name=transform_name,
+                                payload=payload,
+                            ),
+                            status=HTTPStatus.BAD_REQUEST,
                         )
                         return
                 _finish_progress(session, error=None)

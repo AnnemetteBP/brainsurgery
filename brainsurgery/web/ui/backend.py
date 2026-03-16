@@ -169,6 +169,54 @@ def _require_string(value: Any, field: str) -> str:
     return value
 
 
+def _assert_error_context(payload: Any) -> dict[str, Any]:
+    context: dict[str, Any] = {}
+    if isinstance(payload, str):
+        context["raw_payload"] = payload.strip()
+        return context
+    if not isinstance(payload, dict):
+        return context
+    if len(payload) == 1:
+        expr_name = next(iter(payload))
+        context["expression"] = expr_name
+        expr_payload = payload.get(expr_name)
+        if isinstance(expr_payload, dict):
+            context["expression_keys"] = sorted(str(key) for key in expr_payload.keys())
+    return context
+
+
+def _api_error_payload(
+    exc: Exception,
+    *,
+    endpoint: str,
+    transform_name: str | None = None,
+    payload: Any | None = None,
+) -> dict[str, Any]:
+    message = str(exc).strip() or exc.__class__.__name__
+    code = "assert_error" if transform_name == "assert" else "request_error"
+    error_info: dict[str, Any] = {
+        "code": code,
+        "message": message,
+        "endpoint": endpoint,
+        "transform": transform_name,
+        "exception_type": type(exc).__name__,
+    }
+    if transform_name == "assert":
+        error_info["location"] = {
+            "transform": "assert",
+            "field": "payload",
+        }
+        context = _assert_error_context(payload)
+        if context:
+            error_info["context"] = context
+
+    return {
+        "ok": False,
+        "error": message,
+        "error_info": error_info,
+    }
+
+
 def _default_alias(provider: Any) -> str:
     aliases = set(list_model_aliases(provider))
     base = "model"

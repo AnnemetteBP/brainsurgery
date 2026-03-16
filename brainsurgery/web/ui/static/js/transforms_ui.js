@@ -142,7 +142,8 @@ function createTransformsUI({
       transformFields.appendChild(current);
     }
 
-    for (const key of orderedKeys) {
+    if (appState.selectedTransform !== "assert") {
+      for (const key of orderedKeys) {
       if (appState.selectedTransform === "dump" && key === "format") {
         const fmtSelect = document.createElement("select");
         fmtSelect.innerHTML =
@@ -197,7 +198,8 @@ function createTransformsUI({
       input.placeholder = key + " (" + suffix + ")";
       input.value = cfg.fields[key] == null ? "" : String(cfg.fields[key]);
       input.addEventListener("input", () => { cfg.fields[key] = input.value; });
-      transformFields.appendChild(input);
+        transformFields.appendChild(input);
+      }
     }
 
     if (appState.selectedTransform === "help") {
