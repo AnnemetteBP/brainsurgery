@@ -365,7 +365,8 @@ function createTransformsUI({
     for (const item of items) {
       const row = document.createElement("div");
       row.className = "transform-item" + (item.enabled ? "" : " planned") + (appState.selectedTransform === item.name ? " selected" : "");
-      row.tabIndex = item.enabled ? 0 : -1;
+      row.dataset.transform = item.name;
+      row.tabIndex = -1;
       const name = document.createElement("span");
       name.textContent = item.name;
       const badge = document.createElement("span");

@@ -40,23 +40,63 @@ function bindPanelInteractions({
     panel.addEventListener("mousedown", () => setFocusedPanel(panel));
     panel.addEventListener("keydown", (event) => {
       if (panel === transformsPanel && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+        const target = event.target;
+        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+          return;
+        }
         const rows = Array.from(
           transformsEl.querySelectorAll(".transform-item:not(.planned)")
         ).filter((row) => row instanceof HTMLElement);
         if (rows.length) {
           event.preventDefault();
           const currentIndex = rows.indexOf(document.activeElement);
+          const selectedIndex = rows.findIndex((row) => row.classList.contains("selected"));
+          const anchorIndex = currentIndex >= 0 ? currentIndex : selectedIndex;
           const delta = event.key === "ArrowDown" ? 1 : -1;
-          const nextIndex = (currentIndex + delta + rows.length) % rows.length;
+          const nextIndex =
+            anchorIndex >= 0
+              ? (anchorIndex + delta + rows.length) % rows.length
+              : (delta > 0 ? 0 : rows.length - 1);
           rows[nextIndex].focus();
           rows[nextIndex].click();
+          const focusSelectedRow = () => {
+            const selectedRow = transformsEl.querySelector(".transform-item.selected");
+            if (!(selectedRow instanceof HTMLElement)) return;
+            selectedRow.focus();
+            selectedRow.scrollIntoView({ block: "nearest" });
+          };
+          requestAnimationFrame(focusSelectedRow);
+        }
+        return;
+      }
+      if (panel === transformsPanel && event.key === "Enter" && !event.shiftKey) {
+        const target = event.target;
+        if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+          return;
+        }
+        const activeRow = document.activeElement;
+        const selectedRow =
+          (
+            activeRow instanceof HTMLElement
+            && activeRow.classList.contains("transform-item")
+            && !activeRow.classList.contains("planned")
+          )
+            ? activeRow
+            : (
+              transformsEl.querySelector(".transform-item.selected:not(.planned)")
+              || transformsEl.querySelector(".transform-item:not(.planned)")
+            );
+        if (selectedRow instanceof HTMLElement) {
+          event.preventDefault();
+          selectedRow.click();
+          requestAnimationFrame(() => focusPanelRelative(panel, 1));
         }
         return;
       }
       if (event.key === "Tab") {
         if (event.shiftKey) {
           event.preventDefault();
-          focusPanelRelative(panel, -1);
+          focusPanelRelative(panel, 1);
           return;
         }
         const focusable = getFocusableInPanel(panel);
