@@ -6,6 +6,7 @@ from typing import Any
 from omegaconf import OmegaConf
 
 from brainsurgery.engine import (
+    RuntimeFlagLifecycleScope,
     apply_log_level,
     compile_plan,
     create_state_dict_provider,
@@ -13,7 +14,7 @@ from brainsurgery.engine import (
     get_runtime_flags,
     normalize_raw_plan,
     parse_summary_mode,
-    reset_runtime_flags,
+    reset_runtime_flags_for_scope,
     use_output_emitter,
 )
 
@@ -43,7 +44,7 @@ def _run_web_plan(
     planned_raw = normalize_raw_plan(raw)
 
     _configure_logging(log_level=log_level)
-    reset_runtime_flags()
+    reset_runtime_flags_for_scope(RuntimeFlagLifecycleScope.WEBCLI_RUN)
 
     logs: list[str] = []
     output_lines: list[str] = []

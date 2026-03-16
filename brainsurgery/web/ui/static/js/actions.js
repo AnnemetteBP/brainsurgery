@@ -21,6 +21,64 @@ function createActions({
   fileInput,
   transformRunBtn,
 }) {
+  function _applyStateFromResponse(data) {
+    appState.latestModels = data.models || [];
+    if (data.runtime_flags && typeof data.runtime_flags === "object") {
+      appState.latestRuntimeFlags = {
+        dry_run: Boolean(data.runtime_flags.dry_run),
+        preview: Boolean(data.runtime_flags.preview),
+        verbose: Boolean(data.runtime_flags.verbose),
+      };
+    }
+  }
+
+  function _renderState() {
+    renderModels(appState.latestModels);
+    resetTransformSearch();
+    renderTransforms();
+    updatePanels();
+  }
+
+  function _downloadFromResponse(data) {
+    const raw = atob(data.download_b64 || "");
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+    const blob = new Blob([bytes], { type: data.download_mime || "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = data.download_filename || "brainsurgery-save.bin";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function _handleApplySuccess({ runTransformName, cfg, data, isSaveDownload }) {
+    _applyStateFromResponse(data);
+    _renderState();
+
+    if (runTransformName === "exit") {
+      const exitText = (data.output && data.output.trim()) ? data.output : "(no output)";
+      appendResultBlock(runTransformName, exitText);
+      if (cfg.fields.exit_auto_copy && exitText !== "(no output)") {
+        const copied = await copyTextToClipboard(exitText);
+        setStatus(
+          copied
+            ? "Applied exit successfully. Copied plan to clipboard."
+            : "Applied exit successfully. Could not copy automatically."
+        );
+      } else {
+        setStatus("Applied exit successfully.");
+      }
+    } else {
+      setStatus("Applied " + runTransformName + " successfully.");
+      appendResultBlock(runTransformName, data.output || "");
+    }
+
+    if (isSaveDownload) {
+      _downloadFromResponse(data);
+    }
+  }
+
   async function refresh() {
     try {
       const [transformsRes, stateRes] = await Promise.all([fetch("/api/transforms"), fetch("/api/state")]);
@@ -36,14 +94,7 @@ function createActions({
       }
       renderTransforms();
       if (stateData.ok) {
-        appState.latestModels = stateData.models || [];
-        if (stateData.runtime_flags && typeof stateData.runtime_flags === "object") {
-          appState.latestRuntimeFlags = {
-            dry_run: Boolean(stateData.runtime_flags.dry_run),
-            preview: Boolean(stateData.runtime_flags.preview),
-            verbose: Boolean(stateData.runtime_flags.verbose),
-          };
-        }
+        _applyStateFromResponse(stateData);
       }
       renderModels(appState.latestModels);
       updatePanels();
@@ -84,18 +135,8 @@ function createActions({
         });
         const data = await response.json();
         if (!response.ok || !data.ok) { setStatus("Load failed: " + (data.error || "unknown error")); return; }
-        appState.latestModels = data.models || [];
-        if (data.runtime_flags && typeof data.runtime_flags === "object") {
-          appState.latestRuntimeFlags = {
-            dry_run: Boolean(data.runtime_flags.dry_run),
-            preview: Boolean(data.runtime_flags.preview),
-            verbose: Boolean(data.runtime_flags.verbose),
-          };
-        }
-        renderModels(appState.latestModels);
-        resetTransformSearch();
-        renderTransforms();
-        updatePanels();
+        _applyStateFromResponse(data);
+        _renderState();
         setStatus("Load completed successfully.");
       } catch (err) {
         setStatus("Load failed: " + String(err));
@@ -233,32 +274,12 @@ function createActions({
                   setStatus("Apply failed: " + (goData.error || "unknown error"));
                   return;
                 }
-                appState.latestModels = goData.models || [];
-                if (goData.runtime_flags && typeof goData.runtime_flags === "object") {
-                  appState.latestRuntimeFlags = {
-                    dry_run: Boolean(goData.runtime_flags.dry_run),
-                    preview: Boolean(goData.runtime_flags.preview),
-                    verbose: Boolean(goData.runtime_flags.verbose),
-                  };
-                }
-                renderModels(appState.latestModels);
-                resetTransformSearch();
-                renderTransforms();
-                updatePanels();
-                setStatus("Applied " + runTransformName + " successfully.");
-                appendResultBlock(runTransformName, goData.output || "");
-                if (goIsSaveDownload) {
-                  const raw = atob(goData.download_b64 || "");
-                  const bytes = new Uint8Array(raw.length);
-                  for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
-                  const blob = new Blob([bytes], { type: goData.download_mime || "application/octet-stream" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = goData.download_filename || "brainsurgery-save.bin";
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }
+                await _handleApplySuccess({
+                  runTransformName,
+                  cfg,
+                  data: goData,
+                  isSaveDownload: goIsSaveDownload,
+                });
               } catch (err) {
                 setStatus("Apply failed: " + String(err));
               } finally {
@@ -286,47 +307,7 @@ function createActions({
           setStatus("Apply failed: " + (data.error || "unknown error"));
           return;
         }
-        appState.latestModels = data.models || [];
-        if (data.runtime_flags && typeof data.runtime_flags === "object") {
-          appState.latestRuntimeFlags = {
-            dry_run: Boolean(data.runtime_flags.dry_run),
-            preview: Boolean(data.runtime_flags.preview),
-            verbose: Boolean(data.runtime_flags.verbose),
-          };
-        }
-        renderModels(appState.latestModels);
-        resetTransformSearch();
-        renderTransforms();
-        updatePanels();
-        if (runTransformName === "exit") {
-          const exitText = (data.output && data.output.trim()) ? data.output : "(no output)";
-          appendResultBlock(runTransformName, exitText);
-          if (cfg.fields.exit_auto_copy && exitText !== "(no output)") {
-            const copied = await copyTextToClipboard(exitText);
-            setStatus(
-              copied
-                ? "Applied exit successfully. Copied plan to clipboard."
-                : "Applied exit successfully. Could not copy automatically."
-            );
-          } else {
-            setStatus("Applied exit successfully.");
-          }
-        } else {
-          setStatus("Applied " + runTransformName + " successfully.");
-          appendResultBlock(runTransformName, data.output || "");
-        }
-        if (isSaveDownload) {
-          const raw = atob(data.download_b64 || "");
-          const bytes = new Uint8Array(raw.length);
-          for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
-          const blob = new Blob([bytes], { type: data.download_mime || "application/octet-stream" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = data.download_filename || "brainsurgery-save.bin";
-          a.click();
-          URL.revokeObjectURL(url);
-        }
+        await _handleApplySuccess({ runTransformName, cfg, data, isSaveDownload });
       } catch (err) {
         setStatus("Apply failed: " + String(err));
       } finally {

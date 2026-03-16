@@ -33,6 +33,13 @@ from brainsurgery.engine import (
     use_output_emitter,
 )
 
+from .models import (
+    ErrorInfoPayload,
+    ErrorResponsePayload,
+    RuntimeFlagsPayload,
+    model_to_payload,
+)
+
 DISABLED_TRANSFORMS: set[str] = set()
 
 
@@ -197,27 +204,32 @@ def _api_error_payload(
 ) -> dict[str, Any]:
     message = str(exc).strip() or exc.__class__.__name__
     code = "assert_error" if transform_name == "assert" else "request_error"
-    error_info: dict[str, Any] = {
-        "code": code,
-        "message": message,
-        "endpoint": endpoint,
-        "transform": transform_name,
-        "exception_type": type(exc).__name__,
-    }
+    location: dict[str, Any] | None = None
+    context_payload: dict[str, Any] | None = None
     if transform_name == "assert":
-        error_info["location"] = {
+        location = {
             "transform": "assert",
             "field": "payload",
         }
         context = _assert_error_context(payload)
         if context:
-            error_info["context"] = context
+            context_payload = context
 
-    return {
-        "ok": False,
-        "error": message,
-        "error_info": error_info,
-    }
+    return model_to_payload(
+        ErrorResponsePayload(
+            ok=False,
+            error=message,
+            error_info=ErrorInfoPayload(
+                code=code,
+                message=message,
+                endpoint=endpoint,
+                transform=transform_name,
+                exception_type=type(exc).__name__,
+                location=location,
+                context=context_payload,
+            ),
+        )
+    )
 
 
 def _default_alias(provider: Any) -> str:
@@ -350,13 +362,13 @@ def _execute_plan_transform(
     return "\n".join(lines), next_default_model
 
 
-def _serialize_runtime_flags() -> dict[str, bool]:
+def _serialize_runtime_flags() -> RuntimeFlagsPayload:
     flags = get_runtime_flags()
-    return {
-        "dry_run": bool(flags.dry_run),
-        "preview": bool(flags.preview),
-        "verbose": bool(flags.verbose),
-    }
+    return RuntimeFlagsPayload(
+        dry_run=bool(flags.dry_run),
+        preview=bool(flags.preview),
+        verbose=bool(flags.verbose),
+    )
 
 
 def _render_dump_for_alias(

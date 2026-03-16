@@ -6,13 +6,14 @@ import typer
 
 from ..engine import (
     ProviderError,
+    RuntimeFlagLifecycleScope,
     apply_log_level,
     compile_plan,
     create_state_dict_provider,
     get_runtime_flags,
     list_model_aliases,
     normalize_raw_plan,
-    reset_runtime_flags,
+    reset_runtime_flags_for_scope,
     use_output_emitter,
 )
 from .config import _load_cli_config
@@ -137,7 +138,7 @@ def run(
     """Load a plan, execute it, and save the rewritten output checkpoint."""
     configure_logging(log_level)
     _configure_history()
-    reset_runtime_flags()
+    reset_runtime_flags_for_scope(RuntimeFlagLifecycleScope.CLI_RUN)
 
     raw_plan = _load_cli_config(config_items or [])
     planned_raw = normalize_raw_plan(raw_plan)

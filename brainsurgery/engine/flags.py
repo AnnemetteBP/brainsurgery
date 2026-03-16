@@ -29,15 +29,8 @@ def set_runtime_flag(flag_name: str, flag_value: bool) -> RuntimeFlags:
     raise ValueError(f"unknown runtime flag: {flag_name!r}")
 
 
-def reset_runtime_flags() -> RuntimeFlags:
-    global _runtime_flags
-    _runtime_flags = RuntimeFlags()
-    return _runtime_flags
-
-
 __all__ = [
     "RuntimeFlags",
     "get_runtime_flags",
     "set_runtime_flag",
-    "reset_runtime_flags",
 ]

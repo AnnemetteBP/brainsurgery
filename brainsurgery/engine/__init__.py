@@ -13,7 +13,6 @@ from .execution import (
 )
 from .flags import (
     get_runtime_flags,
-    reset_runtime_flags,
     set_runtime_flag,
 )
 from .frontend import emit_line, use_output_emitter
@@ -36,6 +35,10 @@ from .providers import (
     create_state_dict_provider,
 )
 from .render import render_tree, summarize_tensor
+from .runtime_flags_policy import (
+    RuntimeFlagLifecycleScope,
+    reset_runtime_flags_for_scope,
+)
 from .summary import (
     executed_plan_summary_doc,
     executed_plan_summary_yaml,

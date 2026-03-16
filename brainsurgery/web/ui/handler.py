@@ -8,7 +8,11 @@ from typing import Any
 from urllib.parse import unquote
 
 from brainsurgery.core import IteratingTransform, IterationProgress, get_transform
-from brainsurgery.engine import list_model_aliases, reset_runtime_flags
+from brainsurgery.engine import (
+    RuntimeFlagLifecycleScope,
+    list_model_aliases,
+    reset_runtime_flags_for_scope,
+)
 
 from ..http import JsonRequestHandler
 from .backend import (
@@ -24,6 +28,16 @@ from .backend import (
     _serialize_models,
     _serialize_runtime_flags,
     _transform_items,
+)
+from .models import (
+    ApplyTransformResponsePayload,
+    LoadResponsePayload,
+    ModelDumpResponsePayload,
+    ProgressResponsePayload,
+    SaveDownloadResponsePayload,
+    StateResponsePayload,
+    TransformsResponsePayload,
+    model_to_payload,
 )
 from .page import _HTML_PAGE, _STATIC_DIR
 from .session import _SessionState
@@ -82,7 +96,7 @@ def _finish_progress(session: _SessionState, *, error: str | None = None) -> Non
 
 
 def _handler_factory(session: _SessionState):
-    reset_runtime_flags()
+    reset_runtime_flags_for_scope(RuntimeFlagLifecycleScope.WEBUI_SESSION)
     static_content_types = {
         ".html": "text/html; charset=utf-8",
         ".css": "text/css; charset=utf-8",
@@ -126,20 +140,36 @@ def _handler_factory(session: _SessionState):
                 self.wfile.write(encoded)
                 return
             if self.path == "/api/transforms":
-                self._send_json({"ok": True, "transforms": _transform_items()})
+                self._send_json(
+                    model_to_payload(
+                        TransformsResponsePayload(
+                            ok=True,
+                            transforms=_transform_items(),
+                        )
+                    )
+                )
                 return
             if self.path == "/api/state":
                 with session.lock:
                     self._send_json(
-                        {
-                            "ok": True,
-                            "models": _serialize_models(session.provider),
-                            "runtime_flags": _serialize_runtime_flags(),
-                        }
+                        model_to_payload(
+                            StateResponsePayload(
+                                ok=True,
+                                models=_serialize_models(session.provider),
+                                runtime_flags=_serialize_runtime_flags(),
+                            )
+                        )
                     )
                 return
             if self.path == "/api/progress":
-                self._send_json({"ok": True, "progress": _snapshot_progress(session)})
+                self._send_json(
+                    model_to_payload(
+                        ProgressResponsePayload(
+                            ok=True,
+                            progress=_snapshot_progress(session),
+                        )
+                    )
+                )
                 return
             self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
 
@@ -191,11 +221,13 @@ def _handler_factory(session: _SessionState):
                         return
 
                 self._send_json(
-                    {
-                        "ok": True,
-                        "models": models,
-                        "runtime_flags": _serialize_runtime_flags(),
-                    }
+                    model_to_payload(
+                        LoadResponsePayload(
+                            ok=True,
+                            models=models,
+                            runtime_flags=_serialize_runtime_flags(),
+                        )
+                    )
                 )
                 return
 
@@ -252,8 +284,8 @@ def _handler_factory(session: _SessionState):
                 with session.lock:
                     try:
                         flags = _serialize_runtime_flags()
-                        preview_enabled = bool(flags.get("preview"))
-                        dry_run_enabled = bool(flags.get("dry_run"))
+                        preview_enabled = bool(flags.preview)
+                        dry_run_enabled = bool(flags.dry_run)
                         if (
                             transform_name != "set"
                             and preview_enabled
@@ -271,28 +303,32 @@ def _handler_factory(session: _SessionState):
                                 _finish_progress(session, error=None)
                                 if preview_decision == "no-go":
                                     self._send_json(
-                                        {
-                                            "ok": True,
-                                            "models": models,
-                                            "output": (
-                                                f"{preview_output}\n"
-                                                f"preview 1/1 {transform_name}: no-go, apply skipped"
-                                            ),
-                                            "runtime_flags": _serialize_runtime_flags(),
-                                            "preview_confirmation_required": False,
-                                            "preview_transform": transform_name,
-                                        }
+                                        model_to_payload(
+                                            ApplyTransformResponsePayload(
+                                                ok=True,
+                                                models=models,
+                                                output=(
+                                                    f"{preview_output}\n"
+                                                    f"preview 1/1 {transform_name}: no-go, apply skipped"
+                                                ),
+                                                runtime_flags=_serialize_runtime_flags(),
+                                                preview_confirmation_required=False,
+                                                preview_transform=transform_name,
+                                            )
+                                        )
                                     )
                                     return
                                 self._send_json(
-                                    {
-                                        "ok": True,
-                                        "models": models,
-                                        "output": preview_output,
-                                        "runtime_flags": _serialize_runtime_flags(),
-                                        "preview_confirmation_required": True,
-                                        "preview_transform": transform_name,
-                                    }
+                                    model_to_payload(
+                                        ApplyTransformResponsePayload(
+                                            ok=True,
+                                            models=models,
+                                            output=preview_output,
+                                            runtime_flags=_serialize_runtime_flags(),
+                                            preview_confirmation_required=True,
+                                            preview_transform=transform_name,
+                                        )
+                                    )
                                 )
                                 return
                         output, next_default_model = _apply_transform(
@@ -324,13 +360,16 @@ def _handler_factory(session: _SessionState):
                         return
                 _finish_progress(session, error=None)
                 self._send_json(
-                    {
-                        "ok": True,
-                        "models": models,
-                        "output": output,
-                        "runtime_flags": _serialize_runtime_flags(),
-                        "preview_confirmation_required": False,
-                    }
+                    model_to_payload(
+                        ApplyTransformResponsePayload(
+                            ok=True,
+                            models=models,
+                            output=output,
+                            runtime_flags=_serialize_runtime_flags(),
+                            preview_confirmation_required=False,
+                            preview_transform=None,
+                        )
+                    )
                 )
                 return
 
@@ -359,15 +398,17 @@ def _handler_factory(session: _SessionState):
                         return
                 _finish_progress(session, error=None)
                 self._send_json(
-                    {
-                        "ok": True,
-                        "models": models,
-                        "output": output,
-                        "runtime_flags": _serialize_runtime_flags(),
-                        "download_filename": filename,
-                        "download_mime": mime,
-                        "download_b64": content_b64,
-                    }
+                    model_to_payload(
+                        SaveDownloadResponsePayload(
+                            ok=True,
+                            models=models,
+                            output=output,
+                            runtime_flags=_serialize_runtime_flags(),
+                            download_filename=filename,
+                            download_mime=mime,
+                            download_b64=content_b64,
+                        )
+                    )
                 )
                 return
 
@@ -406,12 +447,14 @@ def _handler_factory(session: _SessionState):
                         return
 
                 self._send_json(
-                    {
-                        "ok": True,
-                        "dump": dumped,
-                        "matched_count": matched_count,
-                        "total_count": total_count,
-                    }
+                    model_to_payload(
+                        ModelDumpResponsePayload(
+                            ok=True,
+                            dump=dumped,
+                            matched_count=matched_count,
+                            total_count=total_count,
+                        )
+                    )
                 )
                 return
 

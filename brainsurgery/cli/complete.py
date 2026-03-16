@@ -203,7 +203,7 @@ def _match_payload_candidates(
             grouped: list[str] = []
             seen: set[str] = set()
             for match in matches:
-                if not match.startswith(prefix):
+                if not match.startswith(prefix):  # pragma: no cover - defensive
                     continue
                 suffix = match[len(prefix) :]
                 if not suffix:
