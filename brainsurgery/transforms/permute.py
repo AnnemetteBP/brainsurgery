@@ -1,9 +1,18 @@
 from dataclasses import dataclass
 
-from ..core import BinaryMappingSpec, DestinationPolicy
-from ..core import StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
-from ..core import register_transform
-from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs
+from ..core import (
+    BinaryMappingSpec,
+    BinaryRefs,
+    DeclarativeBinaryTransform,
+    DestinationPolicy,
+    Docs,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    register_transform,
+    state_dict_for_ref,
+    view_for_ref_name,
+)
 from ..engine import emit_verbose_binary_activity
 
 
@@ -12,9 +21,7 @@ class PermuteSpec(BinaryMappingSpec):
     order: tuple[int, ...]
 
 
-def _build_permute_spec(
-    from_ref: TensorRef, to_ref: TensorRef, payload: dict
-) -> PermuteSpec:
+def _build_permute_spec(from_ref: TensorRef, to_ref: TensorRef, payload: dict) -> PermuteSpec:
     order = _parse_order(payload.get("order"))
     return PermuteSpec(from_ref=from_ref, to_ref=to_ref, order=order)
 
@@ -22,10 +29,8 @@ def _build_permute_spec(
 def _permute_apply(
     spec: PermuteSpec, src_name: str, dst_name: str, provider: StateDictProvider
 ) -> None:
-    src_sd = provider.get_state_dict(must_model(spec.from_ref))
-    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
-    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
-    src_view = select_tensor(src_sd[src_name], src_slice)
+    _src_sd, src_view = view_for_ref_name(provider, spec.from_ref, src_name)
+    dst_sd = state_dict_for_ref(provider, spec.to_ref)
     order = spec.order
     if src_view.dim() != len(order):
         raise TransformError(

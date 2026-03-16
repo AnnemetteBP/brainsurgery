@@ -6,6 +6,31 @@ Swiss army knife for scripted tensor surgery on model checkpoints.
 pip install brainsurgery
 ```
 
+## Developer workflow
+Install development tooling:
+
+```bash
+pip install -e ".[dev]"
+```
+
+Enable git hooks:
+
+```bash
+pre-commit install
+```
+
+Run hooks manually:
+
+```bash
+pre-commit run --all-files
+```
+
+Run mypy on demand (manual hook):
+
+```bash
+pre-commit run mypy --all-files
+```
+
 ## Quick start
 Run a YAML plan:
 

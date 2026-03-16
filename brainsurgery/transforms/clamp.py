@@ -1,12 +1,24 @@
 from dataclasses import dataclass
 
-from ..core import BinaryMappingSpec, DestinationPolicy, UnarySpec
-from ..core import StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
-from ..core import register_transform
-from ..core import require_numeric
-from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, DeclarativeUnaryTransform, UnaryRefs
-from ..engine import emit_verbose_binary_activity
-from ..engine import emit_verbose_unary_activity
+from ..core import (
+    BinaryMappingSpec,
+    BinaryRefs,
+    DeclarativeBinaryTransform,
+    DeclarativeUnaryTransform,
+    DestinationPolicy,
+    Docs,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    UnaryRefs,
+    UnarySpec,
+    register_transform,
+    require_numeric,
+    state_dict_for_ref,
+    unary_view_for_ref_name,
+    view_for_ref_name,
+)
+from ..engine import emit_verbose_binary_activity, emit_verbose_unary_activity
 
 
 @dataclass(frozen=True)
@@ -15,25 +27,17 @@ class ClampSpec(BinaryMappingSpec):
     max_value: float | None
 
 
-def _build_clamp_spec(
-    from_ref: TensorRef, to_ref: TensorRef, payload: dict
-) -> ClampSpec:
+def _build_clamp_spec(from_ref: TensorRef, to_ref: TensorRef, payload: dict) -> ClampSpec:
     min_value, max_value = _parse_bounds(payload, "clamp", TransformError)
-    return ClampSpec(
-        from_ref=from_ref, to_ref=to_ref, min_value=min_value, max_value=max_value
-    )
+    return ClampSpec(from_ref=from_ref, to_ref=to_ref, min_value=min_value, max_value=max_value)
 
 
 def _clamp_apply(
     spec: ClampSpec, src_name: str, dst_name: str, provider: StateDictProvider
 ) -> None:
-    src_sd = provider.get_state_dict(must_model(spec.from_ref))
-    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
-    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
-    src_view = select_tensor(src_sd[src_name], src_slice)
-    dst_sd[dst_name] = src_view.clamp(
-        min=spec.min_value, max=spec.max_value
-    ).clone()
+    _src_sd, src_view = view_for_ref_name(provider, spec.from_ref, src_name)
+    dst_sd = state_dict_for_ref(provider, spec.to_ref)
+    dst_sd[dst_name] = src_view.clamp(min=spec.min_value, max=spec.max_value).clone()
     emit_verbose_binary_activity("clamp", src_name, dst_name)
 
 
@@ -59,16 +63,8 @@ def _parse_bounds(
     op_name: str,
     error_type: type[TransformError],
 ) -> tuple[float | None, float | None]:
-    min_value = (
-        require_numeric(payload, op_name=op_name, key="min")
-        if "min" in payload
-        else None
-    )
-    max_value = (
-        require_numeric(payload, op_name=op_name, key="max")
-        if "max" in payload
-        else None
-    )
+    min_value = require_numeric(payload, op_name=op_name, key="min") if "min" in payload else None
+    max_value = require_numeric(payload, op_name=op_name, key="max") if "max" in payload else None
     if min_value is None and max_value is None:
         raise error_type(f"{op_name} requires at least one of: min, max")
     if min_value is not None and max_value is not None and min_value > max_value:
@@ -85,26 +81,13 @@ class ClampInPlaceSpec(UnarySpec):
     max_value: float | None
 
 
-def _build_clamp_in_place_spec(
-    target_ref: TensorRef, payload: dict
-) -> ClampInPlaceSpec:
+def _build_clamp_in_place_spec(target_ref: TensorRef, payload: dict) -> ClampInPlaceSpec:
     min_value, max_value = _parse_bounds(payload, "clamp_", TransformError)
-    return ClampInPlaceSpec(
-        target_ref=target_ref, min_value=min_value, max_value=max_value
-    )
+    return ClampInPlaceSpec(target_ref=target_ref, min_value=min_value, max_value=max_value)
 
 
-def _clamp_in_place_apply(
-    spec: ClampInPlaceSpec, name: str, provider: StateDictProvider
-) -> None:
-    model = must_model(spec.target_ref)
-    sd = provider.get_state_dict(model)
-    slice_spec = (
-        parse_slice(spec.target_ref.slice_spec)
-        if spec.target_ref.slice_spec is not None
-        else None
-    )
-    view = select_tensor(sd[name], slice_spec)
+def _clamp_in_place_apply(spec: ClampInPlaceSpec, name: str, provider: StateDictProvider) -> None:
+    sd, view = unary_view_for_ref_name(provider, spec.target_ref, name)
     view.clamp_(min=spec.min_value, max=spec.max_value)
     sd.mark_write(name)
     emit_verbose_unary_activity("clamp_", name)

@@ -1,7 +1,12 @@
-from ..core import UnarySpec, UnaryTransform
-from ..core import must_model
-from ..core import register_transform
-from ..core import StateDictProvider, TransformError
+from ..core import (
+    StateDictProvider,
+    TransformError,
+    UnarySpec,
+    UnaryTransform,
+    must_model,
+    register_transform,
+    state_dict_for_ref,
+)
 from ..engine import emit_verbose_unary_activity
 
 
@@ -27,21 +32,13 @@ class DeleteTransform(UnaryTransform[UnarySpec]):
 
     def apply_to_target(self, spec: UnarySpec, name: str, provider: StateDictProvider) -> None:
         model = must_model(spec.target_ref)
-        sd = provider.get_state_dict(model)
+        sd = state_dict_for_ref(provider, spec.target_ref)
 
         if name not in sd:
             raise DeleteTransformError(f"delete target disappeared during apply: {model}::{name}")
 
         del sd[name]
         emit_verbose_unary_activity(self.name, name)
-
-
-
-
-
-
-
-
 
 
 register_transform(DeleteTransform())

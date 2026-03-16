@@ -3,11 +3,22 @@ from typing import Any
 
 import torch
 
-from ..core import match_expr_names
-from ..core import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
-from ..core import StateDictProvider, TransformError
-from ..core import BaseTransform, TransformResult, register_transform
-from ..core import ensure_mapping_payload, validate_payload_keys
+from ..core import (
+    BaseTransform,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    TransformResult,
+    ensure_mapping_payload,
+    match_expr_names,
+    must_model,
+    parse_model_expr,
+    parse_slice,
+    register_transform,
+    state_dict_for_ref,
+    validate_payload_keys,
+    view_for_ref_name,
+)
 from ..engine import emit_verbose_event
 
 
@@ -72,7 +83,9 @@ class SplitTransform(BaseTransform):
             if ref.slice_spec is not None:
                 raise SplitTransformError("split destination references must not be sliced")
             if not isinstance(ref.expr, str):
-                raise SplitTransformError("split destination references must resolve to single names")
+                raise SplitTransformError(
+                    "split destination references must resolve to single names"
+                )
             to_refs.append(ref)
 
         sizes = _parse_sizes(payload.get("sizes"))
@@ -87,8 +100,7 @@ class SplitTransform(BaseTransform):
 
     def apply(self, spec: object, provider: StateDictProvider) -> TransformResult:
         typed = self.require_spec(spec)
-        src_model = must_model(typed.from_ref)
-        src_sd = provider.get_state_dict(src_model)
+        src_sd = state_dict_for_ref(provider, typed.from_ref)
         matches = match_expr_names(
             expr=typed.from_ref.expr,
             names=src_sd.keys(),
@@ -98,10 +110,11 @@ class SplitTransform(BaseTransform):
         if not matches:
             raise SplitTransformError("split source matched zero tensors")
         if len(matches) != 1:
-            raise SplitTransformError(f"split source must match exactly one tensor, got {len(matches)}")
+            raise SplitTransformError(
+                f"split source must match exactly one tensor, got {len(matches)}"
+            )
         src_name = matches[0]
-        src_slice = parse_slice(typed.from_ref.slice_spec) if typed.from_ref.slice_spec is not None else None
-        src_view = select_tensor(src_sd[src_name], src_slice)
+        _src_sd, src_view = view_for_ref_name(provider, typed.from_ref, src_name)
 
         rank = src_view.dim()
         dim = typed.dim if typed.dim >= 0 else typed.dim + rank
@@ -120,7 +133,9 @@ class SplitTransform(BaseTransform):
             dst_name = ref.expr
             dst_sd = provider.get_state_dict(dst_model)
             if dst_name in dst_sd:
-                raise SplitTransformError(f"split destination already exists: {dst_model}::{dst_name}")
+                raise SplitTransformError(
+                    f"split destination already exists: {dst_model}::{dst_name}"
+                )
             dst_sd[dst_name] = part.clone()
             emit_verbose_event(self.name, f"{src_name} -> {dst_name}")
 
@@ -142,12 +157,6 @@ def _parse_sizes(raw: object) -> list[int]:
     if not all(isinstance(x, int) and x > 0 for x in raw):
         raise SplitTransformError("split.sizes must be a non-empty list of positive integers")
     return list(raw)
-
-
-
-
-
-
 
 
 register_transform(SplitTransform())

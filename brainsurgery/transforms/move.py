@@ -1,9 +1,15 @@
-from ..engine import get_runtime_flags
-from ..core import BinaryMappingSpec, BinaryMappingTransform, DestinationPolicy
-from ..core import TensorRef, must_model
-from ..core import StateDictProvider, TransformError
-from ..core import register_transform
-from ..engine import emit_verbose_binary_activity
+from ..core import (
+    BinaryMappingSpec,
+    BinaryMappingTransform,
+    DestinationPolicy,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    must_model,
+    register_transform,
+    state_dict_for_ref,
+)
+from ..engine import emit_verbose_binary_activity, get_runtime_flags
 
 
 class MoveTransformError(TransformError):
@@ -33,16 +39,17 @@ class MoveTransform(BinaryMappingTransform[BinaryMappingSpec]):
         if to_ref.slice_spec is not None:
             raise MoveTransformError("move destination must not be sliced")
 
-    def apply_mapping(self, spec: BinaryMappingSpec, src_name: str, dst_name: str, provider: StateDictProvider) -> None:
+    def apply_mapping(
+        self, spec: BinaryMappingSpec, src_name: str, dst_name: str, provider: StateDictProvider
+    ) -> None:
         src_model = must_model(spec.from_ref)
         dst_model = must_model(spec.to_ref)
-        src_sd = provider.get_state_dict(src_model)
-        dst_sd = provider.get_state_dict(dst_model)
+        src_sd = state_dict_for_ref(provider, spec.from_ref)
+        dst_sd = state_dict_for_ref(provider, spec.to_ref)
 
         if dst_name in dst_sd:
             raise MoveTransformError(
-                f"move destination already exists during apply: "
-                f"{dst_model}::{dst_name}"
+                f"move destination already exists during apply: {dst_model}::{dst_name}"
             )
 
         if get_runtime_flags().dry_run:
@@ -57,23 +64,13 @@ class MoveTransform(BinaryMappingTransform[BinaryMappingSpec]):
 
         if dst_name not in dst_sd:
             raise MoveTransformError(
-                f"move internal error: destination missing after move: "
-                f"{dst_model}::{dst_name}"
+                f"move internal error: destination missing after move: {dst_model}::{dst_name}"
             )
         if src_name in src_sd:
             raise MoveTransformError(
-                f"move internal error: source still present after move: "
-                f"{src_model}::{src_name}"
+                f"move internal error: source still present after move: {src_model}::{src_name}"
             )
         emit_verbose_binary_activity(self.name, src_name, dst_name)
-
-
-
-
-
-
-
-
 
 
 register_transform(MoveTransform())

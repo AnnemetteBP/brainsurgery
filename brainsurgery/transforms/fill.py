@@ -3,13 +3,25 @@ from typing import Literal
 
 import torch
 
-from ..core import BinaryMappingSpec, DestinationPolicy, UnarySpec
-from ..core import StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
-from ..core import register_transform
-from ..core import require_numeric
-from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, DeclarativeUnaryTransform, UnaryRefs
-from ..engine import emit_verbose_binary_activity
-from ..engine import emit_verbose_unary_activity
+from ..core import (
+    BinaryMappingSpec,
+    BinaryRefs,
+    DeclarativeBinaryTransform,
+    DeclarativeUnaryTransform,
+    DestinationPolicy,
+    Docs,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    UnaryRefs,
+    UnarySpec,
+    register_transform,
+    require_numeric,
+    state_dict_for_ref,
+    unary_view_for_ref_name,
+    view_for_ref_name,
+)
+from ..engine import emit_verbose_binary_activity, emit_verbose_unary_activity
 
 FillMode = Literal["constant", "rand", "tensor"]
 RandDistribution = Literal["uniform", "normal"]
@@ -38,16 +50,10 @@ def _build_fill_spec(from_ref: TensorRef, to_ref: TensorRef, payload: dict) -> F
     return FillSpec(from_ref=from_ref, to_ref=to_ref, config=config)
 
 
-def _fill_apply(
-    spec: FillSpec, src_name: str, dst_name: str, provider: StateDictProvider
-) -> None:
-    src_sd = provider.get_state_dict(must_model(spec.from_ref))
-    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
-    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
-    template = select_tensor(src_sd[src_name], src_slice)
-    dst_sd[dst_name] = build_filled_tensor_like(
-        template, spec.config, TransformError
-    )
+def _fill_apply(spec: FillSpec, src_name: str, dst_name: str, provider: StateDictProvider) -> None:
+    _src_sd, template = view_for_ref_name(provider, spec.from_ref, src_name)
+    dst_sd = state_dict_for_ref(provider, spec.to_ref)
+    dst_sd[dst_name] = build_filled_tensor_like(template, spec.config, TransformError)
     emit_verbose_binary_activity("fill", src_name, dst_name)
 
 
@@ -135,9 +141,7 @@ def parse_fill_config(
             if "high" in payload:
                 high = require_numeric(payload, op_name=op_name, key="high")
             if low >= high:
-                raise error_type(
-                    f"{op_name} requires low < high for uniform distribution"
-                )
+                raise error_type(f"{op_name} requires low < high for uniform distribution")
         else:
             if "mean" in payload:
                 mean = require_numeric(payload, op_name=op_name, key="mean")
@@ -181,16 +185,15 @@ def build_filled_tensor_like(
         return out
 
     assert config.mode == "tensor"
-    value = torch.as_tensor(
-        config.values_payload, dtype=template.dtype, device=template.device
-    )
+    value = torch.as_tensor(config.values_payload, dtype=template.dtype, device=template.device)
     if value.shape == template.shape:
         return value.clone()
     try:
         expanded = value.expand_as(template)
     except RuntimeError as exc:
         raise error_type(
-            f"fill.values cannot broadcast to target shape {tuple(template.shape)} from {tuple(value.shape)}"
+            "fill.values cannot broadcast to target shape "
+            f"{tuple(template.shape)} from {tuple(value.shape)}"
         ) from exc
     return expanded.clone()
 
@@ -208,17 +211,8 @@ def _build_fill_in_place_spec(target_ref: TensorRef, payload: dict) -> FillInPla
     return FillInPlaceSpec(target_ref=target_ref, config=config)
 
 
-def _fill_in_place_apply(
-    spec: FillInPlaceSpec, name: str, provider: StateDictProvider
-) -> None:
-    model = must_model(spec.target_ref)
-    sd = provider.get_state_dict(model)
-    slice_spec = (
-        parse_slice(spec.target_ref.slice_spec)
-        if spec.target_ref.slice_spec is not None
-        else None
-    )
-    view = select_tensor(sd[name], slice_spec)
+def _fill_in_place_apply(spec: FillInPlaceSpec, name: str, provider: StateDictProvider) -> None:
+    sd, view = unary_view_for_ref_name(provider, spec.target_ref, name)
     filled = build_filled_tensor_like(view, spec.config, TransformError)
     view.copy_(filled)
     sd.mark_write(name)

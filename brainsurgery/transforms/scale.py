@@ -1,12 +1,24 @@
 from dataclasses import dataclass
 
-from ..core import StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
-from ..core import register_transform
-from ..core import require_numeric
-from ..core import BinaryMappingSpec, DestinationPolicy
-from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, UnaryRefs, UnarySpec, DeclarativeUnaryTransform
-from ..engine import emit_verbose_binary_activity
-from ..engine import emit_verbose_unary_activity
+from ..core import (
+    BinaryMappingSpec,
+    BinaryRefs,
+    DeclarativeBinaryTransform,
+    DeclarativeUnaryTransform,
+    DestinationPolicy,
+    Docs,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    UnaryRefs,
+    UnarySpec,
+    register_transform,
+    require_numeric,
+    state_dict_for_ref,
+    unary_view_for_ref_name,
+    view_for_ref_name,
+)
+from ..engine import emit_verbose_binary_activity, emit_verbose_unary_activity
 
 
 @dataclass(frozen=True)
@@ -14,9 +26,7 @@ class ScaleSpec(BinaryMappingSpec):
     factor: float
 
 
-def _build_scale_spec(
-    from_ref: TensorRef, to_ref: TensorRef, payload: dict
-) -> ScaleSpec:
+def _build_scale_spec(from_ref: TensorRef, to_ref: TensorRef, payload: dict) -> ScaleSpec:
     factor = require_numeric(payload, op_name="scale", key="by")
     return ScaleSpec(from_ref=from_ref, to_ref=to_ref, factor=factor)
 
@@ -24,10 +34,9 @@ def _build_scale_spec(
 def _scale_apply(
     spec: ScaleSpec, src_name: str, dst_name: str, provider: StateDictProvider
 ) -> None:
-    src_sd = provider.get_state_dict(must_model(spec.from_ref))
-    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
-    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
-    scaled = select_tensor(src_sd[src_name], src_slice).clone()
+    _src_sd, src_view = view_for_ref_name(provider, spec.from_ref, src_name)
+    dst_sd = state_dict_for_ref(provider, spec.to_ref)
+    scaled = src_view.clone()
     scaled.mul_(spec.factor)
     dst_sd[dst_name] = scaled
     emit_verbose_binary_activity("scale", src_name, dst_name)
@@ -45,7 +54,8 @@ class ScaleTransform(DeclarativeBinaryTransform[ScaleSpec]):
         examples=(
             "scale: { from: ln_f.weight, to: ln_f_half.weight, by: 0.5 }",
             "scale: { from: '.*bias', to: 'scaled.\\\\g<0>', by: -1 }",
-            "scale: { from: 'h.0.attn.c_attn.weight::[:, :10]', to: h.0.attn.c_attn.partial, by: 2.0 }",
+            "scale: { from: 'h.0.attn.c_attn.weight::[:, :10]', "
+            "to: h.0.attn.c_attn.partial, by: 2.0 }",
         ),
     )
     refs = BinaryRefs(from_slice=True)
@@ -61,26 +71,13 @@ class ScaleInPlaceSpec(UnarySpec):
     factor: float
 
 
-def _build_scale_in_place_spec(
-    target_ref: TensorRef, payload: dict
-) -> ScaleInPlaceSpec:
+def _build_scale_in_place_spec(target_ref: TensorRef, payload: dict) -> ScaleInPlaceSpec:
     factor = require_numeric(payload, op_name="scale_", key="by")
     return ScaleInPlaceSpec(target_ref=target_ref, factor=factor)
 
 
-def _scale_in_place_apply(
-    spec: ScaleInPlaceSpec, name: str, provider: StateDictProvider
-) -> None:
-    model = must_model(spec.target_ref)
-    sd = provider.get_state_dict(model)
-    tensor = sd[name]
-
-    slice_spec = (
-        parse_slice(spec.target_ref.slice_spec)
-        if spec.target_ref.slice_spec is not None
-        else None
-    )
-    view = select_tensor(tensor, slice_spec)
+def _scale_in_place_apply(spec: ScaleInPlaceSpec, name: str, provider: StateDictProvider) -> None:
+    sd, view = unary_view_for_ref_name(provider, spec.target_ref, name)
     view.mul_(spec.factor)
     sd.mark_write(name)
     emit_verbose_unary_activity("scale_", name)

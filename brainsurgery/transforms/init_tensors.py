@@ -3,11 +3,17 @@ from typing import Literal
 
 import torch
 
-from ..core import TensorRef, UnarySpec, UnaryTransform
-from ..core import must_model
-from ..core import register_transform
-from ..core import require_numeric
-from ..core import StateDictProvider, TransformError
+from ..core import (
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    UnarySpec,
+    UnaryTransform,
+    must_model,
+    register_transform,
+    require_numeric,
+    state_dict_for_ref,
+)
 from ..engine import emit_verbose_unary_activity
 
 RandDistribution = Literal["uniform", "normal"]
@@ -64,7 +70,7 @@ class _ShapeCreateUnaryTransform(UnaryTransform[ShapeCreateSpec]):
     ) -> None:
         del items
         model = must_model(spec.target_ref)
-        sd = provider.get_state_dict(model)
+        sd = state_dict_for_ref(provider, spec.target_ref)
         if spec.target_name in sd:
             raise TransformError(
                 f"{self.name} destination already exists: {model}::{spec.target_name}"
@@ -95,8 +101,7 @@ class ZeroesTransform(_ShapeCreateUnaryTransform):
     def apply_to_target(
         self, spec: ShapeCreateSpec, name: str, provider: StateDictProvider
     ) -> None:
-        model = must_model(spec.target_ref)
-        sd = provider.get_state_dict(model)
+        sd = state_dict_for_ref(provider, spec.target_ref)
         sd[name] = torch.zeros(spec.shape, dtype=torch.float32)
         emit_verbose_unary_activity(self.name, name)
 
@@ -125,8 +130,7 @@ class OnesTransform(_ShapeCreateUnaryTransform):
     def apply_to_target(
         self, spec: ShapeCreateSpec, name: str, provider: StateDictProvider
     ) -> None:
-        model = must_model(spec.target_ref)
-        sd = provider.get_state_dict(model)
+        sd = state_dict_for_ref(provider, spec.target_ref)
         sd[name] = torch.ones(spec.shape, dtype=torch.float32)
         emit_verbose_unary_activity(self.name, name)
 
@@ -165,8 +169,7 @@ class RandTransform(_ShapeCreateUnaryTransform):
         )
 
     def apply_to_target(self, spec: RandSpec, name: str, provider: StateDictProvider) -> None:
-        model = must_model(spec.target_ref)
-        sd = provider.get_state_dict(model)
+        sd = state_dict_for_ref(provider, spec.target_ref)
         out = torch.empty(spec.shape, dtype=torch.float32)
         generator = None
         if spec.seed is not None:

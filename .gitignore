@@ -2,3 +2,18 @@
 __pycache__
 models
 .brainsurgery
+
+# Python cache/build artifacts
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+dist/
+build/
+*.egg-info/

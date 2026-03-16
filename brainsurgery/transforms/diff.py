@@ -1,15 +1,27 @@
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from typing import Any, Literal
 
 import torch
 
-from ..core import match_expr_names
-from ..core import TensorRef, format_tensor_ref, must_model, parse_model_expr, parse_slice, select_tensor
-from ..core import TransformError
-from ..core import TypedTransform, TransformResult, register_transform
-from ..core import ensure_mapping_payload, require_nonempty_string, validate_payload_keys
-from ..core import StateDictProvider
+from ..core import (
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    TransformResult,
+    TypedTransform,
+    ensure_mapping_payload,
+    format_tensor_ref,
+    match_expr_names,
+    must_model,
+    parse_model_expr,
+    parse_slice,
+    register_transform,
+    require_nonempty_string,
+    state_dict_for_ref,
+    validate_payload_keys,
+    view_for_ref_name,
+)
 from ..engine import emit_line, emit_verbose_event
 
 
@@ -164,7 +176,7 @@ class DiffTransform(TypedTransform[DiffSpec]):
 def _compile_eps(raw_eps: Any) -> float | None:
     if raw_eps is None:
         return None
-    if isinstance(raw_eps, bool) or not isinstance(raw_eps, (int, float)):
+    if isinstance(raw_eps, bool) or not isinstance(raw_eps, int | float):
         raise DiffTransformError("diff.eps must be a non-negative number")
     eps = float(raw_eps)
     if eps < 0:
@@ -184,8 +196,7 @@ def _validate_slice(ref: TensorRef) -> None:
 
 
 def _resolve_names(ref: TensorRef, provider: StateDictProvider) -> list[str]:
-    model = must_model(ref)
-    state_dict = provider.get_state_dict(model)
+    state_dict = state_dict_for_ref(provider, ref)
     try:
         return match_expr_names(
             expr=ref.expr,
@@ -202,15 +213,10 @@ def _collect_differences(
     spec: DiffSpec,
     provider: StateDictProvider,
 ) -> list[tuple[str, str]]:
-    left_sd = provider.get_state_dict(must_model(spec.left_ref))
-    right_sd = provider.get_state_dict(must_model(spec.right_ref))
-    left_slice = parse_slice(spec.left_ref.slice_spec) if spec.left_ref.slice_spec else None
-    right_slice = parse_slice(spec.right_ref.slice_spec) if spec.right_ref.slice_spec else None
-
     differing: list[tuple[str, str]] = []
     for name in shared:
-        left = select_tensor(left_sd[name], left_slice)
-        right = select_tensor(right_sd[name], right_slice)
+        _left_sd, left = view_for_ref_name(provider, spec.left_ref, name)
+        _right_sd, right = view_for_ref_name(provider, spec.right_ref, name)
         reason = _difference_reason(left, right, eps=spec.eps)
         if reason is not None:
             differing.append((name, reason))

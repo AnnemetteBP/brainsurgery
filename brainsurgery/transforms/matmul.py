@@ -1,15 +1,17 @@
 import torch
 
 from ..core import (
+    DeclarativeTernaryTransform,
     DestinationPolicy,
+    Docs,
+    StateDictProvider,
     TernaryMappingSpec,
-    must_model,
-    parse_slice,
+    TernaryRefs,
+    TransformError,
+    register_transform,
+    state_dict_for_ref,
+    view_for_ref_name,
 )
-from ..core import select_tensor
-from ..core import StateDictProvider, TransformError
-from ..core import register_transform
-from ..core import DeclarativeTernaryTransform, Docs, TernaryRefs
 from ..engine import emit_verbose_ternary_activity
 
 
@@ -20,14 +22,9 @@ def _matmul_apply(
     dst_name: str,
     provider: StateDictProvider,
 ) -> None:
-    src_a_sd = provider.get_state_dict(must_model(spec.from_a_ref))
-    src_b_sd = provider.get_state_dict(must_model(spec.from_b_ref))
-    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
-    src_a_slice = parse_slice(spec.from_a_ref.slice_spec) if spec.from_a_ref.slice_spec is not None else None
-    src_b_slice = parse_slice(spec.from_b_ref.slice_spec) if spec.from_b_ref.slice_spec is not None else None
-
-    src_a_view = select_tensor(src_a_sd[src_a_name], src_a_slice)
-    src_b_view = select_tensor(src_b_sd[src_b_name], src_b_slice)
+    _src_a_sd, src_a_view = view_for_ref_name(provider, spec.from_a_ref, src_a_name)
+    _src_b_sd, src_b_view = view_for_ref_name(provider, spec.from_b_ref, src_b_name)
+    dst_sd = state_dict_for_ref(provider, spec.to_ref)
 
     if src_a_view.dtype != src_b_view.dtype:
         raise TransformError(
@@ -43,9 +40,7 @@ def _matmul_apply(
     try:
         result = torch.matmul(src_a_view, src_b_view)
     except RuntimeError as exc:
-        raise TransformError(
-            f"shape mismatch matmul {src_a_name} @ {src_b_name}: {exc}"
-        ) from exc
+        raise TransformError(f"shape mismatch matmul {src_a_name} @ {src_b_name}: {exc}") from exc
 
     dst_sd[dst_name] = result.clone()
     emit_verbose_ternary_activity("matmul", src_a_name, src_b_name, dst_name)

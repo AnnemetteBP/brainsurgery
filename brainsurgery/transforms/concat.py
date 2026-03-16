@@ -3,12 +3,22 @@ from typing import Any
 
 import torch
 
-from ..core import match_expr_names
-from ..core import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
-from ..core import TransformError
-from ..core import BaseTransform, TransformResult, register_transform
-from ..core import ensure_mapping_payload, validate_payload_keys
-from ..core import StateDictProvider
+from ..core import (
+    BaseTransform,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    TransformResult,
+    ensure_mapping_payload,
+    match_expr_names,
+    must_model,
+    parse_model_expr,
+    parse_slice,
+    register_transform,
+    state_dict_for_ref,
+    validate_payload_keys,
+    view_for_ref_name,
+)
 from ..engine import emit_verbose_event
 
 
@@ -91,7 +101,9 @@ class ConcatTransform(BaseTransform):
         dst_name = typed.to_ref.expr
         dst_sd = provider.get_state_dict(dst_model)
         if dst_name in dst_sd:
-            raise ConcatTransformError(f"concat destination already exists: {dst_model}::{dst_name}")
+            raise ConcatTransformError(
+                f"concat destination already exists: {dst_model}::{dst_name}"
+            )
 
         source_tensors = [self._resolve_source_tensor(ref, provider) for ref in typed.from_refs]
         self._validate_sources(source_tensors, dim=typed.dim)
@@ -108,14 +120,12 @@ class ConcatTransform(BaseTransform):
 
     def require_spec(self, spec: object) -> ConcatSpec:
         if not isinstance(spec, ConcatSpec):
-            raise ConcatTransformError(
-                f"concat received wrong spec type: {type(spec).__name__}"
-            )
+            raise ConcatTransformError(f"concat received wrong spec type: {type(spec).__name__}")
         return spec
 
     def _resolve_source_tensor(self, ref: TensorRef, provider: StateDictProvider) -> torch.Tensor:
         src_model = must_model(ref)
-        src_sd = provider.get_state_dict(src_model)
+        src_sd = state_dict_for_ref(provider, ref)
         matches = match_expr_names(
             expr=ref.expr,
             names=src_sd.keys(),
@@ -123,14 +133,17 @@ class ConcatTransform(BaseTransform):
             role="source",
         )
         if not matches:
-            raise ConcatTransformError(f"concat source matched zero tensors: {src_model}::{ref.expr}")
+            raise ConcatTransformError(
+                f"concat source matched zero tensors: {src_model}::{ref.expr}"
+            )
         if len(matches) != 1:
             raise ConcatTransformError(
-                f"concat source must match exactly one tensor, got {len(matches)}: {src_model}::{ref.expr}"
+                "concat source must match exactly one tensor, "
+                f"got {len(matches)}: {src_model}::{ref.expr}"
             )
         src_name = matches[0]
-        src_slice = parse_slice(ref.slice_spec) if ref.slice_spec is not None else None
-        return select_tensor(src_sd[src_name], src_slice)
+        _sd, src_view = view_for_ref_name(provider, ref, src_name)
+        return src_view
 
     def _validate_sources(self, tensors: list[torch.Tensor], *, dim: int) -> None:
         if not tensors:
@@ -140,9 +153,7 @@ class ConcatTransform(BaseTransform):
         rank = first.dim()
         cat_dim = dim if dim >= 0 else dim + rank
         if cat_dim < 0 or cat_dim >= rank:
-            raise ConcatTransformError(
-                f"concat.dim {dim} out of range for rank {rank} tensor"
-            )
+            raise ConcatTransformError(f"concat.dim {dim} out of range for rank {rank} tensor")
 
         for idx, tensor in enumerate(tensors[1:], start=1):
             if tensor.dim() != rank:
@@ -155,7 +166,8 @@ class ConcatTransform(BaseTransform):
                 )
             if tensor.device != first.device:
                 raise ConcatTransformError(
-                    f"concat source device mismatch at index {idx}: {tensor.device} != {first.device}"
+                    "concat source device mismatch at index "
+                    f"{idx}: {tensor.device} != {first.device}"
                 )
             for axis in range(rank):
                 if axis == cat_dim:
@@ -165,12 +177,6 @@ class ConcatTransform(BaseTransform):
                         "concat source shape mismatch outside concat dimension "
                         f"at index {idx}, axis {axis}: {tensor.shape[axis]} != {first.shape[axis]}"
                     )
-
-
-
-
-
-
 
 
 register_transform(ConcatTransform())

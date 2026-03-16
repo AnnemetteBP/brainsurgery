@@ -1,16 +1,27 @@
 from dataclasses import dataclass
 
-from ..core import BinaryMappingSpec, DestinationPolicy, UnarySpec
 import torch
-from ..core import StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
-from ..core import register_transform
-from ..core import require_nonempty_string
+
 from ..core import (
+    BinaryMappingSpec,
+    BinaryRefs,
+    DeclarativeBinaryTransform,
+    DeclarativeUnaryTransform,
+    DestinationPolicy,
+    Docs,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    UnaryRefs,
+    UnarySpec,
+    must_model,
     parse_torch_dtype,
+    register_transform,
+    require_nonempty_string,
+    state_dict_for_ref,
+    view_for_ref_name,
 )
-from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, DeclarativeUnaryTransform, UnaryRefs
-from ..engine import emit_verbose_binary_activity
-from ..engine import emit_verbose_unary_activity
+from ..engine import emit_verbose_binary_activity, emit_verbose_unary_activity
 
 
 @dataclass(frozen=True)
@@ -29,13 +40,9 @@ def _build_cast_spec(from_ref: TensorRef, to_ref: TensorRef, payload: dict) -> C
     return CastSpec(from_ref=from_ref, to_ref=to_ref, dtype=dtype)
 
 
-def _cast_apply(
-    spec: CastSpec, src_name: str, dst_name: str, provider: StateDictProvider
-) -> None:
-    src_sd = provider.get_state_dict(must_model(spec.from_ref))
-    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
-    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
-    src_view = select_tensor(src_sd[src_name], src_slice)
+def _cast_apply(spec: CastSpec, src_name: str, dst_name: str, provider: StateDictProvider) -> None:
+    _src_sd, src_view = view_for_ref_name(provider, spec.from_ref, src_name)
+    dst_sd = state_dict_for_ref(provider, spec.to_ref)
     dst_sd[dst_name] = src_view.to(dtype=spec.dtype)
     emit_verbose_binary_activity("cast", src_name, dst_name)
 
@@ -78,9 +85,7 @@ def _build_cast_in_place_spec(target_ref: TensorRef, payload: dict) -> CastInPla
     return CastInPlaceSpec(target_ref=target_ref, dtype=dtype)
 
 
-def _cast_in_place_apply(
-    spec: CastInPlaceSpec, name: str, provider: StateDictProvider
-) -> None:
+def _cast_in_place_apply(spec: CastInPlaceSpec, name: str, provider: StateDictProvider) -> None:
     model = must_model(spec.target_ref)
     sd = provider.get_state_dict(model)
     sd[name] = sd[name].to(dtype=spec.dtype)

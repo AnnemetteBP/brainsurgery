@@ -1,11 +1,23 @@
 from dataclasses import dataclass
 
-from ..core import BinaryMappingSpec, DestinationPolicy, UnarySpec
-from ..core import StateDictProvider, TensorRef, TransformError, must_model, parse_slice, select_tensor
-from ..core import register_transform
-from ..core import BinaryRefs, DeclarativeBinaryTransform, Docs, DeclarativeUnaryTransform, UnaryRefs
-from ..engine import emit_verbose_binary_activity
-from ..engine import emit_verbose_unary_activity
+from ..core import (
+    BinaryMappingSpec,
+    BinaryRefs,
+    DeclarativeBinaryTransform,
+    DeclarativeUnaryTransform,
+    DestinationPolicy,
+    Docs,
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    UnaryRefs,
+    UnarySpec,
+    must_model,
+    register_transform,
+    state_dict_for_ref,
+    view_for_ref_name,
+)
+from ..engine import emit_verbose_binary_activity, emit_verbose_unary_activity
 
 
 @dataclass(frozen=True)
@@ -13,29 +25,21 @@ class ReshapeSpec(BinaryMappingSpec):
     shape: tuple[int, ...]
 
 
-def _build_reshape_spec(
-    from_ref: TensorRef, to_ref: TensorRef, payload: dict
-) -> ReshapeSpec:
-    shape = _parse_shape(
-        payload.get("shape"), op_name="reshape", error_type=TransformError
-    )
+def _build_reshape_spec(from_ref: TensorRef, to_ref: TensorRef, payload: dict) -> ReshapeSpec:
+    shape = _parse_shape(payload.get("shape"), op_name="reshape", error_type=TransformError)
     return ReshapeSpec(from_ref=from_ref, to_ref=to_ref, shape=shape)
 
 
 def _reshape_apply(
     spec: ReshapeSpec, src_name: str, dst_name: str, provider: StateDictProvider
 ) -> None:
-    src_sd = provider.get_state_dict(must_model(spec.from_ref))
-    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
-    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
-    src_view = select_tensor(src_sd[src_name], src_slice)
+    _src_sd, src_view = view_for_ref_name(provider, spec.from_ref, src_name)
+    dst_sd = state_dict_for_ref(provider, spec.to_ref)
     try:
         dst_sd[dst_name] = src_view.reshape(spec.shape).clone()
         emit_verbose_binary_activity("reshape", src_name, dst_name)
     except RuntimeError as exc:
-        raise TransformError(
-            f"reshape failed for {src_name} -> {dst_name}: {exc}"
-        ) from exc
+        raise TransformError(f"reshape failed for {src_name} -> {dst_name}: {exc}") from exc
 
 
 class ReshapeTransform(DeclarativeBinaryTransform[ReshapeSpec]):
@@ -55,9 +59,7 @@ class ReshapeTransform(DeclarativeBinaryTransform[ReshapeSpec]):
     apply_fn = staticmethod(_reshape_apply)
 
 
-def _parse_shape(
-    raw: object, *, op_name: str, error_type: type[TransformError]
-) -> tuple[int, ...]:
+def _parse_shape(raw: object, *, op_name: str, error_type: type[TransformError]) -> tuple[int, ...]:
     if not isinstance(raw, list) or not raw:
         raise error_type(f"{op_name}.shape must be a non-empty list of integers")
     if not all(isinstance(x, int) for x in raw):
@@ -77,12 +79,8 @@ class ReshapeInPlaceSpec(UnarySpec):
     shape: tuple[int, ...]
 
 
-def _build_reshape_in_place_spec(
-    target_ref: TensorRef, payload: dict
-) -> ReshapeInPlaceSpec:
-    shape = _parse_shape(
-        payload.get("shape"), op_name="reshape_", error_type=TransformError
-    )
+def _build_reshape_in_place_spec(target_ref: TensorRef, payload: dict) -> ReshapeInPlaceSpec:
+    shape = _parse_shape(payload.get("shape"), op_name="reshape_", error_type=TransformError)
     return ReshapeInPlaceSpec(target_ref=target_ref, shape=shape)
 
 

@@ -2,15 +2,21 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from ..engine import render_tree, summarize_tensor
-from ..core import UnaryTransform
-from ..engine import emit_line, tqdm
-from ..core import TensorRef, must_model, parse_model_expr, parse_slice, select_tensor
-from ..core import TransformError
-from ..core import TransformResult, register_transform
-from ..core import ensure_mapping_payload, validate_payload_keys
-from ..core import StateDictProvider
-from ..engine import emit_verbose_unary_activity
+from ..core import (
+    StateDictProvider,
+    TensorRef,
+    TransformError,
+    TransformResult,
+    UnaryTransform,
+    ensure_mapping_payload,
+    must_model,
+    parse_model_expr,
+    register_transform,
+    state_dict_for_ref,
+    unary_view_for_ref_name,
+    validate_payload_keys,
+)
+from ..engine import emit_line, emit_verbose_unary_activity, render_tree, summarize_tensor, tqdm
 
 
 class DumpTransformError(TransformError):
@@ -140,7 +146,9 @@ class DumpTransform(UnaryTransform[DumpSpec]):
                 for name in tqdm(sorted(sd.keys()), desc=self.progress_desc, unit="tensor"):
                     tensor = sd[name]
                     access_counts = _maybe_get_access_counts(sd, name, verbosity=typed.verbosity)
-                    summary = summarize_tensor(tensor, verbosity=typed.verbosity, access_counts=access_counts)
+                    summary = summarize_tensor(
+                        tensor, verbosity=typed.verbosity, access_counts=access_counts
+                    )
                     insert_into_tree(
                         tree,
                         [alias, *name.split(".")],
@@ -153,19 +161,11 @@ class DumpTransform(UnaryTransform[DumpSpec]):
         else:
             if typed.target_ref is None:
                 raise DumpTransformError("dump target missing")
-            model = must_model(typed.target_ref)
-            sd = provider.get_state_dict(model)
+            sd = state_dict_for_ref(provider, typed.target_ref)
             targets = self.resolve_targets(typed, provider)
 
-            slice_spec = (
-                parse_slice(typed.target_ref.slice_spec)
-                if typed.target_ref.slice_spec is not None
-                else None
-            )
-
             for name in tqdm(targets, desc=self.progress_desc, unit="tensor"):
-                tensor = sd[name]
-                view = select_tensor(tensor, slice_spec)
+                _sd, view = unary_view_for_ref_name(provider, typed.target_ref, name)
                 access_counts = _maybe_get_access_counts(sd, name, verbosity=typed.verbosity)
                 insert_into_tree(
                     tree,
@@ -181,18 +181,30 @@ class DumpTransform(UnaryTransform[DumpSpec]):
                     emit_line("{}")
                 else:
                     for alias in sorted(trees_by_alias):
-                        emit_line(json.dumps({alias: trees_by_alias[alias]}, separators=(",", ":"), sort_keys=True))
+                        emit_line(
+                            json.dumps(
+                                {alias: trees_by_alias[alias]},
+                                separators=(",", ":"),
+                                sort_keys=True,
+                            )
+                        )
             else:
                 emit_line(json.dumps(tree, separators=(",", ":"), sort_keys=True))
         elif typed.format == "tree":
             if typed.dump_all_models:
-                blocks = [render_tree({alias: trees_by_alias[alias]}, compact=False) for alias in sorted(trees_by_alias)]
+                blocks = [
+                    render_tree({alias: trees_by_alias[alias]}, compact=False)
+                    for alias in sorted(trees_by_alias)
+                ]
                 emit_line("\n\n".join(blocks))
             else:
                 emit_line(render_tree(tree, compact=False))
         else:
             if typed.dump_all_models:
-                blocks = [render_tree({alias: trees_by_alias[alias]}, compact=True) for alias in sorted(trees_by_alias)]
+                blocks = [
+                    render_tree({alias: trees_by_alias[alias]}, compact=True)
+                    for alias in sorted(trees_by_alias)
+                ]
                 emit_line("\n\n".join(blocks))
             else:
                 emit_line(render_tree(tree, compact=True))
@@ -200,7 +212,9 @@ class DumpTransform(UnaryTransform[DumpSpec]):
         return TransformResult(name=self.name, count=total)
 
 
-def _resolve_model_aliases(provider: StateDictProvider, default_model_hint: str | None) -> list[str]:
+def _resolve_model_aliases(
+    provider: StateDictProvider, default_model_hint: str | None
+) -> list[str]:
     list_aliases = getattr(provider, "list_model_aliases", None)
     if callable(list_aliases):
         aliases = sorted(alias for alias in list_aliases() if isinstance(alias, str) and alias)
@@ -234,7 +248,7 @@ def insert_into_tree(tree: dict[str, Any], parts: list[str], leaf: Any) -> None:
             if child is None:
                 child = [] if next_is_index else {}
                 node[idx] = child
-            elif not isinstance(child, (dict, list)):
+            elif not isinstance(child, dict | list):
                 raise DumpTransformError("invalid tree structure while building dump")
 
             node = child
@@ -251,7 +265,7 @@ def insert_into_tree(tree: dict[str, Any], parts: list[str], leaf: Any) -> None:
         if child is None:
             child = [] if next_is_index else {}
             node[part] = child
-        elif not isinstance(child, (dict, list)):
+        elif not isinstance(child, dict | list):
             raise DumpTransformError("invalid tree structure while building dump")
 
         node = child
@@ -269,16 +283,6 @@ def _maybe_get_access_counts(
     if not callable(access_counts):
         return None
     return access_counts(key)
-
-
-
-
-
-
-
-
-
-
 
 
 register_transform(DumpTransform())

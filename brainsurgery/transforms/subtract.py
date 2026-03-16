@@ -2,21 +2,20 @@ from ..core import (
     BinaryMappingSpec,
     BinaryRefs,
     DeclarativeBinaryTransform,
+    DeclarativeTernaryTransform,
     DestinationPolicy,
     Docs,
     StateDictProvider,
     TernaryMappingSpec,
+    TernaryRefs,
     TransformError,
-    must_model,
-    parse_slice,
+    binary_mapping_views,
+    register_transform,
     require_same_shape_dtype_device,
-    select_tensor,
+    require_same_shape_dtype_device3,
+    ternary_mapping_views,
 )
-from ..core import require_same_shape_dtype_device3
-from ..core import register_transform
-from ..core import DeclarativeTernaryTransform, TernaryRefs
-from ..engine import emit_verbose_binary_activity
-from ..engine import emit_verbose_ternary_activity
+from ..engine import emit_verbose_binary_activity, emit_verbose_ternary_activity
 
 
 def _subtract_apply(
@@ -26,16 +25,15 @@ def _subtract_apply(
     dst_name: str,
     provider: StateDictProvider,
 ) -> None:
-    src_a_sd = provider.get_state_dict(must_model(spec.from_a_ref))
-    src_b_sd = provider.get_state_dict(must_model(spec.from_b_ref))
-    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
-    src_a_slice = parse_slice(spec.from_a_ref.slice_spec) if spec.from_a_ref.slice_spec is not None else None
-    src_b_slice = parse_slice(spec.from_b_ref.slice_spec) if spec.from_b_ref.slice_spec is not None else None
-    dst_slice = parse_slice(spec.to_ref.slice_spec) if spec.to_ref.slice_spec is not None else None
-
-    src_a_view = select_tensor(src_a_sd[src_a_name], src_a_slice)
-    src_b_view = select_tensor(src_b_sd[src_b_name], src_b_slice)
-    dst_view = select_tensor(dst_sd[dst_name], dst_slice)
+    _src_a_sd, _src_b_sd, dst_sd, src_a_view, src_b_view, dst_view = ternary_mapping_views(
+        provider,
+        from_a_ref=spec.from_a_ref,
+        from_b_ref=spec.from_b_ref,
+        to_ref=spec.to_ref,
+        src_a_name=src_a_name,
+        src_b_name=src_b_name,
+        dst_name=dst_name,
+    )
 
     require_same_shape_dtype_device3(
         src_a_view,
@@ -73,13 +71,13 @@ def _subtract_in_place_apply(
     dst_name: str,
     provider: StateDictProvider,
 ) -> None:
-    src_sd = provider.get_state_dict(must_model(spec.from_ref))
-    dst_sd = provider.get_state_dict(must_model(spec.to_ref))
-    src_slice = parse_slice(spec.from_ref.slice_spec) if spec.from_ref.slice_spec is not None else None
-    dst_slice = parse_slice(spec.to_ref.slice_spec) if spec.to_ref.slice_spec is not None else None
-
-    src_view = select_tensor(src_sd[src_name], src_slice)
-    dst_view = select_tensor(dst_sd[dst_name], dst_slice)
+    _src_sd, dst_sd, src_view, dst_view = binary_mapping_views(
+        provider,
+        from_ref=spec.from_ref,
+        to_ref=spec.to_ref,
+        src_name=src_name,
+        dst_name=dst_name,
+    )
     require_same_shape_dtype_device(
         src_view,
         dst_view,
