@@ -13,18 +13,8 @@ from ..engine import (
 from .payload_scan import (
     _current_value_fragment,
     _current_value_key,
-    _find_top_level_colon,
-    _parse_key_from_segment,
     _payload_context,
     _payload_cursor_state,
-    _split_top_level_segments,
-)
-
-# Keep scanner helper symbols visible on this module for test/tooling introspection.
-(
-    _find_top_level_colon,
-    _parse_key_from_segment,
-    _split_top_level_segments,
 )
 
 logger = logging.getLogger("brainsurgery")
