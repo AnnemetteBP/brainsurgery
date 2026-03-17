@@ -42,6 +42,7 @@ class StateResponsePayload:
     ok: Literal[True]
     models: list[dict[str, Any]]
     runtime_flags: RuntimeFlagsPayload
+    insights: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,7 @@ class LoadResponsePayload:
     ok: Literal[True]
     models: list[dict[str, Any]]
     runtime_flags: RuntimeFlagsPayload
+    insights: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,7 @@ class ApplyTransformResponsePayload:
     runtime_flags: RuntimeFlagsPayload
     preview_confirmation_required: bool
     preview_transform: str | None = None
+    insights: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -76,6 +79,7 @@ class SaveDownloadResponsePayload:
     download_filename: str
     download_mime: str
     download_b64: str
+    insights: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -84,3 +88,10 @@ class ModelDumpResponsePayload:
     dump: str
     matched_count: int
     total_count: int
+    module_health: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class ModelDiffResponsePayload:
+    ok: Literal[True]
+    diff: dict[str, Any]

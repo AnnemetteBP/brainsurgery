@@ -5,4 +5,5 @@ export const appState = {
   transformConfigByName: {},
   latestModels: [],
   latestRuntimeFlags: { dry_run: false, preview: false, verbose: false },
+  latestInsights: { preview_history: [] },
 };

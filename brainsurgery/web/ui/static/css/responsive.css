@@ -12,7 +12,14 @@
   .left-stack,
   .right-stack {
     height: 100%;
+  }
+
+  .left-stack {
     grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .right-stack {
+    grid-template-rows: minmax(0, 1fr) auto auto;
   }
 
   #modelsPanel {

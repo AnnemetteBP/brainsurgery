@@ -10,6 +10,7 @@ function createActions({
   renderTransforms,
   updatePanels,
   renderModels,
+  renderInsights,
   appendResultBlock,
   copyTextToClipboard,
   parseFieldValue,
@@ -30,10 +31,14 @@ function createActions({
         verbose: Boolean(data.runtime_flags.verbose),
       };
     }
+    if (data.insights && typeof data.insights === "object") {
+      appState.latestInsights = data.insights;
+    }
   }
 
   function _renderState() {
     renderModels(appState.latestModels);
+    renderInsights();
     resetTransformSearch();
     renderTransforms();
     updatePanels();
@@ -97,6 +102,7 @@ function createActions({
         _applyStateFromResponse(stateData);
       }
       renderModels(appState.latestModels);
+      renderInsights();
       updatePanels();
     } catch (err) {
       setStatus("Refresh failed: " + String(err));

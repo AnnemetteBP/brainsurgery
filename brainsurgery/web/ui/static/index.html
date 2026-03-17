@@ -80,6 +80,24 @@
           <h2 class="title">Current Models</h2>
           <div id="models" class="models"></div>
         </div>
+        <div id="insightsPanel" class="card focus-scope" tabindex="0">
+          <h2 class="title">Insights</h2>
+          <div class="insight-section">
+            <div class="insight-heading">Preview Impact (Recent)</div>
+            <div id="previewImpactRows" class="insight-list"></div>
+          </div>
+          <div class="insight-section">
+            <div class="insight-heading">Checkpoint Diff</div>
+            <div class="diff-controls">
+              <select id="diffLeftAlias"></select>
+              <select id="diffRightAlias"></select>
+              <input id="diffFilterInput" placeholder="regex or JSON list (both sides)" />
+              <button id="diffRefreshBtn" class="secondary-btn" type="button">Refresh Diff</button>
+            </div>
+            <div id="diffSummary" class="binary-summary"></div>
+            <div id="diffTopRows" class="insight-list"></div>
+          </div>
+        </div>
         <div id="resultsPanel" class="card focus-scope" tabindex="0">
           <div class="panel-row">
             <h2 class="title">Results</h2>

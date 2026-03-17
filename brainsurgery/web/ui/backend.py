@@ -4,6 +4,7 @@ from dataclasses import is_dataclass
 from pathlib import Path
 from typing import Any, get_args, get_origin, get_type_hints
 
+import torch
 from omegaconf import OmegaConf
 
 from brainsurgery.core import (
@@ -308,15 +309,16 @@ def _preview_transform(
     transform_name: str,
     payload: Any,
     default_model: str | None,
-) -> tuple[str, bool]:
+) -> tuple[str, bool, dict[str, Any]]:
     transform = get_transform(transform_name)
     compiled = CompiledTransform(
         transform=transform,
         spec=transform.compile(copy.deepcopy(payload), default_model),
     )
     impact = preview_impact_for_transform(compiled, provider)
+    impact_payload = _preview_impact_payload(transform_name=transform_name, impact=impact)
     output = f"preview 1/1 {transform_name}: {format_preview_impact(impact)}"
-    return output, preview_requires_confirmation(transform_name, impact)
+    return output, preview_requires_confirmation(transform_name, impact), impact_payload
 
 
 def _apply_load_transform(*, provider: Any, plan: SurgeryPlan, path: Path, alias: str) -> None:
@@ -420,6 +422,234 @@ def _serialize_models(provider: Any) -> list[dict[str, Any]]:
             }
         )
     return models
+
+
+def _preview_impact_payload(*, transform_name: str, impact: Any) -> dict[str, Any]:
+    changed = sorted(str(item) for item in getattr(impact, "changed", set()) or set())
+    created = sorted(str(item) for item in getattr(impact, "created", set()) or set())
+    deleted = sorted(str(item) for item in getattr(impact, "deleted", set()) or set())
+    return {
+        "transform": transform_name,
+        "changed_count": len(changed),
+        "created_count": len(created),
+        "deleted_count": len(deleted),
+        "changed_samples": changed[:5],
+        "created_samples": created[:5],
+        "deleted_samples": deleted[:5],
+    }
+
+
+def _module_prefix(name: str, *, depth: int = 2) -> str:
+    parts = name.split(".")
+    if len(parts) <= depth:
+        return name
+    return ".".join(parts[:depth])
+
+
+def _coerce_stat_tensor(tensor: torch.Tensor) -> torch.Tensor:
+    if tensor.is_complex():
+        return torch.abs(tensor.to(torch.complex128))
+    if tensor.is_floating_point():
+        return tensor
+    return tensor.to(torch.float32)
+
+
+def _module_health_for_alias(
+    *,
+    provider: Any,
+    alias: str,
+    target: str | list[Any],
+    top_n: int = 10,
+) -> dict[str, Any]:
+    state_dict = provider.get_state_dict(alias)
+    names = list(state_dict.keys())
+    matched = match_expr_names(
+        expr=target,
+        names=names,
+        op_name="webui.module_health",
+        role="target",
+    )
+    if not matched:
+        return {"summary": {"matched_count": 0, "total_count": len(names)}, "modules": []}
+
+    buckets: dict[str, dict[str, Any]] = {}
+    total_elements = 0
+    total_tensors = 0
+
+    for name in matched:
+        tensor = state_dict[name]
+        if not isinstance(tensor, torch.Tensor):
+            continue
+        total_tensors += 1
+        module = _module_prefix(name, depth=2)
+        bucket = buckets.setdefault(
+            module,
+            {
+                "module": module,
+                "tensor_count": 0,
+                "element_count": 0,
+                "abs_mean_weighted_sum": 0.0,
+                "max_abs": 0.0,
+                "near_zero_count": 0,
+            },
+        )
+        bucket["tensor_count"] += 1
+        numel = int(tensor.numel())
+        if numel <= 0:
+            continue
+
+        stat_tensor = _coerce_stat_tensor(tensor.detach())
+        abs_tensor = torch.abs(stat_tensor)
+        abs_mean = float(abs_tensor.mean().item())
+        max_abs = float(abs_tensor.max().item())
+        near_zero = int((abs_tensor <= 1e-12).sum().item())
+
+        bucket["element_count"] += numel
+        bucket["abs_mean_weighted_sum"] += abs_mean * numel
+        bucket["max_abs"] = max(bucket["max_abs"], max_abs)
+        bucket["near_zero_count"] += near_zero
+
+        total_elements += numel
+
+    modules: list[dict[str, Any]] = []
+    for bucket in buckets.values():
+        elements = int(bucket["element_count"])
+        abs_mean = float(bucket["abs_mean_weighted_sum"]) / elements if elements > 0 else 0.0
+        near_zero_ratio = float(bucket["near_zero_count"]) / elements if elements > 0 else 0.0
+        modules.append(
+            {
+                "module": bucket["module"],
+                "tensor_count": int(bucket["tensor_count"]),
+                "element_count": elements,
+                "abs_mean": abs_mean,
+                "max_abs": float(bucket["max_abs"]),
+                "near_zero_ratio": near_zero_ratio,
+            }
+        )
+
+    modules.sort(key=lambda item: (item["abs_mean"], item["max_abs"]), reverse=True)
+    return {
+        "summary": {
+            "matched_count": len(matched),
+            "total_count": len(names),
+            "tensor_count": total_tensors,
+            "element_count": total_elements,
+        },
+        "modules": modules[:top_n],
+    }
+
+
+def _value_diff_max_abs(left: torch.Tensor, right: torch.Tensor) -> float:
+    if left.is_complex():
+        diff = torch.abs(left.to(torch.complex128) - right.to(torch.complex128))
+    else:
+        diff = torch.abs(left.to(torch.float64) - right.to(torch.float64))
+    return float(diff.max().item()) if diff.numel() else 0.0
+
+
+def _model_diff_summary(
+    *,
+    provider: Any,
+    left_alias: str,
+    right_alias: str,
+    left_target: str | list[Any],
+    right_target: str | list[Any],
+    eps: float | None = None,
+    top_n: int = 20,
+) -> dict[str, Any]:
+    left_sd = provider.get_state_dict(left_alias)
+    right_sd = provider.get_state_dict(right_alias)
+    left_names = set(
+        match_expr_names(
+            expr=left_target,
+            names=left_sd.keys(),
+            op_name="webui.diff",
+            role="left",
+        )
+    )
+    right_names = set(
+        match_expr_names(
+            expr=right_target,
+            names=right_sd.keys(),
+            op_name="webui.diff",
+            role="right",
+        )
+    )
+
+    missing_left = sorted(right_names - left_names)
+    missing_right = sorted(left_names - right_names)
+    shared = sorted(left_names & right_names)
+
+    changed = 0
+    unchanged = 0
+    by_kind = {"shape": 0, "dtype": 0, "device": 0, "values": 0}
+    top_differences: list[dict[str, Any]] = []
+
+    for name in shared:
+        left = left_sd[name]
+        right = right_sd[name]
+        if not isinstance(left, torch.Tensor) or not isinstance(right, torch.Tensor):
+            by_kind["values"] += 1
+            changed += 1
+            top_differences.append({"name": name, "kind": "values", "max_abs_diff": None})
+            continue
+
+        if left.shape != right.shape:
+            by_kind["shape"] += 1
+            changed += 1
+            top_differences.append({"name": name, "kind": "shape", "max_abs_diff": None})
+            continue
+        if left.dtype != right.dtype:
+            by_kind["dtype"] += 1
+            changed += 1
+            top_differences.append({"name": name, "kind": "dtype", "max_abs_diff": None})
+            continue
+        if left.device != right.device:
+            by_kind["device"] += 1
+            changed += 1
+            top_differences.append({"name": name, "kind": "device", "max_abs_diff": None})
+            continue
+
+        max_abs_diff = _value_diff_max_abs(left, right)
+        if eps is None:
+            equal = bool(torch.equal(left, right))
+        else:
+            equal = max_abs_diff <= eps
+        if equal:
+            unchanged += 1
+            continue
+
+        by_kind["values"] += 1
+        changed += 1
+        top_differences.append(
+            {"name": name, "kind": "values", "max_abs_diff": float(max_abs_diff)}
+        )
+
+    top_differences.sort(
+        key=lambda item: (
+            item["max_abs_diff"] if item["max_abs_diff"] is not None else -1.0,
+            item["name"],
+        ),
+        reverse=True,
+    )
+
+    return {
+        "summary": {
+            "left_alias": left_alias,
+            "right_alias": right_alias,
+            "left_count": len(left_names),
+            "right_count": len(right_names),
+            "shared_count": len(shared),
+            "missing_on_left": len(missing_left),
+            "missing_on_right": len(missing_right),
+            "changed": changed,
+            "unchanged": unchanged,
+            "by_kind": by_kind,
+        },
+        "missing_on_left_samples": missing_left[:10],
+        "missing_on_right_samples": missing_right[:10],
+        "top_differences": top_differences[:top_n],
+    }
 
 
 def _render_execution_summary(*, plan: SurgeryPlan, mode: str = "raw") -> str:

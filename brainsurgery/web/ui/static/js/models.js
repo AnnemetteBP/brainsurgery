@@ -8,6 +8,41 @@ function createModelsRenderer({
   setStatus,
   tensorCountText,
 }) {
+  function _renderModuleHealth(host, moduleHealth) {
+    host.innerHTML = "";
+    if (!moduleHealth || typeof moduleHealth !== "object") return;
+    const modules = Array.isArray(moduleHealth.modules) ? moduleHealth.modules : [];
+    if (!modules.length) return;
+
+    const maxAbsMean = modules.reduce((acc, item) => {
+      const value = Number(item.abs_mean || 0);
+      return Math.max(acc, Number.isFinite(value) ? value : 0);
+    }, 0);
+    const heading = document.createElement("div");
+    heading.className = "insight-heading";
+    heading.textContent = "module health (top by abs mean)";
+    host.appendChild(heading);
+
+    for (const item of modules) {
+      const row = document.createElement("div");
+      row.className = "insight-row";
+      const label = document.createElement("div");
+      label.className = "insight-row-label";
+      const absMean = Number(item.abs_mean || 0);
+      label.textContent = String(item.module || "(unknown)") + " · abs_mean=" + absMean.toPrecision(4);
+      const barWrap = document.createElement("div");
+      barWrap.className = "meter";
+      const bar = document.createElement("div");
+      bar.className = "meter-fill";
+      const width = maxAbsMean > 0 ? Math.max(2, Math.round((absMean / maxAbsMean) * 100)) : 2;
+      bar.style.width = width + "%";
+      barWrap.appendChild(bar);
+      row.appendChild(label);
+      row.appendChild(barWrap);
+      host.appendChild(row);
+    }
+  }
+
   function renderModels(models) {
     modelsEl.innerHTML = "";
     if (!models.length) {
@@ -31,6 +66,7 @@ function createModelsRenderer({
           lastMatchedCount: null,
           lastTotalCount: null,
           sourceTensorCount: null,
+          lastModuleHealth: null,
         };
       }
       const state = modelViewState[model.alias];
@@ -40,6 +76,7 @@ function createModelsRenderer({
         state.lastDumpSignature = "";
         state.lastMatchedCount = null;
         state.lastTotalCount = null;
+        state.lastModuleHealth = null;
       }
       const pane = document.createElement("div");
       pane.className = "model-pane";
@@ -109,6 +146,9 @@ function createModelsRenderer({
       const pre = document.createElement("pre");
       pre.textContent = hasCachedForCurrentView ? state.lastDumpText : "";
       pre.classList.toggle("hidden", !!state.dump_collapsed);
+      const health = document.createElement("div");
+      health.className = "module-health";
+      _renderModuleHealth(health, state.lastModuleHealth);
 
       dumpToggleBtn.addEventListener("click", () => {
         state.dump_collapsed = !state.dump_collapsed;
@@ -148,7 +188,9 @@ function createModelsRenderer({
           state.lastDumpSignature = state.format + "|" + String(state.verbosity || "shape") + "|" + state.filter;
           state.lastMatchedCount = data.matched_count || 0;
           state.lastTotalCount = data.total_count || 0;
+          state.lastModuleHealth = data.module_health || null;
           count.textContent = tensorCountText(data.matched_count || 0, data.total_count || 0, filterInput.value);
+          _renderModuleHealth(health, state.lastModuleHealth);
           renderCommitButtons();
           setStatus("Updated dump for " + model.alias + ".");
         } catch (err) {
@@ -180,6 +222,7 @@ function createModelsRenderer({
 
       pane.appendChild(head);
       pane.appendChild(controls);
+      pane.appendChild(health);
       pane.appendChild(pre);
       modelsEl.appendChild(pane);
     }

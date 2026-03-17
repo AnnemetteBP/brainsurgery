@@ -19,6 +19,14 @@ const optionsPanelBody = document.getElementById("optionsPanelBody");
 const optionsPanel = document.getElementById("optionsPanel");
 const transformsPanel = document.getElementById("transformsPanel");
 const modelsPanel = document.getElementById("modelsPanel");
+const insightsPanel = document.getElementById("insightsPanel");
+const previewImpactRows = document.getElementById("previewImpactRows");
+const diffLeftAlias = document.getElementById("diffLeftAlias");
+const diffRightAlias = document.getElementById("diffRightAlias");
+const diffFilterInput = document.getElementById("diffFilterInput");
+const diffRefreshBtn = document.getElementById("diffRefreshBtn");
+const diffSummary = document.getElementById("diffSummary");
+const diffTopRows = document.getElementById("diffTopRows");
 const resultsPanel = document.getElementById("resultsPanel");
 const resultsToggleBtn = document.getElementById("resultsToggleBtn");
 const copyResultsBtn = document.getElementById("copyResultsBtn");
@@ -35,7 +43,7 @@ const previewConfirmDetails = document.getElementById("previewConfirmDetails");
 const previewGoBtn = document.getElementById("previewGoBtn");
 const previewNoGoBtn = document.getElementById("previewNoGoBtn");
 
-const panelScopes = [transformsPanel, optionsPanel, modelsPanel, resultsPanel];
+const panelScopes = [transformsPanel, optionsPanel, modelsPanel, insightsPanel, resultsPanel];
 
 export {
   aliasInput,
@@ -46,7 +54,14 @@ export {
   clearOptionsBtn,
   clearResultsBtn,
   copyResultsBtn,
+  diffFilterInput,
+  diffLeftAlias,
+  diffRefreshBtn,
+  diffRightAlias,
+  diffSummary,
+  diffTopRows,
   fileInput,
+  insightsPanel,
   iteratingProgressEl,
   loadBtn,
   loadPanel,
@@ -62,6 +77,7 @@ export {
   previewConfirmModal,
   previewGoBtn,
   previewNoGoBtn,
+  previewImpactRows,
   resultsOutput,
   resultsPanel,
   resultsPanelBody,

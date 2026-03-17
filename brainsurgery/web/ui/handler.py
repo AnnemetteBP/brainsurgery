@@ -20,6 +20,8 @@ from .backend import (
     _apply_load_transform,
     _apply_transform,
     _default_alias,
+    _model_diff_summary,
+    _module_health_for_alias,
     _parse_filter_expr,
     _preview_transform,
     _render_dump_for_alias,
@@ -32,6 +34,7 @@ from .backend import (
 from .models import (
     ApplyTransformResponsePayload,
     LoadResponsePayload,
+    ModelDiffResponsePayload,
     ModelDumpResponsePayload,
     ProgressResponsePayload,
     SaveDownloadResponsePayload,
@@ -93,6 +96,18 @@ def _finish_progress(session: _SessionState, *, error: str | None = None) -> Non
         session.progress["active"] = False
         session.progress["updated_at"] = now
         session.progress["error"] = error
+
+
+def _record_preview_history(session: _SessionState, entry: dict[str, Any]) -> None:
+    entry_copy = dict(entry)
+    entry_copy["timestamp_ms"] = _now_ms()
+    session.preview_history.append(entry_copy)
+    if len(session.preview_history) > 40:
+        del session.preview_history[:-40]
+
+
+def _serialize_insights(session: _SessionState) -> dict[str, Any]:
+    return {"preview_history": list(session.preview_history)}
 
 
 def _handler_factory(session: _SessionState):
@@ -157,6 +172,7 @@ def _handler_factory(session: _SessionState):
                                 ok=True,
                                 models=_serialize_models(session.provider),
                                 runtime_flags=_serialize_runtime_flags(),
+                                insights=_serialize_insights(session),
                             )
                         )
                     )
@@ -226,6 +242,7 @@ def _handler_factory(session: _SessionState):
                             ok=True,
                             models=models,
                             runtime_flags=_serialize_runtime_flags(),
+                            insights=_serialize_insights(session),
                         )
                     )
                 )
@@ -292,12 +309,17 @@ def _handler_factory(session: _SessionState):
                             and not dry_run_enabled
                             and preview_decision != "go"
                         ):
-                            preview_output, needs_confirmation = _preview_transform(
+                            (
+                                preview_output,
+                                needs_confirmation,
+                                preview_impact,
+                            ) = _preview_transform(
                                 provider=session.provider,
                                 transform_name=transform_name,
                                 payload=payload,
                                 default_model=session.default_model,
                             )
+                            _record_preview_history(session, preview_impact)
                             models = _serialize_models(session.provider)
                             if needs_confirmation:
                                 _finish_progress(session, error=None)
@@ -314,6 +336,7 @@ def _handler_factory(session: _SessionState):
                                                 runtime_flags=_serialize_runtime_flags(),
                                                 preview_confirmation_required=False,
                                                 preview_transform=transform_name,
+                                                insights=_serialize_insights(session),
                                             )
                                         )
                                     )
@@ -327,6 +350,7 @@ def _handler_factory(session: _SessionState):
                                             runtime_flags=_serialize_runtime_flags(),
                                             preview_confirmation_required=True,
                                             preview_transform=transform_name,
+                                            insights=_serialize_insights(session),
                                         )
                                     )
                                 )
@@ -368,6 +392,7 @@ def _handler_factory(session: _SessionState):
                             runtime_flags=_serialize_runtime_flags(),
                             preview_confirmation_required=False,
                             preview_transform=None,
+                            insights=_serialize_insights(session),
                         )
                     )
                 )
@@ -407,6 +432,7 @@ def _handler_factory(session: _SessionState):
                             download_filename=filename,
                             download_mime=mime,
                             download_b64=content_b64,
+                            insights=_serialize_insights(session),
                         )
                     )
                 )
@@ -440,6 +466,14 @@ def _handler_factory(session: _SessionState):
                             verbosity=verbosity,
                             target=target,
                         )
+                        try:
+                            module_health = _module_health_for_alias(
+                                provider=session.provider,
+                                alias=alias,
+                                target=target,
+                            )
+                        except Exception:
+                            module_health = None
                     except Exception as exc:
                         self._send_json(
                             {"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST
@@ -453,6 +487,58 @@ def _handler_factory(session: _SessionState):
                             dump=dumped,
                             matched_count=matched_count,
                             total_count=total_count,
+                            module_health=module_health,
+                        )
+                    )
+                )
+                return
+
+            if self.path == "/api/model_diff":
+                try:
+                    body = self._read_json_body()
+                    left_alias = _require_string(body.get("left_alias"), "left_alias")
+                    right_alias = _require_string(body.get("right_alias"), "right_alias")
+                    left_target = _parse_filter_expr(body.get("left_filter"), alias=left_alias)
+                    right_target = _parse_filter_expr(body.get("right_filter"), alias=right_alias)
+                    eps_raw = body.get("eps")
+                    if eps_raw is None:
+                        eps = None
+                    elif isinstance(eps_raw, bool) or not isinstance(eps_raw, int | float):
+                        raise ValueError("eps must be a non-negative number when provided.")
+                    else:
+                        eps = float(eps_raw)
+                        if eps < 0:
+                            raise ValueError("eps must be a non-negative number when provided.")
+                except Exception as exc:
+                    self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                    return
+
+                with session.lock:
+                    try:
+                        aliases = set(list_model_aliases(session.provider))
+                        if left_alias not in aliases:
+                            raise ValueError(f"unknown alias: {left_alias!r}")
+                        if right_alias not in aliases:
+                            raise ValueError(f"unknown alias: {right_alias!r}")
+                        diff_payload = _model_diff_summary(
+                            provider=session.provider,
+                            left_alias=left_alias,
+                            right_alias=right_alias,
+                            left_target=left_target,
+                            right_target=right_target,
+                            eps=eps,
+                        )
+                    except Exception as exc:
+                        self._send_json(
+                            {"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST
+                        )
+                        return
+
+                self._send_json(
+                    model_to_payload(
+                        ModelDiffResponsePayload(
+                            ok=True,
+                            diff=diff_payload,
                         )
                     )
                 )

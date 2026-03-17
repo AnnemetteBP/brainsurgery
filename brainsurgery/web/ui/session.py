@@ -28,3 +28,4 @@ class _SessionState:
             "error": None,
         }
     )
+    preview_history: list[dict[str, Any]] = field(default_factory=list)
