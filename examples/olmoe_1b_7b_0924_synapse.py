@@ -48,9 +48,11 @@ class OLMoE1B7B0924Synapse(nn.Module):
             raise ValueError(f"Missing variable in graph env: {name}")
         return env[name]
 
-    def _block_olmoe_decoder_block(self, x, scope: str) -> tuple[Any, ...]:
+    def _block_olmoe_decoder_block(self, x, past_kv, use_cache, scope: str) -> tuple[Any, ...]:
         env: dict[str, Any] = {}
         env["x"] = x
+        env["past_kv"] = past_kv
+        env["use_cache"] = use_cache
         node_path_1 = self._join_scope(scope, "input_layernorm")
         xnorm_3 = x * torch.rsqrt(torch.mean(x * x, dim=-1, keepdim=True) + float(1e-05))
         x_norm_2 = xnorm_3 * self._param(self._join_scope(node_path_1, "weight"))
@@ -80,141 +82,264 @@ class OLMoE1B7B0924Synapse(nn.Module):
         v_19 = v_lin_10.view(v_lin_10.shape[0], v_lin_10.shape[1], int(16), int(128)).transpose(
             1, 2
         )
-        half_22 = q_17.shape[-1] // 2
-        inv_freq_23 = 1.0 / (
+        if past_kv is None:
+            past_len_20 = 0
+        else:
+            past_len_20 = int(past_kv[0].shape[-2])
+        half_23 = q_17.shape[-1] // 2
+        inv_freq_24 = 1.0 / (
             float(10000.0)
-            ** (torch.arange(0, half_22, device=q_17.device, dtype=q_17.dtype) / float(half_22))
+            ** (torch.arange(0, half_23, device=q_17.device, dtype=q_17.dtype) / float(half_23))
         )
-        pos_24 = torch.arange(q_17.shape[-2], device=q_17.device, dtype=q_17.dtype)
-        ang_25 = torch.einsum("t,d->td", pos_24, inv_freq_23)
-        cos_26 = torch.cos(ang_25)[None, None, :, :]
-        sin_27 = torch.sin(ang_25)[None, None, :, :]
-        q1_28 = q_17[..., :half_22]
-        q2_29 = q_17[..., half_22 : 2 * half_22]
-        k1_30 = k_18[..., :half_22]
-        k2_31 = k_18[..., half_22 : 2 * half_22]
-        qr_20 = torch.cat(
-            [q1_28 * cos_26 - q2_29 * sin_27, q1_28 * sin_27 + q2_29 * cos_26], dim=-1
+        pos_25 = torch.arange(
+            int(past_len_20),
+            int(past_len_20) + q_17.shape[-2],
+            device=q_17.device,
+            dtype=q_17.dtype,
         )
-        kr_21 = torch.cat(
-            [k1_30 * cos_26 - k2_31 * sin_27, k1_30 * sin_27 + k2_31 * cos_26], dim=-1
+        ang_26 = torch.einsum("t,d->td", pos_25, inv_freq_24)
+        cos_27 = torch.cos(ang_26)[None, None, :, :]
+        sin_28 = torch.sin(ang_26)[None, None, :, :]
+        q1_29 = q_17[..., :half_23]
+        q2_30 = q_17[..., half_23 : 2 * half_23]
+        k1_31 = k_18[..., :half_23]
+        k2_32 = k_18[..., half_23 : 2 * half_23]
+        qr_21 = torch.cat(
+            [q1_29 * cos_27 - q2_30 * sin_28, q1_29 * sin_28 + q2_30 * cos_27], dim=-1
         )
-        n_rep_33 = int((int(16) // int(16)))
-        if n_rep_33 == 1:
-            k_ctx_32 = kr_21
+        kr_22 = torch.cat(
+            [k1_31 * cos_27 - k2_32 * sin_28, k1_31 * sin_28 + k2_32 * cos_27], dim=-1
+        )
+        k_all_33 = None
+        v_all_34 = None
+        present_kv_35 = None
+        if use_cache:
+            if past_kv is None:
+                k_all_33 = kr_22
+                v_all_34 = v_19
+            else:
+                k_all_33 = torch.cat([past_kv[0], kr_22], dim=-2)
+                v_all_34 = torch.cat([past_kv[1], v_19], dim=-2)
+            present_kv_35 = (k_all_33, v_all_34)
+        k_coalesced_36 = k_all_33 if ("k_all_33" in locals() and k_all_33 is not None) else kr_22
+        v_coalesced_37 = v_all_34 if ("v_all_34" in locals() and v_all_34 is not None) else v_19
+        n_rep_39 = int((int(16) // int(16)))
+        if n_rep_39 == 1:
+            k_ctx_38 = k_coalesced_36
         else:
-            k_ctx_32 = (
-                kr_21[:, :, None, :, :]
-                .expand(kr_21.shape[0], kr_21.shape[1], n_rep_33, kr_21.shape[2], kr_21.shape[3])
-                .reshape(kr_21.shape[0], kr_21.shape[1] * n_rep_33, kr_21.shape[2], kr_21.shape[3])
+            k_ctx_38 = (
+                k_coalesced_36[:, :, None, :, :]
+                .expand(
+                    k_coalesced_36.shape[0],
+                    k_coalesced_36.shape[1],
+                    n_rep_39,
+                    k_coalesced_36.shape[2],
+                    k_coalesced_36.shape[3],
+                )
+                .reshape(
+                    k_coalesced_36.shape[0],
+                    k_coalesced_36.shape[1] * n_rep_39,
+                    k_coalesced_36.shape[2],
+                    k_coalesced_36.shape[3],
+                )
             )
-        n_rep_35 = int((int(16) // int(16)))
-        if n_rep_35 == 1:
-            v_ctx_34 = v_19
+        n_rep_41 = int((int(16) // int(16)))
+        if n_rep_41 == 1:
+            v_ctx_40 = v_coalesced_37
         else:
-            v_ctx_34 = (
-                v_19[:, :, None, :, :]
-                .expand(v_19.shape[0], v_19.shape[1], n_rep_35, v_19.shape[2], v_19.shape[3])
-                .reshape(v_19.shape[0], v_19.shape[1] * n_rep_35, v_19.shape[2], v_19.shape[3])
+            v_ctx_40 = (
+                v_coalesced_37[:, :, None, :, :]
+                .expand(
+                    v_coalesced_37.shape[0],
+                    v_coalesced_37.shape[1],
+                    n_rep_41,
+                    v_coalesced_37.shape[2],
+                    v_coalesced_37.shape[3],
+                )
+                .reshape(
+                    v_coalesced_37.shape[0],
+                    v_coalesced_37.shape[1] * n_rep_41,
+                    v_coalesced_37.shape[2],
+                    v_coalesced_37.shape[3],
+                )
             )
-        q_len_37 = qr_20.shape[-2]
-        k_len_38 = k_ctx_32.shape[-2]
-        i_idx_39 = torch.arange(q_len_37, device=qr_20.device).unsqueeze(1)
-        j_idx_40 = torch.arange(k_len_38, device=qr_20.device).unsqueeze(0)
-        keep_41 = j_idx_40 <= i_idx_39
-        window_43 = int(4096)
-        if window_43 >= k_len_38 and q_len_37 == k_len_38:
-            mask_36 = None
-        else:
-            keep_41 = keep_41 & (j_idx_40 >= (i_idx_39 - window_43 + 1))
-            mask_val_42 = torch.finfo(qr_20.dtype).min
-            mask_36 = torch.where(
-                keep_41,
-                torch.zeros((), dtype=qr_20.dtype, device=qr_20.device),
-                torch.full((), mask_val_42, dtype=qr_20.dtype, device=qr_20.device),
-            ).view(1, 1, q_len_37, k_len_38)
-        ctx_heads_44 = F.scaled_dot_product_attention(
-            qr_20,
-            k_ctx_32,
-            v_ctx_34,
-            attn_mask=mask_36,
+        mask_42 = None
+        if not use_cache:
+            q_len_43 = qr_21.shape[-2]
+            k_len_44 = k_ctx_38.shape[-2]
+            i_idx_45 = torch.arange(q_len_43, device=qr_21.device).unsqueeze(1)
+            j_idx_46 = torch.arange(k_len_44, device=qr_21.device).unsqueeze(0)
+            keep_47 = j_idx_46 <= i_idx_45
+            window_49 = int(4096)
+            if window_49 >= k_len_44 and q_len_43 == k_len_44:
+                mask_42 = None
+            else:
+                keep_47 = keep_47 & (j_idx_46 >= (i_idx_45 - window_49 + 1))
+                mask_val_48 = torch.finfo(qr_21.dtype).min
+                mask_42 = torch.where(
+                    keep_47,
+                    torch.zeros((), dtype=qr_21.dtype, device=qr_21.device),
+                    torch.full((), mask_val_48, dtype=qr_21.dtype, device=qr_21.device),
+                ).view(1, 1, q_len_43, k_len_44)
+        ctx_heads_50 = F.scaled_dot_product_attention(
+            qr_21,
+            k_ctx_38,
+            v_ctx_40,
+            attn_mask=mask_42,
             dropout_p=0.0,
-            is_causal=(qr_20.shape[-2] > 1 and mask_36 is None),
+            is_causal=(qr_21.shape[-2] > 1 and mask_42 is None),
             scale=0.08838834764831845,
         )
-        ctx_45 = (
-            ctx_heads_44.transpose(1, 2)
+        ctx_51 = (
+            ctx_heads_50.transpose(1, 2)
             .contiguous()
             .view(
-                ctx_heads_44.shape[0],
-                ctx_heads_44.shape[2],
-                ctx_heads_44.shape[1] * ctx_heads_44.shape[3],
+                ctx_heads_50.shape[0],
+                ctx_heads_50.shape[2],
+                ctx_heads_50.shape[1] * ctx_heads_50.shape[3],
             )
         )
-        node_path_46 = self._join_scope(scope_4, "o_proj")
-        a_47 = F.linear(ctx_45, self._param(self._join_scope(node_path_46, "weight")), None)
-        x2_48 = x + a_47
-        node_path_49 = self._join_scope(scope, "post_attention_layernorm")
-        xnorm_51 = x2_48 * torch.rsqrt(
-            torch.mean(x2_48 * x2_48, dim=-1, keepdim=True) + float(1e-05)
+        node_path_52 = self._join_scope(scope_4, "o_proj")
+        a_53 = F.linear(ctx_51, self._param(self._join_scope(node_path_52, "weight")), None)
+        x2_54 = x + a_53
+        node_path_55 = self._join_scope(scope, "post_attention_layernorm")
+        xnorm_57 = x2_54 * torch.rsqrt(
+            torch.mean(x2_54 * x2_54, dim=-1, keepdim=True) + float(1e-05)
         )
-        x3_50 = xnorm_51 * self._param(self._join_scope(node_path_49, "weight"))
-        scope_52 = self._join_scope(scope, "mlp")
-        node_path_53 = self._join_scope(scope_52, "gate")
-        hidden_flat_54 = x3_50.reshape(-1, x3_50.shape[-1])
-        router_logits_55 = F.linear(
-            hidden_flat_54, self._param(self._join_scope(node_path_53, "weight")), None
+        x3_56 = xnorm_57 * self._param(self._join_scope(node_path_55, "weight"))
+        scope_58 = self._join_scope(scope, "mlp")
+        node_path_59 = self._join_scope(scope_58, "gate")
+        router_logits_60 = F.linear(
+            x3_56, self._param(self._join_scope(node_path_59, "weight")), None
         )
-        if int(64) != router_logits_55.shape[-1]:
-            raise ValueError("moe_router_topk num_experts mismatch")
-        router_probs_56 = F.softmax(router_logits_55, dim=-1, dtype=torch.float32)
-        topk_scores_57, topk_indices_58 = torch.topk(router_probs_56, int(8), dim=-1)
-        topk_scores_57 = topk_scores_57.to(router_probs_56.dtype)
-        hidden_flat_61 = x3_50.reshape(-1, x3_50.shape[-1])
-        final_hidden_62 = torch.zeros_like(hidden_flat_61)
-        experts_base_60 = self._join_scope(scope_52, "experts")
-        packed_gate_up_71 = self._join_scope(experts_base_60, "gate_up_proj")
-        packed_down_72 = self._join_scope(experts_base_60, "down_proj")
-        for expert_idx_63 in range(int(64)):
-            expert_pos_64 = (topk_indices_58 == expert_idx_63).nonzero(as_tuple=False)
-            if expert_pos_64.numel() == 0:
-                continue
-            token_idx_65 = expert_pos_64[:, 0]
-            topk_pos_66 = expert_pos_64[:, 1]
-            current_state_67 = hidden_flat_61[token_idx_65]
-            if packed_gate_up_71 in self._state and packed_down_72 in self._state:
-                packed_gate_up_w_73 = self._param(packed_gate_up_71)
-                if packed_gate_up_w_73.ndim == 3:
-                    packed_gate_up_w_73 = packed_gate_up_w_73[expert_idx_63]
-                gate_69, up_70 = F.linear(current_state_67, packed_gate_up_w_73, None).chunk(
-                    2, dim=-1
-                )
-                packed_down_w_74 = self._param(packed_down_72)
-                if packed_down_w_74.ndim == 3:
-                    packed_down_w_74 = packed_down_w_74[expert_idx_63]
-                down_w_77 = packed_down_w_74
-                current_hidden_68 = None
+        router_probs_61 = F.softmax(router_logits_60, dim=int(-1), dtype=torch.float32)
+        topk_scores_62, topk_indices_63 = torch.topk(
+            router_probs_61, int(8), dim=int(-1), largest=True, sorted=True
+        )
+        m_64 = torch.zeros_like(x3_56)
+        for e in range(int(64)):
+            scope_65 = self._join_scope(scope_58, f"experts.{e}")
+            hidden_flat_70 = x3_56.reshape(-1, x3_56.shape[-1])
+            topk_scores_flat_71 = topk_scores_62.reshape(-1, topk_scores_62.shape[-1])
+            topk_indices_flat_72 = topk_indices_63.reshape(-1, topk_indices_63.shape[-1])
+            expert_pos_73 = (topk_indices_flat_72 == int(e)).nonzero(as_tuple=False)
+            token_idx_67 = expert_pos_73[:, 0]
+            topk_pos_68 = expert_pos_73[:, 1]
+            x_sel_66 = hidden_flat_70[token_idx_67]
+            sel_scores_69 = topk_scores_flat_71[token_idx_67, topk_pos_68].to(x_sel_66.dtype)
+            experts_base_75 = self._join_scope(scope_65, "")
+            experts_parent_76 = experts_base_75.rsplit(".", 1)[0] if "." in experts_base_75 else ""
+            packed_gate_up_77 = self._join_scope(experts_base_75, "gate_up_proj")
+            packed_down_78 = self._join_scope(experts_base_75, "down_proj")
+            packed_gate_up_parent_79 = (
+                self._join_scope(experts_parent_76, "gate_up_proj") if experts_parent_76 else ""
+            )
+            packed_down_parent_80 = (
+                self._join_scope(experts_parent_76, "down_proj") if experts_parent_76 else ""
+            )
+            packed_gate_up_key_81 = (
+                packed_gate_up_77
+                if packed_gate_up_77 in self._state
+                else (packed_gate_up_parent_79 if packed_gate_up_parent_79 in self._state else None)
+            )
+            packed_down_key_82 = (
+                packed_down_78
+                if packed_down_78 in self._state
+                else (packed_down_parent_80 if packed_down_parent_80 in self._state else None)
+            )
+            if x_sel_66.numel() == 0:
+                if packed_down_key_82 is not None:
+                    _down_shape = self._param(packed_down_key_82).shape
+                    x_upd_74 = x_sel_66.new_zeros((0, int(_down_shape[-2])))
+                else:
+                    _dw_indexed = self._join_scope(experts_base_75, f"{int(e)}.down_proj.weight")
+                    _dw_scoped = self._join_scope(experts_base_75, "down_proj.weight")
+                    _dw_candidates = [_dw_indexed, _dw_scoped]
+                    if experts_parent_76:
+                        _dw_candidates.extend(
+                            [
+                                self._join_scope(experts_parent_76, f"{int(e)}.down_proj.weight"),
+                                self._join_scope(experts_parent_76, "down_proj.weight"),
+                            ]
+                        )
+                    _dw = None
+                    for _p in _dw_candidates:
+                        if _p in self._state:
+                            _dw = self._state[_p]
+                            break
+                    if _dw is None:
+                        raise KeyError(_dw_candidates[0])
+                    x_upd_74 = x_sel_66.new_zeros((0, int(_dw.shape[-2])))
             else:
-                gate_w_75 = self._param(
-                    self._join_scope(experts_base_60, f"{expert_idx_63}.gate_proj.weight")
-                )
-                up_w_76 = self._param(
-                    self._join_scope(experts_base_60, f"{expert_idx_63}.up_proj.weight")
-                )
-                down_w_77 = self._param(
-                    self._join_scope(experts_base_60, f"{expert_idx_63}.down_proj.weight")
-                )
-                gate_69 = F.linear(current_state_67, gate_w_75, None)
-                up_70 = F.linear(current_state_67, up_w_76, None)
-            current_hidden_68 = F.silu(gate_69) * up_70
-            current_hidden_68 = F.linear(current_hidden_68, down_w_77, None)
-            current_hidden_68 = current_hidden_68 * topk_scores_57[
-                token_idx_65, topk_pos_66
-            ].unsqueeze(-1).to(current_hidden_68.dtype)
-            final_hidden_62.index_add_(0, token_idx_65, current_hidden_68.to(final_hidden_62.dtype))
-        m_59 = final_hidden_62.reshape_as(x3_50)
-        y_78 = x2_48 + m_59
-        return y_78
+                if packed_gate_up_key_81 is not None and packed_down_key_82 is not None:
+                    packed_gate_up_w_83 = self._param(packed_gate_up_key_81)
+                    if packed_gate_up_w_83.ndim == 3:
+                        packed_gate_up_w_83 = packed_gate_up_w_83[int(e)]
+                    gate_85, up_86 = F.linear(x_sel_66, packed_gate_up_w_83, None).chunk(2, dim=-1)
+                    down_w_84 = self._param(packed_down_key_82)
+                    if down_w_84.ndim == 3:
+                        down_w_84 = down_w_84[int(e)]
+                else:
+                    _gw_indexed = self._join_scope(experts_base_75, f"{int(e)}.gate_proj.weight")
+                    _uw_indexed = self._join_scope(experts_base_75, f"{int(e)}.up_proj.weight")
+                    _dw_indexed = self._join_scope(experts_base_75, f"{int(e)}.down_proj.weight")
+                    _gw_scoped = self._join_scope(experts_base_75, "gate_proj.weight")
+                    _uw_scoped = self._join_scope(experts_base_75, "up_proj.weight")
+                    _dw_scoped = self._join_scope(experts_base_75, "down_proj.weight")
+                    _gw_candidates = [_gw_indexed, _gw_scoped]
+                    _uw_candidates = [_uw_indexed, _uw_scoped]
+                    _dw_candidates = [_dw_indexed, _dw_scoped]
+                    if experts_parent_76:
+                        _gw_candidates.extend(
+                            [
+                                self._join_scope(experts_parent_76, f"{int(e)}.gate_proj.weight"),
+                                self._join_scope(experts_parent_76, "gate_proj.weight"),
+                            ]
+                        )
+                        _uw_candidates.extend(
+                            [
+                                self._join_scope(experts_parent_76, f"{int(e)}.up_proj.weight"),
+                                self._join_scope(experts_parent_76, "up_proj.weight"),
+                            ]
+                        )
+                        _dw_candidates.extend(
+                            [
+                                self._join_scope(experts_parent_76, f"{int(e)}.down_proj.weight"),
+                                self._join_scope(experts_parent_76, "down_proj.weight"),
+                            ]
+                        )
+                    _gw = None
+                    _uw = None
+                    down_w_84 = None
+                    for _p in _gw_candidates:
+                        if _p in self._state:
+                            _gw = self._state[_p]
+                            break
+                    for _p in _uw_candidates:
+                        if _p in self._state:
+                            _uw = self._state[_p]
+                            break
+                    for _p in _dw_candidates:
+                        if _p in self._state:
+                            down_w_84 = self._state[_p]
+                            break
+                    if _gw is None:
+                        raise KeyError(_gw_candidates[0])
+                    if _uw is None:
+                        raise KeyError(_uw_candidates[0])
+                    if down_w_84 is None:
+                        raise KeyError(_dw_candidates[0])
+                    gate_85 = F.linear(x_sel_66, _gw, None)
+                    up_86 = F.linear(x_sel_66, _uw, None)
+                hidden_87 = F.silu(gate_85) * up_86
+                x_upd_74 = F.linear(hidden_87, down_w_84, None)
+            m_64 = m_64
+            if token_idx_67.numel() != 0:
+                _acc = m_64.reshape(-1, m_64.shape[-1])
+                _upd = x_upd_74 * sel_scores_69.unsqueeze(-1).to(x_upd_74.dtype)
+                _acc.index_add_(0, token_idx_67, _upd.to(_acc.dtype))
+        y_88 = x2_54 + m_64
+        return (y_88, present_kv_35)
 
     def forward(self, input_ids: torch.Tensor | None = None, **inputs: Any) -> Any:
         if input_ids is not None:
@@ -222,18 +347,29 @@ class OLMoE1B7B0924Synapse(nn.Module):
         env: dict[str, Any] = dict(inputs)
         scope = ""
         input_ids = self._safe_get(env, "input_ids")
-        node_path_79 = self._join_scope(scope, "embed_tokens")
-        x_80 = F.embedding(input_ids, self._param(self._join_scope(node_path_79, "weight")))
+        past_key_values = env.get("past_key_values")
+        use_cache = env.get("use_cache")
+        node_path_89 = self._join_scope(scope, "embed_tokens")
+        x_90 = F.embedding(input_ids, self._param(self._join_scope(node_path_89, "weight")))
+        present_key_values_91 = []
         for i in range(int(16)):
-            scope_81 = self._join_scope(scope, f"layers.{i}")
-            y_82 = self._block_olmoe_decoder_block(x=x_80, scope=scope_81)
-            x_80 = y_82
-        node_path_83 = self._join_scope(scope, "norm")
-        xnorm_85 = x_80 * torch.rsqrt(torch.mean(x_80 * x_80, dim=-1, keepdim=True) + float(1e-05))
-        h_last_84 = xnorm_85 * self._param(self._join_scope(node_path_83, "weight"))
-        logits_86 = F.linear(h_last_84, self._param("lm_head.weight"), None)
+            scope_92 = self._join_scope(scope, f"layers.{i}")
+            past_i_93 = None if past_key_values is None else past_key_values[int(i)]
+            y_94, present_kv_95 = self._block_olmoe_decoder_block(
+                x=x_90, past_kv=past_i_93, use_cache=use_cache, scope=scope_92
+            )
+            x_90 = y_94
+            present_i_96 = present_kv_95
+            if use_cache:
+                present_key_values_91 = list(present_key_values_91)
+                present_key_values_91.append(present_i_96)
+        node_path_97 = self._join_scope(scope, "norm")
+        xnorm_99 = x_90 * torch.rsqrt(torch.mean(x_90 * x_90, dim=-1, keepdim=True) + float(1e-05))
+        h_last_98 = xnorm_99 * self._param(self._join_scope(node_path_97, "weight"))
+        logits_100 = F.linear(h_last_98, self._param("lm_head.weight"), None)
         outputs: dict[str, Any] = {}
-        outputs["logits"] = logits_86
+        outputs["logits"] = logits_100
+        outputs["past_key_values"] = present_key_values_91
         if "logits" in outputs and len(outputs) == 1:
             return outputs["logits"]
         return outputs

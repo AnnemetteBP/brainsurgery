@@ -31,11 +31,15 @@ model:
 
   inputs:
     input_ids: { shape: [B, T], dtype: int64 }
+    past_key_values: { type: kv_cache, optional: true }
+    use_cache: { dtype: bool, optional: true }
 
   blocks:
     olmoe_decoder_block:
       inputs:
         x: { shape: [B, T, D] }
+        past_kv: { type: kv_cache_layer, optional: true }
+        use_cache: { dtype: bool, optional: true }
       graph:
         - input_layernorm: { op: rmsnorm, in: x, out: x_norm, eps: 1.0e-5 }
 
@@ -52,10 +56,17 @@ model:
               - k_heads: { op: reshape_heads, in: kn_lin, out: k, heads: KvH, head_dim: Hd }
               - v_heads: { op: reshape_heads, in: v_lin, out: v, heads: KvH, head_dim: Hd }
 
-              - rope: { op: apply_rope_pair, in: [q, k], out: [qr, kr], theta: 10000.0 }
-              - k_ctx: { op: repeat_kv, in: kr, out: k_ctx, heads: H, kv_heads: KvH }
-              - v_ctx: { op: repeat_kv, in: v, out: v_ctx, heads: H, kv_heads: KvH }
-              - attn_mask: { op: causal_mask, in: qr, key: k_ctx, out: mask, window: C }
+              - past_len: { op: kv_seq_len, in: past_kv, out: past_len }
+              - rope: { op: apply_rope_pair, in: [q, k], out: [qr, kr], theta: 10000.0, offset: past_len }
+              - kv_cache:
+                  when: use_cache
+                  op: kv_cache_update
+                  in: [past_kv, kr, v]
+                  out: [k_all, v_all, present_kv]
+              - qkv_select: { op: coalesce_triplet, in: [k_all, v_all, kr, v], out: [k_coalesced, v_coalesced] }
+              - k_ctx: { op: repeat_kv, in: k_coalesced, out: k_ctx, heads: H, kv_heads: KvH }
+              - v_ctx: { op: repeat_kv, in: v_coalesced, out: v_ctx, heads: H, kv_heads: KvH }
+              - attn_mask: { when: not use_cache, op: causal_mask, in: qr, key: k_ctx, out: mask, window: C }
               - core: { op: attention, in: [qr, k_ctx, v_ctx], out: ctx_heads, mask: mask, causal: true, scale: Hd ** -0.5 }
               - merge: { op: merge_heads, in: ctx_heads, out: ctx }
               - o_proj: { op: linear, in: ctx, out: a, out_features: D, bias: false }
@@ -65,40 +76,61 @@ model:
 
         - mlp:
             graph:
-              - gate:
-                  op: moe_router_topk
-                  in: x3
-                  out: [router_probs, topk_scores, topk_indices]
-                  num_experts: E
-                  k: Ept
-                  renorm_topk: false
-                  softmax_dtype: float32
-
+              - gate: { op: linear, in: x3, out: router_logits, out_features: E, bias: false }
+              - router_probs: { op: softmax, in: router_logits, out: router_probs, dim: -1, dtype: float32 }
+              - topk: { op: topk, in: router_probs, out: [topk_scores, topk_indices], k: Ept, dim: -1 }
+              - m0: { op: zeros_like, in: x3, out: m }
               - experts:
-                  op: moe_experts_ffn
-                  in: [x3, topk_scores, topk_indices]
-                  out: m
-                  num_experts: E
-                  experts_scope: experts
-                  activation: silu
+                  op: repeat
+                  var: e
+                  range: E
+                  body:
+                    - select:
+                        op: moe_select_tokens
+                        in: [x3, topk_scores, topk_indices]
+                        out: [x_sel, token_idx, topk_pos, sel_scores]
+                        expert: e
+                    - ffn:
+                        op: moe_expert_ffn
+                        in: x_sel
+                        out: x_upd
+                        expert: e
+                        experts_scope: ""
+                        activation: silu
+                    - scatter:
+                        op: moe_scatter_add
+                        in: [m, token_idx, x_upd, sel_scores]
+                        out: m
 
         - res2: { op: add, in: [x2, m], out: y }
 
       outputs:
         y: y
+        present_kv: present_kv
 
   graph:
     - embed_tokens: { op: embedding, in: input_ids, out: x, num_embeddings: V, embedding_dim: D }
+    - init_present_kv: { op: init_list, out: present_key_values }
 
     - layers:
         op: repeat
         var: i
         range: L
         body:
-          - block: { use: olmoe_decoder_block, in: { x: x }, out: { y: x } }
+          - past_kv_i: { op: index, in: [past_key_values, i], out: past_i }
+          - block:
+              use: olmoe_decoder_block
+              in: { x: x, past_kv: past_i, use_cache: use_cache }
+              out: { y: x, present_kv: present_i }
+          - collect_present:
+              when: use_cache
+              op: append
+              in: [present_key_values, present_i]
+              out: present_key_values
 
     - norm: { op: rmsnorm, in: x, out: h_last, eps: 1.0e-5 }
     - lm_head: { op: linear, in: h_last, out: logits, out_features: V, bias: false, weight: lm_head.weight }
 
   outputs:
     logits: logits
+    past_key_values: present_key_values

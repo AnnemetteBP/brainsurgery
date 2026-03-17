@@ -41,7 +41,7 @@ model:
         - ln_1: { op: layernorm, in: x, out: x1, dim: D, eps: 1.0e-5 }
         - attn:
             graph:
-              - c_attn: { op: conv1d, in: x1, out: qkv, out_dim: 3 * D }
+              - c_attn: { op: linear, in: x1, out: qkv, out_features: 3 * D, weight_layout: io }
               - split_qkv: { op: split_last_dim, in: qkv, out: [q_lin, k_lin, v_lin], sizes: [D, D, D] }
               - qkv_heads: { op: reshape_heads_triplet, in: [q_lin, k_lin, v_lin], out: [q, k, v], heads: H, head_dim: Hd }
               - kv_cache:
@@ -52,14 +52,14 @@ model:
               - qkv_select: { op: coalesce_triplet, in: [k_all, v_all, k, v], out: [k_ctx, v_ctx] }
               - core: { op: attention, in: [q, k_ctx, v_ctx], out: ctx_heads, backend: sdpa, causal: true, causal_mask_buffer: bias }
               - merge: { op: merge_heads, in: ctx_heads, out: ctx }
-              - c_proj: { op: conv1d, in: ctx, out: a, out_dim: D }
+              - c_proj: { op: linear, in: ctx, out: a, out_features: D, weight_layout: io }
         - res1: { op: add, in: [x, a], out: x2 }
         - ln_2: { op: layernorm, in: x2, out: x3, dim: D, eps: 1.0e-5 }
         - mlp:
             graph:
-              - c_fc: { op: conv1d, in: x3, out: m1, out_dim: M }
+              - c_fc: { op: linear, in: x3, out: m1, out_features: M, weight_layout: io }
               - act: { op: activation, in: m1, out: m2, kind: gelu_new }
-              - c_proj: { op: conv1d, in: m2, out: m3, out_dim: D }
+              - c_proj: { op: linear, in: m2, out: m3, out_features: D, weight_layout: io }
         - res2: { op: add, in: [x2, m3], out: y }
       outputs:
         y: y
