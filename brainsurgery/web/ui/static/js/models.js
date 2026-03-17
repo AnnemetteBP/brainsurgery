@@ -60,6 +60,7 @@ function createModelsRenderer({
           verbosity: "shape",
           filter: "",
           valid: true,
+          module_health_collapsed: false,
           dump_collapsed: false,
           lastDumpText: "",
           lastDumpSignature: "",
@@ -104,7 +105,11 @@ function createModelsRenderer({
       const dumpToggleBtn = document.createElement("button");
       dumpToggleBtn.className = "secondary-btn toggle-dump-btn";
       dumpToggleBtn.textContent = state.dump_collapsed ? "Show Dump" : "Hide Dump";
+      const healthToggleBtn = document.createElement("button");
+      healthToggleBtn.className = "secondary-btn toggle-health-btn";
+      healthToggleBtn.textContent = state.module_health_collapsed ? "Show Health" : "Hide Health";
       right.appendChild(count);
+      right.appendChild(healthToggleBtn);
       right.appendChild(dumpToggleBtn);
       head.appendChild(left);
       head.appendChild(right);
@@ -149,11 +154,17 @@ function createModelsRenderer({
       const health = document.createElement("div");
       health.className = "module-health";
       _renderModuleHealth(health, state.lastModuleHealth);
+      health.classList.toggle("hidden", !!state.module_health_collapsed);
 
       dumpToggleBtn.addEventListener("click", () => {
         state.dump_collapsed = !state.dump_collapsed;
         pre.classList.toggle("hidden", !!state.dump_collapsed);
         dumpToggleBtn.textContent = state.dump_collapsed ? "Show Dump" : "Hide Dump";
+      });
+      healthToggleBtn.addEventListener("click", () => {
+        state.module_health_collapsed = !state.module_health_collapsed;
+        health.classList.toggle("hidden", !!state.module_health_collapsed);
+        healthToggleBtn.textContent = state.module_health_collapsed ? "Show Health" : "Hide Health";
       });
 
       let debounceHandle = null;

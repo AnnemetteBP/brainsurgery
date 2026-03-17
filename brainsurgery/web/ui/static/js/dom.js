@@ -20,6 +20,8 @@ const optionsPanel = document.getElementById("optionsPanel");
 const transformsPanel = document.getElementById("transformsPanel");
 const modelsPanel = document.getElementById("modelsPanel");
 const insightsPanel = document.getElementById("insightsPanel");
+const insightsPanelBody = document.getElementById("insightsPanelBody");
+const insightsToggleBtn = document.getElementById("insightsToggleBtn");
 const previewImpactRows = document.getElementById("previewImpactRows");
 const diffLeftAlias = document.getElementById("diffLeftAlias");
 const diffRightAlias = document.getElementById("diffRightAlias");
@@ -62,6 +64,8 @@ export {
   diffTopRows,
   fileInput,
   insightsPanel,
+  insightsPanelBody,
+  insightsToggleBtn,
   iteratingProgressEl,
   loadBtn,
   loadPanel,

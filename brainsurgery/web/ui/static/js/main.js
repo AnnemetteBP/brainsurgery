@@ -15,6 +15,8 @@ import {
   diffTopRows,
   fileInput,
   insightsPanel,
+  insightsPanelBody,
+  insightsToggleBtn,
   iteratingProgressEl,
   loadBtn,
   loadPanel,
@@ -413,6 +415,14 @@ optionsToggleBtn.addEventListener("click", () => {
   optionsPanelBody.classList.toggle("hidden", collapsing);
   optionsToggleBtn.textContent = collapsing ? "Expand" : "Collapse";
 });
+
+if (insightsToggleBtn && insightsPanelBody) {
+  insightsToggleBtn.addEventListener("click", () => {
+    const collapsing = !insightsPanelBody.classList.contains("hidden");
+    insightsPanelBody.classList.toggle("hidden", collapsing);
+    insightsToggleBtn.textContent = collapsing ? "Expand" : "Collapse";
+  });
+}
 
 clearOptionsBtn.addEventListener("click", () => {
   if (appState.selectedTransform === "load") {

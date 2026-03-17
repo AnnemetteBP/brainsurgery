@@ -121,6 +121,13 @@
   font-size: 11px;
 }
 
+.model-head .toggle-health-btn {
+  margin: 0;
+  width: auto;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
 .model-controls {
   padding: 6px 8px;
   border-bottom: 1px solid var(--line);
@@ -290,7 +297,8 @@
 #optionsToggleBtn,
 #copyResultsBtn,
 #resultsToggleBtn,
-#clearResultsBtn {
+#clearResultsBtn,
+#insightsToggleBtn {
   margin: 0;
   width: auto;
   padding: 6px 10px;
