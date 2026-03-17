@@ -7,3 +7,5 @@
 - [OLY Specification](/Users/petersk/Nobackup/brainsurgery/docs/oly-spec.md)
 - [OLY YAML Grammar](/Users/petersk/Nobackup/brainsurgery/docs/oly-yaml-grammar.md)
 - [OLY Conformance Matrix](/Users/petersk/Nobackup/brainsurgery/docs/oly-conformance.md)
+- [SYNAPSE/1 Specification](/Users/petersk/Nobackup/brainsurgery/docs/synapse-spec.md)
+  - Declarative high-level PyTorch model assembly language and lowering rules.

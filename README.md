@@ -71,6 +71,8 @@ Detailed project documentation is in `docs/`:
   - Exact YAML data model representable through OLY.
 - [OLY Conformance Matrix](/Users/petersk/Nobackup/brainsurgery/docs/oly-conformance.md)
   - Acceptance/rejection cases and round-trip guarantees.
+- [SYNAPSE/1 Specification](/Users/petersk/Nobackup/brainsurgery/docs/synapse-spec.md)
+  - Declarative high-level model assembly language for PyTorch-oriented architectures.
 
 ## CLI
 `brainsurgery [OPTIONS] [CONFIG_ITEMS]...`
