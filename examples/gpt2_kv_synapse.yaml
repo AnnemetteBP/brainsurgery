@@ -1,0 +1,96 @@
+synapse: 1
+
+model:
+  name: GPT2CLM
+  model_type: gpt2
+  architectures: [GPT2LMHeadModel]
+
+  naming:
+    root: ""
+    separator: "."
+    infer_params: true
+
+  symbols:
+    B: null
+    T: null
+    D: 768
+    V: 50257
+    C: 1024
+    L: 12
+    H: 12
+    Hd: 64
+    M: 3072
+
+  params:
+    activation: gelu_new
+    layer_norm_epsilon: 1.0e-5
+    attn_backend: sdpa
+
+  inputs:
+    input_ids: { shape: [B, T], dtype: int64 }
+    past_key_values: { type: kv_cache, optional: true }
+    use_cache: { dtype: bool, optional: true }
+
+  blocks:
+    gpt2_block:
+      inputs:
+        x: { shape: [B, T, D] }
+        past_kv: { type: kv_cache_layer, optional: true }
+        use_cache: { dtype: bool, optional: true }
+      graph:
+        - ln_1: { op: layernorm, in: x, out: x1, dim: D, eps: 1.0e-5 }
+        - attn:
+            graph:
+              - c_attn: { op: conv1d, in: x1, out: qkv, out_dim: 3 * D }
+              - split_qkv: { op: split_last_dim, in: qkv, out: [q_lin, k_lin, v_lin], sizes: [D, D, D] }
+              - qkv_heads: { op: reshape_heads_triplet, in: [q_lin, k_lin, v_lin], out: [q, k, v], heads: H, head_dim: Hd }
+              - kv_cache:
+                  when: use_cache
+                  op: kv_cache_update
+                  in: [past_kv, k, v]
+                  out: [k_all, v_all, present_kv]
+              - qkv_select: { op: coalesce_triplet, in: [k_all, v_all, k, v], out: [k_ctx, v_ctx] }
+              - core: { op: attention, in: [q, k_ctx, v_ctx], out: ctx_heads, backend: sdpa, causal: true, causal_mask_buffer: bias }
+              - merge: { op: merge_heads, in: ctx_heads, out: ctx }
+              - c_proj: { op: conv1d, in: ctx, out: a, out_dim: D }
+        - res1: { op: add, in: [x, a], out: x2 }
+        - ln_2: { op: layernorm, in: x2, out: x3, dim: D, eps: 1.0e-5 }
+        - mlp:
+            graph:
+              - c_fc: { op: conv1d, in: x3, out: m1, out_dim: M }
+              - act: { op: activation, in: m1, out: m2, kind: gelu_new }
+              - c_proj: { op: conv1d, in: m2, out: m3, out_dim: D }
+        - res2: { op: add, in: [x2, m3], out: y }
+      outputs:
+        y: y
+        present_kv: present_kv
+
+  graph:
+    - wte: { op: embedding, in: input_ids, out: tok, num_embeddings: V, embedding_dim: D }
+    - pos_ids: { op: arange_positions, in: input_ids, out: pos_ids, max_len: C }
+    - wpe: { op: embedding, in: pos_ids, out: pos, num_embeddings: C, embedding_dim: D }
+    - add_embed: { op: add, in: [tok, pos], out: x }
+    - init_present_kv: { op: init_list, out: present_key_values }
+
+    - h:
+        op: repeat
+        var: i
+        range: L
+        body:
+          - past_kv_i: { op: index, in: [past_key_values, i], out: past_i }
+          - block:
+              use: gpt2_block
+              in: { x: x, past_kv: past_i, use_cache: use_cache }
+              out: { y: x, present_kv: present_i }
+          - collect_present:
+              when: use_cache
+              op: append
+              in: [present_key_values, present_i]
+              out: present_key_values
+
+    - ln_f: { op: layernorm, in: x, out: h_last, dim: D, eps: 1.0e-5 }
+    - lm_head: { op: linear, in: h_last, out: logits, out_dim: V, bias: false, tie_weight: wte.weight }
+
+  outputs:
+    logits: logits
+    past_key_values: present_key_values

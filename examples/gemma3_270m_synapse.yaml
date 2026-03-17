@@ -1,0 +1,109 @@
+synapse: 1
+
+model:
+  name: Gemma3ForCausalLM_270M
+  model_type: gemma3
+  architectures: [Gemma3ForCausalLM]
+
+  naming:
+    root: ""
+    separator: "."
+    infer_params: true
+
+  # Values aligned with Gemma-3 270M config family.
+  symbols:
+    B: null
+    T: null
+    D: 640
+    V: 262208
+    C: 32768
+    L: 18
+    H: 4
+    KvH: 1
+    Hd: 256
+    QD: 1024
+    M: 2048
+    W: 512
+
+  params:
+    activation: gelu_pytorch_tanh
+    norm_eps: 1.0e-6
+    attn_backend: sdpa
+    rope_theta: 1000000.0
+    sliding_window: 512
+
+  inputs:
+    input_ids: { shape: [B, T], dtype: int64 }
+
+  blocks:
+    gemma3_block:
+      inputs:
+        x: { shape: [B, T, D] }
+        i: { dtype: int64 }
+      graph:
+        - input_layernorm: { op: rmsnorm, in: x, out: x_norm, eps: 1.0e-6, cast_float: true, unit_offset: true }
+        - self_attn:
+            graph:
+              - q_proj: { op: linear, in: x_norm, out: q_lin, out_features: QD, bias: false }
+              - k_proj: { op: linear, in: x_norm, out: k_lin, out_features: KvH * Hd, bias: false }
+              - v_proj: { op: linear, in: x_norm, out: v_lin, out_features: KvH * Hd, bias: false }
+              - q_heads: { op: reshape_heads, in: q_lin, out: q, heads: H, head_dim: Hd }
+              - k_heads: { op: reshape_heads, in: k_lin, out: k, heads: KvH, head_dim: Hd }
+              - v_heads: { op: reshape_heads, in: v_lin, out: v, heads: KvH, head_dim: Hd }
+              - q_norm: { op: rmsnorm, in: q, out: qn, eps: 1.0e-6, cast_float: true, unit_offset: true }
+              - k_norm: { op: rmsnorm, in: k, out: kn, eps: 1.0e-6, cast_float: true, unit_offset: true }
+              - rope:
+                  op: apply_rope_pair
+                  in: [qn, kn]
+                  out: [qr, kr]
+                  theta: 10000.0 + (1000000.0 - 10000.0) * (((i + 1) % 6) == 0)
+              - k_ctx: { op: repeat_kv, in: kr, out: k_ctx, heads: H, kv_heads: KvH }
+              - v_ctx: { op: repeat_kv, in: v, out: v_ctx, heads: H, kv_heads: KvH }
+              - attn_mask:
+                  op: causal_mask
+                  in: qr
+                  key: k_ctx
+                  out: mask
+                  window: W + (C - W) * (((i + 1) % 6) == 0)
+              - core:
+                  op: attention
+                  in: [qr, k_ctx, v_ctx]
+                  out: ctx_heads
+                  mask: mask
+                  backend: sdpa
+                  causal: true
+                  scale: 0.0625
+                  rope_theta: 1000000.0
+                  sliding_window: 512
+              - merge: { op: merge_heads, in: ctx_heads, out: ctx }
+              - o_proj: { op: linear, in: ctx, out: attn_raw, out_features: D, bias: false }
+        - post_attention_layernorm: { op: rmsnorm, in: attn_raw, out: attn, eps: 1.0e-6, cast_float: true, unit_offset: true }
+        - res1: { op: add, in: [x, attn], out: x2 }
+        - pre_feedforward_layernorm: { op: rmsnorm, in: x2, out: x3, eps: 1.0e-6, cast_float: true, unit_offset: true }
+        - mlp:
+            graph:
+              - gate_proj: { op: linear, in: x3, out: g, out_features: M, bias: false }
+              - up_proj: { op: linear, in: x3, out: u, out_features: M, bias: false }
+              - gate_act: { op: activation, in: g, out: g_act, kind: gelu_pytorch_tanh }
+              - gated: { op: mul, in: [g_act, u], out: gu }
+              - down_proj: { op: linear, in: gu, out: m_raw, out_features: D, bias: false }
+        - post_feedforward_layernorm: { op: rmsnorm, in: m_raw, out: m, eps: 1.0e-6, cast_float: true, unit_offset: true }
+        - res2: { op: add, in: [x2, m], out: y }
+      outputs:
+        y: y
+
+  graph:
+    - embed_tokens: { op: embedding, in: input_ids, out: x, num_embeddings: V, embedding_dim: D, scale: D ** 0.5 }
+
+    - layers:
+        op: repeat
+        var: i
+        range: L
+        body:
+          - block: { use: gemma3_block, in: { x: x, i: i }, out: { y: x } }
+
+    - norm: { op: rmsnorm, in: x, out: h_last, eps: 1.0e-6, cast_float: true, unit_offset: true }
+    - lm_head: { op: linear, in: h_last, out: logits, out_features: V, bias: false, tie_weight: embed_tokens.weight }
+
+  outputs:
+    logits: logits
