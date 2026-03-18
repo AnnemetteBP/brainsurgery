@@ -3,33 +3,32 @@ D   = 768    -- hidden dimensions
 L   = 12     -- number of layers
 H   = 12     -- number of attention heads
 V   = 520257 -- vocab size
-EPS = 1e-05  -- eps for layer norms
 
 gpt2_block :: Tensor[B,S,D] -> ?Tensor[B,S] -> Tensor[B,S,D]
-gpt2_block x attention_mask = do
-  q, k, v <- layernorm@ln_1 x eps=EPS |>
-    linear@attn.c_attn out_features=3*D weight_layout=io bias=true |>
-    split_last sizes=[D,D,D] |>
+gpt2_block x attn_mask = do
+  q, k, v <- layernorm@ln_1 x |>
+    linear@attn.c_attn out_features=3*D transpose=true bias=true |>
+    split_last parts=3 |>
     reshape_heads_triplet heads=H
-  causal_attn_mask <- causal_mask q key=k window=T padding_mask=attention_mask
+  causal_attn_mask <- causal_mask q key=k window=T padding_mask=attn_mask
   a <- attention q k v backend=sdpa causal=true mask=causal_attn_mask |>
     merge_heads |>
-    linear@attn.c_proj out_features=D weight_layout=io bias=true
+    linear@attn.c_proj out_features=D transpose=true bias=true
   x <- x + a
-  m <- layernorm@ln_2 x eps=EPS |>
-    linear@mlp.c_fc out_features=4*D weight_layout=io bias=true |>
+  m <- layernorm@ln_2 x |>
+    linear@mlp.c_fc out_features=4*D transpose=true bias=true |>
     act::gelu_new |>
-    linear@mlp.c_proj out_features=D weight_layout=io bias=true
+    linear@mlp.c_proj out_features=D transpose=true bias=true
   return x + m
 
 gpt2 :: TokenIds[B,S] -> ?Tensor[B,S] -> Tensor[B,S,V]
-gpt2 input_ids attention_mask = do
-  tok <- embedding@wte input_ids embedding_dim=D
-  pos <- arange_positions input_ids attention_mask=attention_mask max_len=T |>
-    embedding@wpe num_embeddings=T embedding_dim=D
+gpt2 input_ids attn_mask = do
+  tok <- embedding@wte input_ids dim=D
+  pos <- arange_positions input_ids attention_mask=attn_mask |>
+    embedding@wpe dim=D
   x <- tok + pos
-  for@h i <- [0..L] do
-    x <- gpt2_block x attention_mask
-  logits <- layernorm@ln_f x dim=D eps=EPS |>
+  for@h i <- [0..L) do
+    x <- gpt2_block x attn_mask
+  logits <- layernorm@ln_f x |>
     linear tie_weight=wte.weight
   return logits

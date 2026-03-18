@@ -24,7 +24,7 @@ module olmoe_decoder_block(x, past_kv?, use_cache?) -> (y, present_kv) do
   router_probs <- softmax router_logits dim=-1 dtype=float32
   topk_scores, topk_indices <- topk router_probs k=8 dim=-1
   m <- zeros_like x3
-  for@mlp.experts e <- [0..64] do
+  for@mlp.experts e <- [0..63] do
     x_sel, token_idx, topk_pos, sel_scores <- moe_select_tokens x3 topk_scores topk_indices expert=e
     x_upd <- moe_expert_ffn x_sel expert=e experts_scope= activation=silu
     m <- moe_scatter_add m token_idx x_upd sel_scores
@@ -34,7 +34,7 @@ module olmoe_decoder_block(x, past_kv?, use_cache?) -> (y, present_kv) do
 module olmoe(input_ids, past_key_values?, use_cache?) -> (logits, past_key_values) do
   x <- embedding@model.embed_tokens input_ids num_embeddings=50304 embedding_dim=2048
   present_key_values <- init_list
-  for@model.layers i <- [0..16] do
+  for@model.layers i <- [0..15] do
     past_i <- index past_key_values i
     x, present_i <- olmoe_decoder_block x past_i use_cache
     present_key_values <- append present_key_values present_i when=use_cache

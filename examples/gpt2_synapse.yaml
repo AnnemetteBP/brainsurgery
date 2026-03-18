@@ -3,7 +3,7 @@ model:
   inputs:
     input_ids:
       optional: false
-    attention_mask:
+    attn_mask:
       optional: true
   graph:
   - wte:
@@ -15,13 +15,11 @@ model:
       op: arange_positions
       out: pipe_1
       in: input_ids
-      attention_mask: attention_mask
-      max_len: MAX_T
+      attention_mask: attn_mask
   - wpe:
       op: embedding
       out: pos
       in: pipe_1
-      num_embeddings: MAX_T
       embedding_dim: D
   - n_op_3:
       op: add
@@ -32,13 +30,13 @@ model:
   - h:
       op: repeat
       var: i
-      range: L
+      range: (L-1) + 1
       body:
       - n_use_4:
           use: gpt2_block
           in:
             x: x
-            attention_mask: attention_mask
+            attn_mask: attn_mask
           out:
             out_0: x
   - ln_f:
@@ -46,7 +44,6 @@ model:
       out: pipe_5
       in: x
       dim: D
-      eps: EPS
   - n_op_6:
       op: linear
       out: logits
@@ -56,27 +53,25 @@ model:
   outputs:
     logits: logits
   symbols:
-    MAX_T: 1024
+    T: 1024
     D: 768
     L: 12
     H: 12
     V: null
-    EPS: 1.0e-05
     B: null
-    T: null
+    S: null
   blocks:
     gpt2_block:
       inputs:
         x:
           optional: false
-        attention_mask:
+        attn_mask:
           optional: true
       graph:
       - ln_1:
           op: layernorm
           out: pipe_1
           in: x
-          eps: EPS
           dim: D
       - attn:
           graph:
@@ -85,8 +80,8 @@ model:
               out: pipe_2
               in: pipe_1
               out_features: 3*D
-              weight_layout: io
               bias: true
+              weight_layout: io
       - n_op_6:
           op: split_last
           out:
@@ -94,7 +89,7 @@ model:
           - pipe_4
           - pipe_5
           in: pipe_2
-          sizes: '[D,D,D]'
+          parts: 3
       - n_op_7:
           op: reshape_heads_triplet
           out:
@@ -108,11 +103,11 @@ model:
           heads: H
       - n_op_8:
           op: causal_mask
-          out: attn_mask
+          out: causal_attn_mask
           in: q
           key: k
-          window: MAX_T
-          padding_mask: attention_mask
+          window: T
+          padding_mask: attn_mask
       - n_op_10:
           op: attention
           out: pipe_9
@@ -122,7 +117,7 @@ model:
           - v
           backend: sdpa
           causal: true
-          mask: attn_mask
+          mask: causal_attn_mask
       - n_op_12:
           op: merge_heads
           out: pipe_11
@@ -134,8 +129,8 @@ model:
               out: a
               in: pipe_11
               out_features: D
-              weight_layout: io
               bias: true
+              weight_layout: io
       - n_op_13:
           op: add
           out: x
@@ -146,7 +141,6 @@ model:
           op: layernorm
           out: pipe_14
           in: x
-          eps: EPS
           dim: D
       - mlp:
           graph:
@@ -155,8 +149,8 @@ model:
               out: pipe_15
               in: pipe_14
               out_features: 4*D
-              weight_layout: io
               bias: true
+              weight_layout: io
       - n_op_17:
           op: activation
           in: pipe_15
@@ -169,8 +163,8 @@ model:
               out: m
               in: pipe_16
               out_features: D
-              weight_layout: io
               bias: true
+              weight_layout: io
       - n_op_18:
           op: add
           out: out_0
