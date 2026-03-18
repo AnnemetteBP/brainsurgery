@@ -1,109 +1,239 @@
 synapse: 1
-
 model:
-  name: Gemma3ForCausalLM_270M
-  model_type: gemma3
-  architectures: [Gemma3ForCausalLM]
-
-  naming:
-    root: ""
-    separator: "."
-    infer_params: true
-
-  # Values aligned with Gemma-3 270M config family.
+  inputs:
+    input_ids:
+      optional: false
+    attn_mask:
+      optional: true
+  graph:
+  - embed_tokens:
+      op: embedding
+      out: x
+      in: input_ids
+      num_embeddings: V
+      scale: 25.298221281347036
+      embedding_dim: D
+  - layers:
+      op: repeat
+      var: i
+      range: L
+      body:
+      - n_use_1:
+          use: gemma3_block
+          in:
+            x: x
+            i: i
+            attn_mask: attn_mask
+          out:
+            out_0: x
+  - norm:
+      op: rmsnorm
+      out: pipe_2
+      in: x
+      cast_float: true
+      unit_offset: true
+      dim: D
+  - n_op_3:
+      op: linear
+      out: logits
+      in: pipe_2
+      out_features: V
+      tie_weight: embed_tokens.weight
+  outputs:
+    logits: logits
   symbols:
-    B: null
-    T: null
     D: 640
-    V: 262208
-    C: 32768
+    V: null
     L: 18
     H: 4
-    KvH: 1
-    Hd: 256
-    QD: 1024
-    M: 2048
-    W: 512
-
-  params:
-    activation: gelu_pytorch_tanh
-    norm_eps: 1.0e-6
-    attn_backend: sdpa
-    rope_theta: 1000000.0
-    sliding_window: 512
-
-  inputs:
-    input_ids: { shape: [B, T], dtype: int64 }
-
+    KVH: 1
+    B: null
+    S: null
   blocks:
     gemma3_block:
       inputs:
-        x: { shape: [B, T, D] }
-        i: { dtype: int64 }
+        x:
+          optional: false
+        i:
+          optional: false
+        attn_mask:
+          optional: true
       graph:
-        - input_layernorm: { op: rmsnorm, in: x, out: x_norm, eps: 1.0e-6, cast_float: true, unit_offset: true }
-        - self_attn:
-            graph:
-              - q_proj: { op: linear, in: x_norm, out: q_lin, out_features: QD, bias: false }
-              - k_proj: { op: linear, in: x_norm, out: k_lin, out_features: KvH * Hd, bias: false }
-              - v_proj: { op: linear, in: x_norm, out: v_lin, out_features: KvH * Hd, bias: false }
-              - q_heads: { op: reshape_heads, in: q_lin, out: q, heads: H, head_dim: Hd }
-              - k_heads: { op: reshape_heads, in: k_lin, out: k, heads: KvH, head_dim: Hd }
-              - v_heads: { op: reshape_heads, in: v_lin, out: v, heads: KvH, head_dim: Hd }
-              - q_norm: { op: rmsnorm, in: q, out: qn, eps: 1.0e-6, cast_float: true, unit_offset: true }
-              - k_norm: { op: rmsnorm, in: k, out: kn, eps: 1.0e-6, cast_float: true, unit_offset: true }
-              - rope:
-                  op: apply_rope_pair
-                  in: [qn, kn]
-                  out: [qr, kr]
-                  theta: 10000.0 + (1000000.0 - 10000.0) * (((i + 1) % 6) == 0)
-              - k_ctx: { op: repeat_kv, in: kr, out: k_ctx, heads: H, kv_heads: KvH }
-              - v_ctx: { op: repeat_kv, in: v, out: v_ctx, heads: H, kv_heads: KvH }
-              - attn_mask:
-                  op: causal_mask
-                  in: qr
-                  key: k_ctx
-                  out: mask
-                  window: W + (C - W) * (((i + 1) % 6) == 0)
-              - core:
-                  op: attention
-                  in: [qr, k_ctx, v_ctx]
-                  out: ctx_heads
-                  mask: mask
-                  backend: sdpa
-                  causal: true
-                  scale: 0.0625
-                  rope_theta: 1000000.0
-                  sliding_window: 512
-              - merge: { op: merge_heads, in: ctx_heads, out: ctx }
-              - o_proj: { op: linear, in: ctx, out: attn_raw, out_features: D, bias: false }
-        - post_attention_layernorm: { op: rmsnorm, in: attn_raw, out: attn, eps: 1.0e-6, cast_float: true, unit_offset: true }
-        - res1: { op: add, in: [x, attn], out: x2 }
-        - pre_feedforward_layernorm: { op: rmsnorm, in: x2, out: x3, eps: 1.0e-6, cast_float: true, unit_offset: true }
-        - mlp:
-            graph:
-              - gate_proj: { op: linear, in: x3, out: g, out_features: M, bias: false }
-              - up_proj: { op: linear, in: x3, out: u, out_features: M, bias: false }
-              - gate_act: { op: activation, in: g, out: g_act, kind: gelu_pytorch_tanh }
-              - gated: { op: mul, in: [g_act, u], out: gu }
-              - down_proj: { op: linear, in: gu, out: m_raw, out_features: D, bias: false }
-        - post_feedforward_layernorm: { op: rmsnorm, in: m_raw, out: m, eps: 1.0e-6, cast_float: true, unit_offset: true }
-        - res2: { op: add, in: [x2, m], out: y }
+      - input_layernorm:
+          op: rmsnorm
+          out: x_norm
+          in: x
+          cast_float: true
+          unit_offset: true
+          dim: D
+      - self_attn:
+          graph:
+          - q_proj:
+              op: linear
+              out: q_lin
+              in: x_norm
+              out_features: 1024
+      - self_attn:
+          graph:
+          - k_proj:
+              op: linear
+              out: k_lin
+              in: x_norm
+              out_features: 256
+      - self_attn:
+          graph:
+          - v_proj:
+              op: linear
+              out: v_lin
+              in: x_norm
+              out_features: 256
+      - n_op_1:
+          op: reshape_heads
+          out: q
+          in: q_lin
+          heads: H
+      - n_op_2:
+          op: reshape_heads
+          out: k
+          in: k_lin
+          heads: KVH
+      - n_op_3:
+          op: reshape_heads
+          out: v
+          in: v_lin
+          heads: KVH
+      - self_attn:
+          graph:
+          - q_norm:
+              op: rmsnorm
+              out: qn
+              in: q
+              cast_float: true
+              unit_offset: true
+      - self_attn:
+          graph:
+          - k_norm:
+              op: rmsnorm
+              out: kn
+              in: k
+              cast_float: true
+              unit_offset: true
+      - n_op_4:
+          op: apply_rope_pair
+          out:
+          - qr
+          - kr
+          in:
+          - qn
+          - kn
+          theta: 10000.0 + (1000000.0 - 10000.0) * (((i + 1) % 6) == 0)
+      - n_op_5:
+          op: repeat_kv
+          out: k_ctx
+          in: kr
+          heads: H
+          kv_heads: KVH
+      - n_op_6:
+          op: repeat_kv
+          out: v_ctx
+          in: v
+          heads: H
+          kv_heads: KVH
+      - n_op_7:
+          op: causal_mask
+          out: mask
+          in: qr
+          key: k_ctx
+          window: 512 + (32768 - 512) * (((i + 1) % 6) == 0)
+          padding_mask: attn_mask
+      - n_op_9:
+          op: attention
+          out: pipe_8
+          in:
+          - qr
+          - k_ctx
+          - v_ctx
+          mask: mask
+          backend: sdpa
+          causal: true
+          scale: 0.0625
+          rope_theta: 1000000.0
+          sliding_window: 512
+      - n_op_11:
+          op: merge_heads
+          out: pipe_10
+          in: pipe_8
+      - self_attn:
+          graph:
+          - o_proj:
+              op: linear
+              out: pipe_12
+              in: pipe_10
+              out_features: D
+      - post_attention_layernorm:
+          op: rmsnorm
+          out: attn
+          in: pipe_12
+          cast_float: true
+          unit_offset: true
+          dim: D
+      - n_op_13:
+          op: add
+          out: x2
+          in:
+          - x
+          - attn
+      - pre_feedforward_layernorm:
+          op: rmsnorm
+          out: x3
+          in: x2
+          cast_float: true
+          unit_offset: true
+          dim: D
+      - mlp:
+          graph:
+          - gate_proj:
+              op: linear
+              out: g
+              in: x3
+              out_features: 2048
+      - mlp:
+          graph:
+          - up_proj:
+              op: linear
+              out: u
+              in: x3
+              out_features: 2048
+      - n_op_15:
+          op: activation
+          in: g
+          out: pipe_14
+          kind: gelu_pytorch_tanh
+      - n_op_17:
+          op: mul
+          out: pipe_16
+          in:
+          - pipe_14
+          - u
+      - mlp:
+          graph:
+          - down_proj:
+              op: linear
+              out: pipe_18
+              in: pipe_16
+              out_features: D
+      - post_feedforward_layernorm:
+          op: rmsnorm
+          out: m
+          in: pipe_18
+          cast_float: true
+          unit_offset: true
+          dim: D
+      - n_op_19:
+          op: add
+          out: out_0
+          in:
+          - x2
+          - m
       outputs:
-        y: y
-
-  graph:
-    - embed_tokens: { op: embedding, in: input_ids, out: x, num_embeddings: V, embedding_dim: D, scale: D ** 0.5 }
-
-    - layers:
-        op: repeat
-        var: i
-        range: L
-        body:
-          - block: { use: gemma3_block, in: { x: x, i: i }, out: { y: x } }
-
-    - norm: { op: rmsnorm, in: x, out: h_last, eps: 1.0e-6, cast_float: true, unit_offset: true }
-    - lm_head: { op: linear, in: h_last, out: logits, out_features: V, bias: false, tie_weight: embed_tokens.weight }
-
-  outputs:
-    logits: logits
+        out_0: out_0
