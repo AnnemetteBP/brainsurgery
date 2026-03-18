@@ -5,13 +5,14 @@ H   = 12     -- number of attention heads
 V   = 520257 -- vocab size
 EPS = 1e-05  -- eps for layer norms
 
-gpt2_block :: Tensor[B,T,D] -> Tensor[B,T,D]
-gpt2_block x = do
-  a <- layernorm@ln_1 x eps=EPS |>
+gpt2_block :: Tensor[B,S,D] -> ?Tensor[B,S] -> Tensor[B,S,D]
+gpt2_block x attention_mask = do
+  q, k, v <- layernorm@ln_1 x eps=EPS |>
     linear@attn.c_attn out_features=3*D weight_layout=io bias=true |>
     split_last sizes=[D,D,D] |>
-    reshape_heads_triplet heads=H |>
-    attention backend=sdpa causal=true causal_mask_buffer=bias |>
+    reshape_heads_triplet heads=H
+  causal_attn_mask <- causal_mask q key=k window=T padding_mask=attention_mask
+  a <- attention q k v backend=sdpa causal=true mask=causal_attn_mask |>
     merge_heads |>
     linear@attn.c_proj out_features=D weight_layout=io bias=true
   x <- x + a
@@ -21,14 +22,14 @@ gpt2_block x = do
     linear@mlp.c_proj out_features=D weight_layout=io bias=true
   return x + m
 
-gpt2 :: TokenIds[B,T] -> Tensor[B,T,V]
-gpt2 input_ids = do
-  tok <- embedding@wte input_ids num_embeddings=V embedding_dim=D
-  pos <- arange_positions input_ids max_len=T |>
+gpt2 :: TokenIds[B,S] -> ?Tensor[B,S] -> Tensor[B,S,V]
+gpt2 input_ids attention_mask = do
+  tok <- embedding@wte input_ids embedding_dim=D
+  pos <- arange_positions input_ids attention_mask=attention_mask max_len=T |>
     embedding@wpe num_embeddings=T embedding_dim=D
   x <- tok + pos
   for@h i <- [0..L] do
-    x <- gpt2_block x
+    x <- gpt2_block x attention_mask
   logits <- layernorm@ln_f x dim=D eps=EPS |>
     linear tie_weight=wte.weight
   return logits
