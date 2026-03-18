@@ -1,136 +1,298 @@
 synapse: 1
-
 model:
-  name: OLMoE1B7B
-  model_type: olmoe
-  architectures: [OlmoeForCausalLM]
-
-  naming:
-    root: ""
-    separator: "."
-    infer_params: true
-
+  inputs:
+    input_ids:
+      optional: false
+    attn_mask:
+      optional: true
+    past_key_values:
+      optional: true
+    use_cache:
+      optional: true
+  graph:
+  - n_op_1:
+      op: arange_positions
+      out: pos_ids
+      in: input_ids
+      attention_mask: attn_mask
+  - model:
+      graph:
+      - embed_tokens:
+          op: embedding
+          out: x
+          in: input_ids
+          num_embeddings: V
+          embedding_dim: D
+  - n_op_2:
+      op: init_list
+      out: present_key_values
+  - model:
+      graph:
+      - layers:
+          op: repeat
+          var: i
+          range: L
+          body:
+          - n_op_3:
+              op: index
+              out: past_i
+              in:
+              - past_key_values
+              - i
+          - n_use_4:
+              use: olmoe_decoder_block
+              in:
+                x: x
+                pos_ids: pos_ids
+                attn_mask: attn_mask
+                past_kv: past_i
+                use_cache: use_cache
+              out:
+                'y': x
+                present_kv: present_i
+          - n_op_5:
+              op: append
+              out: present_key_values
+              in:
+              - present_key_values
+              - present_i
+              when: use_cache
+  - model:
+      graph:
+      - norm:
+          op: rmsnorm
+          out: pipe_6
+          in: x
+          eps: EPS
+          dim: D
+  - n_op_7:
+      op: linear
+      out: logits
+      in: pipe_6
+      out_features: V
+      tie_weight: lm_head.weight
+  outputs:
+    logits: logits
+    present_key_values: present_key_values
   symbols:
-    B: null
-    T: null
     D: 2048
     V: 50304
     L: 16
     H: 16
-    KvH: 16
-    Hd: 128
-    M: 1024
+    HD: 128
     E: 64
-    Ept: 8
+    EPT: 8
     C: 4096
-
-  params:
-    activation: silu
-    rms_eps: 1.0e-5
-    rope_theta: 10000.0
-
-  inputs:
-    input_ids: { shape: [B, T], dtype: int64 }
-    past_key_values: { type: kv_cache, optional: true }
-    use_cache: { dtype: bool, optional: true }
-
+    EPS: 1.0e-05
+    B: null
+    S: null
   blocks:
     olmoe_decoder_block:
       inputs:
-        x: { shape: [B, T, D] }
-        past_kv: { type: kv_cache_layer, optional: true }
-        use_cache: { dtype: bool, optional: true }
+        x:
+          optional: false
+        pos_ids:
+          optional: false
+        attn_mask:
+          optional: true
+        past_kv:
+          optional: true
+        use_cache:
+          optional: true
       graph:
-        - input_layernorm: { op: rmsnorm, in: x, out: x_norm, eps: 1.0e-5 }
-
-        - self_attn:
-            graph:
-              - q_proj: { op: linear, in: x_norm, out: q_lin, out_features: D, bias: false }
-              - k_proj: { op: linear, in: x_norm, out: k_lin, out_features: D, bias: false }
-              - v_proj: { op: linear, in: x_norm, out: v_lin, out_features: D, bias: false }
-
-              - q_norm: { op: rmsnorm, in: q_lin, out: qn_lin, eps: 1.0e-5 }
-              - k_norm: { op: rmsnorm, in: k_lin, out: kn_lin, eps: 1.0e-5 }
-
-              - q_heads: { op: reshape_heads, in: qn_lin, out: q, heads: H, head_dim: Hd }
-              - k_heads: { op: reshape_heads, in: kn_lin, out: k, heads: KvH, head_dim: Hd }
-              - v_heads: { op: reshape_heads, in: v_lin, out: v, heads: KvH, head_dim: Hd }
-
-              - past_len: { op: kv_seq_len, in: past_kv, out: past_len }
-              - rope: { op: apply_rope_pair, in: [q, k], out: [qr, kr], theta: 10000.0, offset: past_len }
-              - kv_cache:
-                  when: use_cache
-                  op: kv_cache_update
-                  in: [past_kv, kr, v]
-                  out: [k_all, v_all, present_kv]
-              - qkv_select: { op: coalesce_triplet, in: [k_all, v_all, kr, v], out: [k_coalesced, v_coalesced] }
-              - k_ctx: { op: repeat_kv, in: k_coalesced, out: k_ctx, heads: H, kv_heads: KvH }
-              - v_ctx: { op: repeat_kv, in: v_coalesced, out: v_ctx, heads: H, kv_heads: KvH }
-              - attn_mask: { when: not use_cache, op: causal_mask, in: qr, key: k_ctx, out: mask, window: C }
-              - core: { op: attention, in: [qr, k_ctx, v_ctx], out: ctx_heads, mask: mask, causal: true, scale: Hd ** -0.5 }
-              - merge: { op: merge_heads, in: ctx_heads, out: ctx }
-              - o_proj: { op: linear, in: ctx, out: a, out_features: D, bias: false }
-
-        - res1: { op: add, in: [x, a], out: x2 }
-        - post_attention_layernorm: { op: rmsnorm, in: x2, out: x3, eps: 1.0e-5 }
-
-        - mlp:
-            graph:
-              - gate: { op: linear, in: x3, out: router_logits, out_features: E, bias: false }
-              - router_probs: { op: softmax, in: router_logits, out: router_probs, dim: -1, dtype: float32 }
-              - topk: { op: topk, in: router_probs, out: [topk_scores, topk_indices], k: Ept, dim: -1 }
-              - m0: { op: zeros_like, in: x3, out: m }
-              - experts:
-                  op: repeat
-                  var: e
-                  range: E
-                  body:
-                    - select:
-                        op: moe_select_tokens
-                        in: [x3, topk_scores, topk_indices]
-                        out: [x_sel, token_idx, topk_pos, sel_scores]
-                        expert: e
-                    - ffn:
-                        op: moe_expert_ffn
-                        in: x_sel
-                        out: x_upd
-                        expert: e
-                        experts_scope: ""
-                        activation: silu
-                    - scatter:
-                        op: moe_scatter_add
-                        in: [m, token_idx, x_upd, sel_scores]
-                        out: m
-
-        - res2: { op: add, in: [x2, m], out: y }
-
+      - input_layernorm:
+          op: rmsnorm
+          out: x_norm
+          in: x
+          eps: EPS
+          dim: D
+      - self_attn:
+          graph:
+          - q_proj:
+              op: linear
+              out: q_lin
+              in: x_norm
+              out_features: D
+      - self_attn:
+          graph:
+          - k_proj:
+              op: linear
+              out: k_lin
+              in: x_norm
+              out_features: D
+      - self_attn:
+          graph:
+          - v_proj:
+              op: linear
+              out: v_lin
+              in: x_norm
+              out_features: D
+      - self_attn:
+          graph:
+          - q_norm:
+              op: rmsnorm
+              out: pipe_1
+              in: q_lin
+              eps: EPS
+              dim: D
+      - n_op_2:
+          op: reshape_heads
+          out: q
+          in: pipe_1
+          heads: H
+      - self_attn:
+          graph:
+          - k_norm:
+              op: rmsnorm
+              out: pipe_3
+              in: k_lin
+              eps: EPS
+              dim: D
+      - n_op_4:
+          op: reshape_heads
+          out: k
+          in: pipe_3
+          heads: H
+      - n_op_5:
+          op: reshape_heads
+          out: v
+          in: v_lin
+          heads: H
+      - n_op_6:
+          op: apply_rope_pair
+          out:
+          - qr
+          - kr
+          in:
+          - q
+          - k
+          position_ids: pos_ids
+          theta: 10000.0
+      - n_op_7:
+          op: kv_cache_update
+          in:
+          - past_kv
+          - kr
+          - v
+          out:
+          - k_all
+          - v_all
+          - present_kv
+      - n_op_8:
+          op: coalesce_triplet
+          in:
+          - k_all
+          - v_all
+          - kr
+          - v
+          out:
+          - k_coalesced
+          - v_coalesced
+      - n_op_9:
+          op: causal_mask
+          out: mask
+          in: qr
+          key: k_coalesced
+          window: C
+          padding_mask: attn_mask
+      - n_op_11:
+          op: attention
+          out: pipe_10
+          in:
+          - qr
+          - k_coalesced
+          - v_coalesced
+          mask: mask
+          causal: true
+          scale: 0.08838834764831845
+      - n_op_13:
+          op: merge_heads
+          out: pipe_12
+          in: pipe_10
+      - self_attn:
+          graph:
+          - o_proj:
+              op: linear
+              out: a
+              in: pipe_12
+              out_features: D
+      - n_op_14:
+          op: add
+          out: x2
+          in:
+          - x
+          - a
+      - post_attention_layernorm:
+          op: rmsnorm
+          out: x3
+          in: x2
+          eps: EPS
+          dim: D
+      - mlp:
+          graph:
+          - gate:
+              op: linear
+              out: router_logits
+              in: x3
+              out_features: E
+      - n_op_15:
+          op: softmax
+          out: router_probs
+          in: router_logits
+          dim: -1
+          dtype: float32
+      - n_op_16:
+          op: topk
+          out:
+          - topk_scores
+          - topk_indices
+          in: router_probs
+          k: EPT
+          dim: -1
+      - n_op_17:
+          op: zeros_like
+          out: m
+          in: x3
+      - mlp:
+          graph:
+          - experts:
+              op: repeat
+              var: e
+              range: E
+              body:
+              - n_op_18:
+                  op: moe_select_tokens
+                  out:
+                  - x_sel
+                  - token_idx
+                  - topk_pos
+                  - sel_scores
+                  in:
+                  - x3
+                  - topk_scores
+                  - topk_indices
+                  expert: e
+              - n_op_19:
+                  op: moe_expert_ffn
+                  out: x_upd
+                  in: x_sel
+                  expert: e
+                  experts_scope: ''
+                  activation: silu
+              - n_op_20:
+                  op: moe_scatter_add
+                  out: m
+                  in:
+                  - m
+                  - token_idx
+                  - x_upd
+                  - sel_scores
+      - n_op_21:
+          op: add
+          out: 'y'
+          in:
+          - x2
+          - m
       outputs:
-        y: y
+        'y': 'y'
         present_kv: present_kv
-
-  graph:
-    - embed_tokens: { op: embedding, in: input_ids, out: x, num_embeddings: V, embedding_dim: D }
-    - init_present_kv: { op: init_list, out: present_key_values }
-
-    - layers:
-        op: repeat
-        var: i
-        range: L
-        body:
-          - past_kv_i: { op: index, in: [past_key_values, i], out: past_i }
-          - block:
-              use: olmoe_decoder_block
-              in: { x: x, past_kv: past_i, use_cache: use_cache }
-              out: { y: x, present_kv: present_i }
-          - collect_present:
-              when: use_cache
-              op: append
-              in: [present_key_values, present_i]
-              out: present_key_values
-
-    - norm: { op: rmsnorm, in: x, out: h_last, eps: 1.0e-5 }
-    - lm_head: { op: linear, in: h_last, out: logits, out_features: V, bias: false, weight: lm_head.weight }
-
-  outputs:
-    logits: logits
-    past_key_values: present_key_values
