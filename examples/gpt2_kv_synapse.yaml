@@ -72,7 +72,6 @@ model:
       out: logits
       in: h_last
       out_dim: 50257
-      bias: false
       tie_weight: wte.weight
   outputs:
     logits: logits
@@ -101,6 +100,7 @@ model:
               in: x1
               out_features: 2304
               weight_layout: io
+              bias: true
       - n_op_1:
           op: split_last
           out:
@@ -163,6 +163,7 @@ model:
               in: ctx
               out_features: 768
               weight_layout: io
+              bias: true
       - n_op_7:
           op: add
           out: x2
@@ -183,6 +184,7 @@ model:
               in: x3
               out_features: 3072
               weight_layout: io
+              bias: true
       - n_op_8:
           op: activation
           in: m1
@@ -196,6 +198,7 @@ model:
               in: m2
               out_features: 768
               weight_layout: io
+              bias: true
       - n_op_9:
           op: add
           out: 'y'

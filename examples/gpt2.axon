@@ -1,16 +1,12 @@
 module gpt2_block(x) -> (y) do
-  x1 <- layernorm@ln_1(x, dim=768, eps=1e-05)
-  qkv <- linear@attn.c_attn(x1, out_features=2304, weight_layout=io)
+  qkv <- layernorm@ln_1(x, dim=768, eps=1e-05) |> linear@attn.c_attn(out_features=2304, weight_layout=io, bias=true)
   q_lin, k_lin, v_lin <- split_last(qkv, sizes=[768, 768, 768])
   q, k, v <- reshape_heads_triplet(q_lin, k_lin, v_lin, heads=12, head_dim=64)
   ctx_heads <- attention(q, k, v, backend=sdpa, causal=true, causal_mask_buffer=bias)
-  ctx <- merge_heads(ctx_heads)
-  a <- linear@attn.c_proj(ctx, out_features=768, weight_layout=io)
+  a <- ctx_heads |> merge_heads |> linear@attn.c_proj(out_features=768, weight_layout=io, bias=true)
   x2 <- x + a
-  x3 <- layernorm@ln_2(x2, dim=768, eps=1e-05)
-  m1 <- linear@mlp.c_fc(x3, out_features=3072, weight_layout=io)
-  m2 <- act::gelu_new(m1)
-  m3 <- linear@mlp.c_proj(m2, out_features=768, weight_layout=io)
+  m2 <- layernorm@ln_2(x2, dim=768, eps=1e-05) |> linear@mlp.c_fc(out_features=3072, weight_layout=io, bias=true) |> act::gelu_new
+  m3 <- linear@mlp.c_proj(m2, out_features=768, weight_layout=io, bias=true)
   y <- x2 + m3
   return y
 
@@ -21,6 +17,5 @@ module gpt2(input_ids) -> (logits) do
   x <- tok + pos
   repeat h: i in 12 do
     x <- gpt2_block(x)
-  h_last <- layernorm@ln_f(x, dim=768, eps=1e-05)
-  logits <- linear(h_last, out_dim=50257, bias=false, tie_weight=wte.weight)
+  logits <- layernorm@ln_f(x, dim=768, eps=1e-05) |> linear(out_dim=50257, tie_weight=wte.weight)
   return logits
