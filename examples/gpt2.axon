@@ -1,16 +1,18 @@
 gpt2_block :: Tensor -> Tensor
 gpt2_block x = do
-  q, k, v <- x |> layernorm@ln_1 dim=768 eps=1e-05 |>
+  a <- layernorm@ln_1 x dim=768 eps=1e-05 |>
     linear@attn.c_attn out_features=2304 weight_layout=io bias=true |>
-    split_last sizes=[768, 768, 768]
-  ctx_heads <- reshape_heads_triplet q k v heads=12 head_dim=64 |>
-    attention backend=sdpa causal=true causal_mask_buffer=bias
-  a <- ctx_heads |> merge_heads |> linear@attn.c_proj out_features=768 weight_layout=io bias=true
-  x2 <- x + a
-  m2 <- layernorm@ln_2 x2 dim=768 eps=1e-05 |>
+    split_last sizes=[768, 768, 768] |>
+    reshape_heads_triplet heads=12 head_dim=64 |>
+    attention backend=sdpa causal=true causal_mask_buffer=bias |>
+    merge_heads |>
+    linear@attn.c_proj out_features=768 weight_layout=io bias=true
+  x <- x + a
+  m <- layernorm@ln_2 x dim=768 eps=1e-05 |>
     linear@mlp.c_fc out_features=3072 weight_layout=io bias=true |>
-    act::gelu_new
-  return x2 + linear@mlp.c_proj m2 out_features=768 weight_layout=io bias=true
+    act::gelu_new |>
+    linear@mlp.c_proj out_features=768 weight_layout=io bias=true
+  return x + m
 
 gpt2 :: TokenIds -> Tensor
 gpt2 input_ids = do
