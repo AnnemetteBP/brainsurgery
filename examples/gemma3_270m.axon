@@ -35,9 +35,9 @@ gemma3_block x i attn_mask = do
 
 gemma3 :: TokenIds[B,S] -> ?Tensor[B,S] -> Tensor[B,S,V]
 gemma3 input_ids attn_mask = do
-  x <- embedding@embed_tokens input_ids num_embeddings=V dim=D scale=25.298221281347036
-  for@layers i <- [0..L) do
+  x <- embedding@model.embed_tokens input_ids num_embeddings=V dim=D scale=25.298221281347036
+  for@model.layers i <- [0..L) do
     x <- gemma3_block x i attn_mask
-  logits <- rmsnorm@norm x cast_float=true unit_offset=true |>
-    linear out_features=V tie_weight=embed_tokens.weight
+  logits <- rmsnorm@model.norm x cast_float=true unit_offset=true |>
+    linear out_features=V tie_weight=model.embed_tokens.weight
   return logits
