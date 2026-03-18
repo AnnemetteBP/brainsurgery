@@ -1,18 +1,23 @@
-module gpt2_block(x) -> (y) do
-  q, k, v <- x |> layernorm@ln_1(dim=768, eps=1e-05) |>
-    linear@attn.c_attn(out_features=2304, weight_layout=io, bias=true) |>
-    split_last(sizes=[768, 768, 768])
-  ctx_heads <- reshape_heads_triplet(q, k, v, heads=12, head_dim=64) |>
-    attention(backend=sdpa, causal=true, causal_mask_buffer=bias)
-  a <- ctx_heads |> merge_heads |> linear@attn.c_proj(out_features=768, weight_layout=io, bias=true)
+gpt2_block :: Tensor -> Tensor
+gpt2_block x = do
+  q, k, v <- x |> layernorm@ln_1 dim=768 eps=1e-05 |>
+    linear@attn.c_attn out_features=2304 weight_layout=io bias=true |>
+    split_last sizes=[768, 768, 768]
+  ctx_heads <- reshape_heads_triplet q k v heads=12 head_dim=64 |>
+    attention backend=sdpa causal=true causal_mask_buffer=bias
+  a <- ctx_heads |> merge_heads |> linear@attn.c_proj out_features=768 weight_layout=io bias=true
   x2 <- x + a
-  m2 <- layernorm@ln_2(x2, dim=768, eps=1e-05) |> linear@mlp.c_fc(out_features=3072, weight_layout=io, bias=true) |> act::gelu_new
-  return x2 + linear@mlp.c_proj(m2, out_features=768, weight_layout=io, bias=true)
+  m2 <- layernorm@ln_2 x2 dim=768 eps=1e-05 |>
+    linear@mlp.c_fc out_features=3072 weight_layout=io bias=true |>
+    act::gelu_new
+  return x2 + linear@mlp.c_proj m2 out_features=768 weight_layout=io bias=true
 
-module gpt2(input_ids) -> (logits) do
-  tok <- embedding@wte(input_ids, num_embeddings=50257, embedding_dim=768)
-  pos <- arange_positions(input_ids, max_len=1024) |> embedding@wpe(num_embeddings=1024, embedding_dim=768)
+gpt2 :: TokenIds -> Tensor
+gpt2 input_ids = do
+  tok <- embedding@wte input_ids num_embeddings=50257 embedding_dim=768
+  pos <- arange_positions input_ids max_len=1024 |> embedding@wpe num_embeddings=1024 embedding_dim=768
   x <- tok + pos
   repeat h: i in 12 do
-    x <- gpt2_block(x)
-  return layernorm@ln_f(x, dim=768, eps=1e-05) |> linear(out_dim=50257, tie_weight=wte.weight)
+    x <- gpt2_block x
+  logits <- layernorm@ln_f x dim=768 eps=1e-05 |> linear out_dim=50257 tie_weight=wte.weight
+  return logits

@@ -1,31 +1,33 @@
-module gpt2_block(x, past_kv?, use_cache?) -> (y, present_kv) do
-  x1 <- layernorm@ln_1(x, dim=768, eps=1e-05)
-  qkv <- linear@attn.c_attn(x1, out_features=2304, weight_layout=io, bias=true)
-  q_lin, k_lin, v_lin <- split_last(qkv, sizes=[768, 768, 768])
-  q, k, v <- reshape_heads_triplet(q_lin, k_lin, v_lin, heads=12, head_dim=64)
-  k_all, v_all, present_kv <- cache::update(past_kv, k, v, when=use_cache)
-  k_ctx, v_ctx <- cache::coalesce(k_all, v_all, k, v)
-  ctx_heads <- attention(q, k_ctx, v_ctx, backend=sdpa, causal=true, causal_mask_buffer=bias)
-  ctx <- merge_heads(ctx_heads)
-  a <- linear@attn.c_proj(ctx, out_features=768, weight_layout=io, bias=true)
+gpt2_block :: Tensor -> ?Cache -> ?Bool -> (Tensor, ?Cache)
+gpt2_block x past_kv use_cache = do
+  x1 <- layernorm@ln_1 x dim=768 eps=1e-05
+  qkv <- linear@attn.c_attn x1 out_features=2304 weight_layout=io bias=true
+  q_lin, k_lin, v_lin <- split_last qkv sizes=[768, 768, 768]
+  q, k, v <- reshape_heads_triplet q_lin k_lin v_lin heads=12 head_dim=64
+  k_all, v_all, present_kv <- cache::update past_kv k v when=use_cache
+  k_ctx, v_ctx <- cache::coalesce k_all v_all k v
+  ctx_heads <- attention q k_ctx v_ctx backend=sdpa causal=true causal_mask_buffer=bias
+  ctx <- merge_heads ctx_heads
+  a <- linear@attn.c_proj ctx out_features=768 weight_layout=io bias=true
   x2 <- x + a
-  x3 <- layernorm@ln_2(x2, dim=768, eps=1e-05)
-  m1 <- linear@mlp.c_fc(x3, out_features=3072, weight_layout=io, bias=true)
-  m2 <- act::gelu_new(m1)
-  m3 <- linear@mlp.c_proj(m2, out_features=768, weight_layout=io, bias=true)
+  x3 <- layernorm@ln_2 x2 dim=768 eps=1e-05
+  m1 <- linear@mlp.c_fc x3 out_features=3072 weight_layout=io bias=true
+  m2 <- act::gelu_new m1
+  m3 <- linear@mlp.c_proj m2 out_features=768 weight_layout=io bias=true
   y <- x2 + m3
   return y, present_kv
 
-module gpt2(input_ids, past_key_values?, use_cache?) -> (logits, past_key_values) do
-  tok <- embedding@wte(input_ids, num_embeddings=50257, embedding_dim=768)
-  pos_ids <- arange_positions(input_ids, max_len=1024)
-  pos <- embedding@wpe(pos_ids, num_embeddings=1024, embedding_dim=768)
+gpt2 :: TokenIds -> ?Cache -> ?Bool -> (Tensor, ?Cache)
+gpt2 input_ids past_key_values use_cache = do
+  tok <- embedding@wte input_ids num_embeddings=50257 embedding_dim=768
+  pos_ids <- arange_positions input_ids max_len=1024
+  pos <- embedding@wpe pos_ids num_embeddings=1024 embedding_dim=768
   x <- tok + pos
   present_key_values <- init_list()
   repeat h: i in 12 do
-    past_i <- index(past_key_values, i)
-    x, present_i <- gpt2_block(x, past_i, use_cache)
-    present_key_values <- append(present_key_values, present_i, when=use_cache)
-  h_last <- layernorm@ln_f(x, dim=768, eps=1e-05)
-  logits <- linear(h_last, out_dim=50257, tie_weight=wte.weight)
+    past_i <- index past_key_values i
+    x, present_i <- gpt2_block x past_i use_cache
+    present_key_values <- append present_key_values present_i when=use_cache
+  h_last <- layernorm@ln_f x dim=768 eps=1e-05
+  logits <- linear h_last out_dim=50257 tie_weight=wte.weight
   return logits, present_key_values

@@ -1,43 +1,43 @@
 module olmoe_decoder_block(x, past_kv?, use_cache?) -> (y, present_kv) do
-  x_norm <- rmsnorm@input_layernorm(x, eps=1e-05)
-  q_lin <- linear@self_attn.q_proj(x_norm, out_features=2048)
-  k_lin <- linear@self_attn.k_proj(x_norm, out_features=2048)
-  v_lin <- linear@self_attn.v_proj(x_norm, out_features=2048)
-  qn_lin <- rmsnorm@self_attn.q_norm(q_lin, eps=1e-05)
-  kn_lin <- rmsnorm@self_attn.k_norm(k_lin, eps=1e-05)
-  q <- reshape_heads(qn_lin, heads=16, head_dim=128)
-  k <- reshape_heads(kn_lin, heads=16, head_dim=128)
-  v <- reshape_heads(v_lin, heads=16, head_dim=128)
-  past_len <- cache::seq_len(past_kv)
-  qr, kr <- apply_rope_pair(q, k, theta=10000.0, offset=past_len)
-  k_all, v_all, present_kv <- cache::update(past_kv, kr, v, when=use_cache)
-  k_coalesced, v_coalesced <- cache::coalesce(k_all, v_all, kr, v)
-  k_ctx <- repeat_kv(k_coalesced, heads=16, kv_heads=16)
-  v_ctx <- repeat_kv(v_coalesced, heads=16, kv_heads=16)
-  mask <- causal_mask(qr, when=not use_cache, key=k_ctx, window=4096)
-  ctx_heads <- attention(qr, k_ctx, v_ctx, mask=mask, causal=true, scale=0.08838834764831845)
-  ctx <- merge_heads(ctx_heads)
-  a <- linear@self_attn.o_proj(ctx, out_features=2048)
+  x_norm <- rmsnorm@input_layernorm x eps=1e-05
+  q_lin <- linear@self_attn.q_proj x_norm out_features=2048
+  k_lin <- linear@self_attn.k_proj x_norm out_features=2048
+  v_lin <- linear@self_attn.v_proj x_norm out_features=2048
+  qn_lin <- rmsnorm@self_attn.q_norm q_lin eps=1e-05
+  kn_lin <- rmsnorm@self_attn.k_norm k_lin eps=1e-05
+  q <- reshape_heads qn_lin heads=16 head_dim=128
+  k <- reshape_heads kn_lin heads=16 head_dim=128
+  v <- reshape_heads v_lin heads=16 head_dim=128
+  past_len <- cache::seq_len past_kv
+  qr, kr <- apply_rope_pair q k theta=10000.0 offset=past_len
+  k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
+  k_coalesced, v_coalesced <- cache::coalesce k_all v_all kr v
+  k_ctx <- repeat_kv k_coalesced heads=16 kv_heads=16
+  v_ctx <- repeat_kv v_coalesced heads=16 kv_heads=16
+  mask <- causal_mask qr when=not use_cache key=k_ctx window=4096
+  ctx_heads <- attention qr k_ctx v_ctx mask=mask causal=true scale=0.08838834764831845
+  ctx <- merge_heads ctx_heads
+  a <- linear@self_attn.o_proj ctx out_features=2048
   x2 <- x + a
-  x3 <- rmsnorm@post_attention_layernorm(x2, eps=1e-05)
-  router_logits <- linear@mlp.gate(x3, out_features=64)
-  router_probs <- softmax(router_logits, dim=-1, dtype=float32)
-  topk_scores, topk_indices <- topk(router_probs, k=8, dim=-1)
-  m <- zeros_like(x3)
+  x3 <- rmsnorm@post_attention_layernorm x2 eps=1e-05
+  router_logits <- linear@mlp.gate x3 out_features=64
+  router_probs <- softmax router_logits dim=-1 dtype=float32
+  topk_scores, topk_indices <- topk router_probs k=8 dim=-1
+  m <- zeros_like x3
   repeat mlp.experts: e in 64 do
-    x_sel, token_idx, topk_pos, sel_scores <- moe_select_tokens(x3, topk_scores, topk_indices, expert=e)
-    x_upd <- moe_expert_ffn(x_sel, expert=e, experts_scope=, activation=silu)
-    m <- moe_scatter_add(m, token_idx, x_upd, sel_scores)
+    x_sel, token_idx, topk_pos, sel_scores <- moe_select_tokens x3 topk_scores topk_indices expert=e
+    x_upd <- moe_expert_ffn x_sel expert=e experts_scope= activation=silu
+    m <- moe_scatter_add m token_idx x_upd sel_scores
   y <- x2 + m
   return y, present_kv
 
 module olmoe(input_ids, past_key_values?, use_cache?) -> (logits, past_key_values) do
-  x <- embedding@model.embed_tokens(input_ids, num_embeddings=50304, embedding_dim=2048)
-  present_key_values <- init_list()
+  x <- embedding@model.embed_tokens input_ids num_embeddings=50304 embedding_dim=2048
+  present_key_values <- init_list
   repeat model.layers: i in 16 do
-    past_i <- index(past_key_values, i)
-    x, present_i <- olmoe_decoder_block(x, past_i, use_cache)
-    present_key_values <- append(present_key_values, present_i, when=use_cache)
-  h_last <- rmsnorm@model.norm(x, eps=1e-05)
-  logits <- linear(h_last, out_features=50304, weight=lm_head.weight)
+    past_i <- index past_key_values i
+    x, present_i <- olmoe_decoder_block x past_i use_cache
+    present_key_values <- append present_key_values present_i when=use_cache
+  h_last <- rmsnorm@model.norm x eps=1e-05
+  logits <- linear h_last out_features=50304 weight=lm_head.weight
   return logits, present_key_values
