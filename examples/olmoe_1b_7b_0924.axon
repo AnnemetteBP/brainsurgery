@@ -32,12 +32,12 @@ module olmoe_decoder_block(x, past_kv?, use_cache?) -> (y, present_kv) do
   return y, present_kv
 
 module olmoe(input_ids, past_key_values?, use_cache?) -> (logits, past_key_values) do
-  x <- embedding@embed_tokens(input_ids, num_embeddings=50304, embedding_dim=2048)
+  x <- embedding@model.embed_tokens(input_ids, num_embeddings=50304, embedding_dim=2048)
   present_key_values <- init_list()
-  repeat layers: i in 16 do
+  repeat model.layers: i in 16 do
     past_i <- index(past_key_values, i)
     x, present_i <- olmoe_decoder_block(x, past_i, use_cache)
     present_key_values <- append(present_key_values, present_i, when=use_cache)
-  h_last <- rmsnorm@norm(x, eps=1e-05)
+  h_last <- rmsnorm@model.norm(x, eps=1e-05)
   logits <- linear(h_last, out_features=50304, bias=false, weight=lm_head.weight)
   return logits, present_key_values
