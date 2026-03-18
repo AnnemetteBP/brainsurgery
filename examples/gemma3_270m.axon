@@ -1,0 +1,36 @@
+module gemma3_block(x, i) -> (y) do
+  x_norm <- rmsnorm@input_layernorm(x, eps=1e-06, cast_float=true, unit_offset=true)
+  q_lin <- linear@self_attn.q_proj(x_norm, out_features=1024, bias=false)
+  k_lin <- linear@self_attn.k_proj(x_norm, out_features=256, bias=false)
+  v_lin <- linear@self_attn.v_proj(x_norm, out_features=256, bias=false)
+  q <- reshape_heads(q_lin, heads=4, head_dim=256)
+  k <- reshape_heads(k_lin, heads=1, head_dim=256)
+  v <- reshape_heads(v_lin, heads=1, head_dim=256)
+  qn <- rmsnorm@self_attn.q_norm(q, eps=1e-06, cast_float=true, unit_offset=true)
+  kn <- rmsnorm@self_attn.k_norm(k, eps=1e-06, cast_float=true, unit_offset=true)
+  qr, kr <- apply_rope_pair(qn, kn, theta=10000.0 + (1000000.0 - 10000.0) * (((i + 1) % 6) == 0))
+  k_ctx <- repeat_kv(kr, heads=4, kv_heads=1)
+  v_ctx <- repeat_kv(v, heads=4, kv_heads=1)
+  mask <- causal_mask(qr, key=k_ctx, window=512 + (32768 - 512) * (((i + 1) % 6) == 0))
+  ctx_heads <- attention(qr, k_ctx, v_ctx, mask=mask, backend=sdpa, causal=true, scale=0.0625, rope_theta=1000000.0, sliding_window=512)
+  ctx <- merge_heads(ctx_heads)
+  attn_raw <- linear@self_attn.o_proj(ctx, out_features=640, bias=false)
+  attn <- rmsnorm@post_attention_layernorm(attn_raw, eps=1e-06, cast_float=true, unit_offset=true)
+  x2 <- x + attn
+  x3 <- rmsnorm@pre_feedforward_layernorm(x2, eps=1e-06, cast_float=true, unit_offset=true)
+  g <- linear@mlp.gate_proj(x3, out_features=2048, bias=false)
+  u <- linear@mlp.up_proj(x3, out_features=2048, bias=false)
+  g_act <- act::gelu_pytorch_tanh(g)
+  gu <- g_act * u
+  m_raw <- linear@mlp.down_proj(gu, out_features=640, bias=false)
+  m <- rmsnorm@post_feedforward_layernorm(m_raw, eps=1e-06, cast_float=true, unit_offset=true)
+  y <- x2 + m
+  return y
+
+module gemma3(input_ids) -> (logits) do
+  x <- embedding@embed_tokens(input_ids, num_embeddings=262208, embedding_dim=640, scale=25.298221281347036)
+  repeat layers: i in 18 do
+    x <- gemma3_block(x, i)
+  h_last <- rmsnorm@norm(x, eps=1e-06, cast_float=true, unit_offset=true)
+  logits <- linear(h_last, out_features=262208, bias=false, tie_weight=embed_tokens.weight)
+  return logits

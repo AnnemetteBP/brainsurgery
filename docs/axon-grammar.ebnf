@@ -1,0 +1,89 @@
+# Axon Grammar (Draft v1, indentation-sensitive)
+
+Program           = { TopDecl } ;
+TopDecl           = ModelDecl | ModuleDecl ;
+
+ModelDecl         = "model" Identifier "do" Newline Indent { ModelLine } Dedent ;
+ModelLine         = SymbolsDecl | InputsDecl | OutputsDecl | Stmt | AnnotationLine ;
+
+SymbolsDecl       = "symbols" Newline Indent { SymbolAssign Newline } Dedent ;
+SymbolAssign      = Identifier "=" Expr ;
+
+InputsDecl        = "inputs" Newline Indent { InputDecl Newline } Dedent ;
+InputDecl         = Identifier ":" Type ;
+
+OutputsDecl       = "outputs" Newline Indent { Identifier Newline } Dedent ;
+
+ModuleDecl        = "module" Path "(" [ ParamList ] ")"
+                    [ "->" ReturnSpec ]
+                    "do"
+                    Newline
+                    Indent { StmtOrAnnotation } Dedent ;
+
+StmtOrAnnotation  = AnnotationLine | Stmt ;
+AnnotationLine    = Annotation Newline ;
+Annotation        = "@" Identifier [ "(" [ ArgList ] ")" ] ;
+
+ParamList         = Param { "," Param } ;
+Param             = Identifier [ "?" ] ;
+ReturnSpec        = Identifier | "(" Identifier { "," Identifier } ")" ;
+
+Stmt              = BindStmt Newline
+                  | ReturnStmt Newline
+                  | NodeStmt Newline
+                  | MetaStmt Newline
+                  | ExprStmt Newline ;
+
+BindStmt          = BindTarget "<-" Expr ;
+BindTarget        = Identifier | Identifier "," Identifier { "," Identifier } ;
+
+ReturnStmt        = "return" ExprList ;
+NodeStmt          = "node" Identifier "=" JsonObject ;
+MetaStmt          = "meta" Identifier "=" JsonValue ;
+ExprStmt          = Expr ;
+ExprList          = Expr { "," Expr } ;
+
+Expr              = TernaryExpr ;
+TernaryExpr       = BindExpr [ "?" Expr ":" ExprList ] ;
+BindExpr          = PipeExpr { ">>=" LambdaExpr } ;
+PipeExpr          = BinaryExpr { "|>" Callable } ;
+BinaryExpr        = UnaryExpr { ("+" | "-" | "*" | "/") UnaryExpr } ;
+UnaryExpr         = ["-" | "not"] PrimaryExpr ;
+LambdaExpr        = "\\" Identifier "->" Expr ;
+
+PrimaryExpr       = Literal
+                  | Identifier
+                  | Path
+                  | CallExpr
+                  | "(" Expr ")" ;
+
+CallExpr          = Callable "(" [ ArgList ] ")" ;
+Callable          = Identifier
+                  | Identifier "::" Identifier
+                  | Identifier "@" Path ;
+
+ArgList           = Argument { "," Argument } ;
+Argument          = Identifier "=" Expr | Expr ;
+
+Path              = Identifier { "." Identifier | "[" Expr "]" } ;
+
+Type              = TypeName [ "[" DimList "]" ] ;
+TypeName          = Identifier ;
+DimList           = Expr { "," Expr } ;
+
+Literal           = Integer | Float | Boolean | Null | String ;
+Boolean           = "true" | "false" ;
+Null              = "null" ;
+JsonValue         = JsonObject | JsonArray | Literal ;
+JsonObject        = /{.*}/ ;
+JsonArray         = /\\[.*\\]/ ;
+
+Identifier        = /[A-Za-z_][A-Za-z0-9_]*/ ;
+Integer           = /[0-9]+/ ;
+Float             = /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?/ ;
+String            = /"([^"\\]|\\.)*"/ ;
+
+# Lexical indentation tokens (Python-style)
+Newline           = line break ;
+Indent            = increase in leading indentation ;
+Dedent            = decrease in leading indentation ;
