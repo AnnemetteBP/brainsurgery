@@ -1,27 +1,34 @@
-gpt2_block :: Tensor -> Tensor
+T   = 1024   -- max sequence length
+D   = 768    -- hidden dimensions
+L   = 12     -- number of layers
+H   = 12     -- number of attention heads
+V   = 520257 -- vocab size
+EPS = 1e-05  -- eps for layer norms
+
+gpt2_block :: Tensor[B,T,D] -> Tensor[B,T,D]
 gpt2_block x = do
-  a <- layernorm@ln_1 x dim=768 eps=1e-05 |>
-    linear@attn.c_attn out_features=2304 weight_layout=io bias=true |>
-    split_last sizes=[768, 768, 768] |>
-    reshape_heads_triplet heads=12 head_dim=64 |>
+  a <- layernorm@ln_1 x eps=EPS |>
+    linear@attn.c_attn out_features=3*D weight_layout=io bias=true |>
+    split_last sizes=[D,D,D] |>
+    reshape_heads_triplet heads=H |>
     attention backend=sdpa causal=true causal_mask_buffer=bias |>
     merge_heads |>
-    linear@attn.c_proj out_features=768 weight_layout=io bias=true
+    linear@attn.c_proj out_features=D weight_layout=io bias=true
   x <- x + a
-  m <- layernorm@ln_2 x dim=768 eps=1e-05 |>
-    linear@mlp.c_fc out_features=3072 weight_layout=io bias=true |>
+  m <- layernorm@ln_2 x eps=EPS |>
+    linear@mlp.c_fc out_features=4*D weight_layout=io bias=true |>
     act::gelu_new |>
-    linear@mlp.c_proj out_features=768 weight_layout=io bias=true
+    linear@mlp.c_proj out_features=D weight_layout=io bias=true
   return x + m
 
-gpt2 :: TokenIds -> Tensor
+gpt2 :: TokenIds[B,T] -> Tensor[B,T,V]
 gpt2 input_ids = do
-  tok <- embedding@wte input_ids num_embeddings=50257 embedding_dim=768
-  pos <- arange_positions input_ids max_len=1024 |>
-    embedding@wpe num_embeddings=1024 embedding_dim=768
+  tok <- embedding@wte input_ids num_embeddings=V embedding_dim=D
+  pos <- arange_positions input_ids max_len=T |>
+    embedding@wpe num_embeddings=T embedding_dim=D
   x <- tok + pos
-  for@h i <- [0..12] do
+  for@h i <- [0..L] do
     x <- gpt2_block x
-  logits <- layernorm@ln_f x dim=768 eps=1e-05 |>
-    linear out_dim=50257 tie_weight=wte.weight
+  logits <- layernorm@ln_f x dim=D eps=EPS |>
+    linear tie_weight=wte.weight
   return logits
