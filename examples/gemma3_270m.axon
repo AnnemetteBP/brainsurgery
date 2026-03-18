@@ -29,7 +29,7 @@ module gemma3_block(x, i) -> (y) do
 
 module gemma3(input_ids) -> (logits) do
   x <- embedding@model.embed_tokens input_ids num_embeddings=262208 embedding_dim=640 scale=25.298221281347036
-  repeat model.layers: i in 18 do
+  for@model.layers i <- [0..18] do
     x <- gemma3_block x i
   h_last <- rmsnorm@model.norm x eps=1e-06 cast_float=true unit_offset=true
   logits <- linear h_last out_features=262208 tie_weight=model.embed_tokens.weight

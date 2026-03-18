@@ -24,7 +24,7 @@ gpt2 input_ids past_key_values use_cache = do
   pos <- embedding@wpe pos_ids num_embeddings=1024 embedding_dim=768
   x <- tok + pos
   present_key_values <- init_list()
-  repeat h: i in 12 do
+  for@h i <- [0..12] do
     past_i <- index past_key_values i
     x, present_i <- gpt2_block x past_i use_cache
     present_key_values <- append present_key_values present_i when=use_cache
