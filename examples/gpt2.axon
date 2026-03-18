@@ -1,14 +1,13 @@
 module gpt2_block(x) -> (y) do
-  q_lin, k_lin, v_lin <- x |> layernorm@ln_1(dim=768, eps=1e-05) |>
+  q, k, v <- x |> layernorm@ln_1(dim=768, eps=1e-05) |>
     linear@attn.c_attn(out_features=2304, weight_layout=io, bias=true) |>
     split_last(sizes=[768, 768, 768])
-  q, k, v <- reshape_heads_triplet(q_lin, k_lin, v_lin, heads=12, head_dim=64)
-  ctx_heads <- attention(q, k, v, backend=sdpa, causal=true, causal_mask_buffer=bias)
+  ctx_heads <- reshape_heads_triplet(q, k, v, heads=12, head_dim=64) |>
+    attention(backend=sdpa, causal=true, causal_mask_buffer=bias)
   a <- ctx_heads |> merge_heads |> linear@attn.c_proj(out_features=768, weight_layout=io, bias=true)
   x2 <- x + a
   m2 <- layernorm@ln_2(x2, dim=768, eps=1e-05) |> linear@mlp.c_fc(out_features=3072, weight_layout=io, bias=true) |> act::gelu_new
-  m3 <- linear@mlp.c_proj(m2, out_features=768, weight_layout=io, bias=true)
-  return x2 + m3
+  return x2 + linear@mlp.c_proj(m2, out_features=768, weight_layout=io, bias=true)
 
 module gpt2(input_ids) -> (logits) do
   tok <- embedding@wte(input_ids, num_embeddings=50257, embedding_dim=768)
