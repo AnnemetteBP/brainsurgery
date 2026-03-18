@@ -22,7 +22,7 @@ model:
           out: x
           in: input_ids
           num_embeddings: V
-          scale: 25.298221281347036
+          scale: EMB_SCALE
           embedding_dim: D
   - n_op_2:
       op: init_list
@@ -83,6 +83,16 @@ model:
     L: 18
     H: 4
     KVH: 1
+    QD: 1024
+    KVD: 256
+    FFN: 2048
+    ROPE_PERIOD: 6
+    THETA_BASE: 10000.0
+    THETA_LONG: 1000000.0
+    WIN_LOCAL: 512
+    WIN_LONG: 32768
+    ATTN_SCALE: 0.0625
+    EMB_SCALE: 25.298221281347036
     B: null
     S: null
   blocks:
@@ -114,21 +124,21 @@ model:
               op: linear
               out: q_lin
               in: x_norm
-              out_features: 1024
+              out_features: QD
       - self_attn:
           graph:
           - k_proj:
               op: linear
               out: k_lin
               in: x_norm
-              out_features: 256
+              out_features: KVD
       - self_attn:
           graph:
           - v_proj:
               op: linear
               out: v_lin
               in: x_norm
-              out_features: 256
+              out_features: KVD
       - n_op_1:
           op: reshape_heads
           out: q
@@ -169,7 +179,8 @@ model:
           - qn
           - kn
           position_ids: pos_ids
-          theta: 10000.0 + (1000000.0 - 10000.0) * (((i + 1) % 6) == 0)
+          theta: THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD)
+            == 0)
       - n_op_5:
           op: kv_cache_update
           in:
@@ -207,7 +218,8 @@ model:
           out: mask
           in: qr
           key: k_ctx
-          window: 512 + (32768 - 512) * (((i + 1) % 6) == 0)
+          window: WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) ==
+            0)
           padding_mask: attn_mask
       - n_op_11:
           op: attention
@@ -219,9 +231,9 @@ model:
           mask: mask
           backend: sdpa
           causal: true
-          scale: 0.0625
-          rope_theta: 1000000.0
-          sliding_window: 512
+          scale: ATTN_SCALE
+          rope_theta: THETA_LONG
+          sliding_window: WIN_LOCAL
       - n_op_13:
           op: merge_heads
           out: pipe_12
@@ -259,14 +271,14 @@ model:
               op: linear
               out: g
               in: x3
-              out_features: 2048
+              out_features: FFN
       - mlp:
           graph:
           - up_proj:
               op: linear
               out: u
               in: x3
-              out_features: 2048
+              out_features: FFN
       - n_op_17:
           op: activation
           in: g

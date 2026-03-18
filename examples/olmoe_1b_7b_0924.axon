@@ -7,34 +7,39 @@ E    = 64
 EPT  = 8
 C    = 4096
 EPS  = 1e-05
+THETA = 10000.0
+ATTN_SCALE = 0.08838834764831845
 
 olmoe_decoder_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> ?Bool -> (Tensor[B,S,D], ?CacheLayer)
 olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
   x_norm <- rmsnorm@input_layernorm x eps=EPS
-  q_lin <- x_norm |> linear@self_attn.q_proj out_features=D
-  k_lin <- x_norm |> linear@self_attn.k_proj out_features=D
-  v_lin <- x_norm |> linear@self_attn.v_proj out_features=D
-  q <- q_lin |> rmsnorm@self_attn.q_norm eps=EPS |> reshape_heads heads=H
-  k <- k_lin |> rmsnorm@self_attn.k_norm eps=EPS |> reshape_heads heads=H
-  v <- v_lin |> reshape_heads heads=H
-  qr, kr <- apply_rope_pair q k position_ids=pos_ids theta=10000.0
+  q <- x_norm |> linear@self_attn.q_proj out_features=D |>
+    rmsnorm@self_attn.q_norm eps=EPS |>
+    reshape_heads heads=H
+  k <- x_norm |> linear@self_attn.k_proj out_features=D |>
+    rmsnorm@self_attn.k_norm eps=EPS |>
+    reshape_heads heads=H
+  v <- x_norm |> linear@self_attn.v_proj out_features=D |>
+    reshape_heads heads=H
+  qr, kr <- apply_rope_pair q k position_ids=pos_ids theta=THETA
   k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
   k_coalesced, v_coalesced <- cache::coalesce k_all v_all kr v
   mask <- causal_mask qr key=k_coalesced window=C padding_mask=attn_mask
-  a <- attention qr k_coalesced v_coalesced mask=mask causal=true scale=0.08838834764831845 |>
+  a <- attention qr k_coalesced v_coalesced mask=mask causal=true scale=ATTN_SCALE |>
     merge_heads |>
     linear@self_attn.o_proj out_features=D
-  x2 <- x + a
-  x3 <- rmsnorm@post_attention_layernorm x2 eps=EPS
-  router_logits <- x3 |> linear@mlp.gate out_features=E
-  router_probs <- softmax router_logits dim=-1 dtype=float32
-  topk_scores, topk_indices <- topk router_probs k=EPT dim=-1
+  x <- x + a
+  x3 <- rmsnorm@post_attention_layernorm x eps=EPS
+  topk_scores, topk_indices <- x3 |>
+    linear@mlp.gate out_features=E |>
+    softmax dim=-1 dtype=float32 |>
+    topk k=EPT dim=-1
   m <- zeros_like x3
   for@mlp.experts e <- [0..E) do
     x_sel, token_idx, topk_pos, sel_scores <- moe_select_tokens x3 topk_scores topk_indices expert=e
     x_upd <- moe_expert_ffn x_sel expert=e experts_scope= activation=silu
     m <- moe_scatter_add m token_idx x_upd sel_scores
-  y <- x2 + m
+  y <- x + m
   return y, present_kv
 
 olmoe :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)

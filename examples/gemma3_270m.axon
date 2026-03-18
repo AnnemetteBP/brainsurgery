@@ -3,32 +3,42 @@ V   = 262208
 L   = 18
 H   = 4
 KVH = 1
+QD  = 1024
+KVD = 256
+FFN = 2048
+ROPE_PERIOD = 6
+THETA_BASE = 10000.0
+THETA_LONG = 1000000.0
+WIN_LOCAL = 512
+WIN_LONG = 32768
+ATTN_SCALE = 0.0625
+EMB_SCALE = 25.298221281347036
 
 gemma3_block :: Tensor[B,S,D] -> I -> Tensor[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,D], ?Cache)
 gemma3_block x i pos_ids attn_mask past_kv use_cache = do
   x_norm <- rmsnorm@input_layernorm x cast_float=true unit_offset=true
-  q_lin <- x_norm |> linear@self_attn.q_proj out_features=1024
-  k_lin <- x_norm |> linear@self_attn.k_proj out_features=256
-  v_lin <- x_norm |> linear@self_attn.v_proj out_features=256
+  q_lin <- x_norm |> linear@self_attn.q_proj out_features=QD
+  k_lin <- x_norm |> linear@self_attn.k_proj out_features=KVD
+  v_lin <- x_norm |> linear@self_attn.v_proj out_features=KVD
   q <- q_lin |> reshape_heads heads=H
   k <- k_lin |> reshape_heads heads=KVH
   v <- v_lin |> reshape_heads heads=KVH
   qn <- rmsnorm@self_attn.q_norm q cast_float=true unit_offset=true
   kn <- rmsnorm@self_attn.k_norm k cast_float=true unit_offset=true
-  qr, kr <- apply_rope_pair qn kn position_ids=pos_ids theta=10000.0 + (1000000.0 - 10000.0) * (((i + 1) % 6) == 0)
+  qr, kr <- apply_rope_pair qn kn position_ids=pos_ids theta=THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD) == 0)
   k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
   k_ctx_raw, v_ctx_raw <- cache::coalesce k_all v_all kr v
   k_ctx <- repeat_kv k_ctx_raw heads=H kv_heads=KVH
   v_ctx <- repeat_kv v_ctx_raw heads=H kv_heads=KVH
-  mask <- causal_mask qr key=k_ctx window=512 + (32768 - 512) * (((i + 1) % 6) == 0) padding_mask=attn_mask
-  attn <- attention qr k_ctx v_ctx mask=mask backend=sdpa causal=true scale=0.0625 rope_theta=1000000.0 sliding_window=512 |>
+  mask <- causal_mask qr key=k_ctx window=WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) == 0) padding_mask=attn_mask
+  attn <- attention qr k_ctx v_ctx mask=mask backend=sdpa causal=true scale=ATTN_SCALE rope_theta=THETA_LONG sliding_window=WIN_LOCAL |>
     merge_heads |>
     linear@self_attn.o_proj out_features=D |>
     rmsnorm@post_attention_layernorm cast_float=true unit_offset=true
   x2 <- x + attn
   x3 <- rmsnorm@pre_feedforward_layernorm x2 cast_float=true unit_offset=true
-  g <- x3 |> linear@mlp.gate_proj out_features=2048
-  u <- x3 |> linear@mlp.up_proj out_features=2048
+  g <- x3 |> linear@mlp.gate_proj out_features=FFN
+  u <- x3 |> linear@mlp.up_proj out_features=FFN
   m <- g |> act::gelu_pytorch_tanh |>
     mul u |>
     linear@mlp.down_proj(out_features=D) |>
@@ -39,7 +49,7 @@ gemma3_block x i pos_ids attn_mask past_kv use_cache = do
 gemma3 :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
 gemma3 input_ids attn_mask past_key_values use_cache = do
   pos_ids <- arange_positions input_ids attention_mask=attn_mask
-  x <- embedding@model.embed_tokens input_ids num_embeddings=V dim=D scale=25.298221281347036
+  x <- embedding@model.embed_tokens input_ids num_embeddings=V dim=D scale=EMB_SCALE
   present_key_values <- init_list()
   for@model.layers i <- [0..L) do
     past_i <- index past_key_values i
