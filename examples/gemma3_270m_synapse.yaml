@@ -5,45 +5,81 @@ model:
       optional: false
     attn_mask:
       optional: true
+    past_key_values:
+      optional: true
+    use_cache:
+      optional: true
   graph:
-  - embed_tokens:
-      op: embedding
-      out: x
+  - n_op_1:
+      op: arange_positions
+      out: pos_ids
       in: input_ids
-      num_embeddings: V
-      scale: 25.298221281347036
-      embedding_dim: D
-  - layers:
-      op: repeat
-      var: i
-      range: L
-      body:
-      - n_use_1:
-          use: gemma3_block
-          in:
-            x: x
-            i: i
-            attn_mask: attn_mask
-          out:
-            out_0: x
-  - norm:
-      op: rmsnorm
-      out: pipe_2
-      in: x
-      cast_float: true
-      unit_offset: true
-      dim: D
-  - n_op_3:
+      attention_mask: attn_mask
+  - model:
+      graph:
+      - embed_tokens:
+          op: embedding
+          out: x
+          in: input_ids
+          num_embeddings: V
+          scale: 25.298221281347036
+          embedding_dim: D
+  - n_op_2:
+      op: init_list
+      out: present_key_values
+  - model:
+      graph:
+      - layers:
+          op: repeat
+          var: i
+          range: L
+          body:
+          - n_op_3:
+              op: index
+              out: past_i
+              in:
+              - past_key_values
+              - i
+          - n_use_4:
+              use: gemma3_block
+              in:
+                x: x
+                i: i
+                pos_ids: pos_ids
+                attn_mask: attn_mask
+                past_kv: past_i
+                use_cache: use_cache
+              out:
+                'y': x
+                present_kv: present_i
+          - n_op_5:
+              op: append
+              out: present_key_values
+              in:
+              - present_key_values
+              - present_i
+              when: use_cache
+  - model:
+      graph:
+      - norm:
+          op: rmsnorm
+          out: pipe_6
+          in: x
+          cast_float: true
+          unit_offset: true
+          dim: D
+  - n_op_7:
       op: linear
       out: logits
-      in: pipe_2
+      in: pipe_6
       out_features: V
-      tie_weight: embed_tokens.weight
+      tie_weight: model.embed_tokens.weight
   outputs:
     logits: logits
+    present_key_values: present_key_values
   symbols:
     D: 640
-    V: null
+    V: 262208
     L: 18
     H: 4
     KVH: 1
@@ -56,7 +92,13 @@ model:
           optional: false
         i:
           optional: false
+        pos_ids:
+          optional: false
         attn_mask:
+          optional: true
+        past_kv:
+          optional: true
+        use_cache:
           optional: true
       graph:
       - input_layernorm:
@@ -126,29 +168,50 @@ model:
           in:
           - qn
           - kn
+          position_ids: pos_ids
           theta: 10000.0 + (1000000.0 - 10000.0) * (((i + 1) % 6) == 0)
       - n_op_5:
+          op: kv_cache_update
+          in:
+          - past_kv
+          - kr
+          - v
+          out:
+          - k_all
+          - v_all
+          - present_kv
+      - n_op_6:
+          op: coalesce_triplet
+          in:
+          - k_all
+          - v_all
+          - kr
+          - v
+          out:
+          - k_ctx_raw
+          - v_ctx_raw
+      - n_op_7:
           op: repeat_kv
           out: k_ctx
-          in: kr
+          in: k_ctx_raw
           heads: H
           kv_heads: KVH
-      - n_op_6:
+      - n_op_8:
           op: repeat_kv
           out: v_ctx
-          in: v
+          in: v_ctx_raw
           heads: H
           kv_heads: KVH
-      - n_op_7:
+      - n_op_9:
           op: causal_mask
           out: mask
           in: qr
           key: k_ctx
           window: 512 + (32768 - 512) * (((i + 1) % 6) == 0)
           padding_mask: attn_mask
-      - n_op_9:
+      - n_op_11:
           op: attention
-          out: pipe_8
+          out: pipe_10
           in:
           - qr
           - k_ctx
@@ -159,25 +222,25 @@ model:
           scale: 0.0625
           rope_theta: 1000000.0
           sliding_window: 512
-      - n_op_11:
+      - n_op_13:
           op: merge_heads
-          out: pipe_10
-          in: pipe_8
+          out: pipe_12
+          in: pipe_10
       - self_attn:
           graph:
           - o_proj:
               op: linear
-              out: pipe_12
-              in: pipe_10
+              out: pipe_14
+              in: pipe_12
               out_features: D
       - post_attention_layernorm:
           op: rmsnorm
           out: attn
-          in: pipe_12
+          in: pipe_14
           cast_float: true
           unit_offset: true
           dim: D
-      - n_op_13:
+      - n_op_15:
           op: add
           out: x2
           in:
@@ -204,36 +267,37 @@ model:
               out: u
               in: x3
               out_features: 2048
-      - n_op_15:
+      - n_op_17:
           op: activation
           in: g
-          out: pipe_14
-          kind: gelu_pytorch_tanh
-      - n_op_17:
-          op: mul
           out: pipe_16
+          kind: gelu_pytorch_tanh
+      - n_op_19:
+          op: mul
+          out: pipe_18
           in:
-          - pipe_14
+          - pipe_16
           - u
       - mlp:
           graph:
           - down_proj:
               op: linear
-              out: pipe_18
-              in: pipe_16
+              out: pipe_20
+              in: pipe_18
               out_features: D
       - post_feedforward_layernorm:
           op: rmsnorm
           out: m
-          in: pipe_18
+          in: pipe_20
           cast_float: true
           unit_offset: true
           dim: D
-      - n_op_19:
+      - n_op_21:
           op: add
-          out: out_0
+          out: 'y'
           in:
           - x2
           - m
       outputs:
-        out_0: out_0
+        'y': 'y'
+        present_kv: present_kv
