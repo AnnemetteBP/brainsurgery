@@ -60,6 +60,25 @@ model:
     B: null
     S: null
   blocks:
+    lin_bt:
+      inputs:
+        x:
+          optional: false
+        dim:
+          optional: false
+        path:
+          optional: false
+      graph:
+      - n_op_1:
+          op: linear
+          out: out_0
+          in: x
+          dim: dim
+          bias: true
+          transpose: true
+          param_base: path
+      outputs:
+        out_0: out_0
     gpt2_block:
       inputs:
         x:
@@ -72,16 +91,15 @@ model:
           out: x1
           in: x
           dim: D
-      - attn:
-          graph:
-          - c_attn:
-              op: linear
-              out: pipe_1
-              in: x1
-              dim: 3*D
-              transpose: true
-              bias: true
-      - n_op_2:
+      - n_use_2:
+          use: lin_bt
+          in:
+            x: x1
+            dim: 3*D
+            path: '''attn.c_attn'''
+          out:
+            out_0: pipe_1
+      - n_op_3:
           op: split_last
           out:
           - q_lin
@@ -89,31 +107,31 @@ model:
           - v_lin
           in: pipe_1
           parts: 3
-      - n_op_3:
+      - n_op_4:
           op: reshape_heads
           out: q
           in: q_lin
           heads: H
-      - n_op_4:
+      - n_op_5:
           op: reshape_heads
           out: k
           in: k_lin
           heads: H
-      - n_op_5:
+      - n_op_6:
           op: reshape_heads
           out: v
           in: v_lin
           heads: H
-      - n_op_6:
+      - n_op_7:
           op: causal_mask
           out: causal_attn_mask
           in: q
           key: k
           window: T
           padding_mask: attn_mask
-      - n_op_8:
+      - n_op_9:
           op: attention
-          out: pipe_7
+          out: pipe_8
           in:
           - q
           - k
@@ -121,24 +139,23 @@ model:
           backend: sdpa
           causal: true
           mask: causal_attn_mask
-      - n_op_10:
-          op: merge_heads
-          out: pipe_9
-          in: pipe_7
-      - attn:
-          graph:
-          - c_proj:
-              op: linear
-              out: out_0
-              in: pipe_9
-              dim: D
-              transpose: true
-              bias: true
       - n_op_11:
+          op: merge_heads
+          out: pipe_10
+          in: pipe_8
+      - n_use_12:
+          use: lin_bt
+          in:
+            x: pipe_10
+            dim: D
+            path: '''attn.c_proj'''
+          out:
+            out_0: out_0
+      - n_op_13:
           op: _ir_alias
           in: out_0
           out: a
-      - n_op_12:
+      - n_op_14:
           op: add
           out: x
           in:
@@ -149,34 +166,32 @@ model:
           out: x3
           in: x
           dim: D
-      - mlp:
-          graph:
-          - c_fc:
-              op: linear
-              out: pipe_13
-              in: x3
-              dim: 4*D
-              transpose: true
-              bias: true
-      - n_op_15:
+      - n_use_16:
+          use: lin_bt
+          in:
+            x: x3
+            dim: 4*D
+            path: '''mlp.c_fc'''
+          out:
+            out_0: pipe_15
+      - n_op_18:
           op: activation
-          in: pipe_13
-          out: pipe_14
+          in: pipe_15
+          out: pipe_17
           kind: gelu_new
-      - mlp:
-          graph:
-          - c_proj:
-              op: linear
-              out: out_0
-              in: pipe_14
-              dim: D
-              transpose: true
-              bias: true
-      - n_op_16:
+      - n_use_19:
+          use: lin_bt
+          in:
+            x: pipe_17
+            dim: D
+            path: '''mlp.c_proj'''
+          out:
+            out_0: out_0
+      - n_op_20:
           op: _ir_alias
           in: out_0
           out: m
-      - n_op_17:
+      - n_op_21:
           op: add
           out: out_0
           in:
