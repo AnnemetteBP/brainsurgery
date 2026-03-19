@@ -1,14 +1,14 @@
-D    = 2048
-V    = 50304
-L    = 16
-H    = 16
-HD   = 128
-E    = 64
-EPT  = 8
-C    = 4096
-EPS  = 1e-05
-THETA = 10000.0
-ATTN_SCALE = 0.08838834764831845
+D    = 2048               -- hidden dimension
+V    = 50304              -- vocabulary size
+L    = 16                 -- number of decoder layers
+H    = 16                 -- number of attention heads
+HD   = 128                -- per-head dimension
+E    = 64                 -- number of experts
+EPT  = 8                  -- experts selected per token (top-k)
+C    = 4096               -- context window / max sequence length
+EPS  = 1e-05              -- RMSNorm epsilon
+THETA = 10000.0           -- rope theta
+ATTN_SCALE = 0.08838834764831845 -- attention scale (1 / sqrt(HD))
 
 olmoe_decoder_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> ?Bool -> (Tensor[B,S,D], ?CacheLayer)
 olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
@@ -17,12 +17,11 @@ olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
     q <- x_norm |> linear@q_proj dim=D |> rmsnorm@q_norm eps=EPS |> reshape_heads heads=H
     k <- x_norm |> linear@k_proj dim=D |> rmsnorm@k_norm eps=EPS |> reshape_heads heads=H
     v <- x_norm |> linear@v_proj dim=D |> reshape_heads heads=H
-  qr, kr <- apply_rope_pair q k position_ids=pos_ids theta=THETA
-  k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
-  k_coalesced, v_coalesced <- cache::coalesce k_all v_all kr v
-  mask <- causal_mask qr key=k_coalesced window=C padding_mask=attn_mask
-  a <- attention qr k_coalesced v_coalesced mask=mask causal=true scale=ATTN_SCALE |> merge_heads
-  scope@self_attn do
+    qr, kr <- apply_rope_pair q k position_ids=pos_ids theta=THETA
+    k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
+    k_coalesced, v_coalesced <- cache::coalesce k_all v_all kr v
+    mask <- causal_mask qr key=k_coalesced window=C padding_mask=attn_mask
+    a <- attention qr k_coalesced v_coalesced mask=mask causal=true scale=ATTN_SCALE |> merge_heads
     a <- linear@o_proj a dim=D
   x <- x + a
   x3 <- rmsnorm@post_attention_layernorm x eps=EPS
@@ -43,12 +42,13 @@ olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
 olmoe :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
 olmoe input_ids attn_mask past_key_values use_cache = do
   pos_ids <- arange_positions input_ids attention_mask=attn_mask
-  x <- embedding@model.embed_tokens input_ids dim=D
-  present_key_values <- init_list()
-  for@model.layers i <- [0..L) do
-    past_i <- index past_key_values i
-    x, present_i <- olmoe_decoder_block x pos_ids attn_mask past_i use_cache
-    present_key_values <- append present_key_values present_i when=use_cache
-  logits <- rmsnorm@model.norm x eps=EPS |>
-    linear@lm_head
+  scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    present_key_values <- init_list()
+    for@layers i <- [0..L) do
+      past_i <- index past_key_values i
+      x, present_i <- olmoe_decoder_block x pos_ids attn_mask past_i use_cache
+      present_key_values <- append present_key_values present_i when=use_cache
+    x <- rmsnorm@norm x eps=EPS
+  logits <- linear@lm_head x
   return logits, present_key_values
