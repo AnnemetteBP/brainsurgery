@@ -83,6 +83,25 @@ model:
     B: null
     S: null
   blocks:
+    lin:
+      inputs:
+        x:
+          optional: false
+        dim:
+          optional: false
+        path:
+          optional: false
+      graph:
+      - n_op_1:
+          op: linear
+          out: out_0
+          in: x
+          dim: dim
+          bias: true
+          transpose: true
+          param_base: path
+      outputs:
+        out_0: out_0
     gpt2_block:
       inputs:
         x:
@@ -99,16 +118,15 @@ model:
           out: x1
           in: x
           dim: D
-      - attn:
-          graph:
-          - c_attn:
-              op: linear
-              out: pipe_1
-              in: x1
-              dim: 3*D
-              transpose: true
-              bias: true
-      - n_op_2:
+      - n_use_2:
+          use: lin
+          in:
+            x: x1
+            dim: 3*D
+            path: '''attn.c_attn'''
+          out:
+            out_0: pipe_1
+      - n_op_3:
           op: split_last
           out:
           - q_lin
@@ -116,22 +134,22 @@ model:
           - v_lin
           in: pipe_1
           parts: 3
-      - n_op_3:
+      - n_op_4:
           op: reshape_heads
           out: q
           in: q_lin
           heads: H
-      - n_op_4:
+      - n_op_5:
           op: reshape_heads
           out: k
           in: k_lin
           heads: H
-      - n_op_5:
+      - n_op_6:
           op: reshape_heads
           out: v
           in: v_lin
           heads: H
-      - n_op_6:
+      - n_op_7:
           op: kv_cache_update
           in:
           - past_kv
@@ -141,7 +159,7 @@ model:
           - k_all
           - v_all
           - present_kv
-      - n_op_7:
+      - n_op_8:
           op: coalesce
           in:
           - k_all
@@ -151,16 +169,16 @@ model:
           out:
           - k_ctx
           - v_ctx
-      - n_op_8:
+      - n_op_9:
           op: causal_mask
           out: causal_attn_mask
           in: q
           key: k_ctx
           window: T
           padding_mask: attn_mask
-      - n_op_10:
+      - n_op_11:
           op: attention
-          out: pipe_9
+          out: pipe_10
           in:
           - q
           - k_ctx
@@ -168,24 +186,23 @@ model:
           backend: sdpa
           causal: true
           mask: causal_attn_mask
-      - n_op_12:
-          op: merge_heads
-          out: pipe_11
-          in: pipe_9
-      - attn:
-          graph:
-          - c_proj:
-              op: linear
-              out: out_0
-              in: pipe_11
-              dim: D
-              transpose: true
-              bias: true
       - n_op_13:
+          op: merge_heads
+          out: pipe_12
+          in: pipe_10
+      - n_use_14:
+          use: lin
+          in:
+            x: pipe_12
+            dim: D
+            path: '''attn.c_proj'''
+          out:
+            out_0: out_0
+      - n_op_15:
           op: _ir_alias
           in: out_0
           out: a
-      - n_op_14:
+      - n_op_16:
           op: add
           out: x
           in:
@@ -196,34 +213,32 @@ model:
           out: x3
           in: x
           dim: D
-      - mlp:
-          graph:
-          - c_fc:
-              op: linear
-              out: pipe_15
-              in: x3
-              dim: 4*D
-              transpose: true
-              bias: true
-      - n_op_17:
+      - n_use_18:
+          use: lin
+          in:
+            x: x3
+            dim: 4*D
+            path: '''mlp.c_fc'''
+          out:
+            out_0: pipe_17
+      - n_op_20:
           op: activation
-          in: pipe_15
-          out: pipe_16
+          in: pipe_17
+          out: pipe_19
           kind: gelu_new
-      - mlp:
-          graph:
-          - c_proj:
-              op: linear
-              out: out_0
-              in: pipe_16
-              dim: D
-              transpose: true
-              bias: true
-      - n_op_18:
+      - n_use_21:
+          use: lin
+          in:
+            x: pipe_19
+            dim: D
+            path: '''mlp.c_proj'''
+          out:
+            out_0: out_0
+      - n_op_22:
           op: _ir_alias
           in: out_0
           out: m
-      - n_op_19:
+      - n_op_23:
           op: add
           out: 'y'
           in:

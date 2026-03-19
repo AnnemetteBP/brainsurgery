@@ -60,7 +60,7 @@ model:
     B: null
     S: null
   blocks:
-    lin_bt:
+    lin:
       inputs:
         x:
           optional: false
@@ -92,7 +92,7 @@ model:
           in: x
           dim: D
       - n_use_2:
-          use: lin_bt
+          use: lin
           in:
             x: x1
             dim: 3*D
@@ -144,7 +144,7 @@ model:
           out: pipe_10
           in: pipe_8
       - n_use_12:
-          use: lin_bt
+          use: lin
           in:
             x: pipe_10
             dim: D
@@ -167,7 +167,7 @@ model:
           in: x
           dim: D
       - n_use_16:
-          use: lin_bt
+          use: lin
           in:
             x: x3
             dim: 4*D
@@ -180,7 +180,7 @@ model:
           out: pipe_17
           kind: gelu_new
       - n_use_19:
-          use: lin_bt
+          use: lin
           in:
             x: pipe_17
             dim: D

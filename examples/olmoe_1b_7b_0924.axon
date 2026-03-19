@@ -10,12 +10,15 @@ EPS  = 1e-05              -- RMSNorm epsilon
 THETA = 10000.0           -- rope theta
 ATTN_SCALE = 0.08838834764831845 -- attention scale (1 / sqrt(HD))
 
+rms :: @Path -> Tensor -> Tensor
+rms@path x = rmsnorm@path x eps=EPS
+
 olmoe_decoder_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> ?Bool -> (Tensor[B,S,D], ?CacheLayer)
 olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
-  x_norm <- rmsnorm@input_layernorm x eps=EPS
+  x_norm <- rms@input_layernorm x
   a, present_kv <- scope@self_attn do
-    q <- x_norm |> linear@q_proj dim=D |> rmsnorm@q_norm eps=EPS |> reshape_heads heads=H
-    k <- x_norm |> linear@k_proj dim=D |> rmsnorm@k_norm eps=EPS |> reshape_heads heads=H
+    q <- x_norm |> linear@q_proj dim=D |> rms@q_norm |> reshape_heads heads=H
+    k <- x_norm |> linear@k_proj dim=D |> rms@k_norm |> reshape_heads heads=H
     v <- x_norm |> linear@v_proj dim=D |> reshape_heads heads=H
     qr, kr <- apply_rope_pair q k position_ids=pos_ids theta=THETA
     k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
@@ -25,7 +28,7 @@ olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
     a <- linear@o_proj a dim=D
     return a, present_kv
   x <- x + a
-  x3 <- rmsnorm@post_attention_layernorm x eps=EPS
+  x3 <- rms@post_attention_layernorm x
   topk_scores, topk_indices <- linear@mlp.gate x3 dim=E |>
     softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1
   m <- zeros_like x3
@@ -49,7 +52,7 @@ olmoe input_ids attn_mask past_key_values use_cache = do
       past_i <- index past_key_values i
       x, present_i <- olmoe_decoder_block x pos_ids attn_mask past_i use_cache
       present_key_values <- append present_key_values present_i when=use_cache
-    x <- rmsnorm@norm x eps=EPS
+    x <- rms@norm x
     return x, present_key_values
   logits <- linear@lm_head x
   return logits, present_key_values

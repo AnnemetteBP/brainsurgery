@@ -58,15 +58,13 @@ model:
               - present_key_values
               - present_i
               when: use_cache
-  - model:
-      graph:
-      - norm:
-          op: rmsnorm
-          out: pipe_6
-          in: x
-          cast_float: true
-          unit_offset: true
-          dim: D
+  - n_use_7:
+      use: rms
+      in:
+        x: x
+        path: '''model.norm'''
+      out:
+        out_0: pipe_6
   - model:
       graph:
       - embed_tokens:
@@ -95,6 +93,22 @@ model:
     B: null
     S: null
   blocks:
+    rms:
+      inputs:
+        x:
+          optional: false
+        path:
+          optional: false
+      graph:
+      - n_op_1:
+          op: rmsnorm
+          out: out_0
+          in: x
+          cast_float: true
+          unit_offset: true
+          param_base: path
+      outputs:
+        out_0: out_0
     gemma3_block:
       inputs:
         x:
@@ -110,66 +124,64 @@ model:
         use_cache:
           optional: true
       graph:
-      - input_layernorm:
-          op: rmsnorm
-          out: x_norm
-          in: x
-          cast_float: true
-          unit_offset: true
-          dim: D
+      - n_use_1:
+          use: rms
+          in:
+            x: x
+            path: '''input_layernorm'''
+          out:
+            out_0: x_norm
       - self_attn:
           graph:
           - q_proj:
               op: linear
-              out: pipe_1
+              out: pipe_2
               in: x_norm
               dim: QD
-      - n_op_3:
+      - n_op_4:
           op: reshape_heads
-          out: pipe_2
-          in: pipe_1
+          out: pipe_3
+          in: pipe_2
           heads: H
-      - self_attn:
-          graph:
-          - q_norm:
-              op: rmsnorm
-              out: qn
-              in: pipe_2
-              cast_float: true
-              unit_offset: true
+      - n_use_5:
+          use: rms
+          in:
+            x: pipe_3
+            path: '''self_attn.q_norm'''
+          out:
+            out_0: qn
       - self_attn:
           graph:
           - k_proj:
               op: linear
-              out: pipe_4
-              in: x_norm
-              dim: KVD
-      - n_op_6:
-          op: reshape_heads
-          out: pipe_5
-          in: pipe_4
-          heads: KVH
-      - self_attn:
-          graph:
-          - k_norm:
-              op: rmsnorm
-              out: kn
-              in: pipe_5
-              cast_float: true
-              unit_offset: true
-      - self_attn:
-          graph:
-          - v_proj:
-              op: linear
-              out: pipe_7
+              out: pipe_6
               in: x_norm
               dim: KVD
       - n_op_8:
           op: reshape_heads
-          out: v
-          in: pipe_7
+          out: pipe_7
+          in: pipe_6
           heads: KVH
-      - n_op_9:
+      - n_use_9:
+          use: rms
+          in:
+            x: pipe_7
+            path: '''self_attn.k_norm'''
+          out:
+            out_0: kn
+      - self_attn:
+          graph:
+          - v_proj:
+              op: linear
+              out: pipe_10
+              in: x_norm
+              dim: KVD
+      - n_op_11:
+          op: reshape_heads
+          out: v
+          in: pipe_10
+          heads: KVH
+      - n_op_12:
           op: apply_rope_pair
           out:
           - qr
@@ -180,7 +192,7 @@ model:
           position_ids: pos_ids
           theta: THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD)
             == 0)
-      - n_op_10:
+      - n_op_13:
           op: kv_cache_update
           in:
           - past_kv
@@ -190,7 +202,7 @@ model:
           - k_all
           - v_all
           - present_kv
-      - n_op_11:
+      - n_op_14:
           op: coalesce
           in:
           - k_all
@@ -200,19 +212,19 @@ model:
           out:
           - k_ctx_raw
           - v_ctx_raw
-      - n_op_12:
+      - n_op_15:
           op: repeat_kv
           out: k_ctx
           in: k_ctx_raw
           heads: H
           kv_heads: KVH
-      - n_op_13:
+      - n_op_16:
           op: repeat_kv
           out: v_ctx
           in: v_ctx_raw
           heads: H
           kv_heads: KVH
-      - n_op_14:
+      - n_op_17:
           op: causal_mask
           out: mask
           in: qr
@@ -220,9 +232,9 @@ model:
           window: WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) ==
             0)
           padding_mask: attn_mask
-      - n_op_16:
+      - n_op_19:
           op: attention
-          out: pipe_15
+          out: pipe_18
           in:
           - qr
           - k_ctx
@@ -233,37 +245,37 @@ model:
           scale: ATTN_SCALE
           rope_theta: THETA_LONG
           sliding_window: WIN_LOCAL
-      - n_op_18:
+      - n_op_21:
           op: merge_heads
-          out: pipe_17
-          in: pipe_15
+          out: pipe_20
+          in: pipe_18
       - self_attn:
           graph:
           - o_proj:
               op: linear
               out: attn
-              in: pipe_17
+              in: pipe_20
               dim: D
-      - post_attention_layernorm:
-          op: rmsnorm
-          out: attn
-          in: attn
-          cast_float: true
-          unit_offset: true
-          dim: D
-      - n_op_19:
+      - n_use_22:
+          use: rms
+          in:
+            x: attn
+            path: '''post_attention_layernorm'''
+          out:
+            out_0: attn
+      - n_op_23:
           op: add
           out: x2
           in:
           - x
           - attn
-      - pre_feedforward_layernorm:
-          op: rmsnorm
-          out: x3
-          in: x2
-          cast_float: true
-          unit_offset: true
-          dim: D
+      - n_use_24:
+          use: rms
+          in:
+            x: x2
+            path: '''pre_feedforward_layernorm'''
+          out:
+            out_0: x3
       - mlp:
           graph:
           - gate_proj:
@@ -278,36 +290,36 @@ model:
               out: u
               in: x3
               dim: FFN
-      - n_op_21:
+      - n_op_26:
           op: activation
           in: g
-          out: pipe_20
+          out: pipe_25
           kind: gelu_pytorch_tanh
-      - n_op_23:
+      - n_op_28:
           op: mul
-          out: pipe_22
+          out: pipe_27
           in:
-          - pipe_20
+          - pipe_25
           - u
       - mlp:
           graph:
           - down_proj:
               op: linear
               out: out_0
-              in: pipe_22
+              in: pipe_27
               dim: D
-      - n_op_24:
+      - n_op_29:
           op: _ir_alias
           in: out_0
           out: m
-      - post_feedforward_layernorm:
-          op: rmsnorm
-          out: m
-          in: m
-          cast_float: true
-          unit_offset: true
-          dim: D
-      - n_op_25:
+      - n_use_30:
+          use: rms
+          in:
+            x: m
+            path: '''post_feedforward_layernorm'''
+          out:
+            out_0: m
+      - n_op_31:
           op: add
           out: 'y'
           in:
