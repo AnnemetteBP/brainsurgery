@@ -47,7 +47,7 @@ model:
                 past_kv: past_i
                 use_cache: use_cache
               out:
-                'y': x
+                out_0: x
                 present_kv: present_i
           - n_op_5:
               op: append
@@ -98,6 +98,36 @@ model:
           in: x
           eps: EPS
           param_base: path
+      outputs:
+        out_0: out_0
+    expert_ffn:
+      inputs:
+        x:
+          optional: false
+      graph:
+      - gate_proj:
+          op: linear
+          out: gate
+          in: x
+      - up_proj:
+          op: linear
+          out: up
+          in: x
+      - n_op_2:
+          op: activation
+          in: gate
+          out: pipe_1
+          kind: silu
+      - n_op_4:
+          op: mul
+          out: pipe_3
+          in:
+          - pipe_1
+          - up
+      - down_proj:
+          op: linear
+          out: out_0
+          in: pipe_3
       outputs:
         out_0: out_0
     olmoe_decoder_block:
@@ -285,30 +315,13 @@ model:
                   - topk_scores
                   - topk_indices
                   expert: e
-              - gate_proj:
-                  op: linear
-                  out: gate
-                  in: x_sel
-              - up_proj:
-                  op: linear
-                  out: up
-                  in: x_sel
-              - n_op_28:
-                  op: activation
-                  in: gate
-                  out: pipe_27
-                  kind: silu
-              - n_op_30:
-                  op: mul
-                  out: pipe_29
+              - n_use_27:
+                  use: expert_ffn
                   in:
-                  - pipe_27
-                  - up
-              - down_proj:
-                  op: linear
-                  out: x_upd
-                  in: pipe_29
-              - n_op_31:
+                    x: x_sel
+                  out:
+                    out_0: x_upd
+              - n_op_28:
                   op: moe_scatter_add
                   out: m
                   in:
@@ -316,12 +329,12 @@ model:
                   - token_idx
                   - x_upd
                   - sel_scores
-      - n_op_32:
+      - n_op_29:
           op: add
-          out: 'y'
+          out: out_0
           in:
           - x
           - m
       outputs:
-        'y': 'y'
+        out_0: out_0
         present_kv: present_kv
