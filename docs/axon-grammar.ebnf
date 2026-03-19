@@ -1,89 +1,107 @@
-# Axon Grammar (Draft v1, indentation-sensitive)
+# Axon Grammar (Current Authoring Form)
+#
+# Indentation-sensitive (Python-style INDENT/DEDENT tokens).
+# "--" starts a comment outside strings.
+# Current form intentionally excludes legacy `module ... do` headers and
+# `repeat ...` loops; use haskell-style header + `for@...` loops.
 
-Program           = { TopDecl } ;
-TopDecl           = ModelDecl | ModuleDecl ;
+program             ::= { top_decl } ;
 
-ModelDecl         = "model" Identifier "do" Newline Indent { ModelLine } Dedent ;
-ModelLine         = SymbolsDecl | InputsDecl | OutputsDecl | Stmt | AnnotationLine ;
+top_decl            ::= top_const_decl
+                      | module_decl
+                      ;
 
-SymbolsDecl       = "symbols" Newline Indent { SymbolAssign Newline } Dedent ;
-SymbolAssign      = Identifier "=" Expr ;
+top_const_decl      ::= UPPER_IDENT "=" const_expr NEWLINE ;
 
-InputsDecl        = "inputs" Newline Indent { InputDecl Newline } Dedent ;
-InputDecl         = Identifier ":" Type ;
+module_decl         ::= haskell_sig NEWLINE haskell_def NEWLINE INDENT stmt_block DEDENT ;
+haskell_sig         ::= IDENT "::" type_expr ;
+haskell_def         ::= IDENT ident_list "=" "do" ;
 
-OutputsDecl       = "outputs" Newline Indent { Identifier Newline } Dedent ;
+stmt_block          ::= { statement NEWLINE } ;
 
-ModuleDecl        = "module" Path "(" [ ParamList ] ")"
-                    [ "->" ReturnSpec ]
-                    "do"
-                    Newline
-                    Indent { StmtOrAnnotation } Dedent ;
+statement           ::= bind_stmt
+                      | return_stmt
+                      | for_at_stmt
+                      | scope_stmt
+                      ;
 
-StmtOrAnnotation  = AnnotationLine | Stmt ;
-AnnotationLine    = Annotation Newline ;
-Annotation        = "@" Identifier [ "(" [ ArgList ] ")" ] ;
+bind_stmt           ::= bind_targets "<-" expr ;
+bind_targets        ::= IDENT { "," IDENT } ;
 
-ParamList         = Param { "," Param } ;
-Param             = Identifier [ "?" ] ;
-ReturnSpec        = Identifier | "(" Identifier { "," Identifier } ")" ;
+return_stmt         ::= "return" expr_list ;
+expr_list           ::= expr { "," expr } ;
 
-Stmt              = BindStmt Newline
-                  | ReturnStmt Newline
-                  | NodeStmt Newline
-                  | MetaStmt Newline
-                  | ExprStmt Newline ;
+for_at_stmt         ::= "for" [ "@" path ] IDENT "<-" range_expr "do"
+                        NEWLINE INDENT stmt_block DEDENT ;
+range_expr          ::= "[" expr ".." expr ")"    # half-open
+                      | "(" expr ".." expr "]"    # open-closed
+                      | "[" expr ".." expr "]"    # closed-closed
+                      ;
 
-BindStmt          = BindTarget "<-" Expr ;
-BindTarget        = Identifier | Identifier "," Identifier { "," Identifier } ;
+scope_stmt          ::= ( "scope@" path | "scope" path ) "do"
+                        NEWLINE INDENT stmt_block DEDENT ;
 
-ReturnStmt        = "return" ExprList ;
-NodeStmt          = "node" Identifier "=" JsonObject ;
-MetaStmt          = "meta" Identifier "=" JsonValue ;
-ExprStmt          = Expr ;
-ExprList          = Expr { "," Expr } ;
+expr                ::= ternary_expr ;
+ternary_expr        ::= bind_expr [ "?" expr ":" expr_or_tuple ] ;
+expr_or_tuple       ::= expr | "(" expr_list ")" ;
 
-Expr              = TernaryExpr ;
-TernaryExpr       = BindExpr [ "?" Expr ":" ExprList ] ;
-BindExpr          = PipeExpr { ">>=" LambdaExpr } ;
-PipeExpr          = BinaryExpr { "|>" Callable } ;
-BinaryExpr        = UnaryExpr { ("+" | "-" | "*" | "/") UnaryExpr } ;
-UnaryExpr         = ["-" | "not"] PrimaryExpr ;
-LambdaExpr        = "\\" Identifier "->" Expr ;
+bind_expr           ::= pipe_expr { ">>=" lambda_expr } ;
+lambda_expr         ::= "\" IDENT "->" expr ;
 
-PrimaryExpr       = Literal
-                  | Identifier
-                  | Path
-                  | CallExpr
-                  | "(" Expr ")" ;
+pipe_expr           ::= additive_expr { "|>" pipe_stage } ;
+pipe_stage          ::= call_expr | callable ;
 
-CallExpr          = Callable "(" [ ArgList ] ")" ;
-Callable          = Identifier
-                  | Identifier "::" Identifier
-                  | Identifier "@" Path ;
+additive_expr       ::= multiplicative_expr { ("+" | "-") multiplicative_expr } ;
+multiplicative_expr ::= unary_expr { ("*" | "/" | "%" ) unary_expr } ;
+unary_expr          ::= [ "not" | "-" | "+" ] primary_expr ;
 
-ArgList           = Argument { "," Argument } ;
-Argument          = Identifier "=" Expr | Expr ;
+primary_expr        ::= call_expr
+                      | IDENT
+                      | literal
+                      | "(" expr ")"
+                      ;
 
-Path              = Identifier { "." Identifier | "[" Expr "]" } ;
+call_expr           ::= callable "(" [ arg_list ] ")"
+                      | callable bare_args
+                      ;
 
-Type              = TypeName [ "[" DimList "]" ] ;
-TypeName          = Identifier ;
-DimList           = Expr { "," Expr } ;
+bare_args           ::= bare_arg { bare_arg } ;
+bare_arg            ::= kwarg | primary_arg ;
+primary_arg         ::= IDENT | literal | "(" expr ")" | list_literal ;
 
-Literal           = Integer | Float | Boolean | Null | String ;
-Boolean           = "true" | "false" ;
-Null              = "null" ;
-JsonValue         = JsonObject | JsonArray | Literal ;
-JsonObject        = /{.*}/ ;
-JsonArray         = /\\[.*\\]/ ;
+arg_list            ::= arg { "," arg } ;
+arg                 ::= kwarg | expr ;
+kwarg               ::= IDENT "=" kwarg_value ;
+kwarg_value         ::= expr ;
 
-Identifier        = /[A-Za-z_][A-Za-z0-9_]*/ ;
-Integer           = /[0-9]+/ ;
-Float             = /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?/ ;
-String            = /"([^"\\]|\\.)*"/ ;
+callable            ::= IDENT
+                      | IDENT "::" IDENT
+                      | IDENT "@" path
+                      ;
 
-# Lexical indentation tokens (Python-style)
-Newline           = line break ;
-Indent            = increase in leading indentation ;
-Dedent            = decrease in leading indentation ;
+path                ::= path_segment { "." path_segment } ;
+path_segment        ::= IDENT
+                      | "{" IDENT "}"
+                      ;
+
+type_expr           ::= type_atom { "->" type_atom } ;
+type_atom           ::= [ "?" ] type_name [ "[" dim_list "]" ]
+                      | "(" type_expr { "," type_expr } ")"
+                      ;
+type_name           ::= IDENT ;
+dim_list            ::= dim_expr { "," dim_expr } ;
+dim_expr            ::= IDENT | NUMBER ;
+
+const_expr          ::= expr ;
+
+literal             ::= NUMBER | BOOL | NULL | STRING | list_literal ;
+list_literal        ::= "[" [ expr { "," expr } ] "]" ;
+
+ident_list          ::= IDENT { IDENT } ;
+
+IDENT               ::= /[A-Za-z_][A-Za-z0-9_]*/ ;
+UPPER_IDENT         ::= /[A-Z][A-Z0-9_]*/ ;
+NUMBER              ::= /-?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?/ ;
+BOOL                ::= "true" | "false" ;
+NULL                ::= "null" ;
+STRING              ::= /"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/ ;

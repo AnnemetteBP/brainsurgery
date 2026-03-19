@@ -11,7 +11,6 @@ Core style:
 - namespaced ops via `ns::op(...)`,
 - expression-level conditional via `cond ? a : b`,
 - explicit return via `return ...`,
-- raw graph passthrough via `node`, plus model metadata via `meta`.
 - mixed composition styles: nested call, forward pipe `|>`, and bind `>>=`.
 
 ## 1) Syntax Principles
@@ -25,12 +24,12 @@ Core style:
 
 - Binding: `x1 <- expr`
 - Multi-bind: `q, k, v <- expr1, expr2, expr3`
-- Raw node passthrough: `node n1 = {"op":"repeat","var":"i","range":"L","body":[...]}`
-- Model metadata passthrough: `meta symbols = {"D":768,"L":12}`
 - Module-scoped op: `linear@attn.c_attn(x)`
 - Namespaced op: `cache::update(past, k, v)`
 - Ternary: `use_cache ? a : b`
-- Header: `module name(args) -> outs do`
+- Header:
+  - `name :: T1 -> ?T2 -> (T3, ?T4)`
+  - `name a b = do`
 - Composition (equivalent intent):
   - `y <- g(f(x))`
   - `y <- x |> f |> g`
@@ -45,22 +44,8 @@ Paths define parameter ownership:
 
 ## 4) Symbols and Types
 
-```axon
-symbols
-  V = 50257
-  C = 1024
-  L = 12
-  D = 768
-  H = 12
-  Hd = D / H
-  M = 4 * D
-
-inputs
-  input_ids: i64[B, T]
-
-outputs
-  logits
-```
+Top-level constants define symbols used by module signatures and args:
+`D = 768`, `L = 12`, `EPS = 1e-05`.
 
 ## 5) Core Forms
 
@@ -80,7 +65,7 @@ outputs
 
 - `x <- expr`
 - `return expr`
-- `repeat i in [0, N)` blocks
+- `for@path i <- [0..N) do` blocks
 - ternary `c ? t : f`
 
 ## 5.3 KV-cache helpers
@@ -107,7 +92,8 @@ Hints are annotations, not semantics changes:
 @tp(axis="hidden", parts=2)
 @pp(stage=1)
 @cp(axis="seq", parts=2)
-module h[i].attn(...) do
+h_attn :: Tensor[B,S,D] -> Tensor[B,S,D]
+h_attn x = do
 ```
 
 These are preserved for lowering/planning (TP/PP/CP), ignored by pure interpretation.
@@ -115,7 +101,8 @@ These are preserved for lowering/planning (TP/PP/CP), ignored by pure interpreta
 ## 7) Example (Refined GPT-2 Block)
 
 ```axon
-module gpt2_block(x, past_kv?, use_cache?) -> (y, present_kv?) do
+gpt2_block :: Tensor[B,S,D] -> ?Cache -> ?Bool -> (Tensor[B,S,D], ?Cache)
+gpt2_block x past_kv use_cache = do
   x1 <- layernorm@ln_1(x, eps=1e-5)
   qkv <- linear@attn.c_attn(x1)
   q_lin, k_lin, v_lin <- split_last(qkv)
@@ -137,7 +124,7 @@ Lowering is mechanical:
 
 - `<-` bindings map to graph node outputs,
 - `op@path(...)` maps to Synapse op + inferred parameter path,
-- `repeat` maps to Synapse `op: repeat`,
+- `for@...` maps to Synapse `op: repeat`,
 - ternary maps to conditional graph nodes / `when`-guarded assignments,
 - annotations map to planner metadata.
 

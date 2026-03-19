@@ -13,21 +13,17 @@ ATTN_SCALE = 0.08838834764831845
 olmoe_decoder_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> ?Bool -> (Tensor[B,S,D], ?CacheLayer)
 olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
   x_norm <- rmsnorm@input_layernorm x eps=EPS
-  q <- x_norm |> linear@self_attn.q_proj out_features=D |>
-    rmsnorm@self_attn.q_norm eps=EPS |>
-    reshape_heads heads=H
-  k <- x_norm |> linear@self_attn.k_proj out_features=D |>
-    rmsnorm@self_attn.k_norm eps=EPS |>
-    reshape_heads heads=H
-  v <- x_norm |> linear@self_attn.v_proj out_features=D |>
-    reshape_heads heads=H
+  scope@self_attn do
+    q <- x_norm |> linear@q_proj out_features=D |> rmsnorm@q_norm eps=EPS |> reshape_heads heads=H
+    k <- x_norm |> linear@k_proj out_features=D |> rmsnorm@k_norm eps=EPS |> reshape_heads heads=H
+    v <- x_norm |> linear@v_proj out_features=D |> reshape_heads heads=H
   qr, kr <- apply_rope_pair q k position_ids=pos_ids theta=THETA
   k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
   k_coalesced, v_coalesced <- cache::coalesce k_all v_all kr v
   mask <- causal_mask qr key=k_coalesced window=C padding_mask=attn_mask
-  a <- attention qr k_coalesced v_coalesced mask=mask causal=true scale=ATTN_SCALE |>
-    merge_heads |>
-    linear@self_attn.o_proj out_features=D
+  a <- attention qr k_coalesced v_coalesced mask=mask causal=true scale=ATTN_SCALE |> merge_heads
+  scope@self_attn do
+    a <- linear@o_proj a out_features=D
   x <- x + a
   x3 <- rmsnorm@post_attention_layernorm x eps=EPS
   topk_scores, topk_indices <- x3 |>
@@ -37,7 +33,9 @@ olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
   m <- zeros_like x3
   for@mlp.experts e <- [0..E) do
     x_sel, token_idx, topk_pos, sel_scores <- moe_select_tokens x3 topk_scores topk_indices expert=e
-    x_upd <- moe_expert_ffn x_sel expert=e experts_scope= activation=silu
+    gate <- linear@gate_proj x_sel
+    up <- linear@up_proj x_sel
+    x_upd <- gate |> act::silu |> mul up |> linear@down_proj
     m <- moe_scatter_add m token_idx x_upd sel_scores
   y <- x + m
   return y, present_kv
