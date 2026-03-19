@@ -3,6 +3,45 @@
 This table tracks current Synapse ops, their mathematical semantics, refactor guidance,
 and concrete authored usage in `examples/*.axon`.
 
+## Typed Lowering Contract
+
+Lowering now validates op arity and kwarg names/types using this contract.
+
+- `Dim`: integer or symbolic dimension token/expression (for example `D`, `4*D`).
+- `Num`: integer, float, or symbolic numeric token/expression.
+- `Bool`: `true` or `false`.
+- `Str`: string/token.
+- `List[Int]`: list of integers.
+
+| Op | Positional Args | Kwargs (typed) |
+|---|---|---|
+| `embedding` | `embedding(x)` | `dim: Dim`, `scale: Num` |
+| `linear` | `linear(x)` | `dim: Dim`, `bias: Bool`, `transpose: Bool` |
+| `layernorm` | `layernorm(x)` | `dim: Dim`, `eps: Num` |
+| `rmsnorm` | `rmsnorm(x)` | `dim: Dim`, `eps: Num`, `cast_float: Bool`, `unit_offset: Bool` |
+| `activation` | `act::kind(x)` | `kind: Str` (derived from `kind`) |
+| `attention` | `attention(q, k, v)` | `backend: Str`, `causal: Bool`, `mask: Str`, `scale: Num`, `rope_theta: Num`, `sliding_window: Dim`, `causal_mask_buffer: Str` |
+| `causal_mask` | `causal_mask(q)` | `key: Str`, `window: Dim`, `padding_mask: Str` |
+| `reshape_heads` | `reshape_heads(x)` | `heads: Dim`, `head_dim: Dim` |
+| `split_last` | `split_last(x)` | `parts: Int`, `sizes: List[Int]` |
+| `apply_rope_pair` | `apply_rope_pair(q, k)` | `position_ids: Str`, `theta: Num` |
+| `repeat_kv` | `repeat_kv(x)` | `heads: Dim`, `kv_heads: Dim` |
+| `arange_positions` | `arange_positions(input_ids)` | `attention_mask: Str` |
+| `kv_cache_update` | `cache::update(past, k, v)` | none |
+| `coalesce` | `cache::coalesce(a, b, ...)` | none |
+| `kv_seq_len` | `cache::seq_len(cache)` | none |
+| `topk` | `topk(x)` | `k: Dim`, `dim: Int` |
+| `softmax` | `softmax(x)` | `dim: Int`, `dtype: Str` |
+| `zeros_like` | `zeros_like(x)` | none |
+| `moe_select_tokens` | `moe_select_tokens(x, scores, indices)` | `expert: Dim` |
+| `moe_scatter_add` | `moe_scatter_add(acc, idx, upd, w)` | none |
+| `index` | `index(container, idx)` | none |
+| `init_list` | `init_list()` | none |
+| `append` | `append(xs, x)` | none (`when` is parsed as control-flow guard, not op kwarg) |
+| `add` | `add(x, y)` | none |
+| `mul` | `mul(x, y)` | none |
+| `merge_heads` | `merge_heads(x)` | none |
+
 | Op | Mathematical Meaning | Merge / Extend / Rename Assessment | Exact Instances in Axon (`file:line: full text`) | Options / Changes |
 |---|---|---|---|---|
 | `embedding` | Lookup / gather:<br>$Y[b,t,:] = W[\mathrm{idx}_{b,t},:]$ | Keep as-is | `examples/gemma3_270m.axon:52: x <- embedding@model.embed_tokens input_ids num_embeddings=V dim=D scale=EMB_SCALE`<br>`examples/gpt2.axon:25: tok <- embedding@wte input_ids dim=D`<br>`examples/gpt2.axon:27: embedding@wpe dim=D`<br>`examples/gpt2_kv.axon:29: tok <- embedding@wte input_ids dim=D`<br>`examples/gpt2_kv.axon:31: pos <- embedding@wpe pos_ids dim=D`<br>`examples/olmoe_1b_7b_0924.axon:46: x <- embedding@model.embed_tokens input_ids num_embeddings=V dim=D` | Options: `dim`, `scale`.<br>Change: standardized on Axon `dim` (reject `embedding_dim` in Axon source). |

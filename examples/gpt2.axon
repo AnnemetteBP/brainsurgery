@@ -4,7 +4,7 @@ L   = 12     -- number of layers
 H   = 12     -- number of attention heads
 V   = 520257 -- vocab size
 
-lin :: @Path -> Tensor -> I -> Tensor
+lin :: @Path -> Tensor[B,S,Din] -> I -> Tensor[B,S,dim]
 lin@path x dim = linear@path x dim=dim bias=true transpose=true
 
 gpt2_block :: Tensor[B,S,D] -> ?Tensor[B,S] -> Tensor[B,S,D]
@@ -27,8 +27,7 @@ gpt2_block x attn_mask = do
 gpt2 :: TokenIds[B,S] -> ?Tensor[B,S] -> Tensor[B,S,V]
 gpt2 input_ids attn_mask = do
   tok <- embedding@wte input_ids dim=D
-  pos <- arange_positions input_ids attention_mask=attn_mask |>
-    embedding@wpe dim=D
+  pos <- arange_positions input_ids attention_mask=attn_mask |> embedding@wpe
   x <- tok + pos
   for@h i <- [0..L) do
     x <- gpt2_block x attn_mask

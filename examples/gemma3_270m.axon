@@ -14,7 +14,7 @@ WIN_LONG = 32768         -- long-context attention window size
 ATTN_SCALE = 0.0625      -- attention scale (1 / sqrt(head_dim))
 EMB_SCALE = 25.298221281347036 -- embedding scaling factor (sqrt(D))
 
-rms :: @Path -> Tensor -> Tensor
+rms :: @Path -> Tensor[B,S,D] -> Tensor[B,S,D]
 rms@path x = rmsnorm@path x cast_float=true unit_offset=true
 
 gemma3_block :: Tensor[B,S,D] -> I -> Tensor[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,D], ?Cache)

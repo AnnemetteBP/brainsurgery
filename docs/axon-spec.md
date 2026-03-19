@@ -9,7 +9,8 @@ Core style:
 - single-assignment bindings with `<-`,
 - module-path call sugar via `op@path(...)`,
 - namespaced ops via `ns::op(...)`,
-- expression-level conditional via `cond ? a : b`,
+- expression-level conditional via `if cond then a else b`,
+- ternary shorthand `cond ? a : b` (equivalent to `if/then/else`),
 - explicit return via `return ...`,
 - mixed composition styles: nested call, forward pipe `|>`, and bind `>>=`.
 
@@ -26,7 +27,8 @@ Core style:
 - Multi-bind: `q, k, v <- expr1, expr2, expr3`
 - Module-scoped op: `linear@attn.c_attn(x)`
 - Namespaced op: `cache::update(past, k, v)`
-- Ternary: `use_cache ? a : b`
+- Conditional: `if use_cache then a else b`
+- Ternary shorthand: `use_cache ? a : b`
 - Header:
   - `name :: T1 -> ?T2 -> (T3, ?T4)`
   - `name a b = do`
@@ -66,7 +68,8 @@ Top-level constants define symbols used by module signatures and args:
 - `x <- expr`
 - `return expr`
 - `for@path i <- [0..N) do` blocks
-- ternary `c ? t : f`
+- conditional `if c then t else f`
+- ternary shorthand `c ? t : f`
 
 ## 5.3 KV-cache helpers
 
@@ -105,7 +108,7 @@ gpt2_block x past_kv use_cache = do
   qkv <- linear@attn.c_attn(x1)
   q_lin, k_lin, v_lin <- split_last(qkv)
   q, k, v <- reshape_heads(q_lin, heads=H), reshape_heads(k_lin, heads=H), reshape_heads(v_lin, heads=H)
-  k_all, v_all, present_kv <- use_cache ? cache::update(past_kv, k, v) : k, v, null
+  k_all, v_all, present_kv <- if use_cache then cache::update(past_kv, k, v) else (k, v, null)
   k_ctx, v_ctx <- cache::coalesce(k_all, v_all, k, v)
   a_heads <- attention(q, k_ctx, v_ctx, causal=true)
   x2 <- x + linear@attn.c_proj(merge_heads(a_heads))
@@ -123,7 +126,7 @@ Lowering is mechanical:
 - `<-` bindings map to graph node outputs,
 - `op@path(...)` maps to Synapse op + inferred parameter path,
 - `for@...` maps to Synapse `op: repeat`,
-- ternary maps to conditional graph nodes / `when`-guarded assignments,
+- `if/then/else` and ternary shorthand map to conditional graph nodes / `when`-guarded assignments,
 - annotations map to planner metadata.
 
 Synapse YAML remains the canonical machine-readable format. Axon is the readable authoring/rendering format.

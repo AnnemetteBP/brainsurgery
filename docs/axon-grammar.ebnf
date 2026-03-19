@@ -41,7 +41,11 @@ range_expr          ::= "[" expr ".." expr ")"    # half-open
 scope_stmt          ::= ( "scope@" path | "scope" path ) "do"
                         NEWLINE INDENT stmt_block DEDENT ;
 
-expr                ::= ternary_expr ;
+expr                ::= conditional_expr ;
+conditional_expr    ::= if_then_else_expr
+                      | ternary_expr
+                      ;
+if_then_else_expr   ::= "if" expr "then" expr_or_tuple "else" expr_or_tuple ;
 ternary_expr        ::= bind_expr [ "?" expr ":" expr_or_tuple ] ;
 expr_or_tuple       ::= expr | "(" expr_list ")" ;
 

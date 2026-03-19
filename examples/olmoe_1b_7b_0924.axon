@@ -10,10 +10,10 @@ EPS  = 1e-05              -- RMSNorm epsilon
 THETA = 10000.0           -- rope theta
 ATTN_SCALE = 0.08838834764831845 -- attention scale (1 / sqrt(HD))
 
-rms :: @Path -> Tensor -> Tensor
+rms :: @Path -> Tensor[B,S,D] -> Tensor[B,S,D]
 rms@path x = rmsnorm@path x eps=EPS
 
-expert_ffn :: Tensor -> Tensor
+expert_ffn :: Tensor[N,D] -> Tensor[N,D]
 expert_ffn x = do
   gate <- linear@gate_proj x
   up <- linear@up_proj x
