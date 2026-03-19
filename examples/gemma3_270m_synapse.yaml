@@ -121,55 +121,55 @@ model:
           graph:
           - q_proj:
               op: linear
-              out: q_lin
+              out: pipe_1
               in: x_norm
               dim: QD
-      - self_attn:
-          graph:
-          - k_proj:
-              op: linear
-              out: k_lin
-              in: x_norm
-              dim: KVD
-      - self_attn:
-          graph:
-          - v_proj:
-              op: linear
-              out: v_lin
-              in: x_norm
-              dim: KVD
-      - n_op_1:
-          op: reshape_heads
-          out: q
-          in: q_lin
-          heads: H
-      - n_op_2:
-          op: reshape_heads
-          out: k
-          in: k_lin
-          heads: KVH
       - n_op_3:
           op: reshape_heads
-          out: v
-          in: v_lin
-          heads: KVH
+          out: pipe_2
+          in: pipe_1
+          heads: H
       - self_attn:
           graph:
           - q_norm:
               op: rmsnorm
               out: qn
-              in: q
+              in: pipe_2
               cast_float: true
               unit_offset: true
+      - self_attn:
+          graph:
+          - k_proj:
+              op: linear
+              out: pipe_4
+              in: x_norm
+              dim: KVD
+      - n_op_6:
+          op: reshape_heads
+          out: pipe_5
+          in: pipe_4
+          heads: KVH
       - self_attn:
           graph:
           - k_norm:
               op: rmsnorm
               out: kn
-              in: k
+              in: pipe_5
               cast_float: true
               unit_offset: true
-      - n_op_4:
+      - self_attn:
+          graph:
+          - v_proj:
+              op: linear
+              out: pipe_7
+              in: x_norm
+              dim: KVD
+      - n_op_8:
+          op: reshape_heads
+          out: v
+          in: pipe_7
+          heads: KVH
+      - n_op_9:
           op: apply_rope_pair
           out:
           - qr
@@ -180,7 +180,7 @@ model:
           position_ids: pos_ids
           theta: THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD)
             == 0)
-      - n_op_5:
+      - n_op_10:
           op: kv_cache_update
           in:
           - past_kv
@@ -190,7 +190,7 @@ model:
           - k_all
           - v_all
           - present_kv
-      - n_op_6:
+      - n_op_11:
           op: coalesce
           in:
           - k_all
@@ -200,19 +200,19 @@ model:
           out:
           - k_ctx_raw
           - v_ctx_raw
-      - n_op_7:
+      - n_op_12:
           op: repeat_kv
           out: k_ctx
           in: k_ctx_raw
           heads: H
           kv_heads: KVH
-      - n_op_8:
+      - n_op_13:
           op: repeat_kv
           out: v_ctx
           in: v_ctx_raw
           heads: H
           kv_heads: KVH
-      - n_op_9:
+      - n_op_14:
           op: causal_mask
           out: mask
           in: qr
@@ -220,9 +220,9 @@ model:
           window: WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) ==
             0)
           padding_mask: attn_mask
-      - n_op_11:
+      - n_op_16:
           op: attention
-          out: pipe_10
+          out: pipe_15
           in:
           - qr
           - k_ctx
@@ -233,16 +233,16 @@ model:
           scale: ATTN_SCALE
           rope_theta: THETA_LONG
           sliding_window: WIN_LOCAL
-      - n_op_13:
+      - n_op_18:
           op: merge_heads
-          out: pipe_12
-          in: pipe_10
+          out: pipe_17
+          in: pipe_15
       - self_attn:
           graph:
           - o_proj:
               op: linear
               out: attn
-              in: pipe_12
+              in: pipe_17
               dim: D
       - post_attention_layernorm:
           op: rmsnorm
@@ -251,7 +251,7 @@ model:
           cast_float: true
           unit_offset: true
           dim: D
-      - n_op_14:
+      - n_op_19:
           op: add
           out: x2
           in:
@@ -278,23 +278,23 @@ model:
               out: u
               in: x3
               dim: FFN
-      - n_op_16:
+      - n_op_21:
           op: activation
           in: g
-          out: pipe_15
+          out: pipe_20
           kind: gelu_pytorch_tanh
-      - n_op_18:
+      - n_op_23:
           op: mul
-          out: pipe_17
+          out: pipe_22
           in:
-          - pipe_15
+          - pipe_20
           - u
       - mlp:
           graph:
           - down_proj:
               op: linear
               out: m
-              in: pipe_17
+              in: pipe_22
               dim: D
       - post_feedforward_layernorm:
           op: rmsnorm
@@ -303,7 +303,7 @@ model:
           cast_float: true
           unit_offset: true
           dim: D
-      - n_op_19:
+      - n_op_24:
           op: add
           out: 'y'
           in:

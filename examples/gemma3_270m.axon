@@ -1,40 +1,34 @@
-D   = 640
-V   = 262208
-L   = 18
-H   = 4
-KVH = 1
-QD  = 1024
-KVD = 256
-FFN = 2048
-ROPE_PERIOD = 6
-THETA_BASE = 10000.0
-THETA_LONG = 1000000.0
-WIN_LOCAL = 512
-WIN_LONG = 32768
-ATTN_SCALE = 0.0625
-EMB_SCALE = 25.298221281347036
+D   = 640                -- hidden dimension
+V   = 262208             -- vocabulary size
+L   = 18                 -- number of decoder layers
+H   = 4                  -- number of query attention heads
+KVH = 1                  -- number of key/value heads
+QD  = 1024               -- q projection dimension (H * head_dim)
+KVD = 256                -- k/v projection dimension (KVH * head_dim)
+FFN = 2048               -- feed-forward intermediate dimension
+ROPE_PERIOD = 6          -- periodicity for long-context rope/window schedule
+THETA_BASE = 10000.0     -- base rope theta
+THETA_LONG = 1000000.0   -- long-context rope theta
+WIN_LOCAL = 512          -- local sliding-window size
+WIN_LONG = 32768         -- long-context attention window size
+ATTN_SCALE = 0.0625      -- attention scale (1 / sqrt(head_dim))
+EMB_SCALE = 25.298221281347036 -- embedding scaling factor (sqrt(D))
 
 gemma3_block :: Tensor[B,S,D] -> I -> Tensor[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,D], ?Cache)
 gemma3_block x i pos_ids attn_mask past_kv use_cache = do
   x_norm <- rmsnorm@input_layernorm x cast_float=true unit_offset=true
   scope@self_attn do
-    q_lin <- x_norm |> linear@q_proj dim=QD
-    k_lin <- x_norm |> linear@k_proj dim=KVD
-    v_lin <- x_norm |> linear@v_proj dim=KVD
-  q <- q_lin |> reshape_heads heads=H
-  k <- k_lin |> reshape_heads heads=KVH
-  v <- v_lin |> reshape_heads heads=KVH
-  scope@self_attn do
-    qn <- rmsnorm@q_norm q cast_float=true unit_offset=true
-    kn <- rmsnorm@k_norm k cast_float=true unit_offset=true
-  qr, kr <- apply_rope_pair qn kn position_ids=pos_ids theta=THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD) == 0)
-  k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
-  k_ctx_raw, v_ctx_raw <- cache::coalesce k_all v_all kr v
-  k_ctx <- repeat_kv k_ctx_raw heads=H kv_heads=KVH
-  v_ctx <- repeat_kv v_ctx_raw heads=H kv_heads=KVH
-  mask <- causal_mask qr key=k_ctx window=WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) == 0) padding_mask=attn_mask
-  scope@self_attn do
-    attn <- attention qr k_ctx v_ctx mask=mask backend=sdpa causal=true scale=ATTN_SCALE rope_theta=THETA_LONG sliding_window=WIN_LOCAL |> merge_heads |> linear@o_proj dim=D
+    qn <- x_norm |> linear@q_proj dim=QD |> reshape_heads heads=H |> rmsnorm@q_norm cast_float=true unit_offset=true
+    kn <- x_norm |> linear@k_proj dim=KVD |> reshape_heads heads=KVH |> rmsnorm@k_norm cast_float=true unit_offset=true
+    v <- x_norm |> linear@v_proj dim=KVD |> reshape_heads heads=KVH
+    qr, kr <- apply_rope_pair qn kn position_ids=pos_ids theta=THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD) == 0)
+    k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
+    k_ctx_raw, v_ctx_raw <- cache::coalesce k_all v_all kr v
+    k_ctx <- repeat_kv k_ctx_raw heads=H kv_heads=KVH
+    v_ctx <- repeat_kv v_ctx_raw heads=H kv_heads=KVH
+    mask <- causal_mask qr key=k_ctx window=WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) == 0) padding_mask=attn_mask
+    attn <- attention qr k_ctx v_ctx mask=mask backend=sdpa causal=true scale=ATTN_SCALE rope_theta=THETA_LONG sliding_window=WIN_LOCAL |>
+      merge_heads |> linear@o_proj dim=D
   attn <- rmsnorm@post_attention_layernorm attn cast_float=true unit_offset=true
   x2 <- x + attn
   x3 <- rmsnorm@pre_feedforward_layernorm x2 cast_float=true unit_offset=true
