@@ -60,14 +60,14 @@ model:
       graph:
       - norm:
           op: rmsnorm
-          out: pipe_6
+          out: x
           in: x
           eps: EPS
           dim: D
   - lm_head:
       op: linear
       out: logits
-      in: pipe_6
+      in: x
   outputs:
     logits: logits
     present_key_values: present_key_values

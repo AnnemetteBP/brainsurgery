@@ -176,12 +176,16 @@ model:
           graph:
           - c_proj:
               op: linear
-              out: a
+              out: out_0
               in: pipe_11
               dim: D
               transpose: true
               bias: true
       - n_op_13:
+          op: _ir_alias
+          in: out_0
+          out: a
+      - n_op_14:
           op: add
           out: x
           in:
@@ -196,26 +200,30 @@ model:
           graph:
           - c_fc:
               op: linear
-              out: pipe_14
+              out: pipe_15
               in: x3
               dim: 4*D
               transpose: true
               bias: true
-      - n_op_16:
+      - n_op_17:
           op: activation
-          in: pipe_14
-          out: pipe_15
+          in: pipe_15
+          out: pipe_16
           kind: gelu_new
       - mlp:
           graph:
           - c_proj:
               op: linear
-              out: m
-              in: pipe_15
+              out: out_0
+              in: pipe_16
               dim: D
               transpose: true
               bias: true
-      - n_op_17:
+      - n_op_18:
+          op: _ir_alias
+          in: out_0
+          out: m
+      - n_op_19:
           op: add
           out: 'y'
           in:

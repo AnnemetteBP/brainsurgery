@@ -293,9 +293,13 @@ model:
           graph:
           - down_proj:
               op: linear
-              out: m
+              out: out_0
               in: pipe_22
               dim: D
+      - n_op_24:
+          op: _ir_alias
+          in: out_0
+          out: m
       - post_feedforward_layernorm:
           op: rmsnorm
           out: m
@@ -303,7 +307,7 @@ model:
           cast_float: true
           unit_offset: true
           dim: D
-      - n_op_24:
+      - n_op_25:
           op: add
           out: 'y'
           in:
