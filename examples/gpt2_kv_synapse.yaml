@@ -67,11 +67,10 @@ model:
       out: pipe_7
       in: x
       dim: D
-  - n_op_8:
+  - wte:
       op: linear
       out: logits
       in: pipe_7
-      tie_weight: wte.weight
   outputs:
     logits: logits
     present_key_values: present_key_values
@@ -106,9 +105,9 @@ model:
               op: linear
               out: pipe_1
               in: x1
-              out_features: 3*D
+              dim: 3*D
+              transpose: true
               bias: true
-              weight_layout: io
       - n_op_2:
           op: split_last
           out:
@@ -179,9 +178,9 @@ model:
               op: linear
               out: a
               in: pipe_11
-              out_features: D
+              dim: D
+              transpose: true
               bias: true
-              weight_layout: io
       - n_op_13:
           op: add
           out: x
@@ -199,9 +198,9 @@ model:
               op: linear
               out: pipe_14
               in: x3
-              out_features: 4*D
+              dim: 4*D
+              transpose: true
               bias: true
-              weight_layout: io
       - n_op_16:
           op: activation
           in: pipe_14
@@ -213,9 +212,9 @@ model:
               op: linear
               out: m
               in: pipe_15
-              out_features: D
+              dim: D
+              transpose: true
               bias: true
-              weight_layout: io
       - n_op_17:
           op: add
           out: 'y'

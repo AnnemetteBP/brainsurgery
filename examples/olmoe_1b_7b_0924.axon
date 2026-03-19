@@ -14,20 +14,20 @@ olmoe_decoder_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLay
 olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
   x_norm <- rmsnorm@input_layernorm x eps=EPS
   scope@self_attn do
-    q <- x_norm |> linear@q_proj out_features=D |> rmsnorm@q_norm eps=EPS |> reshape_heads heads=H
-    k <- x_norm |> linear@k_proj out_features=D |> rmsnorm@k_norm eps=EPS |> reshape_heads heads=H
-    v <- x_norm |> linear@v_proj out_features=D |> reshape_heads heads=H
+    q <- x_norm |> linear@q_proj dim=D |> rmsnorm@q_norm eps=EPS |> reshape_heads heads=H
+    k <- x_norm |> linear@k_proj dim=D |> rmsnorm@k_norm eps=EPS |> reshape_heads heads=H
+    v <- x_norm |> linear@v_proj dim=D |> reshape_heads heads=H
   qr, kr <- apply_rope_pair q k position_ids=pos_ids theta=THETA
   k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
   k_coalesced, v_coalesced <- cache::coalesce k_all v_all kr v
   mask <- causal_mask qr key=k_coalesced window=C padding_mask=attn_mask
   a <- attention qr k_coalesced v_coalesced mask=mask causal=true scale=ATTN_SCALE |> merge_heads
   scope@self_attn do
-    a <- linear@o_proj a out_features=D
+    a <- linear@o_proj a dim=D
   x <- x + a
   x3 <- rmsnorm@post_attention_layernorm x eps=EPS
   topk_scores, topk_indices <- x3 |>
-    linear@mlp.gate out_features=E |>
+    linear@mlp.gate dim=E |>
     softmax dim=-1 dtype=float32 |>
     topk k=EPT dim=-1
   m <- zeros_like x3
@@ -43,12 +43,12 @@ olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
 olmoe :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
 olmoe input_ids attn_mask past_key_values use_cache = do
   pos_ids <- arange_positions input_ids attention_mask=attn_mask
-  x <- embedding@model.embed_tokens input_ids num_embeddings=V dim=D
+  x <- embedding@model.embed_tokens input_ids dim=D
   present_key_values <- init_list()
   for@model.layers i <- [0..L) do
     past_i <- index past_key_values i
     x, present_i <- olmoe_decoder_block x pos_ids attn_mask past_i use_cache
     present_key_values <- append present_key_values present_i when=use_cache
   logits <- rmsnorm@model.norm x eps=EPS |>
-    linear out_features=V tie_weight=lm_head.weight
+    linear@lm_head
   return logits, present_key_values

@@ -78,11 +78,9 @@ KV remains optional at spec level; codegen/runtime may use hints to optimize dec
 
 ## 5.4 MoE helpers (composable)
 
-- `router(x)`
-- `topk(scores, k=K)`
-- `select_tokens(hidden, topk_scores, topk_idx, expert=e)`
-- `expert_ffn@experts(e, x, activation=...)`
-- `scatter_add(accum, token_idx, updates, weights)`
+- `linear@...` + activation + `mul` + `linear@...` for expert FFN (compositional, no dedicated expert op)
+- `moe_select_tokens(hidden, topk_scores, topk_idx, expert=e)`
+- `moe_scatter_add(accum, token_idx, updates, weights)`
 
 ## 6) Parallelism Hints
 

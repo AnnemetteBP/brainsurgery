@@ -44,12 +44,11 @@ model:
       out: pipe_5
       in: x
       dim: D
-  - n_op_6:
+  - wte:
       op: linear
       out: logits
       in: pipe_5
-      tie_weight: wte.weight
-      out_features: V
+      dim: V
   outputs:
     logits: logits
   symbols:
@@ -79,9 +78,9 @@ model:
               op: linear
               out: pipe_1
               in: x1
-              out_features: 3*D
+              dim: 3*D
+              transpose: true
               bias: true
-              weight_layout: io
       - n_op_2:
           op: split_last
           out:
@@ -132,9 +131,9 @@ model:
               op: linear
               out: a
               in: pipe_9
-              out_features: D
+              dim: D
+              transpose: true
               bias: true
-              weight_layout: io
       - n_op_11:
           op: add
           out: x
@@ -152,9 +151,9 @@ model:
               op: linear
               out: pipe_12
               in: x3
-              out_features: 4*D
+              dim: 4*D
+              transpose: true
               bias: true
-              weight_layout: io
       - n_op_14:
           op: activation
           in: pipe_12
@@ -166,9 +165,9 @@ model:
               op: linear
               out: m
               in: pipe_13
-              out_features: D
+              dim: D
+              transpose: true
               bias: true
-              weight_layout: io
       - n_op_15:
           op: add
           out: out_0

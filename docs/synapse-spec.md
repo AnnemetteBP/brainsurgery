@@ -74,7 +74,7 @@ model:
   outputs:
     logits:
       from: x
-      head: { op: linear, out_dim: ${params.vocab_size} }
+      head: { op: linear, dim: ${params.vocab_size} }
 ```
 
 ## 5. Core Concepts
@@ -113,35 +113,43 @@ Each graph item is a single-key mapping:
 
 Unrolling is deterministic and produces stable node names with index suffixes.
 
-### 5.6 Shared Parameters
-Nodes may declare:
-
-```yaml
-share: <parameter_path>
-```
-
-to reuse an already-declared parameter tensor (e.g., tied embedding/output weights).
-
-## 6. Operation Set (Initial)
-SYNAPSE/1 starts with a constrained op set:
+## 6. Operation Set (Current Runtime)
+The current Synapse runtime/compiler supports these model-domain ops:
 - `embedding`
 - `linear`
 - `layernorm`
-- `mha`
-- `mlp`
+- `rmsnorm`
+- `activation`
+- `softmax`
+- `topk`
+- `zeros_like`
 - `add`
 - `mul`
-- `reshape`
-- `permute`
-- `gelu`
-- `relu`
-- `dropout`
-- `softmax`
-- `concat`
-- `split`
-- `identity`
+- `arange_positions`
+- `split_last` (`parts` or `sizes`)
+- `reshape_heads`
+- `apply_rope_pair`
+- `kv_seq_len`
+- `repeat_kv`
+- `merge_heads`
+- `attention`
+- `causal_mask`
+- `moe_select_tokens`
+- `moe_scatter_add`
+- `index`
+- `init_list`
+- `append`
+- `kv_cache_update`
+- `coalesce`
 
-Additional ops are versioned extensions and must declare compile rules.
+Control/build graph constructs:
+- `repeat` (control node, not an op module)
+- `use` block invocation
+- nested `graph` scopes
+
+Internal IR-only nodes (lowering artifacts, not public DSL surface):
+- `_ir_alias`
+- `_ir_const`
 
 ## 7. Expressions
 Supported expression forms:
@@ -161,8 +169,7 @@ Compiler MUST validate:
 4. Shape compatibility for op contracts.
 5. `mha.dim % mha.heads == 0`.
 6. `add`/`mul` inputs follow exact-shape or allowed broadcast rules.
-7. `share` targets exist and have identical shape/dtype.
-8. `outputs.*.from` resolves to an existing tensor.
+7. `outputs.*.from` resolves to an existing tensor.
 
 ## 9. Deterministic Lowering to PyTorch
 SYNAPSE/1 compiles into:
@@ -243,9 +250,9 @@ model:
   inputs:
     x: { shape: [B, D], dtype: float32 }
   graph:
-    - fc1: { op: linear, in: x, out: h1, out_dim: 1024 }
+    - fc1: { op: linear, in: x, out: h1, dim: 1024 }
     - act: { op: gelu, in: h1, out: h2 }
-    - fc2: { op: linear, in: h2, out: y, out_dim: D }
+    - fc2: { op: linear, in: h2, out: y, dim: D }
   outputs:
     yhat: { from: y }
 ```

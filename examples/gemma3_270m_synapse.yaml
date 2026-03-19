@@ -21,7 +21,6 @@ model:
           op: embedding
           out: x
           in: input_ids
-          num_embeddings: V
           scale: EMB_SCALE
           embedding_dim: D
   - n_op_2:
@@ -68,12 +67,12 @@ model:
           cast_float: true
           unit_offset: true
           dim: D
-  - n_op_7:
-      op: linear
-      out: logits
-      in: pipe_6
-      out_features: V
-      tie_weight: model.embed_tokens.weight
+  - model:
+      graph:
+      - embed_tokens:
+          op: linear
+          out: logits
+          in: pipe_6
   outputs:
     logits: logits
     present_key_values: present_key_values
@@ -124,21 +123,21 @@ model:
               op: linear
               out: q_lin
               in: x_norm
-              out_features: QD
+              dim: QD
       - self_attn:
           graph:
           - k_proj:
               op: linear
               out: k_lin
               in: x_norm
-              out_features: KVD
+              dim: KVD
       - self_attn:
           graph:
           - v_proj:
               op: linear
               out: v_lin
               in: x_norm
-              out_features: KVD
+              dim: KVD
       - n_op_1:
           op: reshape_heads
           out: q
@@ -244,7 +243,7 @@ model:
               op: linear
               out: attn
               in: pipe_12
-              out_features: D
+              dim: D
       - post_attention_layernorm:
           op: rmsnorm
           out: attn
@@ -271,14 +270,14 @@ model:
               op: linear
               out: g
               in: x3
-              out_features: FFN
+              dim: FFN
       - mlp:
           graph:
           - up_proj:
               op: linear
               out: u
               in: x3
-              out_features: FFN
+              dim: FFN
       - n_op_16:
           op: activation
           in: g
@@ -296,7 +295,7 @@ model:
               op: linear
               out: m
               in: pipe_17
-              out_features: D
+              dim: D
       - post_feedforward_layernorm:
           op: rmsnorm
           out: m

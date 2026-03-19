@@ -21,7 +21,6 @@ model:
           op: embedding
           out: x
           in: input_ids
-          num_embeddings: V
           embedding_dim: D
   - n_op_2:
       op: init_list
@@ -65,12 +64,10 @@ model:
           in: x
           eps: EPS
           dim: D
-  - n_op_7:
+  - lm_head:
       op: linear
       out: logits
       in: pipe_6
-      out_features: V
-      tie_weight: lm_head.weight
   outputs:
     logits: logits
     present_key_values: present_key_values
@@ -114,7 +111,7 @@ model:
               op: linear
               out: pipe_1
               in: x_norm
-              out_features: D
+              dim: D
       - self_attn:
           graph:
           - q_norm:
@@ -134,7 +131,7 @@ model:
               op: linear
               out: pipe_4
               in: x_norm
-              out_features: D
+              dim: D
       - self_attn:
           graph:
           - k_norm:
@@ -154,7 +151,7 @@ model:
               op: linear
               out: pipe_7
               in: x_norm
-              out_features: D
+              dim: D
       - n_op_8:
           op: reshape_heads
           out: v
@@ -217,7 +214,7 @@ model:
               op: linear
               out: a
               in: a
-              out_features: D
+              dim: D
       - n_op_16:
           op: add
           out: x
@@ -236,7 +233,7 @@ model:
               op: linear
               out: pipe_17
               in: x3
-              out_features: E
+              dim: E
       - n_op_19:
           op: softmax
           out: pipe_18

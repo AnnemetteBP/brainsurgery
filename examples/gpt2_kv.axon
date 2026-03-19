@@ -8,7 +8,7 @@ gpt2_block :: Tensor[B,S,D] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,D]
 gpt2_block x attn_mask past_kv use_cache = do
   x1 <- layernorm@ln_1 x
   scope@attn do
-    q_lin, k_lin, v_lin <- x1 |> linear@c_attn out_features=3*D transpose=true bias=true |> split_last parts=3
+    q_lin, k_lin, v_lin <- x1 |> linear@c_attn dim=3*D transpose=true bias=true |> split_last parts=3
     q <- reshape_heads q_lin heads=H
     k <- reshape_heads k_lin heads=H
     v <- reshape_heads v_lin heads=H
@@ -16,11 +16,11 @@ gpt2_block x attn_mask past_kv use_cache = do
   k_ctx, v_ctx <- cache::coalesce k_all v_all k v
   scope@attn do
     causal_attn_mask <- causal_mask q key=k_ctx window=T padding_mask=attn_mask
-    a <- attention q k_ctx v_ctx backend=sdpa causal=true mask=causal_attn_mask |> merge_heads |> linear@c_proj out_features=D transpose=true bias=true
+    a <- attention q k_ctx v_ctx backend=sdpa causal=true mask=causal_attn_mask |> merge_heads |> linear@c_proj dim=D transpose=true bias=true
   x <- x + a
   x3 <- layernorm@ln_2 x
   scope@mlp do
-    m <- x3 |> linear@c_fc out_features=4*D transpose=true bias=true |> act::gelu_new |> linear@c_proj out_features=D transpose=true bias=true
+    m <- x3 |> linear@c_fc dim=4*D transpose=true bias=true |> act::gelu_new |> linear@c_proj dim=D transpose=true bias=true
   y <- x + m
   return y, present_kv
 
@@ -36,5 +36,5 @@ gpt2 input_ids attn_mask past_key_values use_cache = do
     x, present_i <- gpt2_block x attn_mask past_i use_cache
     present_key_values <- append present_key_values present_i when=use_cache
   logits <- layernorm@ln_f x |>
-    linear tie_weight=wte.weight
+    linear@wte
   return logits, present_key_values

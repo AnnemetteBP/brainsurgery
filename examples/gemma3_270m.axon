@@ -18,9 +18,9 @@ gemma3_block :: Tensor[B,S,D] -> I -> Tensor[B,S] -> ?Tensor[B,S] -> ?Cache -> ?
 gemma3_block x i pos_ids attn_mask past_kv use_cache = do
   x_norm <- rmsnorm@input_layernorm x cast_float=true unit_offset=true
   scope@self_attn do
-    q_lin <- x_norm |> linear@q_proj out_features=QD
-    k_lin <- x_norm |> linear@k_proj out_features=KVD
-    v_lin <- x_norm |> linear@v_proj out_features=KVD
+    q_lin <- x_norm |> linear@q_proj dim=QD
+    k_lin <- x_norm |> linear@k_proj dim=KVD
+    v_lin <- x_norm |> linear@v_proj dim=KVD
   q <- q_lin |> reshape_heads heads=H
   k <- k_lin |> reshape_heads heads=KVH
   v <- v_lin |> reshape_heads heads=KVH
@@ -34,14 +34,14 @@ gemma3_block x i pos_ids attn_mask past_kv use_cache = do
   v_ctx <- repeat_kv v_ctx_raw heads=H kv_heads=KVH
   mask <- causal_mask qr key=k_ctx window=WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) == 0) padding_mask=attn_mask
   scope@self_attn do
-    attn <- attention qr k_ctx v_ctx mask=mask backend=sdpa causal=true scale=ATTN_SCALE rope_theta=THETA_LONG sliding_window=WIN_LOCAL |> merge_heads |> linear@o_proj out_features=D
+    attn <- attention qr k_ctx v_ctx mask=mask backend=sdpa causal=true scale=ATTN_SCALE rope_theta=THETA_LONG sliding_window=WIN_LOCAL |> merge_heads |> linear@o_proj dim=D
   attn <- rmsnorm@post_attention_layernorm attn cast_float=true unit_offset=true
   x2 <- x + attn
   x3 <- rmsnorm@pre_feedforward_layernorm x2 cast_float=true unit_offset=true
   scope@mlp do
-    g <- x3 |> linear@gate_proj out_features=FFN
-    u <- x3 |> linear@up_proj out_features=FFN
-    m <- g |> act::gelu_pytorch_tanh |> mul u |> linear@down_proj out_features=D
+    g <- x3 |> linear@gate_proj dim=FFN
+    u <- x3 |> linear@up_proj dim=FFN
+    m <- g |> act::gelu_pytorch_tanh |> mul u |> linear@down_proj dim=D
   m <- rmsnorm@post_feedforward_layernorm m cast_float=true unit_offset=true
   y <- x2 + m
   return y, present_kv
@@ -49,12 +49,13 @@ gemma3_block x i pos_ids attn_mask past_kv use_cache = do
 gemma3 :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
 gemma3 input_ids attn_mask past_key_values use_cache = do
   pos_ids <- arange_positions input_ids attention_mask=attn_mask
-  x <- embedding@model.embed_tokens input_ids num_embeddings=V dim=D scale=EMB_SCALE
-  present_key_values <- init_list()
-  for@model.layers i <- [0..L) do
-    past_i <- index past_key_values i
-    x, present_i <- gemma3_block x i pos_ids attn_mask past_i use_cache
-    present_key_values <- append present_key_values present_i when=use_cache
-  logits <- rmsnorm@model.norm x cast_float=true unit_offset=true |>
-    linear out_features=V tie_weight=model.embed_tokens.weight
+  scope@model do
+    x <- embedding@embed_tokens input_ids dim=D scale=EMB_SCALE
+    present_key_values <- init_list()
+    for@layers i <- [0..L) do
+      past_i <- index past_key_values i
+      x, present_i <- gemma3_block x i pos_ids attn_mask past_i use_cache
+      present_key_values <- append present_key_values present_i when=use_cache
+    logits <- rmsnorm@norm x cast_float=true unit_offset=true |>
+      linear@embed_tokens
   return logits, present_key_values
