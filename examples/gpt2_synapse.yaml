@@ -30,7 +30,7 @@ model:
   - h:
       op: repeat
       var: i
-      range: (L-1) + 1
+      range: L
       body:
       - n_use_4:
           use: gpt2_block
@@ -70,47 +70,51 @@ model:
       graph:
       - ln_1:
           op: layernorm
-          out: pipe_1
+          out: x1
           in: x
           dim: D
       - attn:
           graph:
           - c_attn:
               op: linear
-              out: pipe_2
-              in: pipe_1
+              out: pipe_1
+              in: x1
               out_features: 3*D
               bias: true
               weight_layout: io
-      - n_op_6:
+      - n_op_2:
           op: split_last
           out:
-          - pipe_3
-          - pipe_4
-          - pipe_5
-          in: pipe_2
+          - q_lin
+          - k_lin
+          - v_lin
+          in: pipe_1
           parts: 3
-      - n_op_7:
-          op: reshape_heads_triplet
-          out:
-          - q
-          - k
-          - v
-          in:
-          - pipe_3
-          - pipe_4
-          - pipe_5
+      - n_op_3:
+          op: reshape_heads
+          out: q
+          in: q_lin
           heads: H
-      - n_op_8:
+      - n_op_4:
+          op: reshape_heads
+          out: k
+          in: k_lin
+          heads: H
+      - n_op_5:
+          op: reshape_heads
+          out: v
+          in: v_lin
+          heads: H
+      - n_op_6:
           op: causal_mask
           out: causal_attn_mask
           in: q
           key: k
           window: T
           padding_mask: attn_mask
-      - n_op_10:
+      - n_op_8:
           op: attention
-          out: pipe_9
+          out: pipe_7
           in:
           - q
           - k
@@ -118,20 +122,20 @@ model:
           backend: sdpa
           causal: true
           mask: causal_attn_mask
-      - n_op_12:
+      - n_op_10:
           op: merge_heads
-          out: pipe_11
-          in: pipe_9
+          out: pipe_9
+          in: pipe_7
       - attn:
           graph:
           - c_proj:
               op: linear
               out: a
-              in: pipe_11
+              in: pipe_9
               out_features: D
               bias: true
               weight_layout: io
-      - n_op_13:
+      - n_op_11:
           op: add
           out: x
           in:
@@ -139,33 +143,33 @@ model:
           - a
       - ln_2:
           op: layernorm
-          out: pipe_14
+          out: x3
           in: x
           dim: D
       - mlp:
           graph:
           - c_fc:
               op: linear
-              out: pipe_15
-              in: pipe_14
+              out: pipe_12
+              in: x3
               out_features: 4*D
               bias: true
               weight_layout: io
-      - n_op_17:
+      - n_op_14:
           op: activation
-          in: pipe_15
-          out: pipe_16
+          in: pipe_12
+          out: pipe_13
           kind: gelu_new
       - mlp:
           graph:
           - c_proj:
               op: linear
               out: m
-              in: pipe_16
+              in: pipe_13
               out_features: D
               bias: true
               weight_layout: io
-      - n_op_18:
+      - n_op_15:
           op: add
           out: out_0
           in:

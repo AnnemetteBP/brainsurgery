@@ -84,6 +84,8 @@ model:
     EPT: 8
     C: 4096
     EPS: 1.0e-05
+    THETA: 10000.0
+    ATTN_SCALE: 0.08838834764831845
     B: null
     S: null
   blocks:
@@ -110,55 +112,55 @@ model:
           graph:
           - q_proj:
               op: linear
-              out: q_lin
-              in: x_norm
-              out_features: D
-      - self_attn:
-          graph:
-          - k_proj:
-              op: linear
-              out: k_lin
-              in: x_norm
-              out_features: D
-      - self_attn:
-          graph:
-          - v_proj:
-              op: linear
-              out: v_lin
+              out: pipe_1
               in: x_norm
               out_features: D
       - self_attn:
           graph:
           - q_norm:
               op: rmsnorm
-              out: pipe_1
-              in: q_lin
+              out: pipe_2
+              in: pipe_1
               eps: EPS
               dim: D
-      - n_op_2:
+      - n_op_3:
           op: reshape_heads
           out: q
-          in: pipe_1
+          in: pipe_2
           heads: H
+      - self_attn:
+          graph:
+          - k_proj:
+              op: linear
+              out: pipe_4
+              in: x_norm
+              out_features: D
       - self_attn:
           graph:
           - k_norm:
               op: rmsnorm
-              out: pipe_3
-              in: k_lin
+              out: pipe_5
+              in: pipe_4
               eps: EPS
               dim: D
-      - n_op_4:
+      - n_op_6:
           op: reshape_heads
           out: k
-          in: pipe_3
+          in: pipe_5
           heads: H
-      - n_op_5:
+      - self_attn:
+          graph:
+          - v_proj:
+              op: linear
+              out: pipe_7
+              in: x_norm
+              out_features: D
+      - n_op_8:
           op: reshape_heads
           out: v
-          in: v_lin
+          in: pipe_7
           heads: H
-      - n_op_6:
+      - n_op_9:
           op: apply_rope_pair
           out:
           - qr
@@ -167,8 +169,8 @@ model:
           - q
           - k
           position_ids: pos_ids
-          theta: 10000.0
-      - n_op_7:
+          theta: THETA
+      - n_op_10:
           op: kv_cache_update
           in:
           - past_kv
@@ -178,8 +180,8 @@ model:
           - k_all
           - v_all
           - present_kv
-      - n_op_8:
-          op: coalesce_triplet
+      - n_op_11:
+          op: coalesce
           in:
           - k_all
           - v_all
@@ -188,68 +190,68 @@ model:
           out:
           - k_coalesced
           - v_coalesced
-      - n_op_9:
+      - n_op_12:
           op: causal_mask
           out: mask
           in: qr
           key: k_coalesced
           window: C
           padding_mask: attn_mask
-      - n_op_11:
+      - n_op_14:
           op: attention
-          out: pipe_10
+          out: pipe_13
           in:
           - qr
           - k_coalesced
           - v_coalesced
           mask: mask
           causal: true
-          scale: 0.08838834764831845
-      - n_op_13:
+          scale: ATTN_SCALE
+      - n_op_15:
           op: merge_heads
-          out: pipe_12
-          in: pipe_10
+          out: a
+          in: pipe_13
       - self_attn:
           graph:
           - o_proj:
               op: linear
               out: a
-              in: pipe_12
+              in: a
               out_features: D
-      - n_op_14:
+      - n_op_16:
           op: add
-          out: x2
+          out: x
           in:
           - x
           - a
       - post_attention_layernorm:
           op: rmsnorm
           out: x3
-          in: x2
+          in: x
           eps: EPS
           dim: D
       - mlp:
           graph:
           - gate:
               op: linear
-              out: router_logits
+              out: pipe_17
               in: x3
               out_features: E
-      - n_op_15:
+      - n_op_19:
           op: softmax
-          out: router_probs
-          in: router_logits
+          out: pipe_18
+          in: pipe_17
           dim: -1
           dtype: float32
-      - n_op_16:
+      - n_op_20:
           op: topk
           out:
           - topk_scores
           - topk_indices
-          in: router_probs
+          in: pipe_18
           k: EPT
           dim: -1
-      - n_op_17:
+      - n_op_21:
           op: zeros_like
           out: m
           in: x3
@@ -260,7 +262,7 @@ model:
               var: e
               range: E
               body:
-              - n_op_18:
+              - n_op_22:
                   op: moe_select_tokens
                   out:
                   - x_sel
@@ -272,14 +274,30 @@ model:
                   - topk_scores
                   - topk_indices
                   expert: e
-              - n_op_19:
-                  op: moe_expert_ffn
-                  out: x_upd
+              - gate_proj:
+                  op: linear
+                  out: gate
                   in: x_sel
-                  expert: e
-                  experts_scope: ''
-                  activation: silu
-              - n_op_20:
+              - up_proj:
+                  op: linear
+                  out: up
+                  in: x_sel
+              - n_op_24:
+                  op: activation
+                  in: gate
+                  out: pipe_23
+                  kind: silu
+              - n_op_26:
+                  op: mul
+                  out: pipe_25
+                  in:
+                  - pipe_23
+                  - up
+              - down_proj:
+                  op: linear
+                  out: x_upd
+                  in: pipe_25
+              - n_op_27:
                   op: moe_scatter_add
                   out: m
                   in:
@@ -287,11 +305,11 @@ model:
                   - token_idx
                   - x_upd
                   - sel_scores
-      - n_op_21:
+      - n_op_28:
           op: add
           out: 'y'
           in:
-          - x2
+          - x
           - m
       outputs:
         'y': 'y'

@@ -87,12 +87,12 @@ ShapeSpec          = SequenceOf(ExprOrVar) ;
 
 OpName             = "embedding" | "linear" | "layernorm" | "rmsnorm"
                    | "activation" | "softmax" | "topk" | "zeros_like"
-                   | "add" | "mul" | "arange_positions" | "split_last_dim"
-                   | "reshape_heads_triplet" | "reshape_heads" | "apply_rope_pair"
+                   | "add" | "mul" | "arange_positions" | "split_last"
+                   | "reshape_heads" | "apply_rope_pair"
                    | "kv_seq_len" | "repeat_kv" | "merge_heads" | "attention"
-                   | "causal_mask" | "moe_select_tokens" | "moe_expert_ffn"
+                   | "causal_mask" | "moe_select_tokens"
                    | "moe_scatter_add" | "index" | "init_list" | "append"
-                   | "kv_cache_update" | "coalesce_triplet" ;
+                   | "kv_cache_update" | "coalesce" ;
 
 Expr               = Int | Float | Bool | Null | SymbolName | VarName | ExprString ;
 ExprOrVar          = Expr ;

@@ -6,19 +6,18 @@ V   = 520257 -- vocab size
 
 gpt2_block :: Tensor[B,S,D] -> ?Tensor[B,S] -> Tensor[B,S,D]
 gpt2_block x attn_mask = do
-  q, k, v <- layernorm@ln_1 x |>
-    linear@attn.c_attn out_features=3*D transpose=true bias=true |>
-    split_last parts=3 |>
-    reshape_heads_triplet heads=H
-  causal_attn_mask <- causal_mask q key=k window=T padding_mask=attn_mask
-  a <- attention q k v backend=sdpa causal=true mask=causal_attn_mask |>
-    merge_heads |>
-    linear@attn.c_proj out_features=D transpose=true bias=true
+  x1 <- layernorm@ln_1 x
+  scope@attn do
+    q_lin, k_lin, v_lin <- x1 |> linear@c_attn out_features=3*D transpose=true bias=true |> split_last parts=3
+    q <- reshape_heads q_lin heads=H
+    k <- reshape_heads k_lin heads=H
+    v <- reshape_heads v_lin heads=H
+    causal_attn_mask <- causal_mask q key=k window=T padding_mask=attn_mask
+    a <- attention q k v backend=sdpa causal=true mask=causal_attn_mask |> merge_heads |> linear@c_proj out_features=D transpose=true bias=true
   x <- x + a
-  m <- layernorm@ln_2 x |>
-    linear@mlp.c_fc out_features=4*D transpose=true bias=true |>
-    act::gelu_new |>
-    linear@mlp.c_proj out_features=D transpose=true bias=true
+  x3 <- layernorm@ln_2 x
+  scope@mlp do
+    m <- x3 |> linear@c_fc out_features=4*D transpose=true bias=true |> act::gelu_new |> linear@c_proj out_features=D transpose=true bias=true
   return x + m
 
 gpt2 :: TokenIds[B,S] -> ?Tensor[B,S] -> Tensor[B,S,V]

@@ -3,6 +3,8 @@ model:
   inputs:
     input_ids:
       optional: false
+    attn_mask:
+      optional: true
     past_key_values:
       optional: true
     use_cache:
@@ -12,19 +14,17 @@ model:
       op: embedding
       out: tok
       in: input_ids
-      num_embeddings: 50257
-      embedding_dim: 768
+      embedding_dim: D
   - n_op_1:
       op: arange_positions
       out: pos_ids
       in: input_ids
-      max_len: 1024
+      attention_mask: attn_mask
   - wpe:
       op: embedding
       out: pos
       in: pos_ids
-      num_embeddings: 1024
-      embedding_dim: 768
+      embedding_dim: D
   - n_op_2:
       op: add
       out: x
@@ -37,7 +37,7 @@ model:
   - h:
       op: repeat
       var: i
-      range: '12'
+      range: L
       body:
       - n_op_4:
           op: index
@@ -49,6 +49,7 @@ model:
           use: gpt2_block
           in:
             x: x
+            attn_mask: attn_mask
             past_kv: past_i
             use_cache: use_cache
           out:
@@ -63,24 +64,32 @@ model:
           when: use_cache
   - ln_f:
       op: layernorm
-      out: h_last
+      out: pipe_7
       in: x
-      dim: 768
-      eps: '1e-05'
-  - n_op_7:
+      dim: D
+  - n_op_8:
       op: linear
       out: logits
-      in: h_last
-      out_dim: 50257
+      in: pipe_7
       tie_weight: wte.weight
   outputs:
     logits: logits
-    past_key_values: present_key_values
+    present_key_values: present_key_values
+  symbols:
+    T: 1024
+    D: 768
+    L: 12
+    H: 12
+    V: 520257
+    B: null
+    S: null
   blocks:
     gpt2_block:
       inputs:
         x:
           optional: false
+        attn_mask:
+          optional: true
         past_kv:
           optional: true
         use_cache:
@@ -90,38 +99,40 @@ model:
           op: layernorm
           out: x1
           in: x
-          dim: 768
-          eps: '1e-05'
+          dim: D
       - attn:
           graph:
           - c_attn:
               op: linear
-              out: qkv
+              out: pipe_1
               in: x1
-              out_features: 2304
-              weight_layout: io
+              out_features: 3*D
               bias: true
-      - n_op_1:
+              weight_layout: io
+      - n_op_2:
           op: split_last
           out:
           - q_lin
           - k_lin
           - v_lin
-          in: qkv
-          sizes: '[768, 768, 768]'
-      - n_op_2:
-          op: reshape_heads_triplet
-          out:
-          - q
-          - k
-          - v
-          in:
-          - q_lin
-          - k_lin
-          - v_lin
-          heads: 12
-          head_dim: 64
+          in: pipe_1
+          parts: 3
       - n_op_3:
+          op: reshape_heads
+          out: q
+          in: q_lin
+          heads: H
+      - n_op_4:
+          op: reshape_heads
+          out: k
+          in: k_lin
+          heads: H
+      - n_op_5:
+          op: reshape_heads
+          out: v
+          in: v_lin
+          heads: H
+      - n_op_6:
           op: kv_cache_update
           in:
           - past_kv
@@ -131,8 +142,8 @@ model:
           - k_all
           - v_all
           - present_kv
-      - n_op_4:
-          op: coalesce_triplet
+      - n_op_7:
+          op: coalesce
           in:
           - k_all
           - v_all
@@ -141,70 +152,76 @@ model:
           out:
           - k_ctx
           - v_ctx
-      - n_op_5:
+      - n_op_8:
+          op: causal_mask
+          out: causal_attn_mask
+          in: q
+          key: k_ctx
+          window: T
+          padding_mask: attn_mask
+      - n_op_10:
           op: attention
-          out: ctx_heads
+          out: pipe_9
           in:
           - q
           - k_ctx
           - v_ctx
           backend: sdpa
           causal: true
-          causal_mask_buffer: bias
-      - n_op_6:
+          mask: causal_attn_mask
+      - n_op_12:
           op: merge_heads
-          out: ctx
-          in: ctx_heads
+          out: pipe_11
+          in: pipe_9
       - attn:
           graph:
           - c_proj:
               op: linear
               out: a
-              in: ctx
-              out_features: 768
-              weight_layout: io
+              in: pipe_11
+              out_features: D
               bias: true
-      - n_op_7:
+              weight_layout: io
+      - n_op_13:
           op: add
-          out: x2
+          out: x
           in:
           - x
           - a
       - ln_2:
           op: layernorm
           out: x3
-          in: x2
-          dim: 768
-          eps: '1e-05'
+          in: x
+          dim: D
       - mlp:
           graph:
           - c_fc:
               op: linear
-              out: m1
+              out: pipe_14
               in: x3
-              out_features: 3072
-              weight_layout: io
+              out_features: 4*D
               bias: true
-      - n_op_8:
+              weight_layout: io
+      - n_op_16:
           op: activation
-          in: m1
-          out: m2
+          in: pipe_14
+          out: pipe_15
           kind: gelu_new
       - mlp:
           graph:
           - c_proj:
               op: linear
-              out: m3
-              in: m2
-              out_features: 768
-              weight_layout: io
+              out: m
+              in: pipe_15
+              out_features: D
               bias: true
-      - n_op_9:
+              weight_layout: io
+      - n_op_17:
           op: add
           out: 'y'
           in:
-          - x2
-          - m3
+          - x
+          - m
       outputs:
         'y': 'y'
         present_kv: present_kv

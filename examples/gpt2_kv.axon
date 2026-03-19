@@ -6,21 +6,21 @@ V   = 520257 -- vocab size
 
 gpt2_block :: Tensor[B,S,D] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,D], ?Cache)
 gpt2_block x attn_mask past_kv use_cache = do
-  q, k, v <- layernorm@ln_1 x |>
-    linear@attn.c_attn out_features=3*D transpose=true bias=true |>
-    split_last parts=3 |>
-    reshape_heads_triplet heads=H
+  x1 <- layernorm@ln_1 x
+  scope@attn do
+    q_lin, k_lin, v_lin <- x1 |> linear@c_attn out_features=3*D transpose=true bias=true |> split_last parts=3
+    q <- reshape_heads q_lin heads=H
+    k <- reshape_heads k_lin heads=H
+    v <- reshape_heads v_lin heads=H
   k_all, v_all, present_kv <- cache::update past_kv k v when=use_cache
   k_ctx, v_ctx <- cache::coalesce k_all v_all k v
-  causal_attn_mask <- causal_mask q key=k_ctx window=T padding_mask=attn_mask
-  a <- attention q k_ctx v_ctx backend=sdpa causal=true mask=causal_attn_mask |>
-    merge_heads |>
-    linear@attn.c_proj out_features=D transpose=true bias=true
+  scope@attn do
+    causal_attn_mask <- causal_mask q key=k_ctx window=T padding_mask=attn_mask
+    a <- attention q k_ctx v_ctx backend=sdpa causal=true mask=causal_attn_mask |> merge_heads |> linear@c_proj out_features=D transpose=true bias=true
   x <- x + a
-  m <- layernorm@ln_2 x |>
-    linear@mlp.c_fc out_features=4*D transpose=true bias=true |>
-    act::gelu_new |>
-    linear@mlp.c_proj out_features=D transpose=true bias=true
+  x3 <- layernorm@ln_2 x
+  scope@mlp do
+    m <- x3 |> linear@c_fc out_features=4*D transpose=true bias=true |> act::gelu_new |> linear@c_proj out_features=D transpose=true bias=true
   y <- x + m
   return y, present_kv
 
