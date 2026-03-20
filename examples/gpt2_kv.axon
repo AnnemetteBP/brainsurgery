@@ -6,6 +6,7 @@ V   = 520257 -- vocab size
 
 import Activations gelu_new
 import Cache
+import Cache past_length
 
 lin :: @Path -> Tensor[B,S,Din] -> I -> Tensor[B,S,dim]
 lin@path x dim = linear@path x dim=dim bias=true transpose=true
@@ -35,9 +36,7 @@ gpt2_block x attn_mask past_kv use_cache = do
 gpt2 :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
 gpt2 input_ids attn_mask past_key_values use_cache = do
   tok <- embedding@wte input_ids dim=D
-  past_0 <- Cache.index past_key_values 0
-  past_length <- Cache.seq_len past_0
-  pos <- position_ids input_ids attention_mask=attn_mask past_length=past_length |> embedding@wpe
+  pos <- position_ids input_ids attn_mask past_length=(past_length past_key_values) |> embedding@wpe
   x <- tok + pos
   present_key_values <- Cache.init
   for@h i <- [0..L) do

@@ -17,26 +17,22 @@ model:
       dim: D
       _params:
         weight: wte.weight
-  - n_op_2:
-      _op: index
-      _bind: past_0
-      _args:
-      - past_key_values
-      - '0'
-  - n_op_3:
-      _op: kv_seq_len
-      _args: past_0
-      _bind: past_length
+  - n_call_4:
+      _op: call
+      _target: Cache.past_length
+      _args: past_key_values
+      _bind: kwarg_3
   - n_op_5:
       _op: position_ids
-      _bind: pipe_4
-      _args: input_ids
-      attention_mask: attn_mask
-      past_length: past_length
+      _bind: pipe_2
+      _args:
+      - input_ids
+      - attn_mask
+      past_length: kwarg_3
   - n_op_6:
       _op: embedding
       _bind: pos
-      _args: pipe_4
+      _args: pipe_2
       _params:
         weight: wpe.weight
   - n_op_7:
@@ -156,6 +152,23 @@ model:
       outputs:
         k_ctx: k_ctx
         v_ctx: v_ctx
+    Cache.past_length:
+      inputs:
+        cache:
+          optional: true
+      graph:
+      - n_op_1:
+          _op: index
+          _bind: first
+          _args:
+          - cache
+          - '0'
+      - n_op_2:
+          _op: kv_seq_len
+          _args: first
+          _bind: out_0
+      outputs:
+        out_0: out_0
     gpt2_block:
       inputs:
         x:

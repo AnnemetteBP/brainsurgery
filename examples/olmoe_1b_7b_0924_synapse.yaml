@@ -10,22 +10,18 @@ model:
     use_cache:
       optional: true
   graph:
-  - n_op_1:
-      _op: index
-      _bind: past_0
-      _args:
-      - past_key_values
-      - '0'
-  - n_op_2:
-      _op: kv_seq_len
-      _args: past_0
-      _bind: past_length
+  - n_call_2:
+      _op: call
+      _target: Cache.past_length
+      _args: past_key_values
+      _bind: kwarg_1
   - n_op_3:
       _op: position_ids
       _bind: pos_ids
-      _args: input_ids
-      attention_mask: attn_mask
-      past_length: past_length
+      _args:
+      - input_ids
+      - attn_mask
+      past_length: kwarg_1
   - n_op_4:
       _op: embedding
       _bind: x
@@ -151,6 +147,23 @@ model:
       outputs:
         k_ctx: k_ctx
         v_ctx: v_ctx
+    Cache.past_length:
+      inputs:
+        cache:
+          optional: true
+      graph:
+      - n_op_1:
+          _op: index
+          _bind: first
+          _args:
+          - cache
+          - '0'
+      - n_op_2:
+          _op: kv_seq_len
+          _args: first
+          _bind: out_0
+      outputs:
+        out_0: out_0
     expert_ffn:
       inputs:
         x:

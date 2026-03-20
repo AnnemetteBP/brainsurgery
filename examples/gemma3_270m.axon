@@ -16,6 +16,7 @@ EMB_SCALE = 25.298221281347036 -- embedding scaling factor (sqrt(D))
 
 import Activations gelu_pytorch_tanh
 import Cache
+import Cache past_length
 
 rms :: @Path -> Tensor[B,S,D] -> Tensor[B,S,D]
 rms@path x = rmsnorm@path x cast_float=true unit_offset=true
@@ -49,9 +50,7 @@ gemma3_block x i pos_ids attn_mask past_kv use_cache = do
 
 gemma3 :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
 gemma3 input_ids attn_mask past_key_values use_cache = do
-  past_0 <- Cache.index past_key_values 0
-  past_length <- Cache.seq_len past_0
-  pos_ids <- position_ids input_ids attention_mask=attn_mask past_length=past_length
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_key_values)
   logits, present_key_values <- scope@model do
     x <- embedding@embed_tokens input_ids dim=D scale=EMB_SCALE
     present_key_values <- Cache.init
