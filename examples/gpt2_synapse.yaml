@@ -100,7 +100,7 @@ model:
           out:
             out_0: pipe_1
       - n_op_3:
-          op: split_last
+          op: split
           out:
           - q_lin
           - k_lin

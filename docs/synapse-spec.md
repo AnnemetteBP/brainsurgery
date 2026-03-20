@@ -126,7 +126,7 @@ The current Synapse runtime/compiler supports these model-domain ops:
 - `add`
 - `mul`
 - `arange_positions`
-- `split_last` (`parts` or `sizes`)
+- `split` (`parts` or `sizes`)
 - `reshape_heads`
 - `apply_rope_pair`
 - `kv_seq_len`
@@ -141,6 +141,24 @@ The current Synapse runtime/compiler supports these model-domain ops:
 - `append`
 - `kv_cache_update`
 - `coalesce`
+
+### 6.1 Clarified Semantics (Stability-Critical)
+- `kv_cache_update`:
+  - operation contract is `(past, k, v) -> (k_all, v_all, present)`
+  - no op kwargs; conditional execution is represented by graph control flow (`when` guards), not op kwargs
+- `coalesce`:
+  - generic grouped fallback, not KV-specific
+  - if output arity is `n`, inputs are partitioned as strided groups:
+    - `out_j = first non-None(in_j, in_{j+n}, in_{j+2n}, ...)`
+  - input count must be divisible by output count
+- `moe_select_tokens`:
+  - generic sparse dispatch selector over router top-k assignments
+  - returns selected hidden rows and routing metadata `(selected_hidden, token_idx, topk_pos, selected_scores)`
+  - empty selections are valid and must produce empty tensors with consistent shapes/dtypes
+- `moe_scatter_add`:
+  - generic weighted sparse accumulation primitive
+  - semantics: `accum[token_idx] += updates * scores`
+  - repeated indices accumulate; empty indices are a no-op
 
 Control/build graph constructs:
 - `repeat` (control node, not an op module)

@@ -87,7 +87,7 @@ ShapeSpec          = SequenceOf(ExprOrVar) ;
 
 OpName             = "embedding" | "linear" | "layernorm" | "rmsnorm"
                    | "activation" | "softmax" | "topk" | "zeros_like"
-                   | "add" | "mul" | "arange_positions" | "split_last"
+                   | "add" | "mul" | "arange_positions" | "split"
                    | "reshape_heads" | "apply_rope_pair"
                    | "kv_seq_len" | "repeat_kv" | "merge_heads" | "attention"
                    | "causal_mask" | "moe_select_tokens"

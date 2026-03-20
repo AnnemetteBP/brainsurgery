@@ -14,6 +14,9 @@ WIN_LONG = 32768         -- long-context attention window size
 ATTN_SCALE = 0.0625      -- attention scale (1 / sqrt(head_dim))
 EMB_SCALE = 25.298221281347036 -- embedding scaling factor (sqrt(D))
 
+import Activations gelu_pytorch_tanh
+import Cache
+
 rms :: @Path -> Tensor[B,S,D] -> Tensor[B,S,D]
 rms@path x = rmsnorm@path x cast_float=true unit_offset=true
 
@@ -25,10 +28,10 @@ gemma3_block x i pos_ids attn_mask past_kv use_cache = do
     kn <- x_norm |> linear@k_proj dim=KVD |> reshape_heads heads=KVH |> rms@k_norm
     v <- x_norm |> linear@v_proj dim=KVD |> reshape_heads heads=KVH
     qr, kr <- apply_rope_pair qn kn position_ids=pos_ids theta=THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD) == 0)
-    k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
-    k_ctx_raw, v_ctx_raw <- cache::coalesce k_all v_all kr v
-    k_ctx <- repeat_kv k_ctx_raw heads=H kv_heads=KVH
-    v_ctx <- repeat_kv v_ctx_raw heads=H kv_heads=KVH
+    k_all, v_all, present_kv <- Cache.update past_kv kr v when=use_cache
+    k_ctx_raw, v_ctx_raw <- Cache.coalesce k_all v_all kr v
+    k_ctx <- repeat k_ctx_raw (H / KVH)
+    v_ctx <- repeat v_ctx_raw (H / KVH)
     mask <- causal_mask qr key=k_ctx window=WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) == 0) padding_mask=attn_mask
     attn <- attention qr k_ctx v_ctx mask=mask backend=sdpa causal=true scale=ATTN_SCALE rope_theta=THETA_LONG sliding_window=WIN_LOCAL |>
       merge_heads |> linear@o_proj dim=D
@@ -39,7 +42,7 @@ gemma3_block x i pos_ids attn_mask past_kv use_cache = do
   m <- scope@mlp do
     g <- linear@gate_proj x3 dim=FFN
     u <- linear@up_proj x3 dim=FFN
-    return act::gelu_pytorch_tanh g |> mul u |> linear@down_proj dim=D
+    return gelu_pytorch_tanh g |> mul u |> linear@down_proj dim=D
   m <- rms@post_feedforward_layernorm m
   y <- x2 + m
   return y, present_kv
@@ -49,11 +52,11 @@ gemma3 input_ids attn_mask past_key_values use_cache = do
   pos_ids <- arange_positions input_ids attention_mask=attn_mask
   logits, present_key_values <- scope@model do
     x <- embedding@embed_tokens input_ids dim=D scale=EMB_SCALE
-    present_key_values <- init_list()
+    present_key_values <- Cache.init
     for@layers i <- [0..L) do
-      past_i <- index past_key_values i
+      past_i <- Cache.index past_key_values i
       x, present_i <- gemma3_block x i pos_ids attn_mask past_i use_cache
-      present_key_values <- append present_key_values present_i when=use_cache
+      present_key_values <- use_cache ? Cache.append present_key_values present_i : present_key_values
     logits <- rms@norm x |>
       linear@embed_tokens
     return logits, present_key_values

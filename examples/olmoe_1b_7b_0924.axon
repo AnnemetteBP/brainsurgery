@@ -10,6 +10,10 @@ EPS  = 1e-05              -- RMSNorm epsilon
 THETA = 10000.0           -- rope theta
 ATTN_SCALE = 0.08838834764831845 -- attention scale (1 / sqrt(HD))
 
+import Activations silu
+import Cache
+import MoE
+
 rms :: @Path -> Tensor[B,S,D] -> Tensor[B,S,D]
 rms@path x = rmsnorm@path x eps=EPS
 
@@ -17,7 +21,7 @@ expert_ffn :: Tensor[N,D] -> Tensor[N,D]
 expert_ffn x = do
   gate <- linear@gate_proj x
   up <- linear@up_proj x
-  return gate |> act::silu |> mul up |> linear@down_proj
+  return gate |> silu |> mul up |> linear@down_proj
 
 olmoe_decoder_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> ?Bool -> (Tensor[B,S,D], ?CacheLayer)
 olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
@@ -27,8 +31,8 @@ olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
     k <- x_norm |> linear@k_proj dim=D |> rms@k_norm |> reshape_heads heads=H
     v <- x_norm |> linear@v_proj dim=D |> reshape_heads heads=H
     qr, kr <- apply_rope_pair q k position_ids=pos_ids theta=THETA
-    k_all, v_all, present_kv <- cache::update past_kv kr v when=use_cache
-    k_coalesced, v_coalesced <- cache::coalesce k_all v_all kr v
+    k_all, v_all, present_kv <- Cache.update past_kv kr v when=use_cache
+    k_coalesced, v_coalesced <- Cache.coalesce k_all v_all kr v
     mask <- causal_mask qr key=k_coalesced window=C padding_mask=attn_mask
     a <- attention qr k_coalesced v_coalesced mask=mask causal=true scale=ATTN_SCALE |> merge_heads
     a <- linear@o_proj a dim=D
@@ -40,9 +44,9 @@ olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
       softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1
     m <- zeros_like xn
     for@experts e <- [0..E) do
-      x_sel, token_idx, topk_pos, sel_scores <- moe_select_tokens xn topk_scores topk_indices expert=e
+      x_sel, token_idx, topk_pos, sel_scores <- MoE.select xn topk_scores topk_indices expert=e
       x_upd <- expert_ffn x_sel
-      m <- moe_scatter_add m token_idx x_upd sel_scores
+      m <- MoE.scatter_add m token_idx x_upd sel_scores
     return m
   return x + m, present_kv
 
@@ -51,11 +55,11 @@ olmoe input_ids attn_mask past_key_values use_cache = do
   pos_ids <- arange_positions input_ids attention_mask=attn_mask
   x, present_key_values <- scope@model do
     x <- embedding@embed_tokens input_ids dim=D
-    present_key_values <- init_list()
+    present_key_values <- Cache.init
     for@layers i <- [0..L) do
-      past_i <- index past_key_values i
+      past_i <- Cache.index past_key_values i
       x, present_i <- olmoe_decoder_block x pos_ids attn_mask past_i use_cache
-      present_key_values <- append present_key_values present_i when=use_cache
+      present_key_values <- use_cache ? Cache.append present_key_values present_i : present_key_values
     x <- rms@norm x
     return x, present_key_values
   logits <- linear@lm_head x
