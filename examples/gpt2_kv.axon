@@ -35,7 +35,9 @@ gpt2_block x attn_mask past_kv use_cache = do
 gpt2 :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
 gpt2 input_ids attn_mask past_key_values use_cache = do
   tok <- embedding@wte input_ids dim=D
-  pos <- arange_positions input_ids attention_mask=attn_mask |> embedding@wpe
+  past_0 <- Cache.index past_key_values 0
+  past_length <- Cache.seq_len past_0
+  pos <- position_ids input_ids attention_mask=attn_mask past_length=past_length |> embedding@wpe
   x <- tok + pos
   present_key_values <- Cache.init
   for@h i <- [0..L) do

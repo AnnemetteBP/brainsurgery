@@ -11,11 +11,22 @@ model:
       optional: true
   graph:
   - n_op_1:
-      _op: arange_positions
+      _op: index
+      _bind: past_0
+      _args:
+      - past_key_values
+      - '0'
+  - n_op_2:
+      _op: kv_seq_len
+      _args: past_0
+      _bind: past_length
+  - n_op_3:
+      _op: position_ids
       _bind: pos_ids
       _args: input_ids
       attention_mask: attn_mask
-  - n_op_2:
+      past_length: past_length
+  - n_op_4:
       _op: embedding
       _bind: x
       _args: input_ids
@@ -23,59 +34,61 @@ model:
       scale: EMB_SCALE
       _params:
         weight: model.embed_tokens.weight
-  - n_op_3:
+  - n_op_5:
       _op: init_list
       _bind: present_key_values
-  - model:
-      graph:
-      - layers:
-          _op: repeat
-          var: i
-          range: L
-          body:
-          - n_op_4:
-              _op: index
-              _bind: past_i
-              _args:
-              - past_key_values
-              - i
-          - n_call_5:
-              _op: call
-              _target: gemma3_block
-              _args:
-              - x
-              - i
-              - pos_ids
-              - attn_mask
-              - past_i
-              - use_cache
-              _bind:
-              - x
-              - present_i
-          - n_op_6:
-              _op: append
-              _bind: present_key_values
-              _args:
-              - present_key_values
-              - present_i
-              when: use_cache
-          - n_op_7:
-              _op: _ir_alias
-              _args: present_key_values
-              _bind: present_key_values
-              when: not (use_cache)
-  - n_call_9:
-      _op: call
-      _target: rms
+  - n_for_10:
+      _op: for
+      _scope: model.layers
+      _var: i
+      _to: L
+      _body:
+      - n_op_6:
+          _op: index
+          _bind: past_i
+          _args:
+          - past_key_values
+          - i
+      - n_call_7:
+          _op: call
+          _target: gemma3_block
+          _args:
+          - x
+          - i
+          - pos_ids
+          - attn_mask
+          - past_i
+          - use_cache
+          _bind:
+          - x
+          - present_i
+      - n_op_8:
+          _op: append
+          _bind: present_key_values
+          _args:
+          - present_key_values
+          - present_i
+          when: use_cache
+      - n_op_9:
+          _op: _ir_alias
+          _args: present_key_values
+          _bind: present_key_values
+          when: not (use_cache)
+  - n_call_12:
+      _op: rmsnorm
+      _bind: pipe_11
       _args: x
-      _bind: pipe_8
-      path: '''model.norm'''
-  - model:
-      graph:
-      - embed_tokens:
-          _op: linear
-          _bind: logits
-          _args: pipe_8
+      cast_float: true
+      unit_offset: true
+      dim: D
+      _params:
+        weight: model.norm.weight
+  - n_op_13:
+      _op: linear
+      _bind: logits
+      _args: pipe_11
+      _params:
+        weight: model.embed_tokens.weight
   outputs:
     logits: logits
     present_key_values: present_key_values
@@ -145,23 +158,6 @@ model:
       outputs:
         k_ctx: k_ctx
         v_ctx: v_ctx
-    rms:
-      inputs:
-        x:
-          optional: false
-        path:
-          optional: false
-      graph:
-      - n_op_1:
-          _op: rmsnorm
-          _bind: out_0
-          _args: x
-          cast_float: true
-          unit_offset: true
-          dim: D
-          param_base: path
-      outputs:
-        out_0: out_0
     gemma3_block:
       inputs:
         x:
@@ -178,60 +174,69 @@ model:
           optional: true
       graph:
       - n_call_1:
-          _op: call
-          _target: rms
-          _args: x
+          _op: rmsnorm
           _bind: x_norm
-          path: '''input_layernorm'''
-      - self_attn:
-          graph:
-          - q_proj:
-              _op: linear
-              _bind: pipe_2
-              _args: x_norm
-              dim: QD
-      - n_op_4:
+          _args: x
+          cast_float: true
+          unit_offset: true
+          dim: D
+          _params:
+            weight: input_layernorm.weight
+      - n_op_3:
+          _op: linear
+          _bind: pipe_2
+          _args: x_norm
+          dim: QD
+          _params:
+            weight: self_attn.q_proj.weight
+      - n_op_5:
           _op: reshape_heads
-          _bind: pipe_3
+          _bind: pipe_4
           _args: pipe_2
           heads: H
-      - n_call_5:
-          _op: call
-          _target: rms
-          _args: pipe_3
+      - n_call_6:
+          _op: rmsnorm
           _bind: qn
-          path: '''self_attn.q_norm'''
-      - self_attn:
-          graph:
-          - k_proj:
-              _op: linear
-              _bind: pipe_6
-              _args: x_norm
-              dim: KVD
+          _args: pipe_4
+          cast_float: true
+          unit_offset: true
+          dim: D
+          _params:
+            weight: self_attn.q_norm.weight
       - n_op_8:
-          _op: reshape_heads
+          _op: linear
           _bind: pipe_7
-          _args: pipe_6
-          heads: KVH
-      - n_call_9:
-          _op: call
-          _target: rms
+          _args: x_norm
+          dim: KVD
+          _params:
+            weight: self_attn.k_proj.weight
+      - n_op_10:
+          _op: reshape_heads
+          _bind: pipe_9
           _args: pipe_7
+          heads: KVH
+      - n_call_11:
+          _op: rmsnorm
           _bind: kn
-          path: '''self_attn.k_norm'''
-      - self_attn:
-          graph:
-          - v_proj:
-              _op: linear
-              _bind: pipe_10
-              _args: x_norm
-              dim: KVD
-      - n_op_11:
+          _args: pipe_9
+          cast_float: true
+          unit_offset: true
+          dim: D
+          _params:
+            weight: self_attn.k_norm.weight
+      - n_op_13:
+          _op: linear
+          _bind: pipe_12
+          _args: x_norm
+          dim: KVD
+          _params:
+            weight: self_attn.v_proj.weight
+      - n_op_14:
           _op: reshape_heads
           _bind: v
-          _args: pipe_10
+          _args: pipe_12
           heads: KVH
-      - n_op_12:
+      - n_op_15:
           _op: apply_rope_pair
           _bind:
           - qr
@@ -242,7 +247,7 @@ model:
           position_ids: pos_ids
           theta: THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD)
             == 0)
-      - n_call_13:
+      - n_call_16:
           _op: call
           _target: Cache.update
           _args:
@@ -254,7 +259,7 @@ model:
           - v_all
           - present_kv
           when: use_cache
-      - n_call_14:
+      - n_call_17:
           _op: call
           _target: Cache.coalesce
           _args:
@@ -265,17 +270,17 @@ model:
           _bind:
           - k_ctx_raw
           - v_ctx_raw
-      - n_op_15:
+      - n_op_18:
           _op: repeat_kv
           _bind: k_ctx
           _args: k_ctx_raw
           repeats: H / KVH
-      - n_op_16:
+      - n_op_19:
           _op: repeat_kv
           _bind: v_ctx
           _args: v_ctx_raw
           repeats: H / KVH
-      - n_op_17:
+      - n_op_20:
           _op: causal_mask
           _bind: mask
           _args: qr
@@ -283,9 +288,9 @@ model:
           window: WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) ==
             0)
           padding_mask: attn_mask
-      - n_op_19:
+      - n_op_22:
           _op: attention
-          _bind: pipe_18
+          _bind: pipe_21
           _args:
           - qr
           - k_ctx
@@ -296,83 +301,92 @@ model:
           scale: ATTN_SCALE
           rope_theta: THETA_LONG
           sliding_window: WIN_LOCAL
-      - n_op_21:
+      - n_op_24:
           _op: merge_heads
-          _bind: pipe_20
-          _args: pipe_18
-      - self_attn:
-          graph:
-          - o_proj:
-              _op: linear
-              _bind: attn
-              _args: pipe_20
-              dim: D
-      - n_call_22:
-          _op: call
-          _target: rms
-          _args: attn
+          _bind: pipe_23
+          _args: pipe_21
+      - n_op_25:
+          _op: linear
           _bind: attn
-          path: '''post_attention_layernorm'''
-      - n_op_23:
+          _args: pipe_23
+          dim: D
+          _params:
+            weight: self_attn.o_proj.weight
+      - n_call_26:
+          _op: rmsnorm
+          _bind: attn
+          _args: attn
+          cast_float: true
+          unit_offset: true
+          dim: D
+          _params:
+            weight: post_attention_layernorm.weight
+      - n_op_27:
           _op: add
           _bind: x2
           _args:
           - x
           - attn
-      - n_call_24:
-          _op: call
-          _target: rms
-          _args: x2
+      - n_call_28:
+          _op: rmsnorm
           _bind: x3
-          path: '''pre_feedforward_layernorm'''
-      - mlp:
-          graph:
-          - gate_proj:
-              _op: linear
-              _bind: g
-              _args: x3
-              dim: FFN
-      - mlp:
-          graph:
-          - up_proj:
-              _op: linear
-              _bind: u
-              _args: x3
-              dim: FFN
-      - n_op_26:
+          _args: x2
+          cast_float: true
+          unit_offset: true
+          dim: D
+          _params:
+            weight: pre_feedforward_layernorm.weight
+      - n_op_29:
+          _op: linear
+          _bind: g
+          _args: x3
+          dim: FFN
+          _params:
+            weight: mlp.gate_proj.weight
+      - n_op_30:
+          _op: linear
+          _bind: u
+          _args: x3
+          dim: FFN
+          _params:
+            weight: mlp.up_proj.weight
+      - n_op_32:
           _op: activation
           _args: g
-          _bind: pipe_25
+          _bind: pipe_31
           kind: gelu_pytorch_tanh
-      - n_op_28:
+      - n_op_34:
           _op: mul
-          _bind: pipe_27
+          _bind: pipe_33
           _args:
-          - pipe_25
+          - pipe_31
           - u
-      - mlp:
-          graph:
-          - down_proj:
-              _op: linear
-              _bind: out_0
-              _args: pipe_27
-              dim: D
-      - n_op_29:
+      - n_op_35:
+          _op: linear
+          _bind: out_0
+          _args: pipe_33
+          dim: D
+          _params:
+            weight: mlp.down_proj.weight
+      - n_op_36:
           _op: _ir_alias
           _args: out_0
           _bind: m
-      - n_call_30:
-          _op: call
-          _target: rms
-          _args: m
+      - n_call_37:
+          _op: rmsnorm
           _bind: m
-          path: '''post_feedforward_layernorm'''
-      - n_op_31:
+          _args: m
+          cast_float: true
+          unit_offset: true
+          dim: D
+          _params:
+            weight: post_feedforward_layernorm.weight
+      - n_op_38:
           _op: add
-          _bind: y
+          _bind: 'y'
           _args:
           - x2
           - m
       outputs:
-        y: y
+        'y': 'y'
         present_kv: present_kv
