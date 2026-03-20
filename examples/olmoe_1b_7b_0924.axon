@@ -33,7 +33,7 @@ olmoe_decoder_block x pos_ids attn_mask past_kv use_cache = do
     qr, kr <- apply_rope_pair q k position_ids=pos_ids theta=THETA
     k_all, v_all, present_kv <- Cache.update past_kv kr v when=use_cache
     k_coalesced, v_coalesced <- Cache.coalesce k_all v_all kr v
-    mask <- causal_mask qr key=k_coalesced window=C padding_mask=attn_mask
+    mask <- causal_mask qr k_coalesced window=C padding_mask=attn_mask
     a <- attention qr k_coalesced v_coalesced mask=mask causal=true scale=ATTN_SCALE |> merge_heads
     a <- linear@o_proj a dim=D
     return a, present_kv

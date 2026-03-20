@@ -121,9 +121,10 @@ model:
       - n_op_8:
           _op: causal_mask
           _bind: causal_attn_mask
-          _args: q
-          key: k
-          window: T
+          _args:
+          - q
+          - k
+          window: 768
           padding_mask: attn_mask
       - n_op_10:
           _op: attention

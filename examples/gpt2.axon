@@ -17,7 +17,7 @@ gpt2_block x attn_mask = do
     q <- reshape_heads q_lin heads=H
     k <- reshape_heads k_lin heads=H
     v <- reshape_heads v_lin heads=H
-    causal_attn_mask <- causal_mask q key=k window=T padding_mask=attn_mask
+    causal_attn_mask <- causal_mask q k window=768 padding_mask=attn_mask
     return attention q k v backend=sdpa causal=true mask=causal_attn_mask |>
       merge_heads |> lin@c_proj D
   x <- x + a

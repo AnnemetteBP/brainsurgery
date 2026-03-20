@@ -23,7 +23,7 @@ gpt2_block x attn_mask past_kv use_cache = do
   k_all, v_all, present_kv <- Cache.update past_kv k v when=use_cache
   k_ctx, v_ctx <- Cache.coalesce k_all v_all k v
   a <- scope@attn do
-    causal_attn_mask <- causal_mask q key=k_ctx window=T padding_mask=attn_mask
+    causal_attn_mask <- causal_mask q k_ctx window=T padding_mask=attn_mask
     return attention q k_ctx v_ctx backend=sdpa causal=true mask=causal_attn_mask |>
       merge_heads |> lin@c_proj D
   x <- x + a
