@@ -259,9 +259,8 @@ model:
           - q
           - k_ctx
           - v_ctx
-          backend: sdpa
-          causal: true
           mask: causal_attn_mask
+          causal: true
       - n_op_14:
           _op: merge_heads
           _bind: pipe_13

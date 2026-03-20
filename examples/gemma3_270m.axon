@@ -34,7 +34,7 @@ gemma3_block x i pos_ids attn_mask past_kv use_cache = do
     k_ctx <- repeat k_ctx_raw (H / KVH)
     v_ctx <- repeat v_ctx_raw (H / KVH)
     mask <- causal_mask qr k_ctx window=WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) == 0) padding_mask=attn_mask
-    attn <- attention qr k_ctx v_ctx mask=mask backend=sdpa causal=true scale=ATTN_SCALE rope_theta=THETA_LONG sliding_window=WIN_LOCAL |>
+    attn <- attention qr k_ctx v_ctx mask=mask causal=true scale=ATTN_SCALE |>
       merge_heads |> linear@o_proj dim=D
     return attn, present_kv
   attn <- rms@post_attention_layernorm attn

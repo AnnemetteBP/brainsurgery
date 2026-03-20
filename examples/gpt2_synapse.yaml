@@ -133,9 +133,8 @@ model:
           - q
           - k
           - v
-          backend: sdpa
-          causal: true
           mask: causal_attn_mask
+          causal: true
       - n_op_12:
           _op: merge_heads
           _bind: pipe_11

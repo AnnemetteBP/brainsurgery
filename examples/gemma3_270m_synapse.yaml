@@ -310,11 +310,8 @@ model:
           - k_ctx
           - v_ctx
           mask: mask
-          backend: sdpa
           causal: true
           scale: ATTN_SCALE
-          rope_theta: THETA_LONG
-          sliding_window: WIN_LOCAL
       - n_op_24:
           _op: merge_heads
           _bind: pipe_23
