@@ -15,15 +15,15 @@ model:
       _bind: pos_ids
       _args: input_ids
       attention_mask: attn_mask
-  - model:
-      graph:
-      - embed_tokens:
-          _op: embedding
-          _bind: x
-          _args: input_ids
-          scale: EMB_SCALE
-          embedding_dim: D
   - n_op_2:
+      _op: embedding
+      _bind: x
+      _args: input_ids
+      dim: D
+      scale: EMB_SCALE
+      _params:
+        weight: model.embed_tokens.weight
+  - n_op_3:
       _op: init_list
       _bind: present_key_values
   - model:
@@ -33,13 +33,13 @@ model:
           var: i
           range: L
           body:
-          - n_op_3:
+          - n_op_4:
               _op: index
               _bind: past_i
               _args:
               - past_key_values
               - i
-          - n_call_4:
+          - n_call_5:
               _op: call
               _target: gemma3_block
               _args:
@@ -52,30 +52,30 @@ model:
               _bind:
               - x
               - present_i
-          - n_op_5:
+          - n_op_6:
               _op: append
               _bind: present_key_values
               _args:
               - present_key_values
               - present_i
               when: use_cache
-          - n_op_6:
+          - n_op_7:
               _op: _ir_alias
               _args: present_key_values
               _bind: present_key_values
               when: not (use_cache)
-  - n_call_8:
+  - n_call_9:
       _op: call
       _target: rms
       _args: x
-      _bind: pipe_7
+      _bind: pipe_8
       path: '''model.norm'''
   - model:
       graph:
       - embed_tokens:
           _op: linear
           _bind: logits
-          _args: pipe_7
+          _args: pipe_8
   outputs:
     logits: logits
     present_key_values: present_key_values

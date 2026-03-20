@@ -10,27 +10,31 @@ model:
     use_cache:
       optional: true
   graph:
-  - wte:
+  - n_op_1:
       _op: embedding
       _bind: tok
       _args: input_ids
-      embedding_dim: D
-  - n_op_2:
+      dim: D
+      _params:
+        weight: wte.weight
+  - n_op_3:
       _op: arange_positions
-      _bind: pipe_1
+      _bind: pipe_2
       _args: input_ids
       attention_mask: attn_mask
-  - wpe:
+  - n_op_4:
       _op: embedding
       _bind: pos
-      _args: pipe_1
-  - n_op_3:
+      _args: pipe_2
+      _params:
+        weight: wpe.weight
+  - n_op_5:
       _op: add
       _bind: x
       _args:
       - tok
       - pos
-  - n_op_4:
+  - n_op_6:
       _op: init_list
       _bind: present_key_values
   - h:
@@ -38,13 +42,13 @@ model:
       var: i
       range: L
       body:
-      - n_op_5:
+      - n_op_7:
           _op: index
           _bind: past_i
           _args:
           - past_key_values
           - i
-      - n_call_6:
+      - n_call_8:
           _op: call
           _target: gpt2_block
           _args:
@@ -55,27 +59,27 @@ model:
           _bind:
           - x
           - present_i
-      - n_op_7:
+      - n_op_9:
           _op: append
           _bind: present_key_values
           _args:
           - present_key_values
           - present_i
           when: use_cache
-      - n_op_8:
+      - n_op_10:
           _op: _ir_alias
           _args: present_key_values
           _bind: present_key_values
           when: not (use_cache)
   - ln_f:
       _op: layernorm
-      _bind: pipe_9
+      _bind: pipe_11
       _args: x
       dim: D
   - wte:
       _op: linear
       _bind: logits
-      _args: pipe_9
+      _args: pipe_11
   outputs:
     logits: logits
     present_key_values: present_key_values

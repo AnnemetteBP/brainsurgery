@@ -6,21 +6,25 @@ model:
     attn_mask:
       optional: true
   graph:
-  - wte:
+  - n_op_1:
       _op: embedding
       _bind: tok
       _args: input_ids
-      embedding_dim: D
-  - n_op_2:
+      dim: D
+      _params:
+        weight: wte.weight
+  - n_op_3:
       _op: arange_positions
-      _bind: pipe_1
+      _bind: pipe_2
       _args: input_ids
       attention_mask: attn_mask
-  - wpe:
+  - n_op_4:
       _op: embedding
       _bind: pos
-      _args: pipe_1
-  - n_op_3:
+      _args: pipe_2
+      _params:
+        weight: wpe.weight
+  - n_op_5:
       _op: add
       _bind: x
       _args:
@@ -31,7 +35,7 @@ model:
       var: i
       range: L
       body:
-      - n_call_4:
+      - n_call_6:
           _op: call
           _target: gpt2_block
           _args:
@@ -40,13 +44,13 @@ model:
           _bind: x
   - ln_f:
       _op: layernorm
-      _bind: pipe_5
+      _bind: pipe_7
       _args: x
       dim: D
   - wte:
       _op: linear
       _bind: logits
-      _args: pipe_5
+      _args: pipe_7
       dim: V
   outputs:
     logits: logits

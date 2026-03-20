@@ -135,28 +135,30 @@ gpt2 :: TokenIds[B,S] -> ?Tensor[B,S] -> Tensor[B,S,V]
 gpt2 input_ids attn_mask = do
   tok <- embedding@wte input_ids dim=D
   -- synapse:
-  --   wte:
-  --     op: embedding
-  --     out: tok
-  --     in: input_ids
-  --     embedding_dim: D
+  --   n_op_1:
+  --     _op: embedding
+  --     _bind: tok
+  --     _args: input_ids
+  --     dim: D
+  --     _params: {weight: wte.weight}
   pos <- arange_positions input_ids attention_mask=attn_mask |> embedding@wpe
   -- synapse:
-  --   n_op_2:
-  --     op: arange_positions
-  --     out: pipe_1
-  --     in: input_ids
+  --   n_op_3:
+  --     _op: arange_positions
+  --     _bind: pipe_2
+  --     _args: input_ids
   --     attention_mask: attn_mask
-  --   wpe:
-  --     op: embedding
-  --     out: pos
-  --     in: pipe_1
+  --   n_op_4:
+  --     _op: embedding
+  --     _bind: pos
+  --     _args: pipe_2
+  --     _params: {weight: wpe.weight}
   x <- tok + pos
   -- synapse:
-  --   n_op_3:
-  --     op: add
-  --     out: x
-  --     in: [tok, pos]
+  --   n_op_5:
+  --     _op: add
+  --     _bind: x
+  --     _args: [tok, pos]
   for@h i <- [0..L) do
     x <- gpt2_block x attn_mask
     -- synapse:
