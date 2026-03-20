@@ -11,66 +11,71 @@ model:
       optional: true
   graph:
   - wte:
-      op: embedding
-      out: tok
-      in: input_ids
-      embedding_dim: D
-  - n_op_1:
-      op: arange_positions
-      out: pos_ids
-      in: input_ids
-      attention_mask: attn_mask
-  - wpe:
-      op: embedding
-      out: pos
-      in: pos_ids
+      _op: embedding
+      _bind: tok
+      _args: input_ids
       embedding_dim: D
   - n_op_2:
-      op: add
-      out: x
-      in:
+      _op: arange_positions
+      _bind: pipe_1
+      _args: input_ids
+      attention_mask: attn_mask
+  - wpe:
+      _op: embedding
+      _bind: pos
+      _args: pipe_1
+  - n_op_3:
+      _op: add
+      _bind: x
+      _args:
       - tok
       - pos
-  - n_op_3:
-      op: init_list
-      out: present_key_values
+  - n_op_4:
+      _op: init_list
+      _bind: present_key_values
   - h:
-      op: repeat
+      _op: repeat
       var: i
       range: L
       body:
-      - n_op_4:
-          op: index
-          out: past_i
-          in:
+      - n_op_5:
+          _op: index
+          _bind: past_i
+          _args:
           - past_key_values
           - i
-      - n_use_5:
-          use: gpt2_block
-          in:
-            x: x
-            attn_mask: attn_mask
-            past_kv: past_i
-            use_cache: use_cache
-          out:
-            'y': x
-            present_kv: present_i
-      - n_op_6:
-          op: append
-          out: present_key_values
-          in:
+      - n_call_6:
+          _op: call
+          _target: gpt2_block
+          _args:
+          - x
+          - attn_mask
+          - past_i
+          - use_cache
+          _bind:
+          - x
+          - present_i
+      - n_op_7:
+          _op: append
+          _bind: present_key_values
+          _args:
           - present_key_values
           - present_i
           when: use_cache
+      - n_op_8:
+          _op: _ir_alias
+          _args: present_key_values
+          _bind: present_key_values
+          when: not (use_cache)
   - ln_f:
-      op: layernorm
-      out: pipe_7
-      in: x
+      _op: layernorm
+      _bind: pipe_9
+      _args: x
       dim: D
   - wte:
-      op: linear
-      out: logits
-      in: pipe_7
+      _op: linear
+      _bind: logits
+      _args: pipe_9
   outputs:
     logits: logits
     present_key_values: present_key_values
@@ -83,6 +88,53 @@ model:
     B: null
     S: null
   blocks:
+    Cache.update:
+      inputs:
+        past:
+          optional: true
+        k:
+          optional: false
+        v:
+          optional: false
+      graph:
+      - n_op_1:
+          _op: kv_cache_update
+          _args:
+          - past
+          - k
+          - v
+          _bind:
+          - k_all
+          - v_all
+          - present
+      outputs:
+        k_all: k_all
+        v_all: v_all
+        present: present
+    Cache.coalesce:
+      inputs:
+        k_all:
+          optional: true
+        v_all:
+          optional: true
+        k:
+          optional: false
+        v:
+          optional: false
+      graph:
+      - n_op_1:
+          _op: coalesce
+          _args:
+          - k_all
+          - v_all
+          - k
+          - v
+          _bind:
+          - k_ctx
+          - v_ctx
+      outputs:
+        k_ctx: k_ctx
+        v_ctx: v_ctx
     lin:
       inputs:
         x:
@@ -93,9 +145,9 @@ model:
           optional: false
       graph:
       - n_op_1:
-          op: linear
-          out: out_0
-          in: x
+          _op: linear
+          _bind: out_0
+          _args: x
           dim: dim
           bias: true
           transpose: true
@@ -114,72 +166,75 @@ model:
           optional: true
       graph:
       - ln_1:
-          op: layernorm
-          out: x1
-          in: x
+          _op: layernorm
+          _bind: x1
+          _args: x
           dim: D
-      - n_use_2:
-          use: lin
-          in:
-            x: x1
-            dim: 3*D
-            path: '''attn.c_attn'''
-          out:
-            out_0: pipe_1
+      - n_call_2:
+          _op: call
+          _target: lin
+          _args:
+          - x1
+          - 3*D
+          _bind: pipe_1
+          path: '''attn.c_attn'''
       - n_op_3:
-          op: split
-          out:
+          _op: split
+          _bind:
           - q_lin
           - k_lin
           - v_lin
-          in: pipe_1
+          _args: pipe_1
           parts: 3
       - n_op_4:
-          op: reshape_heads
-          out: q
-          in: q_lin
+          _op: reshape_heads
+          _bind: q
+          _args: q_lin
           heads: H
       - n_op_5:
-          op: reshape_heads
-          out: k
-          in: k_lin
+          _op: reshape_heads
+          _bind: k
+          _args: k_lin
           heads: H
       - n_op_6:
-          op: reshape_heads
-          out: v
-          in: v_lin
+          _op: reshape_heads
+          _bind: v
+          _args: v_lin
           heads: H
-      - n_op_7:
-          op: kv_cache_update
-          in:
+      - n_call_7:
+          _op: call
+          _target: Cache.update
+          _args:
           - past_kv
           - k
           - v
-          out:
+          _bind:
           - k_all
           - v_all
           - present_kv
-      - n_op_8:
-          op: coalesce
-          in:
+          when: use_cache
+      - n_call_8:
+          _op: call
+          _target: Cache.coalesce
+          _args:
           - k_all
           - v_all
           - k
           - v
-          out:
+          _bind:
           - k_ctx
           - v_ctx
       - n_op_9:
-          op: causal_mask
-          out: causal_attn_mask
-          in: q
+          _op: causal_mask
+          _bind: causal_attn_mask
+          _args: q
           key: k_ctx
           window: T
           padding_mask: attn_mask
       - n_op_11:
-          op: attention
-          out: pipe_10
-          in:
+          _op: attention
+          _bind: pipe_10
+          _args:
           - q
           - k_ctx
           - v_ctx
@@ -187,63 +242,63 @@ model:
           causal: true
           mask: causal_attn_mask
       - n_op_13:
-          op: merge_heads
-          out: pipe_12
-          in: pipe_10
-      - n_use_14:
-          use: lin
-          in:
-            x: pipe_12
-            dim: D
-            path: '''attn.c_proj'''
-          out:
-            out_0: out_0
+          _op: merge_heads
+          _bind: pipe_12
+          _args: pipe_10
+      - n_call_14:
+          _op: call
+          _target: lin
+          _args:
+          - pipe_12
+          - D
+          _bind: out_0
+          path: '''attn.c_proj'''
       - n_op_15:
-          op: _ir_alias
-          in: out_0
-          out: a
+          _op: _ir_alias
+          _args: out_0
+          _bind: a
       - n_op_16:
-          op: add
-          out: x
-          in:
+          _op: add
+          _bind: x
+          _args:
           - x
           - a
       - ln_2:
-          op: layernorm
-          out: x3
-          in: x
+          _op: layernorm
+          _bind: x3
+          _args: x
           dim: D
-      - n_use_18:
-          use: lin
-          in:
-            x: x3
-            dim: 4*D
-            path: '''mlp.c_fc'''
-          out:
-            out_0: pipe_17
+      - n_call_18:
+          _op: call
+          _target: lin
+          _args:
+          - x3
+          - 4*D
+          _bind: pipe_17
+          path: '''mlp.c_fc'''
       - n_op_20:
-          op: activation
-          in: pipe_17
-          out: pipe_19
+          _op: activation
+          _args: pipe_17
+          _bind: pipe_19
           kind: gelu_new
-      - n_use_21:
-          use: lin
-          in:
-            x: pipe_19
-            dim: D
-            path: '''mlp.c_proj'''
-          out:
-            out_0: out_0
+      - n_call_21:
+          _op: call
+          _target: lin
+          _args:
+          - pipe_19
+          - D
+          _bind: out_0
+          path: '''mlp.c_proj'''
       - n_op_22:
-          op: _ir_alias
-          in: out_0
-          out: m
+          _op: _ir_alias
+          _args: out_0
+          _bind: m
       - n_op_23:
-          op: add
-          out: 'y'
-          in:
+          _op: add
+          _bind: y
+          _args:
           - x
           - m
       outputs:
-        'y': 'y'
+        y: y
         present_kv: present_kv

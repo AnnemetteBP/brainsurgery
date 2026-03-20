@@ -11,62 +11,67 @@ model:
       optional: true
   graph:
   - n_op_1:
-      op: arange_positions
-      out: pos_ids
-      in: input_ids
+      _op: arange_positions
+      _bind: pos_ids
+      _args: input_ids
       attention_mask: attn_mask
   - model:
       graph:
       - embed_tokens:
-          op: embedding
-          out: x
-          in: input_ids
+          _op: embedding
+          _bind: x
+          _args: input_ids
           embedding_dim: D
   - n_op_2:
-      op: init_list
-      out: present_key_values
+      _op: init_list
+      _bind: present_key_values
   - model:
       graph:
       - layers:
-          op: repeat
+          _op: repeat
           var: i
           range: L
           body:
           - n_op_3:
-              op: index
-              out: past_i
-              in:
+              _op: index
+              _bind: past_i
+              _args:
               - past_key_values
               - i
-          - n_use_4:
-              use: olmoe_decoder_block
-              in:
-                x: x
-                pos_ids: pos_ids
-                attn_mask: attn_mask
-                past_kv: past_i
-                use_cache: use_cache
-              out:
-                out_0: x
-                present_kv: present_i
+          - n_call_4:
+              _op: call
+              _target: olmoe_decoder_block
+              _args:
+              - x
+              - pos_ids
+              - attn_mask
+              - past_i
+              - use_cache
+              _bind:
+              - x
+              - present_i
           - n_op_5:
-              op: append
-              out: present_key_values
-              in:
+              _op: append
+              _bind: present_key_values
+              _args:
               - present_key_values
               - present_i
               when: use_cache
-  - n_use_6:
-      use: rms
-      in:
-        x: x
-        path: '''model.norm'''
-      out:
-        out_0: x
+          - n_op_6:
+              _op: _ir_alias
+              _args: present_key_values
+              _bind: present_key_values
+              when: not (use_cache)
+  - n_call_7:
+      _op: call
+      _target: rms
+      _args: x
+      _bind: x
+      path: '''model.norm'''
   - lm_head:
-      op: linear
-      out: logits
-      in: x
+      _op: linear
+      _bind: logits
+      _args: x
   outputs:
     logits: logits
     present_key_values: present_key_values
@@ -85,6 +90,53 @@ model:
     B: null
     S: null
   blocks:
+    Cache.update:
+      inputs:
+        past:
+          optional: true
+        k:
+          optional: false
+        v:
+          optional: false
+      graph:
+      - n_op_1:
+          _op: kv_cache_update
+          _args:
+          - past
+          - k
+          - v
+          _bind:
+          - k_all
+          - v_all
+          - present
+      outputs:
+        k_all: k_all
+        v_all: v_all
+        present: present
+    Cache.coalesce:
+      inputs:
+        k_all:
+          optional: true
+        v_all:
+          optional: true
+        k:
+          optional: false
+        v:
+          optional: false
+      graph:
+      - n_op_1:
+          _op: coalesce
+          _args:
+          - k_all
+          - v_all
+          - k
+          - v
+          _bind:
+          - k_ctx
+          - v_ctx
+      outputs:
+        k_ctx: k_ctx
+        v_ctx: v_ctx
     rms:
       inputs:
         x:
@@ -93,10 +145,11 @@ model:
           optional: false
       graph:
       - n_op_1:
-          op: rmsnorm
-          out: out_0
-          in: x
+          _op: rmsnorm
+          _bind: out_0
+          _args: x
           eps: EPS
+          dim: D
           param_base: path
       outputs:
         out_0: out_0
@@ -106,28 +159,29 @@ model:
           optional: false
       graph:
       - gate_proj:
-          op: linear
-          out: gate
-          in: x
+          _op: linear
+          _bind: gate
+          _args: x
       - up_proj:
-          op: linear
-          out: up
-          in: x
+          _op: linear
+          _bind: up
+          _args: x
       - n_op_2:
-          op: activation
-          in: gate
-          out: pipe_1
+          _op: activation
+          _args: gate
+          _bind: pipe_1
           kind: silu
       - n_op_4:
-          op: mul
-          out: pipe_3
-          in:
+          _op: mul
+          _bind: pipe_3
+          _args:
           - pipe_1
           - up
       - down_proj:
-          op: linear
-          out: out_0
-          in: pipe_3
+          _op: linear
+          _bind: out_0
+          _args: pipe_3
+          dim: D
       outputs:
         out_0: out_0
     olmoe_decoder_block:
@@ -143,104 +197,104 @@ model:
         use_cache:
           optional: true
       graph:
-      - n_use_1:
-          use: rms
-          in:
-            x: x
-            path: '''input_layernorm'''
-          out:
-            out_0: x_norm
+      - n_call_1:
+          _op: call
+          _target: rms
+          _args: x
+          _bind: x_norm
+          path: '''input_layernorm'''
       - self_attn:
           graph:
           - q_proj:
-              op: linear
-              out: pipe_2
-              in: x_norm
+              _op: linear
+              _bind: pipe_2
+              _args: x_norm
               dim: D
-      - n_use_4:
-          use: rms
-          in:
-            x: pipe_2
-            path: '''self_attn.q_norm'''
-          out:
-            out_0: pipe_3
+      - n_call_4:
+          _op: call
+          _target: rms
+          _args: pipe_2
+          _bind: pipe_3
+          path: '''self_attn.q_norm'''
       - n_op_5:
-          op: reshape_heads
-          out: q
-          in: pipe_3
+          _op: reshape_heads
+          _bind: q
+          _args: pipe_3
           heads: H
       - self_attn:
           graph:
           - k_proj:
-              op: linear
-              out: pipe_6
-              in: x_norm
+              _op: linear
+              _bind: pipe_6
+              _args: x_norm
               dim: D
-      - n_use_8:
-          use: rms
-          in:
-            x: pipe_6
-            path: '''self_attn.k_norm'''
-          out:
-            out_0: pipe_7
+      - n_call_8:
+          _op: call
+          _target: rms
+          _args: pipe_6
+          _bind: pipe_7
+          path: '''self_attn.k_norm'''
       - n_op_9:
-          op: reshape_heads
-          out: k
-          in: pipe_7
+          _op: reshape_heads
+          _bind: k
+          _args: pipe_7
           heads: H
       - self_attn:
           graph:
           - v_proj:
-              op: linear
-              out: pipe_10
-              in: x_norm
+              _op: linear
+              _bind: pipe_10
+              _args: x_norm
               dim: D
       - n_op_11:
-          op: reshape_heads
-          out: v
-          in: pipe_10
+          _op: reshape_heads
+          _bind: v
+          _args: pipe_10
           heads: H
       - n_op_12:
-          op: apply_rope_pair
-          out:
+          _op: apply_rope_pair
+          _bind:
           - qr
           - kr
-          in:
+          _args:
           - q
           - k
           position_ids: pos_ids
           theta: THETA
-      - n_op_13:
-          op: kv_cache_update
-          in:
+      - n_call_13:
+          _op: call
+          _target: Cache.update
+          _args:
           - past_kv
           - kr
           - v
-          out:
+          _bind:
           - k_all
           - v_all
           - present_kv
-      - n_op_14:
-          op: coalesce
-          in:
+          when: use_cache
+      - n_call_14:
+          _op: call
+          _target: Cache.coalesce
+          _args:
           - k_all
           - v_all
           - kr
           - v
-          out:
+          _bind:
           - k_coalesced
           - v_coalesced
       - n_op_15:
-          op: causal_mask
-          out: mask
-          in: qr
+          _op: causal_mask
+          _bind: mask
+          _args: qr
           key: k_coalesced
           window: C
           padding_mask: attn_mask
       - n_op_17:
-          op: attention
-          out: pipe_16
-          in:
+          _op: attention
+          _bind: pipe_16
+          _args:
           - qr
           - k_coalesced
           - v_coalesced
@@ -248,91 +302,89 @@ model:
           causal: true
           scale: ATTN_SCALE
       - n_op_18:
-          op: merge_heads
-          out: a
-          in: pipe_16
+          _op: merge_heads
+          _bind: a
+          _args: pipe_16
       - self_attn:
           graph:
           - o_proj:
-              op: linear
-              out: a
-              in: a
+              _op: linear
+              _bind: a
+              _args: a
               dim: D
       - n_op_19:
-          op: add
-          out: x
-          in:
+          _op: add
+          _bind: x
+          _args:
           - x
           - a
-      - n_use_20:
-          use: rms
-          in:
-            x: x
-            path: '''post_attention_layernorm'''
-          out:
-            out_0: x3
+      - n_call_20:
+          _op: call
+          _target: rms
+          _args: x
+          _bind: xn
+          path: '''post_attention_layernorm'''
       - mlp:
           graph:
           - gate:
-              op: linear
-              out: pipe_21
-              in: x3
+              _op: linear
+              _bind: pipe_21
+              _args: xn
               dim: E
       - n_op_23:
-          op: softmax
-          out: pipe_22
-          in: pipe_21
+          _op: softmax
+          _bind: pipe_22
+          _args: pipe_21
           dim: -1
           dtype: float32
       - n_op_24:
-          op: topk
-          out:
+          _op: topk
+          _bind:
           - topk_scores
           - topk_indices
-          in: pipe_22
+          _args: pipe_22
           k: EPT
           dim: -1
       - n_op_25:
-          op: zeros_like
-          out: m
-          in: x3
+          _op: zeros_like
+          _bind: m
+          _args: xn
       - mlp:
           graph:
           - experts:
-              op: repeat
+              _op: repeat
               var: e
               range: E
               body:
               - n_op_26:
-                  op: moe_select_tokens
-                  out:
+                  _op: moe_select_tokens
+                  _bind:
                   - x_sel
                   - token_idx
                   - topk_pos
                   - sel_scores
-                  in:
-                  - x3
+                  _args:
+                  - xn
                   - topk_scores
                   - topk_indices
                   expert: e
-              - n_use_27:
-                  use: expert_ffn
-                  in:
-                    x: x_sel
-                  out:
-                    out_0: x_upd
+              - n_call_27:
+                  _op: call
+                  _target: expert_ffn
+                  _args: x_sel
+                  _bind: x_upd
               - n_op_28:
-                  op: moe_scatter_add
-                  out: m
-                  in:
+                  _op: moe_scatter_add
+                  _bind: m
+                  _args:
                   - m
                   - token_idx
                   - x_upd
                   - sel_scores
       - n_op_29:
-          op: add
-          out: out_0
-          in:
+          _op: add
+          _bind: out_0
+          _args:
           - x
           - m
       outputs:
