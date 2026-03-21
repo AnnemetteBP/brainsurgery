@@ -29,7 +29,7 @@ gemma3_block x i pos_ids attn_mask past_kv = do
     k <- linear@k_proj xn dim=KVD |> reshape_heads heads=KVH |> rms@k_norm
     v <- linear@v_proj xn dim=KVD |> reshape_heads heads=KVH
     theta <- THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD) == 0)
-    q, k <- apply_rope_pair q k position_ids=pos_ids theta=theta
+    q, k <- rope_pair q k position_ids=pos_ids theta=theta
     k, v, new_kv <- Cache.update past_kv k v
     k <- repeat k (H / KVH)
     v <- repeat v (H / KVH)
@@ -45,8 +45,7 @@ gemma3_block x i pos_ids attn_mask past_kv = do
     u <- linear@up_proj xn dim=FFN
     return gelu_pytorch_tanh g |> mul u |> linear@down_proj dim=D
   m <- rms@post_feedforward_layernorm m
-  x <- x + m
-  return x, new_kv
+  return x + m, new_kv
 
 gemma3 :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
 gemma3 input_ids attn_mask past_kv use_cache = do

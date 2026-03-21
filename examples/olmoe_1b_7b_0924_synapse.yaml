@@ -224,7 +224,7 @@ model:
           _args: pipe_12
           heads: H
       - n_op_15:
-          _op: apply_rope_pair
+          _op: rope_pair
           _bind:
           - qr
           - kr

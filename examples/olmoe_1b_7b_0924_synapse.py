@@ -304,31 +304,33 @@ class OLMoE1B7B0924Synapse(nn.Module):
         v_37 = pipe_12_33.view(
             pipe_12_33.shape[0], pipe_12_33.shape[1], int(heads_34), int(head_dim_35)
         ).transpose(1, 2)
+        if q_22.ndim != 4 or k_31.ndim != 4:
+            raise ValueError("rope_pair expects q and k to be rank-4 [batch, heads, seq, head_dim]")
+        if int(q_22.shape[0]) != int(k_31.shape[0]):
+            raise ValueError("rope_pair expects q and k to have matching batch size")
+        if int(q_22.shape[-2]) != int(k_31.shape[-2]):
+            raise ValueError("rope_pair expects q and k to have matching sequence length")
+        if int(q_22.shape[-1]) != int(k_31.shape[-1]):
+            raise ValueError("rope_pair expects q and k to have matching head dimension")
         half_40 = q_22.shape[-1] // 2
+        if int(q_22.shape[-1]) % 2 != 0:
+            raise ValueError("rope_pair expects even head dimension")
         inv_freq_41 = 1.0 / (
             float(10000.0)
             ** (torch.arange(0, half_40, device=q_22.device, dtype=q_22.dtype) / float(half_40))
         )
-        if pos_ids is not None:
-            if pos_ids.ndim != 2:
-                raise ValueError("apply_rope_pair.position_ids must be rank-2 [batch, seq]")
-            if int(pos_ids.shape[0]) != int(q_22.shape[0]):
-                raise ValueError("apply_rope_pair.position_ids batch size must match q/k batch")
-            if int(pos_ids.shape[1]) != int(q_22.shape[-2]):
-                raise ValueError(
-                    "apply_rope_pair.position_ids width must match q/k sequence length"
-                )
-            pos_42 = pos_ids.to(device=q_22.device, dtype=q_22.dtype)
-            ang_43 = pos_42.unsqueeze(-1) * inv_freq_41.unsqueeze(0).unsqueeze(0)
-            cos_44 = torch.cos(ang_43).unsqueeze(1)
-            sin_45 = torch.sin(ang_43).unsqueeze(1)
-        else:
-            pos_42 = torch.arange(
-                int(0), int(0) + q_22.shape[-2], device=q_22.device, dtype=q_22.dtype
-            )
-            ang_43 = torch.einsum("t,d->td", pos_42, inv_freq_41)
-            cos_44 = torch.cos(ang_43)[None, None, :, :]
-            sin_45 = torch.sin(ang_43)[None, None, :, :]
+        if pos_ids is None:
+            raise ValueError("rope_pair.position_ids must not be null")
+        if pos_ids.ndim != 2:
+            raise ValueError("rope_pair.position_ids must be rank-2 [batch, seq]")
+        if int(pos_ids.shape[0]) != int(q_22.shape[0]):
+            raise ValueError("rope_pair.position_ids batch size must match q/k batch")
+        if int(pos_ids.shape[1]) != int(q_22.shape[-2]):
+            raise ValueError("rope_pair.position_ids width must match q/k sequence length")
+        pos_42 = pos_ids.to(device=q_22.device, dtype=q_22.dtype)
+        ang_43 = pos_42.unsqueeze(-1) * inv_freq_41.unsqueeze(0).unsqueeze(0)
+        cos_44 = torch.cos(ang_43).unsqueeze(1)
+        sin_45 = torch.sin(ang_43).unsqueeze(1)
         q1_46 = q_22[..., :half_40]
         q2_47 = q_22[..., half_40 : 2 * half_40]
         k1_48 = k_31[..., :half_40]
@@ -621,7 +623,7 @@ class OLMoE1B7B0924Synapse(nn.Module):
         if mask is not None:
             generated_mask = mask.new_zeros((batch, max_len))
             generated_mask[:, :start_len] = mask
-        past_key_values = None
+        cache_state = None
         finished = torch.zeros(batch, dtype=torch.bool, device=input_ids.device)
         cur_len = start_len
         was_training = self.training
@@ -631,27 +633,20 @@ class OLMoE1B7B0924Synapse(nn.Module):
                 while cur_len < max_len and not torch.all(finished):
                     step_input = (
                         generated[:, :cur_len]
-                        if past_key_values is None
+                        if cache_state is None
                         else generated[:, cur_len - 1 : cur_len]
                     )
-                    if generated_mask is None:
-                        model_out = self.forward(
-                            step_input, past_key_values=past_key_values, use_cache=True
-                        )
-                    else:
-                        model_out = self.forward(
-                            step_input,
-                            attention_mask=generated_mask[:, :cur_len],
-                            attn_mask=generated_mask[:, :cur_len],
-                            past_key_values=past_key_values,
-                            use_cache=True,
-                        )
+                    call_kwargs: dict[str, Any] = {}
+                    if generated_mask is not None:
+                        call_kwargs["attention_mask"] = generated_mask[:, :cur_len]
+                        call_kwargs["attn_mask"] = generated_mask[:, :cur_len]
+                    call_kwargs["past_kv"] = cache_state
+                    call_kwargs["use_cache"] = True
+                    model_out = self.forward(step_input, **call_kwargs)
                     if isinstance(model_out, dict):
                         logits = model_out["logits"]
-                        if "past_key_values" in model_out:
-                            past_key_values = model_out["past_key_values"]
-                        elif "present_key_values" in model_out:
-                            past_key_values = model_out["present_key_values"]
+                        if "new_kv" in model_out:
+                            cache_state = model_out["new_kv"]
                     else:
                         logits = model_out
                     next_token = torch.argmax(logits[:, -1, :], dim=-1)

@@ -26,8 +26,7 @@ gpt2_block x attn_mask past_kv = do
   x3 <- layernorm@ln_2 x
   m <- scope@mlp do
     return lin@c_fc x3 4*D |> gelu_new |> lin@c_proj D
-  x <- x + m
-  return x, new_kv
+  return x + m, new_kv
 
 gpt2 :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
 gpt2 input_ids attn_mask past_kv use_cache = do

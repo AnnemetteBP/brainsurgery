@@ -30,10 +30,10 @@ olmoe_decoder_block x pos_ids attn_mask past_kv = do
     q <- x_norm |> linear@q_proj dim=D |> rms@q_norm |> reshape_heads heads=H
     k <- x_norm |> linear@k_proj dim=D |> rms@k_norm |> reshape_heads heads=H
     v <- x_norm |> linear@v_proj dim=D |> reshape_heads heads=H
-    qr, kr <- apply_rope_pair q k position_ids=pos_ids theta=THETA
-    k_ctx, v_ctx, new_kv <- Cache.update past_kv kr v
-    mask <- causal_mask qr k_ctx window=C padding_mask=attn_mask
-    a <- attention qr k_ctx v_ctx mask=mask scale=ATTN_SCALE |> merge_heads
+    q, k <- rope_pair q k position_ids=pos_ids theta=THETA
+    k, v, new_kv <- Cache.update past_kv k v
+    mask <- causal_mask q k window=C padding_mask=attn_mask
+    a <- attention q k v mask=mask scale=ATTN_SCALE |> merge_heads
     a <- linear@o_proj a dim=D
     return a, new_kv
   x <- x + a

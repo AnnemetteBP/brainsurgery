@@ -111,18 +111,18 @@ class Gemma3Synapse270M(nn.Module):
         xnorm_5 = x.float() * torch.rsqrt(
             torch.mean(x.float() * x.float(), dim=-1, keepdim=True) + float(1e-06)
         )
-        x_norm_4 = xnorm_5 * (
+        xn_4 = xnorm_5 * (
             1.0
             + emitter._param(
                 self._join_scope(self._scope_of(node_path_3), "input_layernorm.weight")
             ).float()
         )
-        x_norm_4 = x_norm_4.type_as(x)
+        xn_4 = xn_4.type_as(x)
         node_path_6 = self._join_scope(scope, "n_op_3")
-        if x_norm_4.numel() == 0:
-            pipe_2_7 = x_norm_4.new_empty(
+        if xn_4.numel() == 0:
+            pipe_2_7 = xn_4.new_empty(
                 (
-                    *x_norm_4.shape[:-1],
+                    *xn_4.shape[:-1],
                     int(
                         self._param(
                             self._join_scope(self._scope_of(node_path_6), "self_attn.q_proj.weight")
@@ -132,7 +132,7 @@ class Gemma3Synapse270M(nn.Module):
             )
         else:
             pipe_2_7 = F.linear(
-                x_norm_4,
+                xn_4,
                 self._param(
                     self._join_scope(self._scope_of(node_path_6), "self_attn.q_proj.weight")
                 ),
@@ -168,10 +168,10 @@ class Gemma3Synapse270M(nn.Module):
         )
         q_13 = q_13.type_as(pipe_4_11)
         node_path_15 = self._join_scope(scope, "n_op_8")
-        if x_norm_4.numel() == 0:
-            pipe_7_16 = x_norm_4.new_empty(
+        if xn_4.numel() == 0:
+            pipe_7_16 = xn_4.new_empty(
                 (
-                    *x_norm_4.shape[:-1],
+                    *xn_4.shape[:-1],
                     int(
                         self._param(
                             self._join_scope(
@@ -183,7 +183,7 @@ class Gemma3Synapse270M(nn.Module):
             )
         else:
             pipe_7_16 = F.linear(
-                x_norm_4,
+                xn_4,
                 self._param(
                     self._join_scope(self._scope_of(node_path_15), "self_attn.k_proj.weight")
                 ),
@@ -219,10 +219,10 @@ class Gemma3Synapse270M(nn.Module):
         )
         k_22 = k_22.type_as(pipe_9_20)
         node_path_24 = self._join_scope(scope, "n_op_13")
-        if x_norm_4.numel() == 0:
-            pipe_12_25 = x_norm_4.new_empty(
+        if xn_4.numel() == 0:
+            pipe_12_25 = xn_4.new_empty(
                 (
-                    *x_norm_4.shape[:-1],
+                    *xn_4.shape[:-1],
                     int(
                         self._param(
                             self._join_scope(
@@ -234,7 +234,7 @@ class Gemma3Synapse270M(nn.Module):
             )
         else:
             pipe_12_25 = F.linear(
-                x_norm_4,
+                xn_4,
                 self._param(
                     self._join_scope(self._scope_of(node_path_24), "self_attn.v_proj.weight")
                 ),
@@ -258,178 +258,182 @@ class Gemma3Synapse270M(nn.Module):
         v_29 = pipe_12_25.view(
             pipe_12_25.shape[0], pipe_12_25.shape[1], int(heads_26), int(head_dim_27)
         ).transpose(1, 2)
-        half_30 = q_13.shape[-1] // 2
-        inv_freq_31 = 1.0 / (
-            float(10000.0 + (1000000.0 - 10000.0) * (((i + 1) % 6) == 0))
-            ** (torch.arange(0, half_30, device=q_13.device, dtype=q_13.dtype) / float(half_30))
+        theta_30 = 10000.0 + (1000000.0 - 10000.0) * (((i + 1) % 6) == 0)
+        if q_13.ndim != 4 or k_22.ndim != 4:
+            raise ValueError("rope_pair expects q and k to be rank-4 [batch, heads, seq, head_dim]")
+        if int(q_13.shape[0]) != int(k_22.shape[0]):
+            raise ValueError("rope_pair expects q and k to have matching batch size")
+        if int(q_13.shape[-2]) != int(k_22.shape[-2]):
+            raise ValueError("rope_pair expects q and k to have matching sequence length")
+        if int(q_13.shape[-1]) != int(k_22.shape[-1]):
+            raise ValueError("rope_pair expects q and k to have matching head dimension")
+        half_31 = q_13.shape[-1] // 2
+        if int(q_13.shape[-1]) % 2 != 0:
+            raise ValueError("rope_pair expects even head dimension")
+        inv_freq_32 = 1.0 / (
+            float(theta_30)
+            ** (torch.arange(0, half_31, device=q_13.device, dtype=q_13.dtype) / float(half_31))
         )
-        if pos_ids is not None:
-            if pos_ids.ndim != 2:
-                raise ValueError("apply_rope_pair.position_ids must be rank-2 [batch, seq]")
-            if int(pos_ids.shape[0]) != int(q_13.shape[0]):
-                raise ValueError("apply_rope_pair.position_ids batch size must match q/k batch")
-            if int(pos_ids.shape[1]) != int(q_13.shape[-2]):
-                raise ValueError(
-                    "apply_rope_pair.position_ids width must match q/k sequence length"
-                )
-            pos_32 = pos_ids.to(device=q_13.device, dtype=q_13.dtype)
-            ang_33 = pos_32.unsqueeze(-1) * inv_freq_31.unsqueeze(0).unsqueeze(0)
-            cos_34 = torch.cos(ang_33).unsqueeze(1)
-            sin_35 = torch.sin(ang_33).unsqueeze(1)
-        else:
-            pos_32 = torch.arange(
-                int(0), int(0) + q_13.shape[-2], device=q_13.device, dtype=q_13.dtype
-            )
-            ang_33 = torch.einsum("t,d->td", pos_32, inv_freq_31)
-            cos_34 = torch.cos(ang_33)[None, None, :, :]
-            sin_35 = torch.sin(ang_33)[None, None, :, :]
-        q1_36 = q_13[..., :half_30]
-        q2_37 = q_13[..., half_30 : 2 * half_30]
-        k1_38 = k_22[..., :half_30]
-        k2_39 = k_22[..., half_30 : 2 * half_30]
-        q_13 = torch.cat([q1_36 * cos_34 - q2_37 * sin_35, q1_36 * sin_35 + q2_37 * cos_34], dim=-1)
-        k_22 = torch.cat([k1_38 * cos_34 - k2_39 * sin_35, k1_38 * sin_35 + k2_39 * cos_34], dim=-1)
+        if pos_ids is None:
+            raise ValueError("rope_pair.position_ids must not be null")
+        if pos_ids.ndim != 2:
+            raise ValueError("rope_pair.position_ids must be rank-2 [batch, seq]")
+        if int(pos_ids.shape[0]) != int(q_13.shape[0]):
+            raise ValueError("rope_pair.position_ids batch size must match q/k batch")
+        if int(pos_ids.shape[1]) != int(q_13.shape[-2]):
+            raise ValueError("rope_pair.position_ids width must match q/k sequence length")
+        pos_33 = pos_ids.to(device=q_13.device, dtype=q_13.dtype)
+        ang_34 = pos_33.unsqueeze(-1) * inv_freq_32.unsqueeze(0).unsqueeze(0)
+        cos_35 = torch.cos(ang_34).unsqueeze(1)
+        sin_36 = torch.sin(ang_34).unsqueeze(1)
+        q1_37 = q_13[..., :half_31]
+        q2_38 = q_13[..., half_31 : 2 * half_31]
+        k1_39 = k_22[..., :half_31]
+        k2_40 = k_22[..., half_31 : 2 * half_31]
+        q_13 = torch.cat([q1_37 * cos_35 - q2_38 * sin_36, q1_37 * sin_36 + q2_38 * cos_35], dim=-1)
+        k_22 = torch.cat([k1_39 * cos_35 - k2_40 * sin_36, k1_39 * sin_36 + k2_40 * cos_35], dim=-1)
         if past_kv is None:
             k_22 = k_22
             v_29 = v_29
         else:
             k_22 = torch.cat([past_kv[0], k_22], dim=-2)
             v_29 = torch.cat([past_kv[1], v_29], dim=-2)
-        new_kv_40 = (k_22, v_29)
-        n_rep_41 = int(4.0)
-        if n_rep_41 == 1:
+        new_kv_41 = (k_22, v_29)
+        n_rep_42 = int(4.0)
+        if n_rep_42 == 1:
             k_22 = k_22
         else:
             k_22 = (
                 k_22[:, :, None, :, :]
-                .expand(k_22.shape[0], k_22.shape[1], n_rep_41, k_22.shape[2], k_22.shape[3])
-                .reshape(k_22.shape[0], k_22.shape[1] * n_rep_41, k_22.shape[2], k_22.shape[3])
+                .expand(k_22.shape[0], k_22.shape[1], n_rep_42, k_22.shape[2], k_22.shape[3])
+                .reshape(k_22.shape[0], k_22.shape[1] * n_rep_42, k_22.shape[2], k_22.shape[3])
             )
-        n_rep_42 = int(4.0)
-        if n_rep_42 == 1:
+        n_rep_43 = int(4.0)
+        if n_rep_43 == 1:
             v_29 = v_29
         else:
             v_29 = (
                 v_29[:, :, None, :, :]
-                .expand(v_29.shape[0], v_29.shape[1], n_rep_42, v_29.shape[2], v_29.shape[3])
-                .reshape(v_29.shape[0], v_29.shape[1] * n_rep_42, v_29.shape[2], v_29.shape[3])
+                .expand(v_29.shape[0], v_29.shape[1], n_rep_43, v_29.shape[2], v_29.shape[3])
+                .reshape(v_29.shape[0], v_29.shape[1] * n_rep_43, v_29.shape[2], v_29.shape[3])
             )
-        q_len_44 = q_13.shape[-2]
-        k_len_45 = k_22.shape[-2]
+        window_44 = 512 + (32768 - 512) * (((i + 1) % 6) == 0)
+        q_len_46 = q_13.shape[-2]
+        k_len_47 = k_22.shape[-2]
         if not hasattr(self, "_causal_mask_cache"):
             self._causal_mask_cache = {}
-        window_52 = int(512 + (32768 - 512) * (((i + 1) % 6) == 0))
+        window_54 = int(window_44)
         if attn_mask is None:
-            pad_key_53 = None
+            pad_key_55 = None
         else:
-            pad_key_53 = (
+            pad_key_55 = (
                 int(attn_mask.data_ptr()),
                 int(attn_mask.storage_offset()),
                 tuple(int(x) for x in attn_mask.shape),
             )
-        cache_key_46 = (
-            int(q_len_44),
-            int(k_len_45),
-            window_52,
+        cache_key_48 = (
+            int(q_len_46),
+            int(k_len_47),
+            window_54,
             q_13.dtype,
             q_13.device,
-            pad_key_53,
+            pad_key_55,
         )
-        cached_mask_47 = self._causal_mask_cache.get(cache_key_46)
-        if torch.is_tensor(cached_mask_47):
-            mask_43 = cached_mask_47
+        cached_mask_49 = self._causal_mask_cache.get(cache_key_48)
+        if torch.is_tensor(cached_mask_49):
+            mask_45 = cached_mask_49
         else:
-            j_idx_49 = torch.arange(k_len_45, device=q_13.device).unsqueeze(0)
-            if q_len_44 == 1:
-                keep_50 = j_idx_49 >= (k_len_45 - window_52)
+            j_idx_51 = torch.arange(k_len_47, device=q_13.device).unsqueeze(0)
+            if q_len_46 == 1:
+                keep_52 = j_idx_51 >= (k_len_47 - window_54)
             else:
-                i_idx_48 = torch.arange(q_len_44, device=q_13.device).unsqueeze(1)
-                keep_50 = j_idx_49 <= i_idx_48
-                keep_50 = keep_50 & (j_idx_49 >= (i_idx_48 - window_52 + 1))
+                i_idx_50 = torch.arange(q_len_46, device=q_13.device).unsqueeze(1)
+                keep_52 = j_idx_51 <= i_idx_50
+                keep_52 = keep_52 & (j_idx_51 >= (i_idx_50 - window_54 + 1))
             if attn_mask is not None:
                 if attn_mask.ndim != 2:
                     raise ValueError("causal_mask.padding_mask must be rank-2 [batch, seq]")
-                if int(attn_mask.shape[-1]) != k_len_45:
+                if int(attn_mask.shape[-1]) != k_len_47:
                     raise ValueError(
                         "causal_mask.padding_mask width must match key sequence length"
                     )
-                pad_keep_54 = attn_mask.to(torch.bool).unsqueeze(1).unsqueeze(1)
-                keep_50 = keep_50.unsqueeze(0).unsqueeze(0) & pad_keep_54
+                pad_keep_56 = attn_mask.to(torch.bool).unsqueeze(1).unsqueeze(1)
+                keep_52 = keep_52.unsqueeze(0).unsqueeze(0) & pad_keep_56
             else:
-                keep_50 = keep_50.view(1, 1, q_len_44, k_len_45)
-            mask_val_51 = torch.finfo(q_13.dtype).min
-            mask_43 = torch.where(
-                keep_50,
+                keep_52 = keep_52.view(1, 1, q_len_46, k_len_47)
+            mask_val_53 = torch.finfo(q_13.dtype).min
+            mask_45 = torch.where(
+                keep_52,
                 torch.zeros((), dtype=q_13.dtype, device=q_13.device),
-                torch.full((), mask_val_51, dtype=q_13.dtype, device=q_13.device),
+                torch.full((), mask_val_53, dtype=q_13.dtype, device=q_13.device),
             )
-            self._causal_mask_cache[cache_key_46] = mask_43
-        pipe_20_55 = F.scaled_dot_product_attention(
+            self._causal_mask_cache[cache_key_48] = mask_45
+        pipe_22_57 = F.scaled_dot_product_attention(
             q_13,
             k_22,
             v_29,
-            attn_mask=mask_43,
+            attn_mask=mask_45,
             dropout_p=0.0,
-            is_causal=(q_13.shape[-2] > 1 and mask_43 is None),
+            is_causal=(q_13.shape[-2] > 1 and mask_45 is None),
             scale=0.0625,
         )
-        pipe_22_56 = (
-            pipe_20_55.transpose(1, 2)
+        pipe_24_58 = (
+            pipe_22_57.transpose(1, 2)
             .contiguous()
             .view(
-                pipe_20_55.shape[0], pipe_20_55.shape[2], pipe_20_55.shape[1] * pipe_20_55.shape[3]
+                pipe_22_57.shape[0], pipe_22_57.shape[2], pipe_22_57.shape[1] * pipe_22_57.shape[3]
             )
         )
-        node_path_57 = self._join_scope(scope, "n_op_24")
-        if pipe_22_56.numel() == 0:
-            attn_58 = pipe_22_56.new_empty(
+        node_path_59 = self._join_scope(scope, "n_op_26")
+        if pipe_24_58.numel() == 0:
+            a_60 = pipe_24_58.new_empty(
                 (
-                    *pipe_22_56.shape[:-1],
+                    *pipe_24_58.shape[:-1],
                     int(
                         self._param(
                             self._join_scope(
-                                self._scope_of(node_path_57), "self_attn.o_proj.weight"
+                                self._scope_of(node_path_59), "self_attn.o_proj.weight"
                             )
                         ).shape[0]
                     ),
                 )
             )
         else:
-            attn_58 = F.linear(
-                pipe_22_56,
+            a_60 = F.linear(
+                pipe_24_58,
                 self._param(
-                    self._join_scope(self._scope_of(node_path_57), "self_attn.o_proj.weight")
+                    self._join_scope(self._scope_of(node_path_59), "self_attn.o_proj.weight")
                 ),
                 None,
             )
-        node_path_59 = self._join_scope(scope, "n_call_25")
-        xnorm_60 = attn_58.float() * torch.rsqrt(
-            torch.mean(attn_58.float() * attn_58.float(), dim=-1, keepdim=True) + float(1e-06)
+        node_path_61 = self._join_scope(scope, "n_call_27")
+        xnorm_62 = a_60.float() * torch.rsqrt(
+            torch.mean(a_60.float() * a_60.float(), dim=-1, keepdim=True) + float(1e-06)
         )
-        attn_58 = xnorm_60 * (
+        a_60 = xnorm_62 * (
             1.0
             + emitter._param(
-                self._join_scope(self._scope_of(node_path_59), "post_attention_layernorm.weight")
+                self._join_scope(self._scope_of(node_path_61), "post_attention_layernorm.weight")
             ).float()
         )
-        attn_58 = attn_58.type_as(attn_58)
-        x2_61 = x + attn_58
-        node_path_62 = self._join_scope(scope, "n_call_27")
-        xnorm_64 = x2_61.float() * torch.rsqrt(
-            torch.mean(x2_61.float() * x2_61.float(), dim=-1, keepdim=True) + float(1e-06)
+        a_60 = a_60.type_as(a_60)
+        x = x + a_60
+        node_path_63 = self._join_scope(scope, "n_call_29")
+        xnorm_64 = x.float() * torch.rsqrt(
+            torch.mean(x.float() * x.float(), dim=-1, keepdim=True) + float(1e-06)
         )
-        x3_63 = xnorm_64 * (
+        xn_4 = xnorm_64 * (
             1.0
             + emitter._param(
-                self._join_scope(self._scope_of(node_path_62), "pre_feedforward_layernorm.weight")
+                self._join_scope(self._scope_of(node_path_63), "pre_feedforward_layernorm.weight")
             ).float()
         )
-        x3_63 = x3_63.type_as(x2_61)
-        node_path_65 = self._join_scope(scope, "n_op_28")
-        if x3_63.numel() == 0:
-            g_66 = x3_63.new_empty(
+        xn_4 = xn_4.type_as(x)
+        node_path_65 = self._join_scope(scope, "n_op_30")
+        if xn_4.numel() == 0:
+            g_66 = xn_4.new_empty(
                 (
-                    *x3_63.shape[:-1],
+                    *xn_4.shape[:-1],
                     int(
                         self._param(
                             self._join_scope(self._scope_of(node_path_65), "mlp.gate_proj.weight")
@@ -439,15 +443,15 @@ class Gemma3Synapse270M(nn.Module):
             )
         else:
             g_66 = F.linear(
-                x3_63,
+                xn_4,
                 self._param(self._join_scope(self._scope_of(node_path_65), "mlp.gate_proj.weight")),
                 None,
             )
-        node_path_67 = self._join_scope(scope, "n_op_29")
-        if x3_63.numel() == 0:
-            u_68 = x3_63.new_empty(
+        node_path_67 = self._join_scope(scope, "n_op_31")
+        if xn_4.numel() == 0:
+            u_68 = xn_4.new_empty(
                 (
-                    *x3_63.shape[:-1],
+                    *xn_4.shape[:-1],
                     int(
                         self._param(
                             self._join_scope(self._scope_of(node_path_67), "mlp.up_proj.weight")
@@ -457,21 +461,21 @@ class Gemma3Synapse270M(nn.Module):
             )
         else:
             u_68 = F.linear(
-                x3_63,
+                xn_4,
                 self._param(self._join_scope(self._scope_of(node_path_67), "mlp.up_proj.weight")),
                 None,
             )
-        pipe_30_69 = (
+        pipe_32_69 = (
             0.5
             * g_66
             * (1.0 + torch.tanh(0.7978845608028654 * (g_66 + 0.044715 * g_66 * g_66 * g_66)))
         )
-        pipe_32_70 = pipe_30_69 * u_68
-        node_path_71 = self._join_scope(scope, "n_op_34")
-        if pipe_32_70.numel() == 0:
-            out_0_72 = pipe_32_70.new_empty(
+        pipe_34_70 = pipe_32_69 * u_68
+        node_path_71 = self._join_scope(scope, "n_op_36")
+        if pipe_34_70.numel() == 0:
+            out_0_72 = pipe_34_70.new_empty(
                 (
-                    *pipe_32_70.shape[:-1],
+                    *pipe_34_70.shape[:-1],
                     int(
                         self._param(
                             self._join_scope(self._scope_of(node_path_71), "mlp.down_proj.weight")
@@ -481,12 +485,12 @@ class Gemma3Synapse270M(nn.Module):
             )
         else:
             out_0_72 = F.linear(
-                pipe_32_70,
+                pipe_34_70,
                 self._param(self._join_scope(self._scope_of(node_path_71), "mlp.down_proj.weight")),
                 None,
             )
         m_73 = out_0_72
-        node_path_74 = self._join_scope(scope, "n_call_36")
+        node_path_74 = self._join_scope(scope, "n_call_38")
         xnorm_75 = m_73.float() * torch.rsqrt(
             torch.mean(m_73.float() * m_73.float(), dim=-1, keepdim=True) + float(1e-06)
         )
@@ -497,8 +501,8 @@ class Gemma3Synapse270M(nn.Module):
             ).float()
         )
         m_73 = m_73.type_as(m_73)
-        y_76 = x2_61 + m_73
-        return (y_76, new_kv_40)
+        out_0_72 = x + m_73
+        return (out_0_72, new_kv_41)
 
     def forward(self, input_ids: torch.Tensor | None = None, **inputs: Any) -> Any:
         input_specs = {
@@ -514,8 +518,8 @@ class Gemma3Synapse270M(nn.Module):
         attn_mask = env.get("attn_mask")
         past_kv = env.get("past_kv")
         use_cache = env.get("use_cache")
-        out_0_77 = self._block_Cache_past_length(cache=past_kv, scope=scope)
-        kwarg_1_78 = out_0_77
+        out_0_76 = self._block_Cache_past_length(cache=past_kv, scope=scope)
+        kwarg_1_77 = out_0_76
         if input_ids.ndim != 2:
             raise ValueError("position_ids._args must resolve to rank-2 [batch, seq] tensor")
         if attn_mask is not None:
@@ -527,95 +531,95 @@ class Gemma3Synapse270M(nn.Module):
                 raise ValueError(
                     "position_ids.attention_mask width must be >= input sequence length"
                 )
-            full_pos_81 = attn_mask.to(torch.long).cumsum(dim=-1) - 1
-            full_pos_81 = full_pos_81.masked_fill(attn_mask == 0, 0)
-            pos_ids_79 = full_pos_81[:, -input_ids.shape[1] :]
+            full_pos_80 = attn_mask.to(torch.long).cumsum(dim=-1) - 1
+            full_pos_80 = full_pos_80.masked_fill(attn_mask == 0, 0)
+            pos_ids_78 = full_pos_80[:, -input_ids.shape[1] :]
         else:
-            pos_offset_80 = int(kwarg_1_78)
-            if pos_offset_80 < 0:
+            pos_offset_79 = int(kwarg_1_77)
+            if pos_offset_79 < 0:
                 raise ValueError("position_ids.past_length must resolve to non-negative int")
-            pos_ids_79 = torch.arange(
-                pos_offset_80,
-                pos_offset_80 + input_ids.shape[1],
+            pos_ids_78 = torch.arange(
+                pos_offset_79,
+                pos_offset_79 + input_ids.shape[1],
                 device=input_ids.device,
                 dtype=torch.long,
             ).unsqueeze(0)
-        node_path_82 = self._join_scope(scope, "n_op_4")
-        x_83 = F.embedding(
+        node_path_81 = self._join_scope(scope, "n_op_4")
+        x_82 = F.embedding(
             input_ids,
             emitter._param(
-                self._join_scope(self._scope_of(node_path_82), "model.embed_tokens.weight")
+                self._join_scope(self._scope_of(node_path_81), "model.embed_tokens.weight")
             ),
         )
-        x_83 = x_83 * torch.tensor(float(25.298221281347036), dtype=x_83.dtype, device=x_83.device)
-        new_kv_84 = None
+        x_82 = x_82 * torch.tensor(float(25.298221281347036), dtype=x_82.dtype, device=x_82.device)
+        new_kv_83 = None
         if use_cache:
-            new_kv_84 = []
+            new_kv_83 = []
         if not (use_cache):
-            new_kv_84 = None
-        to_86 = int(18)
-        from_87 = int(0)
-        step_88 = int(1)
-        for i_85 in self._for_values(from_value=from_87, to_value=to_86, step_value=step_88):
-            scope_89 = self._join_scope(scope, f"model.layers.{i_85}")
+            new_kv_83 = None
+        to_85 = int(18)
+        from_86 = int(0)
+        step_87 = int(1)
+        for i_84 in self._for_values(from_value=from_86, to_value=to_85, step_value=step_87):
+            scope_88 = self._join_scope(scope, f"model.layers.{i_84}")
             if past_kv is None:
-                past_i_90 = None
+                past_i_89 = None
             else:
                 try:
-                    past_i_90 = past_kv[int(i_85)]
+                    past_i_89 = past_kv[int(i_84)]
                 except (IndexError, KeyError, TypeError):
-                    past_i_90 = None
-            y_91, new_kv_92 = self._block_gemma3_block(
-                x=x_83,
-                i=i_85,
-                pos_ids=pos_ids_79,
+                    past_i_89 = None
+            out_0_90, new_kv_91 = self._block_gemma3_block(
+                x=x_82,
+                i=i_84,
+                pos_ids=pos_ids_78,
                 attn_mask=attn_mask,
-                past_kv=past_i_90,
-                scope=scope_89,
+                past_kv=past_i_89,
+                scope=scope_88,
             )
-            x_83 = y_91
-            new_i_93 = new_kv_92
-            if new_kv_84 is None:
-                new_kv_84 = None
+            x_82 = out_0_90
+            new_i_92 = new_kv_91
+            if new_kv_83 is None:
+                new_kv_83 = None
             else:
-                new_kv_84 = list(new_kv_84)
-                new_kv_84.append(new_i_93)
-        node_path_94 = self._join_scope(scope, "n_call_12")
-        xnorm_96 = x_83.float() * torch.rsqrt(
-            torch.mean(x_83.float() * x_83.float(), dim=-1, keepdim=True) + float(1e-06)
+                new_kv_83 = list(new_kv_83)
+                new_kv_83.append(new_i_92)
+        node_path_93 = self._join_scope(scope, "n_call_12")
+        xnorm_95 = x_82.float() * torch.rsqrt(
+            torch.mean(x_82.float() * x_82.float(), dim=-1, keepdim=True) + float(1e-06)
         )
-        pipe_11_95 = xnorm_96 * (
+        pipe_11_94 = xnorm_95 * (
             1.0
             + emitter._param(
-                self._join_scope(self._scope_of(node_path_94), "model.norm.weight")
+                self._join_scope(self._scope_of(node_path_93), "model.norm.weight")
             ).float()
         )
-        pipe_11_95 = pipe_11_95.type_as(x_83)
-        node_path_97 = self._join_scope(scope, "n_op_13")
-        if pipe_11_95.numel() == 0:
-            logits_98 = pipe_11_95.new_empty(
+        pipe_11_94 = pipe_11_94.type_as(x_82)
+        node_path_96 = self._join_scope(scope, "n_op_13")
+        if pipe_11_94.numel() == 0:
+            logits_97 = pipe_11_94.new_empty(
                 (
-                    *pipe_11_95.shape[:-1],
+                    *pipe_11_94.shape[:-1],
                     int(
                         self._param(
                             self._join_scope(
-                                self._scope_of(node_path_97), "model.embed_tokens.weight"
+                                self._scope_of(node_path_96), "model.embed_tokens.weight"
                             )
                         ).shape[0]
                     ),
                 )
             )
         else:
-            logits_98 = F.linear(
-                pipe_11_95,
+            logits_97 = F.linear(
+                pipe_11_94,
                 self._param(
-                    self._join_scope(self._scope_of(node_path_97), "model.embed_tokens.weight")
+                    self._join_scope(self._scope_of(node_path_96), "model.embed_tokens.weight")
                 ),
                 None,
             )
         outputs: dict[str, Any] = {}
-        outputs["logits"] = logits_98
-        outputs["new_kv"] = new_kv_84
+        outputs["logits"] = logits_97
+        outputs["new_kv"] = new_kv_83
         if "logits" in outputs and len(outputs) == 1:
             return outputs["logits"]
         return outputs
