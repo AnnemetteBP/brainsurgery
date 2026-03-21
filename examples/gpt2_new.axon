@@ -1,0 +1,52 @@
+T = 1024      -- max sequence length
+D = 768       -- hidden dimension
+L = 12        -- decoder layers
+H = 12        -- attention heads
+V = 520257    -- vocab size
+
+import Activations gelu_new
+import Cache
+import Cache past_length
+
+gpt2_new_block :: Tensor[B,S,D] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+gpt2_new_block x attn_mask past_kv = do
+  x_norm <- layernorm@ln_1 x
+
+  a, new_kv <- scope@attn do
+    qkv <- linear@c_attn x_norm dim=(3 * D) bias=true transpose=true
+    q_lin, k_lin, v_lin <- split qkv parts=3
+
+    q <- reshape_heads q_lin heads=H
+    k <- reshape_heads k_lin heads=H
+    v <- reshape_heads v_lin heads=H
+
+    k, v, new_kv <- Cache.update past_kv k v
+    mask <- causal_mask q k window=T padding_mask=attn_mask
+    a <- attention q k v mask=mask |> merge_heads
+    a <- linear@c_proj a dim=D bias=true transpose=true
+    return a, new_kv
+
+  x <- x + a
+
+  x_mlp_norm <- layernorm@ln_2 x
+  m <- scope@mlp do
+    h <- linear@c_fc x_mlp_norm dim=(4 * D) bias=true transpose=true
+    m <- gelu_new h |> linear@c_proj dim=D bias=true transpose=true
+    return m
+
+  return x + m, new_kv
+
+gpt2_new :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
+gpt2_new input_ids attn_mask past_kv use_cache = do
+  tok <- embedding@wte input_ids dim=D
+  pos <- position_ids input_ids attn_mask past_length=(past_length past_kv) |> embedding@wpe
+  x <- tok + pos
+
+  new_kv <- use_cache ? Cache.init : null
+  for@h i <- [0..L) do
+    past_i <- Cache.index past_kv i
+    x, new_i <- gpt2_new_block x attn_mask past_i
+    new_kv <- Cache.append new_kv new_i
+
+  logits <- layernorm@ln_f x |> linear@wte dim=V
+  return logits, new_kv
