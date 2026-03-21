@@ -120,7 +120,7 @@ model:
           heads: H
       - n_op_8:
           _op: causal_mask
-          _bind: causal_attn_mask
+          _bind: mask
           _args:
           - q
           - k
@@ -133,8 +133,7 @@ model:
           - q
           - k
           - v
-          mask: causal_attn_mask
-          causal: true
+          mask: mask
       - n_op_12:
           _op: merge_heads
           _bind: pipe_11
@@ -179,8 +178,8 @@ model:
             bias: mlp.c_fc.bias
       - n_op_20:
           _op: activations_gelu_new
-          _args: pipe_17
           _bind: pipe_19
+          _args: pipe_17
       - n_call_21:
           _op: linear
           _bind: out_0

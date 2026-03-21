@@ -5,7 +5,7 @@ model:
       optional: false
     attn_mask:
       optional: true
-    past_key_values:
+    past_kv:
       optional: true
     use_cache:
       optional: true
@@ -13,7 +13,7 @@ model:
   - n_call_2:
       _op: call
       _target: Cache.past_length
-      _args: past_key_values
+      _args: past_kv
       _bind: kwarg_1
   - n_op_3:
       _op: position_ids
@@ -32,20 +32,26 @@ model:
         weight: model.embed_tokens.weight
   - n_op_5:
       _op: list_init
-      _bind: present_key_values
-  - n_for_9:
+      _bind: new_kv
+      when: use_cache
+  - n_op_6:
+      _op: _ir_const
+      value: null
+      _bind: new_kv
+      when: not (use_cache)
+  - n_for_10:
       _op: for
       _scope: model.layers
       _var: i
       _to: L
       _body:
-      - n_op_6:
+      - n_op_7:
           _op: list_index
           _bind: past_i
           _args:
-          - past_key_values
+          - past_kv
           - i
-      - n_call_7:
+      - n_call_8:
           _op: call
           _target: gemma3_block
           _args:
@@ -54,35 +60,33 @@ model:
           - pos_ids
           - attn_mask
           - past_i
-          - use_cache
           _bind:
           - x
-          - present_i
-      - n_op_8:
+          - new_i
+      - n_op_9:
           _op: list_append
-          _bind: present_key_values
+          _bind: new_kv
           _args:
-          - present_key_values
-          - present_i
-          when: use_cache
-  - n_call_11:
+          - new_kv
+          - new_i
+  - n_call_12:
       _op: rmsnorm
-      _bind: pipe_10
+      _bind: pipe_11
       _args: x
       cast_float: true
       unit_offset: true
       dim: D
       _params:
         weight: model.norm.weight
-  - n_op_12:
+  - n_op_13:
       _op: linear
       _bind: logits
-      _args: pipe_10
+      _args: pipe_11
       _params:
         weight: model.embed_tokens.weight
   outputs:
     logits: logits
-    present_key_values: present_key_values
+    new_kv: new_kv
   symbols:
     D: 640
     V: 262208
@@ -131,8 +135,6 @@ model:
           optional: true
         past_kv:
           optional: true
-        use_cache:
-          optional: true
       graph:
       - n_call_1:
           _op: rmsnorm
@@ -157,7 +159,7 @@ model:
           heads: H
       - n_call_6:
           _op: rmsnorm
-          _bind: qn
+          _bind: q
           _args: pipe_4
           cast_float: true
           unit_offset: true
@@ -178,7 +180,7 @@ model:
           heads: KVH
       - n_call_11:
           _op: rmsnorm
-          _bind: kn
+          _bind: k
           _args: pipe_9
           cast_float: true
           unit_offset: true
@@ -200,41 +202,40 @@ model:
       - n_op_15:
           _op: apply_rope_pair
           _bind:
-          - qr
-          - kr
+          - q
+          - k
           _args:
-          - qn
-          - kn
+          - q
+          - k
           position_ids: pos_ids
           theta: THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD)
             == 0)
       - n_op_16:
           _op: cache_update
           _bind:
-          - k_ctx_raw
-          - v_ctx_raw
-          - present_kv
+          - k
+          - v
+          - new_kv
           _args:
           - past_kv
-          - kr
+          - k
           - v
-          - use_cache
       - n_op_17:
           _op: repeat
-          _bind: k_ctx
-          _args: k_ctx_raw
+          _bind: k
+          _args: k
           repeats: H / KVH
       - n_op_18:
           _op: repeat
-          _bind: v_ctx
-          _args: v_ctx_raw
+          _bind: v
+          _args: v
           repeats: H / KVH
       - n_op_19:
           _op: causal_mask
           _bind: mask
           _args:
-          - qr
-          - k_ctx
+          - q
+          - k
           window: WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) ==
             0)
           padding_mask: attn_mask
@@ -242,11 +243,10 @@ model:
           _op: attention
           _bind: pipe_20
           _args:
-          - qr
-          - k_ctx
-          - v_ctx
+          - q
+          - k
+          - v
           mask: mask
-          causal: true
           scale: ATTN_SCALE
       - n_op_23:
           _op: merge_heads
@@ -335,4 +335,4 @@ model:
           - m
       outputs:
         'y': 'y'
-        present_kv: present_kv
+        new_kv: new_kv

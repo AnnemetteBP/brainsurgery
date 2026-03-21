@@ -5,7 +5,7 @@ model:
       optional: false
     attn_mask:
       optional: true
-    past_key_values:
+    past_kv:
       optional: true
     use_cache:
       optional: true
@@ -20,7 +20,7 @@ model:
   - n_call_4:
       _op: call
       _target: Cache.past_length
-      _args: past_key_values
+      _args: past_kv
       _bind: kwarg_3
   - n_op_5:
       _op: position_ids
@@ -43,54 +43,58 @@ model:
       - pos
   - n_op_8:
       _op: list_init
-      _bind: present_key_values
-  - n_for_12:
+      _bind: new_kv
+      when: use_cache
+  - n_op_9:
+      _op: _ir_const
+      value: null
+      _bind: new_kv
+      when: not (use_cache)
+  - n_for_13:
       _op: for
       _scope: h
       _var: i
       _to: L
       _body:
-      - n_op_9:
+      - n_op_10:
           _op: list_index
           _bind: past_i
           _args:
-          - past_key_values
+          - past_kv
           - i
-      - n_call_10:
+      - n_call_11:
           _op: call
           _target: gpt2_block
           _args:
           - x
           - attn_mask
           - past_i
-          - use_cache
           _bind:
           - x
-          - present_i
-      - n_op_11:
+          - new_i
+      - n_op_12:
           _op: list_append
-          _bind: present_key_values
+          _bind: new_kv
           _args:
-          - present_key_values
-          - present_i
-          when: use_cache
-  - n_op_14:
+          - new_kv
+          - new_i
+  - n_op_15:
       _op: layernorm
-      _bind: pipe_13
+      _bind: pipe_14
       _args: x
       dim: D
       _params:
         weight: ln_f.weight
         bias: ln_f.bias
-  - n_op_15:
+  - n_op_16:
       _op: linear
       _bind: logits
-      _args: pipe_13
+      _args: pipe_14
       _params:
         weight: wte.weight
   outputs:
     logits: logits
-    present_key_values: present_key_values
+    new_kv: new_kv
   symbols:
     T: 1024
     D: 768
@@ -124,8 +128,6 @@ model:
         attn_mask:
           optional: true
         past_kv:
-          optional: true
-        use_cache:
           optional: true
       graph:
       - n_op_1:
@@ -172,20 +174,19 @@ model:
       - n_op_8:
           _op: cache_update
           _bind:
-          - k_ctx
-          - v_ctx
-          - present_kv
+          - k
+          - v
+          - new_kv
           _args:
           - past_kv
           - k
           - v
-          - use_cache
       - n_op_9:
           _op: causal_mask
-          _bind: causal_attn_mask
+          _bind: mask
           _args:
           - q
-          - k_ctx
+          - k
           window: T
           padding_mask: attn_mask
       - n_op_11:
@@ -193,17 +194,16 @@ model:
           _bind: pipe_10
           _args:
           - q
-          - k_ctx
-          - v_ctx
-          mask: causal_attn_mask
-          causal: true
+          - k
+          - v
+          mask: mask
       - n_op_13:
           _op: merge_heads
           _bind: pipe_12
           _args: pipe_10
       - n_call_14:
           _op: linear
-          _bind: out_0
+          _bind: a
           _args: pipe_12
           dim: D
           bias: true
@@ -212,16 +212,12 @@ model:
             weight: attn.c_proj.weight
             bias: attn.c_proj.bias
       - n_op_15:
-          _op: _ir_alias
-          _args: out_0
-          _bind: a
-      - n_op_16:
           _op: add
           _bind: x
           _args:
           - x
           - a
-      - n_op_17:
+      - n_op_16:
           _op: layernorm
           _bind: x3
           _args: x
@@ -229,9 +225,9 @@ model:
           _params:
             weight: ln_2.weight
             bias: ln_2.bias
-      - n_call_19:
+      - n_call_18:
           _op: linear
-          _bind: pipe_18
+          _bind: pipe_17
           _args: x3
           dim: 4*D
           bias: true
@@ -239,25 +235,25 @@ model:
           _params:
             weight: mlp.c_fc.weight
             bias: mlp.c_fc.bias
-      - n_op_21:
+      - n_op_20:
           _op: activations_gelu_new
-          _bind: pipe_20
-          _args: pipe_18
-      - n_call_22:
+          _bind: pipe_19
+          _args: pipe_17
+      - n_call_21:
           _op: linear
           _bind: out_0
-          _args: pipe_20
+          _args: pipe_19
           dim: D
           bias: true
           transpose: true
           _params:
             weight: mlp.c_proj.weight
             bias: mlp.c_proj.bias
-      - n_op_23:
+      - n_op_22:
           _op: _ir_alias
           _args: out_0
           _bind: m
-      - n_op_24:
+      - n_op_23:
           _op: add
           _bind: 'y'
           _args:
@@ -265,4 +261,4 @@ model:
           - m
       outputs:
         'y': 'y'
-        present_kv: present_kv
+        new_kv: new_kv
