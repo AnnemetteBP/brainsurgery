@@ -31,16 +31,16 @@ model:
       _params:
         weight: model.embed_tokens.weight
   - n_op_5:
-      _op: init_list
+      _op: list_init
       _bind: present_key_values
-  - n_for_10:
+  - n_for_9:
       _op: for
       _scope: model.layers
       _var: i
       _to: L
       _body:
       - n_op_6:
-          _op: index
+          _op: list_index
           _bind: past_i
           _args:
           - past_key_values
@@ -59,30 +59,25 @@ model:
           - x
           - present_i
       - n_op_8:
-          _op: append
+          _op: list_append
           _bind: present_key_values
           _args:
           - present_key_values
           - present_i
           when: use_cache
-      - n_op_9:
-          _op: _ir_alias
-          _args: present_key_values
-          _bind: present_key_values
-          when: not (use_cache)
-  - n_call_12:
+  - n_call_11:
       _op: rmsnorm
-      _bind: pipe_11
+      _bind: pipe_10
       _args: x
       cast_float: true
       unit_offset: true
       dim: D
       _params:
         weight: model.norm.weight
-  - n_op_13:
+  - n_op_12:
       _op: linear
       _bind: logits
-      _args: pipe_11
+      _args: pipe_10
       _params:
         weight: model.embed_tokens.weight
   outputs:
@@ -107,68 +102,21 @@ model:
     B: null
     S: null
   blocks:
-    Cache.update:
-      inputs:
-        past:
-          optional: true
-        k:
-          optional: false
-        v:
-          optional: false
-      graph:
-      - n_op_1:
-          _op: kv_cache_update
-          _args:
-          - past
-          - k
-          - v
-          _bind:
-          - k_all
-          - v_all
-          - present
-      outputs:
-        k_all: k_all
-        v_all: v_all
-        present: present
-    Cache.coalesce:
-      inputs:
-        k_all:
-          optional: true
-        v_all:
-          optional: true
-        k:
-          optional: false
-        v:
-          optional: false
-      graph:
-      - n_op_1:
-          _op: coalesce
-          _args:
-          - k_all
-          - v_all
-          - k
-          - v
-          _bind:
-          - k_ctx
-          - v_ctx
-      outputs:
-        k_ctx: k_ctx
-        v_ctx: v_ctx
     Cache.past_length:
       inputs:
         cache:
           optional: true
       graph:
       - n_op_1:
-          _op: index
+          _op: list_index
           _bind: first
           _args:
           - cache
           - '0'
       - n_op_2:
-          _op: kv_seq_len
-          _args: first
+          _op: cache_seq_len
           _bind: out_0
+          _args: first
       outputs:
         out_0: out_0
     gemma3_block:
@@ -260,40 +208,28 @@ model:
           position_ids: pos_ids
           theta: THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD)
             == 0)
-      - n_call_16:
-          _op: call
-          _target: Cache.update
+      - n_op_16:
+          _op: cache_update
+          _bind:
+          - k_ctx_raw
+          - v_ctx_raw
+          - present_kv
           _args:
           - past_kv
           - kr
           - v
-          _bind:
-          - k_all
-          - v_all
-          - present_kv
-          when: use_cache
-      - n_call_17:
-          _op: call
-          _target: Cache.coalesce
-          _args:
-          - k_all
-          - v_all
-          - kr
-          - v
-          _bind:
-          - k_ctx_raw
-          - v_ctx_raw
-      - n_op_18:
-          _op: repeat_kv
+          - use_cache
+      - n_op_17:
+          _op: repeat
           _bind: k_ctx
           _args: k_ctx_raw
           repeats: H / KVH
-      - n_op_19:
-          _op: repeat_kv
+      - n_op_18:
+          _op: repeat
           _bind: v_ctx
           _args: v_ctx_raw
           repeats: H / KVH
-      - n_op_20:
+      - n_op_19:
           _op: causal_mask
           _bind: mask
           _args:
@@ -302,9 +238,9 @@ model:
           window: WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) ==
             0)
           padding_mask: attn_mask
-      - n_op_22:
+      - n_op_21:
           _op: attention
-          _bind: pipe_21
+          _bind: pipe_20
           _args:
           - qr
           - k_ctx
@@ -312,18 +248,18 @@ model:
           mask: mask
           causal: true
           scale: ATTN_SCALE
-      - n_op_24:
+      - n_op_23:
           _op: merge_heads
-          _bind: pipe_23
-          _args: pipe_21
-      - n_op_25:
+          _bind: pipe_22
+          _args: pipe_20
+      - n_op_24:
           _op: linear
           _bind: attn
-          _args: pipe_23
+          _args: pipe_22
           dim: D
           _params:
             weight: self_attn.o_proj.weight
-      - n_call_26:
+      - n_call_25:
           _op: rmsnorm
           _bind: attn
           _args: attn
@@ -332,13 +268,13 @@ model:
           dim: D
           _params:
             weight: post_attention_layernorm.weight
-      - n_op_27:
+      - n_op_26:
           _op: add
           _bind: x2
           _args:
           - x
           - attn
-      - n_call_28:
+      - n_call_27:
           _op: rmsnorm
           _bind: x3
           _args: x2
@@ -347,43 +283,42 @@ model:
           dim: D
           _params:
             weight: pre_feedforward_layernorm.weight
-      - n_op_29:
+      - n_op_28:
           _op: linear
           _bind: g
           _args: x3
           dim: FFN
           _params:
             weight: mlp.gate_proj.weight
-      - n_op_30:
+      - n_op_29:
           _op: linear
           _bind: u
           _args: x3
           dim: FFN
           _params:
             weight: mlp.up_proj.weight
-      - n_op_32:
-          _op: activation
+      - n_op_31:
+          _op: activations_gelu_pytorch_tanh
+          _bind: pipe_30
           _args: g
-          _bind: pipe_31
-          kind: gelu_pytorch_tanh
-      - n_op_34:
+      - n_op_33:
           _op: mul
-          _bind: pipe_33
+          _bind: pipe_32
           _args:
-          - pipe_31
+          - pipe_30
           - u
-      - n_op_35:
+      - n_op_34:
           _op: linear
           _bind: out_0
-          _args: pipe_33
+          _args: pipe_32
           dim: D
           _params:
             weight: mlp.down_proj.weight
-      - n_op_36:
+      - n_op_35:
           _op: _ir_alias
           _args: out_0
           _bind: m
-      - n_call_37:
+      - n_call_36:
           _op: rmsnorm
           _bind: m
           _args: m
@@ -392,7 +327,7 @@ model:
           dim: D
           _params:
             weight: post_feedforward_layernorm.weight
-      - n_op_38:
+      - n_op_37:
           _op: add
           _bind: 'y'
           _args:

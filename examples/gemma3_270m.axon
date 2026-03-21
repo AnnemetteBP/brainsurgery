@@ -29,8 +29,7 @@ gemma3_block x i pos_ids attn_mask past_kv use_cache = do
     kn <- x_norm |> linear@k_proj dim=KVD |> reshape_heads heads=KVH |> rms@k_norm
     v <- x_norm |> linear@v_proj dim=KVD |> reshape_heads heads=KVH
     qr, kr <- apply_rope_pair qn kn position_ids=pos_ids theta=THETA_BASE + (THETA_LONG - THETA_BASE) * (((i + 1) % ROPE_PERIOD) == 0)
-    k_all, v_all, present_kv <- Cache.update past_kv kr v when=use_cache
-    k_ctx_raw, v_ctx_raw <- Cache.coalesce k_all v_all kr v
+    k_ctx_raw, v_ctx_raw, present_kv <- Cache.update past_kv kr v use_cache
     k_ctx <- repeat k_ctx_raw (H / KVH)
     v_ctx <- repeat v_ctx_raw (H / KVH)
     mask <- causal_mask qr k_ctx window=WIN_LOCAL + (WIN_LONG - WIN_LOCAL) * (((i + 1) % ROPE_PERIOD) == 0) padding_mask=attn_mask
@@ -57,7 +56,7 @@ gemma3 input_ids attn_mask past_key_values use_cache = do
     for@layers i <- [0..L) do
       past_i <- Cache.index past_key_values i
       x, present_i <- gemma3_block x i pos_ids attn_mask past_i use_cache
-      present_key_values <- use_cache ? Cache.append present_key_values present_i : present_key_values
+      present_key_values <- Cache.append present_key_values present_i when=use_cache
     logits <- rms@norm x |>
       linear@embed_tokens
     return logits, present_key_values

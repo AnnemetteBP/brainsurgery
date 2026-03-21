@@ -178,10 +178,9 @@ model:
             weight: mlp.c_fc.weight
             bias: mlp.c_fc.bias
       - n_op_20:
-          _op: activation
+          _op: activations_gelu_new
           _args: pipe_17
           _bind: pipe_19
-          kind: gelu_new
       - n_call_21:
           _op: linear
           _bind: out_0

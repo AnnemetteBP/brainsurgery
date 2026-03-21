@@ -42,16 +42,16 @@ model:
       - tok
       - pos
   - n_op_8:
-      _op: init_list
+      _op: list_init
       _bind: present_key_values
-  - n_for_13:
+  - n_for_12:
       _op: for
       _scope: h
       _var: i
       _to: L
       _body:
       - n_op_9:
-          _op: index
+          _op: list_index
           _bind: past_i
           _args:
           - past_key_values
@@ -68,29 +68,24 @@ model:
           - x
           - present_i
       - n_op_11:
-          _op: append
+          _op: list_append
           _bind: present_key_values
           _args:
           - present_key_values
           - present_i
           when: use_cache
-      - n_op_12:
-          _op: _ir_alias
-          _args: present_key_values
-          _bind: present_key_values
-          when: not (use_cache)
-  - n_op_15:
+  - n_op_14:
       _op: layernorm
-      _bind: pipe_14
+      _bind: pipe_13
       _args: x
       dim: D
       _params:
         weight: ln_f.weight
         bias: ln_f.bias
-  - n_op_16:
+  - n_op_15:
       _op: linear
       _bind: logits
-      _args: pipe_14
+      _args: pipe_13
       _params:
         weight: wte.weight
   outputs:
@@ -105,68 +100,21 @@ model:
     B: null
     S: null
   blocks:
-    Cache.update:
-      inputs:
-        past:
-          optional: true
-        k:
-          optional: false
-        v:
-          optional: false
-      graph:
-      - n_op_1:
-          _op: kv_cache_update
-          _args:
-          - past
-          - k
-          - v
-          _bind:
-          - k_all
-          - v_all
-          - present
-      outputs:
-        k_all: k_all
-        v_all: v_all
-        present: present
-    Cache.coalesce:
-      inputs:
-        k_all:
-          optional: true
-        v_all:
-          optional: true
-        k:
-          optional: false
-        v:
-          optional: false
-      graph:
-      - n_op_1:
-          _op: coalesce
-          _args:
-          - k_all
-          - v_all
-          - k
-          - v
-          _bind:
-          - k_ctx
-          - v_ctx
-      outputs:
-        k_ctx: k_ctx
-        v_ctx: v_ctx
     Cache.past_length:
       inputs:
         cache:
           optional: true
       graph:
       - n_op_1:
-          _op: index
+          _op: list_index
           _bind: first
           _args:
           - cache
           - '0'
       - n_op_2:
-          _op: kv_seq_len
-          _args: first
+          _op: cache_seq_len
           _bind: out_0
+          _args: first
       outputs:
         out_0: out_0
     gpt2_block:
@@ -221,30 +169,18 @@ model:
           _bind: v
           _args: v_lin
           heads: H
-      - n_call_8:
-          _op: call
-          _target: Cache.update
+      - n_op_8:
+          _op: cache_update
+          _bind:
+          - k_ctx
+          - v_ctx
+          - present_kv
           _args:
           - past_kv
           - k
           - v
-          _bind:
-          - k_all
-          - v_all
-          - present_kv
-          when: use_cache
-      - n_call_9:
-          _op: call
-          _target: Cache.coalesce
-          _args:
-          - k_all
-          - v_all
-          - k
-          - v
-          _bind:
-          - k_ctx
-          - v_ctx
-      - n_op_10:
+          - use_cache
+      - n_op_9:
           _op: causal_mask
           _bind: causal_attn_mask
           _args:
@@ -252,40 +188,40 @@ model:
           - k_ctx
           window: T
           padding_mask: attn_mask
-      - n_op_12:
+      - n_op_11:
           _op: attention
-          _bind: pipe_11
+          _bind: pipe_10
           _args:
           - q
           - k_ctx
           - v_ctx
           mask: causal_attn_mask
           causal: true
-      - n_op_14:
+      - n_op_13:
           _op: merge_heads
-          _bind: pipe_13
-          _args: pipe_11
-      - n_call_15:
+          _bind: pipe_12
+          _args: pipe_10
+      - n_call_14:
           _op: linear
           _bind: out_0
-          _args: pipe_13
+          _args: pipe_12
           dim: D
           bias: true
           transpose: true
           _params:
             weight: attn.c_proj.weight
             bias: attn.c_proj.bias
-      - n_op_16:
+      - n_op_15:
           _op: _ir_alias
           _args: out_0
           _bind: a
-      - n_op_17:
+      - n_op_16:
           _op: add
           _bind: x
           _args:
           - x
           - a
-      - n_op_18:
+      - n_op_17:
           _op: layernorm
           _bind: x3
           _args: x
@@ -293,9 +229,9 @@ model:
           _params:
             weight: ln_2.weight
             bias: ln_2.bias
-      - n_call_20:
+      - n_call_19:
           _op: linear
-          _bind: pipe_19
+          _bind: pipe_18
           _args: x3
           dim: 4*D
           bias: true
@@ -303,26 +239,25 @@ model:
           _params:
             weight: mlp.c_fc.weight
             bias: mlp.c_fc.bias
-      - n_op_22:
-          _op: activation
-          _args: pipe_19
-          _bind: pipe_21
-          kind: gelu_new
-      - n_call_23:
+      - n_op_21:
+          _op: activations_gelu_new
+          _bind: pipe_20
+          _args: pipe_18
+      - n_call_22:
           _op: linear
           _bind: out_0
-          _args: pipe_21
+          _args: pipe_20
           dim: D
           bias: true
           transpose: true
           _params:
             weight: mlp.c_proj.weight
             bias: mlp.c_proj.bias
-      - n_op_24:
+      - n_op_23:
           _op: _ir_alias
           _args: out_0
           _bind: m
-      - n_op_25:
+      - n_op_24:
           _op: add
           _bind: 'y'
           _args:
