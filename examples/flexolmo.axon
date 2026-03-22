@@ -1,0 +1,66 @@
+D    = 4096               -- hidden dimension
+V    = 100352             -- vocabulary size
+L    = 32                 -- number of decoder layers
+H    = 32                 -- number of attention heads
+HD   = 128                -- per-head dimension (D / H)
+E    = 8                  -- number of experts
+EPT  = 4                  -- experts selected per token (top-k)
+C    = 4096               -- context window / max sequence length
+FFN  = 11008              -- expert intermediate dimension
+EPS  = 1e-06              -- RMSNorm epsilon
+THETA = 500000.0          -- RoPE theta
+ATTN_SCALE = 0.08838834764831845 -- attention scale (1 / sqrt(HD))
+
+import Activations silu
+import Cache past_length
+import MoE
+
+rms :: @Path -> Tensor[B,S,D] -> Tensor[B,S,D]
+rms@path x = rmsnorm@path x eps=EPS
+
+expert_ffn :: Tensor[N,D] -> Tensor[N,D]
+expert_ffn x = do
+  gate <- linear@gate_proj x dim=FFN
+  up <- linear@up_proj x dim=FFN
+  return gate |> silu |> mul up |> linear@down_proj dim=D
+
+flexolmo_decoder_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+flexolmo_decoder_block x pos_ids attn_mask past_kv = do
+  x_norm <- rms@post_feedforward_layernorm x
+  a, new_kv <- scope@self_attn do
+    q <- x_norm |> linear@q_proj dim=D |> rms@q_norm |> reshape_heads heads=H
+    k <- x_norm |> linear@k_proj dim=D |> rms@k_norm |> reshape_heads heads=H
+    v <- x_norm |> linear@v_proj dim=D |> reshape_heads heads=H
+    q, k <- rope_pair q k position_ids=pos_ids theta=THETA
+    k, v, new_kv <- Cache.update past_kv k v
+    mask <- causal_mask q k window=C padding_mask=attn_mask
+    a <- attention q k v mask=mask scale=ATTN_SCALE |> merge_heads
+    a <- linear@o_proj a dim=D
+    return a, new_kv
+  x <- x + a
+  xn <- rms@post_attention_layernorm x
+  m <- scope@mlp do
+    topk_scores, topk_indices <- linear@gate xn dim=E |>
+      softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1
+    m <- zeros_like xn
+    for@experts e <- [0..E) do
+      x_sel, token_idx, topk_pos, sel_scores <- MoE.select xn topk_scores topk_indices expert=e
+      x_upd <- expert_ffn x_sel
+      m <- MoE.scatter_add m token_idx x_upd sel_scores
+    return m
+  return x + m, new_kv
+
+flexolmo :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
+flexolmo input_ids attn_mask past_kv use_cache = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  x, new_kv <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    new_kv <- use_cache ? Cache.init : null
+    for@layers i <- [0..L) do
+      past_i <- Cache.index past_kv i
+      x, new_i <- flexolmo_decoder_block x pos_ids attn_mask past_i
+      new_kv <- Cache.append new_kv new_i
+    x <- rms@norm x
+    return x, new_kv
+  logits <- linear@lm_head x
+  return logits, new_kv
