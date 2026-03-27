@@ -1,0 +1,421 @@
+D     = 2048                -- hidden dimension
+V     = 102400              -- vocabulary size
+L     = 27                  -- number of decoder layers
+H     = 16                  -- number of attention heads
+QKNOPE = 128                -- non-rotary q/k head dim
+QKROPE = 64                 -- rotary q/k head dim
+VHD   = 128                 -- value head dim
+QHD   = QKNOPE + QKROPE     -- query/key head dim
+KVR   = 512                 -- latent kv rank (kv_lora_rank)
+KVPROJ = H * (QKNOPE + VHD) -- kv_b projection output dimension
+FFN   = 10944               -- dense ffn intermediate dim
+E     = 64                  -- number of routed experts
+EPT   = 6                   -- routed experts selected per token
+EM    = 1408                -- routed expert intermediate dim
+SE    = 2                   -- number of shared experts
+EPS   = 1e-06               -- RMSNorm epsilon
+THETA = 10000.0             -- RoPE theta
+C     = 163840              -- context window
+FIRST_DENSE = 1             -- first dense-only layer count
+ATTN_SCALE = 0.07216878364870322 -- DeepSeek-V2 scaling = 1/sqrt(qk_head_dim)
+
+import Activations silu
+import Cache past_length
+import Cache
+import MoE
+
+rms :: @Path -> Tensor[B,S,D] -> Tensor[B,S,D]
+rms@path x = rmsnorm@path x eps=EPS cast_float=true
+
+deepseek_v2_lite_attn :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+deepseek_v2_lite_attn x pos_ids attn_mask past_kv = do
+  a, new_kv <- scope@self_attn do
+    q <- linear@q_proj x dim=(H * QHD) bias=false |> reshape_heads heads=H
+    q_nope, q_pe <- split q sizes=[128, 64]
+
+    kv_comp <- linear@kv_a_proj_with_mqa x dim=(KVR + QKROPE) bias=false
+    kv_latent, k_pe_base <- split kv_comp sizes=[512, 64]
+    kv_latent <- rms@kv_a_layernorm kv_latent
+    kv <- linear@kv_b_proj kv_latent dim=KVPROJ bias=false |> reshape_heads heads=H
+    k_nope, v <- split kv sizes=[128, 128]
+
+    k_pe <- reshape_heads k_pe_base heads=1 |> repeat repeats=H
+    q_pe, k_pe <- rope_pair q_pe k_pe position_ids=pos_ids theta=THETA interleaved=true scale_factor=40.0 beta_fast=32.0 beta_slow=1.0 mscale=0.707 mscale_all_dim=0.707 original_context=4096
+    q_full <- concat q_nope q_pe dim=-1
+    k_full <- concat k_nope k_pe dim=-1
+
+    k_all, v_all, new_kv <- Cache.update past_kv k_full v
+    mask <- causal_mask q_full k_all window=C padding_mask=attn_mask
+    a <- attention q_full k_all v_all mask=mask scale=ATTN_SCALE eager=true |> merge_heads
+    a <- linear@o_proj a dim=D bias=false
+    return a, new_kv
+  return a, new_kv
+
+deepseek_v2_lite_attn_qkv :: Tensor[B,S,D] -> Tensor[B,S] -> (Tensor[B,H,S,QHD], Tensor[B,H,S,QHD], Tensor[B,H,S,VHD])
+deepseek_v2_lite_attn_qkv x pos_ids = do
+  q_full, k_full, v <- scope@self_attn do
+    q <- linear@q_proj x dim=(H * QHD) bias=false |> reshape_heads heads=H
+    q_nope, q_pe <- split q sizes=[128, 64]
+
+    kv_comp <- linear@kv_a_proj_with_mqa x dim=(KVR + QKROPE) bias=false
+    kv_latent, k_pe_base <- split kv_comp sizes=[512, 64]
+    kv_latent <- rms@kv_a_layernorm kv_latent
+    kv <- linear@kv_b_proj kv_latent dim=KVPROJ bias=false |> reshape_heads heads=H
+    k_nope, v <- split kv sizes=[128, 128]
+
+    k_pe <- reshape_heads k_pe_base heads=1 |> repeat repeats=H
+    q_pe, k_pe <- rope_pair q_pe k_pe position_ids=pos_ids theta=THETA interleaved=true scale_factor=40.0 beta_fast=32.0 beta_slow=1.0 mscale=0.707 mscale_all_dim=0.707 original_context=4096
+    q_full <- concat q_nope q_pe dim=-1
+    k_full <- concat k_nope k_pe dim=-1
+    return q_full, k_full, v
+  return q_full, k_full, v
+
+deepseek_v2_lite_qkv_block :: Tensor[B,S,D] -> Tensor[B,S] -> (Tensor[B,H,S,QHD], Tensor[B,H,S,QHD], Tensor[B,H,S,VHD])
+deepseek_v2_lite_qkv_block x pos_ids = do
+  xn <- rms@input_layernorm x
+  q_full, k_full, v <- deepseek_v2_lite_attn_qkv xn pos_ids
+  return q_full, k_full, v
+
+deepseek_v2_lite_dense_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+deepseek_v2_lite_dense_block x pos_ids attn_mask past_kv = do
+  xn <- rms@input_layernorm x
+  a, new_kv <- deepseek_v2_lite_attn xn pos_ids attn_mask past_kv
+  x <- x + a
+  xn <- rms@post_attention_layernorm x
+  m <- scope@mlp do
+    gate <- linear@gate_proj xn dim=FFN bias=false
+    up <- linear@up_proj xn dim=FFN bias=false
+    return gate |> silu |> mul up |> linear@down_proj dim=D bias=false
+  return x + m, new_kv
+
+deepseek_v2_lite_dense_block_after_attn :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+deepseek_v2_lite_dense_block_after_attn x pos_ids attn_mask past_kv = do
+  xn <- rms@input_layernorm x
+  a, new_kv <- deepseek_v2_lite_attn xn pos_ids attn_mask past_kv
+  return x + a, new_kv
+
+deepseek_v2_lite_dense_block_post_attn_norm :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+deepseek_v2_lite_dense_block_post_attn_norm x pos_ids attn_mask past_kv = do
+  x, new_kv <- deepseek_v2_lite_dense_block_after_attn x pos_ids attn_mask past_kv
+  return rms@post_attention_layernorm x, new_kv
+
+deepseek_v2_lite_moe_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+deepseek_v2_lite_moe_block x pos_ids attn_mask past_kv = do
+  xn <- rms@input_layernorm x
+  a, new_kv <- deepseek_v2_lite_attn xn pos_ids attn_mask past_kv
+  x <- x + a
+  xn <- rms@post_attention_layernorm x
+  m <- scope@mlp do
+    shared <- scope@shared_experts do
+      gate <- linear@gate_proj xn dim=(EM * SE) bias=false
+      up <- linear@up_proj xn dim=(EM * SE) bias=false
+      return gate |> silu |> mul up |> linear@down_proj dim=D bias=false
+    topk_scores, topk_indices <- linear@gate xn dim=E bias=false |>
+      softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1 sorted=false
+    routed <- zeros_like xn
+    for@experts e <- [0..E) do
+      x_sel, token_idx, topk_pos, sel_scores <- MoE.select xn topk_scores topk_indices expert=e
+      gate <- _linear@@gate_proj x_sel dim=EM bias=false
+      up <- _linear@@up_proj x_sel dim=EM bias=false
+      x_upd <- gate |> silu |> mul up |> _linear@@down_proj dim=D bias=false
+      routed <- MoE.scatter_add routed token_idx x_upd sel_scores
+    return shared + routed
+  return x + m, new_kv
+
+deepseek_v2_lite_moe_post_attn_norm :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+deepseek_v2_lite_moe_post_attn_norm x pos_ids attn_mask past_kv = do
+  xn <- rms@input_layernorm x
+  a, new_kv <- deepseek_v2_lite_attn xn pos_ids attn_mask past_kv
+  x <- x + a
+  return rms@post_attention_layernorm x, new_kv
+
+deepseek_v2_lite_moe_topk :: Tensor[B,S,D] -> (Tensor[B,S,EPT], Tensor[B,S,EPT])
+deepseek_v2_lite_moe_topk xn = do
+  topk_scores, topk_indices <- linear@gate xn dim=E bias=false |>
+    softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1 sorted=false
+  return topk_scores, topk_indices
+
+deepseek_v2_lite_moe_mlp :: Tensor[B,S,D] -> Tensor[B,S,D]
+deepseek_v2_lite_moe_mlp xn = do
+  shared <- scope@shared_experts do
+    gate <- linear@gate_proj xn dim=(EM * SE) bias=false
+    up <- linear@up_proj xn dim=(EM * SE) bias=false
+    return gate |> silu |> mul up |> linear@down_proj dim=D bias=false
+  topk_scores, topk_indices <- deepseek_v2_lite_moe_topk xn
+  routed <- zeros_like xn
+  for@experts e <- [0..E) do
+    x_sel, token_idx, topk_pos, sel_scores <- MoE.select xn topk_scores topk_indices expert=e
+    gate <- _linear@@gate_proj x_sel dim=EM bias=false
+    up <- _linear@@up_proj x_sel dim=EM bias=false
+    x_upd <- gate |> silu |> mul up |> _linear@@down_proj dim=D bias=false
+    routed <- MoE.scatter_add routed token_idx x_upd sel_scores
+  return shared + routed
+
+deepseek_v2_lite_embedding_stage :: TokenIds[B,S] -> Tensor[B,S,D]
+deepseek_v2_lite_embedding_stage input_ids = do
+  x <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    return x
+  return x
+
+deepseek_v2_lite_layer0_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,D]
+deepseek_v2_lite_layer0_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  x <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block x pos_ids attn_mask past_i
+    return x
+  return x
+
+deepseek_v2_lite_layer0_input_norm_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> Tensor[B,S,D]
+deepseek_v2_lite_layer0_input_norm_stage input_ids attn_mask = do
+  x <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      x <- rms@input_layernorm x
+    return x
+  return x
+
+deepseek_v2_lite_layer0_after_attn_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,D]
+deepseek_v2_lite_layer0_after_attn_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  x <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block_after_attn x pos_ids attn_mask past_i
+    return x
+  return x
+
+deepseek_v2_lite_layer0_post_attn_norm_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,D]
+deepseek_v2_lite_layer0_post_attn_norm_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  x <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block_post_attn_norm x pos_ids attn_mask past_i
+    return x
+  return x
+
+deepseek_v2_lite_layer0_q_full_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> Tensor[B,H,S,QHD]
+deepseek_v2_lite_layer0_q_full_stage input_ids attn_mask = do
+  pos_ids <- position_ids input_ids attn_mask
+  q_full <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      q_full, _, _ <- deepseek_v2_lite_qkv_block x pos_ids
+      x <- q_full
+    return x
+  return q_full
+
+deepseek_v2_lite_layer0_k_full_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> Tensor[B,H,S,QHD]
+deepseek_v2_lite_layer0_k_full_stage input_ids attn_mask = do
+  pos_ids <- position_ids input_ids attn_mask
+  k_full <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      _, k_full, _ <- deepseek_v2_lite_qkv_block x pos_ids
+      x <- k_full
+    return x
+  return k_full
+
+deepseek_v2_lite_layer0_v_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> Tensor[B,H,S,VHD]
+deepseek_v2_lite_layer0_v_stage input_ids attn_mask = do
+  pos_ids <- position_ids input_ids attn_mask
+  v <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      _, _, v <- deepseek_v2_lite_qkv_block x pos_ids
+      x <- v
+    return x
+  return v
+
+deepseek_v2_lite_layer1_post_attn_norm_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,D]
+deepseek_v2_lite_layer1_post_attn_norm_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  x <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block x pos_ids attn_mask past_i
+    for@layers i <- [1..2) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_moe_post_attn_norm x pos_ids attn_mask past_i
+    return x
+  return x
+
+deepseek_v2_lite_layer1_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,D]
+deepseek_v2_lite_layer1_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  x <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block x pos_ids attn_mask past_i
+    for@layers i <- [1..2) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_moe_block x pos_ids attn_mask past_i
+    return x
+  return x
+
+deepseek_v2_lite_layer26_post_attn_norm_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,D]
+deepseek_v2_lite_layer26_post_attn_norm_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  x <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block x pos_ids attn_mask past_i
+    for@layers i <- [1..26) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_moe_block x pos_ids attn_mask past_i
+    for@layers i <- [26..27) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_moe_post_attn_norm x pos_ids attn_mask past_i
+    return x
+  return x
+
+deepseek_v2_lite_layer26_topk_indices_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,EPT]
+deepseek_v2_lite_layer26_topk_indices_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  topk_indices <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block x pos_ids attn_mask past_i
+    for@layers i <- [1..26) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_moe_block x pos_ids attn_mask past_i
+    for@layers i <- [26..27) do
+      past_i <- Cache.index past_kv i
+      xn, _ <- deepseek_v2_lite_moe_post_attn_norm x pos_ids attn_mask past_i
+      topk_scores, topk_indices <- _linear@@mlp.gate xn dim=E bias=false |>
+        softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1 sorted=false
+      x <- topk_indices
+    return x
+  return topk_indices
+
+deepseek_v2_lite_layer26_topk_scores_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,EPT]
+deepseek_v2_lite_layer26_topk_scores_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  topk_scores <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block x pos_ids attn_mask past_i
+    for@layers i <- [1..26) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_moe_block x pos_ids attn_mask past_i
+    for@layers i <- [26..27) do
+      past_i <- Cache.index past_kv i
+      xn, _ <- deepseek_v2_lite_moe_post_attn_norm x pos_ids attn_mask past_i
+      topk_scores, topk_indices <- _linear@@mlp.gate xn dim=E bias=false |>
+        softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1 sorted=false
+      x <- topk_scores
+    return x
+  return topk_scores
+
+deepseek_v2_lite_layer1_moe_topk_scores_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,EPT]
+deepseek_v2_lite_layer1_moe_topk_scores_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  topk_scores <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block x pos_ids attn_mask past_i
+    for@layers i <- [1..2) do
+      past_i <- Cache.index past_kv i
+      xn, _ <- deepseek_v2_lite_moe_post_attn_norm x pos_ids attn_mask past_i
+      topk_scores, topk_indices <- _linear@@mlp.gate xn dim=E bias=false |>
+        softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1 sorted=false
+      x <- topk_scores
+    return x
+  return topk_scores
+
+deepseek_v2_lite_layer1_moe_topk_indices_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,EPT]
+deepseek_v2_lite_layer1_moe_topk_indices_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  topk_indices <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block x pos_ids attn_mask past_i
+    for@layers i <- [1..2) do
+      past_i <- Cache.index past_kv i
+      xn, _ <- deepseek_v2_lite_moe_post_attn_norm x pos_ids attn_mask past_i
+      topk_scores, topk_indices <- _linear@@mlp.gate xn dim=E bias=false |>
+        softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1 sorted=false
+      x <- topk_indices
+    return x
+  return topk_indices
+
+deepseek_v2_lite_layer1_moe_output_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,D]
+deepseek_v2_lite_layer1_moe_output_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  m <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block x pos_ids attn_mask past_i
+    for@layers i <- [1..2) do
+      past_i <- Cache.index past_kv i
+      xn, _ <- deepseek_v2_lite_moe_post_attn_norm x pos_ids attn_mask past_i
+      m <- scope@mlp do
+        return deepseek_v2_lite_moe_mlp xn
+      x <- m
+    return x
+  return m
+
+deepseek_v2_lite_layer26_moe_output_stage :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> Tensor[B,S,D]
+deepseek_v2_lite_layer26_moe_output_stage input_ids attn_mask past_kv = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  m <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    for@layers i <- [0..1) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_dense_block x pos_ids attn_mask past_i
+    for@layers i <- [1..26) do
+      past_i <- Cache.index past_kv i
+      x, _ <- deepseek_v2_lite_moe_block x pos_ids attn_mask past_i
+    for@layers i <- [26..27) do
+      past_i <- Cache.index past_kv i
+      xn, _ <- deepseek_v2_lite_moe_post_attn_norm x pos_ids attn_mask past_i
+      shared_gate <- _linear@@mlp.shared_experts.gate_proj xn dim=(EM * SE) bias=false
+      shared_up <- _linear@@mlp.shared_experts.up_proj xn dim=(EM * SE) bias=false
+      shared <- shared_gate |> silu |> mul shared_up |>
+        _linear@@mlp.shared_experts.down_proj dim=D bias=false
+      topk_scores, topk_indices <- _linear@@mlp.gate xn dim=E bias=false |>
+        softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1 sorted=false
+      routed <- zeros_like xn
+      for@mlp.experts e <- [0..E) do
+        x_sel, token_idx, topk_pos, sel_scores <- MoE.select xn topk_scores topk_indices expert=e
+        gate <- linear@gate_proj x_sel dim=EM bias=false
+        up <- linear@up_proj x_sel dim=EM bias=false
+        x_upd <- gate |> silu |> mul up |> linear@down_proj dim=D bias=false
+        routed <- MoE.scatter_add routed token_idx x_upd sel_scores
+      m <- shared + routed
+      x <- m
+    return x
+  return m
+
+deepseek_v2_lite :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
+deepseek_v2_lite input_ids attn_mask past_kv use_cache = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  x, new_kv <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    new_kv <- use_cache ? Cache.init : null
+    for@layers i <- [0..FIRST_DENSE) do
+      past_i <- Cache.index past_kv i
+      x, new_i <- deepseek_v2_lite_dense_block x pos_ids attn_mask past_i
+      new_kv <- Cache.append new_kv new_i
+    for@layers i <- [FIRST_DENSE..L) do
+      past_i <- Cache.index past_kv i
+      x, new_i <- deepseek_v2_lite_moe_block x pos_ids attn_mask past_i
+      new_kv <- Cache.append new_kv new_i
+    x <- rms@norm x
+    return x, new_kv
+  logits <- linear@lm_head x dim=V bias=false
+  return logits, new_kv
