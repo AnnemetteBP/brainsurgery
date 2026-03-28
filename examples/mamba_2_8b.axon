@@ -31,11 +31,10 @@ mamba_block x = do
 
 mamba_2_8b :: TokenIds[B,S] -> Tensor[B,S,V]
 mamba_2_8b input_ids = do
-  x <- scope@backbone do
+  logits <- scope@backbone do
     x <- embedding@embeddings input_ids dim=D
     for@layers i <- [0..L) do
       x <- mamba_block x
     x <- rms@norm_f x
-    return x
-  logits <- linear@backbone.embeddings x dim=V
+    return linear@embeddings x dim=V
   return logits
