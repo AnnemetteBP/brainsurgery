@@ -50,19 +50,8 @@ gpt_oss_block x i pos_ids attn_mask past_kv = do
   m <- scope@mlp do
     router_topk, topk_indices <- linear@router xn dim=E bias=true |>
       topk k=EPT dim=-1
-    topk_scores <- softmax router_topk dim=-1 dtype=float32
-    m <- zeros_like xn
-    for@experts e <- [0..E) do
-      x_sel, token_idx, topk_pos, sel_scores <- MoE.select xn topk_scores topk_indices expert=e
-      gate_up <- linear x_sel weight=gate_up_proj.weight bias=true bias_path=gate_up_proj.bias dim=2*D transpose=true expert=e
-      gate_raw, up_raw <- split gate_up parts=2 interleave=true
-      gate <- clamp gate_raw max=SWIGLU_LIMIT
-      up <- clamp up_raw min=-SWIGLU_LIMIT max=SWIGLU_LIMIT
-      gate_alpha <- gate * SWIGLU_ALPHA
-      gate_sig <- gate_alpha |> sigmoid
-      glu <- gate * gate_sig
-      x_upd <- (up + 1.0) |> mul glu |> linear weight=down_proj.weight bias=true bias_path=down_proj.bias dim=D transpose=true expert=e
-      m <- MoE.scatter_add m token_idx x_upd sel_scores accum_dtype=float32
+    topk_scores <- softmax router_topk dim=-1
+    m <- MoE.grouped_ffn xn topk_scores topk_indices gate_up_weight=mlp.experts.gate_up_proj.weight gate_up_bias=mlp.experts.gate_up_proj.bias down_weight=mlp.experts.down_proj.weight down_bias=mlp.experts.down_proj.bias alpha=SWIGLU_ALPHA limit=SWIGLU_LIMIT
     return m
 
   return x + m, new_kv
