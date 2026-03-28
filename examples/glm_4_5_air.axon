@@ -1,0 +1,101 @@
+D    = 4096       -- hidden dimension
+V    = 151552     -- vocabulary size
+L    = 46         -- number of decoder layers
+H    = 96         -- number of query attention heads
+KVH  = 8          -- number of key/value heads
+HD   = 128        -- per-head dimension
+QD   = 12288      -- query projection dimension (H * HD)
+KVD  = 1024       -- key/value projection dimension (KVH * HD)
+FFN  = 10944      -- dense feed-forward intermediate dimension
+E    = 128        -- routed experts
+EPT  = 8          -- routed experts selected per token
+EM   = 1408       -- routed expert intermediate dimension
+EPS  = 1e-05      -- RMSNorm epsilon
+THETA = 1000000.0 -- RoPE theta
+C    = 131072     -- max context window
+FIRST_DENSE = 1   -- number of initial dense-only layers
+
+import Activations silu
+import Cache past_length
+import Cache
+import MoE
+
+rms :: @Path -> Tensor[B,S,D] -> Tensor[B,S,D]
+rms@path x = rmsnorm@path x eps=EPS
+
+routed_expert_ffn :: Tensor[N,D] -> Tensor[N,D]
+routed_expert_ffn x = do
+  gate <- linear@gate_proj x dim=EM bias=false
+  up <- linear@up_proj x dim=EM bias=false
+  return gate |> silu |> mul up |> linear@down_proj dim=D bias=false
+
+dense_ffn :: Tensor[B,S,D] -> Tensor[B,S,D]
+dense_ffn x = do
+  gate <- linear@gate_proj x dim=FFN bias=false
+  up <- linear@up_proj x dim=FFN bias=false
+  return gate |> silu |> mul up |> linear@down_proj dim=D bias=false
+
+shared_expert_ffn :: Tensor[B,S,D] -> Tensor[B,S,D]
+shared_expert_ffn x = do
+  gate <- linear@gate_proj x dim=EM bias=false
+  up <- linear@up_proj x dim=EM bias=false
+  return gate |> silu |> mul up |> linear@down_proj dim=D bias=false
+
+glm4_5_air_attn :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+glm4_5_air_attn x pos_ids attn_mask past_kv = do
+  xn <- rms@input_layernorm x
+  a, new_kv <- scope@self_attn do
+    q <- linear@q_proj xn dim=QD bias=true |> reshape_heads heads=H
+    k <- linear@k_proj xn dim=KVD bias=true |> reshape_heads heads=KVH
+    v <- linear@v_proj xn dim=KVD bias=true |> reshape_heads heads=KVH
+    q, k <- rope_pair q k position_ids=pos_ids theta=THETA
+    k, v, new_kv <- Cache.update past_kv k v
+    k <- repeat k (H / KVH)
+    v <- repeat v (H / KVH)
+    mask <- causal_mask q k window=C padding_mask=attn_mask
+    a <- attention q k v mask=mask |> merge_heads |> linear@o_proj dim=D bias=false
+    return a, new_kv
+  return x + a, new_kv
+
+glm4_5_air_dense_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+glm4_5_air_dense_block x pos_ids attn_mask past_kv = do
+  x, new_kv <- glm4_5_air_attn x pos_ids attn_mask past_kv
+  xn <- rms@post_attention_layernorm x
+  m <- scope@mlp do
+    return dense_ffn xn
+  return x + m, new_kv
+
+glm4_5_air_moe_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+glm4_5_air_moe_block x pos_ids attn_mask past_kv = do
+  x, new_kv <- glm4_5_air_attn x pos_ids attn_mask past_kv
+  xn <- rms@post_attention_layernorm x
+  m <- scope@mlp do
+    shared <- scope@shared_experts do
+      return shared_expert_ffn xn
+    topk_scores, topk_indices <- linear@gate xn dim=E bias=false |>
+      softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1
+    routed <- zeros_like xn
+    for@experts e <- [0..E) do
+      x_sel, token_idx, topk_pos, sel_scores <- MoE.select xn topk_scores topk_indices expert=e
+      x_upd <- routed_expert_ffn x_sel
+      routed <- MoE.scatter_add routed token_idx x_upd sel_scores
+    return shared + routed
+  return x + m, new_kv
+
+glm_4_5_air :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
+glm_4_5_air input_ids attn_mask past_kv use_cache = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(past_length past_kv)
+  x, new_kv <- scope@model do
+    x <- embedding@embed_tokens input_ids dim=D
+    new_kv <- use_cache ? Cache.init : null
+    past_0 <- Cache.index past_kv 0
+    x, new_0 <- glm4_5_air_dense_block x pos_ids attn_mask past_0
+    new_kv <- Cache.append new_kv new_0
+    for@layers i <- [FIRST_DENSE..L) do
+      past_i <- Cache.index past_kv i
+      x, new_i <- glm4_5_air_moe_block x pos_ids attn_mask past_i
+      new_kv <- Cache.append new_kv new_i
+    x <- rms@norm x
+    return x, new_kv
+  logits <- linear@lm_head x dim=V bias=false
+  return logits, new_kv

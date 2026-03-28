@@ -3,8 +3,8 @@ V    = 100352             -- vocabulary size
 L    = 32                 -- number of decoder layers
 H    = 32                 -- number of attention heads
 HD   = 128                -- per-head dimension (D / H)
-E    = 8                  -- number of experts
-EPT  = 4                  -- experts selected per token (top-k)
+E    = 2                  -- number of experts
+EPT  = 2                  -- experts selected per token (top-k)
 C    = 4096               -- context window / max sequence length
 FFN  = 11008              -- expert intermediate dimension
 EPS  = 1e-06              -- RMSNorm epsilon
@@ -26,29 +26,29 @@ expert_ffn x = do
 
 flexolmo_decoder_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
 flexolmo_decoder_block x pos_ids attn_mask past_kv = do
-  x_norm <- rms@post_feedforward_layernorm x
   a, new_kv <- scope@self_attn do
-    q <- x_norm |> linear@q_proj dim=D |> rms@q_norm |> reshape_heads heads=H
-    k <- x_norm |> linear@k_proj dim=D |> rms@k_norm |> reshape_heads heads=H
-    v <- x_norm |> linear@v_proj dim=D |> reshape_heads heads=H
+    q <- x |> linear@q_proj dim=D |> rms@q_norm |> reshape_heads heads=H
+    k <- x |> linear@k_proj dim=D |> rms@k_norm |> reshape_heads heads=H
+    v <- x |> linear@v_proj dim=D |> reshape_heads heads=H
     q, k <- rope_pair q k position_ids=pos_ids theta=THETA
     k, v, new_kv <- Cache.update past_kv k v
     mask <- causal_mask q k window=C padding_mask=attn_mask
     a <- attention q k v mask=mask scale=ATTN_SCALE |> merge_heads
     a <- linear@o_proj a dim=D
     return a, new_kv
-  x <- x + a
-  xn <- rms@post_attention_layernorm x
+  a_norm <- rms@post_attention_layernorm a
+  x <- x + a_norm
   m <- scope@mlp do
-    topk_scores, topk_indices <- linear@gate xn dim=E |>
+    topk_scores, topk_indices <- linear@gate x dim=E |>
       softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1
-    m <- zeros_like xn
+    m <- x * 0.0
     for@experts e <- [0..E) do
-      x_sel, token_idx, topk_pos, sel_scores <- MoE.select xn topk_scores topk_indices expert=e
+      x_sel, token_idx, topk_pos, sel_scores <- MoE.select x topk_scores topk_indices expert=e
       x_upd <- expert_ffn x_sel
       m <- MoE.scatter_add m token_idx x_upd sel_scores
     return m
-  return x + m, new_kv
+  m_norm <- rms@post_feedforward_layernorm m
+  return x + m_norm, new_kv
 
 flexolmo :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
 flexolmo input_ids attn_mask past_kv use_cache = do
