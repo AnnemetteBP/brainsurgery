@@ -1,3 +1,4 @@
+{-# PADDING_SIDE "right" #-}
 D = 2560
 I = 5120
 N = 16

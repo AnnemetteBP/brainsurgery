@@ -1,3 +1,4 @@
+{-# PADDING_SIDE "right" #-}
 D = 1472
 V = 50304
 L = 36

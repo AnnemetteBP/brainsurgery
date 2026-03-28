@@ -1,3 +1,4 @@
+{-# PADDING_SIDE "right" #-}
 D = 8
 I = 32
 N = 8
