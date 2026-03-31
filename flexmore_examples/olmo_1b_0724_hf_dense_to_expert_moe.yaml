@@ -1,0 +1,84 @@
+inputs:
+  - m0::models/olmo_1b_0724_hf_dense
+  - m1::models/olmo_1b_0724_hf_dense
+
+output:
+  path: models/olmo_1b_0724_hf_dense_moe_demo
+
+transforms:
+  # Compact paper/demo example:
+  # upcycle layer 0 of dense OLMo-1B into a tiny 2-expert MoE-style layout.
+  #
+  # We intentionally load the same dense checkpoint twice under two aliases so
+  # the plan stays self-contained and does not require physically duplicated
+  # expert source models on disk.
+
+  # Preflight checks on the dense source tensors we are about to upcycle.
+  - assert: { exists: m0::model.layers.0.mlp.gate_proj.weight }
+  - assert: { exists: m0::model.layers.0.mlp.up_proj.weight }
+  - assert: { exists: m0::model.layers.0.mlp.down_proj.weight }
+  - assert: { exists: m1::model.layers.0.mlp.gate_proj.weight }
+  - assert: { exists: m1::model.layers.0.mlp.up_proj.weight }
+  - assert: { exists: m1::model.layers.0.mlp.down_proj.weight }
+
+  - assert:
+      shape:
+        of: m0::model.layers.0.mlp.gate_proj.weight
+        is: [8192, 2048]
+  - assert:
+      shape:
+        of: m0::model.layers.0.mlp.up_proj.weight
+        is: [8192, 2048]
+  - assert:
+      shape:
+        of: m0::model.layers.0.mlp.down_proj.weight
+        is: [2048, 8192]
+
+  # Expert 0 comes from alias m0.
+  - copy:
+      from: m0::model.layers.0.mlp.gate_proj.weight
+      to: m0::model.layers.0.mlp.experts.0.gate_proj.weight
+  - copy:
+      from: m0::model.layers.0.mlp.up_proj.weight
+      to: m0::model.layers.0.mlp.experts.0.up_proj.weight
+  - copy:
+      from: m0::model.layers.0.mlp.down_proj.weight
+      to: m0::model.layers.0.mlp.experts.0.down_proj.weight
+
+  # Expert 1 comes from alias m1. In this minimal demo it is the same dense
+  # checkpoint, but the separate alias makes the surgery pattern explicit.
+  - copy:
+      from: m1::model.layers.0.mlp.gate_proj.weight
+      to: m0::model.layers.0.mlp.experts.1.gate_proj.weight
+  - copy:
+      from: m1::model.layers.0.mlp.up_proj.weight
+      to: m0::model.layers.0.mlp.experts.1.up_proj.weight
+  - copy:
+      from: m1::model.layers.0.mlp.down_proj.weight
+      to: m0::model.layers.0.mlp.experts.1.down_proj.weight
+
+  # Sanity checks on the new expert tensors.
+  - assert:
+      equal:
+        left: m0::model.layers.0.mlp.gate_proj.weight::[:16, :16]
+        right: m0::model.layers.0.mlp.experts.0.gate_proj.weight::[:16, :16]
+  - assert:
+      equal:
+        left: m1::model.layers.0.mlp.gate_proj.weight::[:16, :16]
+        right: m0::model.layers.0.mlp.experts.1.gate_proj.weight::[:16, :16]
+
+  # Initialize a simple 2-expert router for the upcycled layer.
+  - zeroes:
+      target: m0::model.layers.0.mlp.gate.weight
+      shape: [2, 2048]
+
+  - assert:
+      shape:
+        of: m0::model.layers.0.mlp.gate.weight
+        is: [2, 2048]
+
+  # Optionally remove the original dense MLP weights from layer 0 so the output
+  # state dict more clearly reflects the MoE-style rewrite.
+  - delete: { target: m0::model.layers.0.mlp.gate_proj.weight }
+  - delete: { target: m0::model.layers.0.mlp.up_proj.weight }
+  - delete: { target: m0::model.layers.0.mlp.down_proj.weight }

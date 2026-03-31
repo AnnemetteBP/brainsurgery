@@ -3,6 +3,8 @@ __pycache__
 models
 .brainsurgery
 
+.env
+
 # Python cache/build artifacts
 *.py[cod]
 *.pyo

@@ -1,0 +1,70 @@
+inputs:
+  - m0::models/olmo_7b_it_expert_a
+  - m1::models/olmo_7b_it_expert_b
+
+output: { path: models/moe_out }
+
+transforms:
+  # Paper demo: upcycle two dense OLMo-style FF projections into a single
+  # expert-stacked MoE tensor. This stays intentionally small and only touches
+  # layer 0 so the state-dict surgery is easy to read.
+
+  # Preflight checks. These are the kinds of guards that are awkward in an ad
+  # hoc Python script but very natural in a declarative plan.
+  - assert: { exists: m0::model.transformer.blocks.0.ff_proj.weight }
+  - assert: { exists: m1::model.transformer.blocks.0.ff_proj.weight }
+  - assert:
+      shape:
+        of: m0::model.transformer.blocks.0.ff_proj.weight
+        is: [4096, 22016]
+  - assert:
+      shape:
+        of: m1::model.transformer.blocks.0.ff_proj.weight
+        is: [4096, 22016]
+  - assert: { not: { exists: m0::model.transformer.blocks.0.moe_ff_proj.weight } }
+
+  # LAYER 0
+  - permute:
+      from: m0::model.transformer.blocks.0.ff_proj.weight
+      to: m0::tmp.ff_proj.0_raw
+      order: [1, 0]
+
+  - permute:
+      from: m1::model.transformer.blocks.0.ff_proj.weight
+      to: m0::tmp.ff_proj.1_raw
+      order: [1, 0]
+
+  # Clone the permuted views into explicit expert tensors before concatenation.
+  - copy: { from: m0::tmp.ff_proj.0_raw, to: m0::tmp.ff_proj.0 }
+  - copy: { from: m0::tmp.ff_proj.1_raw, to: m0::tmp.ff_proj.1 }
+
+  - assert:
+      shape:
+        of: m0::tmp.ff_proj.0
+        is: [22016, 4096]
+  - assert:
+      shape:
+        of: m0::tmp.ff_proj.1
+        is: [22016, 4096]
+  - assert:
+      equal:
+        left: m0::tmp.ff_proj.0_raw::[:16, :16]
+        right: m0::tmp.ff_proj.0::[:16, :16]
+  - assert:
+      equal:
+        left: m0::tmp.ff_proj.1_raw::[:16, :16]
+        right: m0::tmp.ff_proj.1::[:16, :16]
+
+  - concat:
+      from:
+        - m0::tmp.ff_proj.0
+        - m0::tmp.ff_proj.1
+      to: m0::model.transformer.blocks.0.moe_ff_proj.weight
+      dim: 0
+
+  - assert:
+      shape:
+        of: m0::model.transformer.blocks.0.moe_ff_proj.weight
+        is: [44032, 4096]
+
+  - delete: { target: m0::tmp.* }

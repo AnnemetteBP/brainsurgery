@@ -1,0 +1,42 @@
+inputs:
+  - m0::models/mistral_expert1
+  - m1::models/mistral_expert2
+
+output:
+  path: models/moe_out_new
+
+transforms:
+
+  # permute expert 0
+  - permute:
+      from: m0::model.transformer.blocks.0.ff_proj.weight
+      to: m0::tmp.w1.e0_raw
+      order: [1, 0]
+
+  - copy:
+      from: m0::tmp.w1.e0_raw
+      to: m0::tmp.w1.e0
+
+  - delete: { target: m0::tmp.w1.e0_raw }
+
+  # permute expert 1
+  - permute:
+      from: m1::model.transformer.blocks.0.ff_proj.weight
+      to: m0::tmp.w1.e1_raw
+      order: [1, 0]
+
+  - copy:
+      from: m0::tmp.w1.e1_raw
+      to: m0::tmp.w1.e1
+
+  - delete: { target: m0::tmp.w1.e1_raw }
+
+  # concat → skriver ind i m0 (output model!)
+  - concat:
+      from:
+        - m0::tmp.w1.e0
+        - m0::tmp.w1.e1
+      to: m0::model.transformer.blocks.0.feed_forward_moe.experts.mlp.w1
+      dim: 0
+
+  - delete: { target: m0::tmp.* }
