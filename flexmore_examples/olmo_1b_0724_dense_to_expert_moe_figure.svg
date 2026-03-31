@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">Dense-to-expert-MoE upcycling: imperative script versus BrainSurgery plan</title>
+  <desc id="desc">Three-panel comparison showing a Python reference script, a declarative BrainSurgery YAML plan, and diff-based validation reporting no differences found.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f6f1e8; }
+      .panel { fill: #fffdf9; stroke: #1f2937; stroke-width: 2; rx: 18; ry: 18; }
+      .header-a { fill: #9f2f21; }
+      .header-b { fill: #155e63; }
+      .header-c { fill: #2f5f2f; }
+      .title { font-family: Georgia, "Times New Roman", serif; font-size: 28px; font-weight: 700; fill: #ffffff; }
+      .body { font-family: "Courier New", monospace; font-size: 20px; fill: #17202a; }
+      .label { font-family: Georgia, "Times New Roman", serif; font-size: 24px; font-weight: 700; fill: #17202a; }
+      .caption { font-family: Georgia, "Times New Roman", serif; font-size: 24px; fill: #17202a; }
+      .small { font-family: Georgia, "Times New Roman", serif; font-size: 20px; fill: #334155; }
+      .bullet { font-family: Georgia, "Times New Roman", serif; font-size: 21px; fill: #17202a; }
+      .callout { fill: #f3e3cf; stroke: #9a6b2f; stroke-width: 1.5; rx: 12; ry: 12; }
+      .okbox { fill: #edf7ed; stroke: #2f5f2f; stroke-width: 1.5; rx: 12; ry: 12; }
+      .arrow { stroke: #7c3f00; stroke-width: 4; fill: none; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0,0 10,4 0,8" fill="#7c3f00"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="980"/>
+
+  <text x="800" y="58" text-anchor="middle" class="label" style="font-size:34px;">
+    Dense-to-Expert-MoE Upcycling for OLMo-1B: Imperative Baseline vs Declarative BrainSurgery Workflow
+  </text>
+  <text x="800" y="92" text-anchor="middle" class="small">
+    Same conversion semantics, but explicit checkpoint surgery and validation replace handwritten control flow.
+  </text>
+
+  <rect class="panel" x="50" y="130" width="470" height="650"/>
+  <rect class="header-a" x="50" y="130" width="470" height="72" rx="18" ry="18"/>
+  <text x="285" y="175" text-anchor="middle" class="title">A. Reference Python Script</text>
+  <text x="78" y="235" class="body">moe_to_dense_mapping = {</text>
+  <text x="78" y="265" class="body">  "feed_forward_moe.experts.mlp.w1": ...</text>
+  <text x="78" y="295" class="body">  "feed_forward_moe.experts.mlp.w2": ...</text>
+  <text x="78" y="325" class="body">  "attention.w_q.weight": ...</text>
+  <text x="78" y="355" class="body">}</text>
+  <text x="78" y="405" class="body">for expert, path in enumerate(dense_paths):</text>
+  <text x="78" y="435" class="body">  dense_state_dict = load_state_dict(path)</text>
+  <text x="78" y="465" class="body">  for key in list(moe_state_dict.keys()):</text>
+  <text x="78" y="495" class="body">    if any(pattern in key for pattern in ...):</text>
+  <text x="78" y="525" class="body">      dense_key = key.replace(...)</text>
+  <text x="78" y="555" class="body">      if "expert" in key or "router" in key:</text>
+  <text x="78" y="585" class="body">        moe_state_dict[key][...] =</text>
+  <text x="78" y="615" class="body">          dense_state_dict[dense_key].T</text>
+  <text x="78" y="645" class="body">      else:</text>
+  <text x="78" y="675" class="body">        moe_state_dict[key] =</text>
+  <text x="78" y="705" class="body">          dense_state_dict[dense_key]</text>
+
+  <rect class="callout" x="72" y="724" width="425" height="38"/>
+  <text x="88" y="749" class="bullet">Control flow, mapping, mutation, and output writing are intertwined.</text>
+
+  <rect class="panel" x="565" y="130" width="470" height="650"/>
+  <rect class="header-b" x="565" y="130" width="470" height="72" rx="18" ry="18"/>
+  <text x="800" y="175" text-anchor="middle" class="title">B. BrainSurgery YAML Plan</text>
+  <text x="593" y="235" class="body">transforms:</text>
+  <text x="593" y="270" class="body">  - assert: { exists: m0::model.embed_tokens.weight }</text>
+  <text x="593" y="305" class="body">  - assert:</text>
+  <text x="593" y="335" class="body">      equal:</text>
+  <text x="593" y="365" class="body">        left:  m0::model.layers\.(\d+)\.mlp...</text>
+  <text x="593" y="395" class="body">        right: m1::model.layers.\1.mlp...</text>
+  <text x="593" y="430" class="body">  - copy:</text>
+  <text x="593" y="460" class="body">      from: m0::model.layers\.(\d+)\.mlp...</text>
+  <text x="593" y="490" class="body">      to:   m0::model.layers.\1.mlp.experts.0...</text>
+  <text x="593" y="525" class="body">  - copy:</text>
+  <text x="593" y="555" class="body">      from: m1::model.layers\.(\d+)\.mlp...</text>
+  <text x="593" y="585" class="body">      to:   m0::model.layers.\1.mlp.experts.1...</text>
+  <text x="593" y="620" class="body">  - fill:</text>
+  <text x="593" y="650" class="body">      to: m0::model.layers.\1.mlp.gate.weight</text>
+  <text x="593" y="680" class="body">      mode: constant</text>
+  <text x="593" y="710" class="body">      value: 0</text>
+  <text x="593" y="745" class="body">  - delete: { target: m0::model.layers\.(\d+)\.mlp... }</text>
+
+  <rect class="callout" x="587" y="724" width="425" height="38"/>
+  <text x="603" y="749" class="bullet">Assertions, surgery, and validation are explicit, reviewable, and reusable.</text>
+
+  <rect class="panel" x="1080" y="130" width="470" height="650"/>
+  <rect class="header-c" x="1080" y="130" width="470" height="72" rx="18" ry="18"/>
+  <text x="1315" y="175" text-anchor="middle" class="title">C. Built-In Validation</text>
+  <text x="1108" y="245" class="body">inputs:</text>
+  <text x="1108" y="275" class="body">  - yaml::olmo_1b_0724_hf_dense_moe_demo</text>
+  <text x="1108" y="305" class="body">  - ref::olmo_1b_0724_hf_dense_moe_reference</text>
+  <text x="1108" y="355" class="body">transforms:</text>
+  <text x="1108" y="385" class="body">  - diff: { mode: aliases, left_alias: ref,</text>
+  <text x="1108" y="415" class="body">            right_alias: yaml }</text>
+
+  <rect class="okbox" x="1105" y="465" width="420" height="190"/>
+  <text x="1130" y="515" class="body">Missing on left:</text>
+  <text x="1130" y="547" class="body">  (none)</text>
+  <text x="1130" y="587" class="body">Missing on right:</text>
+  <text x="1130" y="619" class="body">  (none)</text>
+  <text x="1130" y="659" class="body">Differing:</text>
+  <text x="1130" y="691" class="body">  (none)</text>
+  <text x="1130" y="731" class="body">No differences found.</text>
+
+  <rect class="callout" x="1102" y="724" width="425" height="38"/>
+  <text x="1118" y="749" class="bullet">The declarative plan matches the independent reference implementation.</text>
+
+  <path class="arrow" d="M 520 460 C 540 460, 545 460, 565 460"/>
+  <path class="arrow" d="M 1035 460 C 1055 460, 1060 460, 1080 460"/>
+
+  <text x="800" y="843" text-anchor="middle" class="caption">
+    Dense checkpoint A + Dense checkpoint B
+    &#160;&#160;→&#160;&#160;
+    BrainSurgery plan or imperative reference converter
+    &#160;&#160;→&#160;&#160;
+    MoE-style checkpoint
+    &#160;&#160;→&#160;&#160;
+    BrainSurgery diff
+  </text>
+  <text x="800" y="887" text-anchor="middle" class="small">
+    The main claim is reduced implementation complexity with explicit validation, not just fewer lines of code.
+  </text>
+  <text x="800" y="926" text-anchor="middle" class="small">
+    Example assets: dense_to_expert_moe.py, olmo_1b_0724_hf_dense_to_expert_moe.yaml, olmo_1b_0724_hf_dense_to_expert_moe_validate.yaml
+  </text>
+</svg>

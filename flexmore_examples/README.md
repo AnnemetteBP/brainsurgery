@@ -105,6 +105,29 @@ The reference script can also emit:
   A small manifest documenting the conversion settings and validation assets.
 - `run_olmo_1b_0724_demo.py`
   A one-command runner for the full convert/reference/diff flow.
+- `olmo_1b_0724_dense_to_expert_moe_figure.svg`
+  A paper-ready vector figure comparing the imperative script, the BrainSurgery
+  YAML plan, and the final diff-based validation result.
+
+## Figure Asset
+
+The figure asset is:
+
+```text
+flexmore_examples/olmo_1b_0724_dense_to_expert_moe_figure.svg
+```
+
+Suggested caption:
+
+```text
+Comparison of an imperative dense-to-expert-MoE upcycling script and an equivalent
+BrainSurgery workflow. The reference Python implementation mixes tensor-name
+mapping, control flow, mutation, and checkpoint writing in handwritten code.
+BrainSurgery instead expresses the conversion as a declarative plan consisting of
+assertions, tensor copies, initialization, and deletions. The resulting checkpoint
+is then validated against the reference implementation using BrainSurgery's built-in
+diffing, which reports no missing or differing tensors.
+```
 
 ## Scope
 
