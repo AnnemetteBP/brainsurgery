@@ -4,6 +4,7 @@ models
 .brainsurgery
 
 .env
+stuff/
 
 # Python cache/build artifacts
 *.py[cod]

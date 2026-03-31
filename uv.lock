@@ -34,6 +34,7 @@ name = "brainsurgery"
 version = "0.2.12"
 source = { editable = "." }
 dependencies = [
+    { name = "huggingface-hub" },
     { name = "numpy" },
     { name = "omegaconf" },
     { name = "pyaml" },
@@ -59,6 +60,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "build", marker = "extra == 'dev'" },
+    { name = "huggingface-hub" },
     { name = "mltiming", marker = "extra == 'dev'" },
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "numpy" },

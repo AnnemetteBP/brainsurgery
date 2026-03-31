@@ -6,58 +6,120 @@ output:
   path: models/olmo_1b_0724_hf_dense_moe_demo
 
 transforms:
-  # Compact paper/demo example:
-  # upcycle layer 0 of dense OLMo-1B into a tiny 2-expert MoE-style layout.
+  # Full OLMo-1B HF dense -> 2-expert MoE-style state-dict upcycling plan.
   #
-  # We intentionally load the same dense checkpoint twice under two aliases so
-  # the plan stays self-contained and does not require physically duplicated
-  # expert source models on disk.
+  # This mirrors the intent of flexmore_examples/dense_to_expert_moe.py for the
+  # local HF checkpoint layout:
+  # - keep shared tensors from m0 as the output anchor
+  # - assert that the shared tensors in m1 match
+  # - rewrite every dense MLP block into two experts
+  # - create a zero-initialized 2-expert router per layer
+  # - remove the original dense MLP tensors from the output state dict
+  #
+  # We intentionally point both aliases at the same dense checkpoint so the plan
+  # is self-contained. Swap m1 to a different expert source checkpoint if needed.
 
-  # Preflight checks on the dense source tensors we are about to upcycle.
-  - assert: { exists: m0::model.layers.0.mlp.gate_proj.weight }
-  - assert: { exists: m0::model.layers.0.mlp.up_proj.weight }
-  - assert: { exists: m0::model.layers.0.mlp.down_proj.weight }
-  - assert: { exists: m1::model.layers.0.mlp.gate_proj.weight }
-  - assert: { exists: m1::model.layers.0.mlp.up_proj.weight }
-  - assert: { exists: m1::model.layers.0.mlp.down_proj.weight }
+  # Preflight: make sure the dense tensors we rely on are present.
+  - assert: { exists: m0::model.embed_tokens.weight }
+  - assert: { exists: m0::lm_head.weight }
+  - assert: { exists: m0::model.layers\.0\.mlp\.gate_proj\.weight }
+  - assert: { exists: m0::model.layers\.0\.mlp\.up_proj\.weight }
+  - assert: { exists: m0::model.layers\.0\.mlp\.down_proj\.weight }
+  - assert: { exists: m1::model.layers\.0\.mlp\.gate_proj\.weight }
+  - assert: { exists: m1::model.layers\.0\.mlp\.up_proj\.weight }
+  - assert: { exists: m1::model.layers\.0\.mlp\.down_proj\.weight }
 
+  # Shape checks for the local 1B checkpoint layout.
   - assert:
       shape:
-        of: m0::model.layers.0.mlp.gate_proj.weight
+        of: m0::model.embed_tokens.weight
+        is: [50304, 2048]
+  - assert:
+      shape:
+        of: m0::lm_head.weight
+        is: [50304, 2048]
+  - assert:
+      shape:
+        of: m0::model.layers\.0\.mlp\.gate_proj\.weight
         is: [8192, 2048]
   - assert:
       shape:
-        of: m0::model.layers.0.mlp.up_proj.weight
+        of: m0::model.layers\.0\.mlp\.up_proj\.weight
         is: [8192, 2048]
   - assert:
       shape:
-        of: m0::model.layers.0.mlp.down_proj.weight
+        of: m0::model.layers\.0\.mlp\.down_proj\.weight
         is: [2048, 8192]
 
-  # Expert 0 comes from alias m0.
-  - copy:
-      from: m0::model.layers.0.mlp.gate_proj.weight
-      to: m0::model.layers.0.mlp.experts.0.gate_proj.weight
-  - copy:
-      from: m0::model.layers.0.mlp.up_proj.weight
-      to: m0::model.layers.0.mlp.experts.0.up_proj.weight
-  - copy:
-      from: m0::model.layers.0.mlp.down_proj.weight
-      to: m0::model.layers.0.mlp.experts.0.down_proj.weight
+  # Sanity-check that the shared tensors across the two dense aliases match.
+  - assert:
+      equal:
+        left: m0::model.embed_tokens.weight
+        right: m1::model.embed_tokens.weight
+  - assert:
+      equal:
+        left: m0::lm_head.weight
+        right: m1::lm_head.weight
+  - assert:
+      equal:
+        left: m0::model.layers\.(\d+)\.self_attn\.q_proj\.weight
+        right: m1::model.layers.\1.self_attn.q_proj.weight
+  - assert:
+      equal:
+        left: m0::model.layers\.(\d+)\.self_attn\.k_proj\.weight
+        right: m1::model.layers.\1.self_attn.k_proj.weight
+  - assert:
+      equal:
+        left: m0::model.layers\.(\d+)\.self_attn\.v_proj\.weight
+        right: m1::model.layers.\1.self_attn.v_proj.weight
+  - assert:
+      equal:
+        left: m0::model.layers\.(\d+)\.self_attn\.o_proj\.weight
+        right: m1::model.layers.\1.self_attn.o_proj.weight
+  - assert:
+      equal:
+        left: m0::model.layers\.(\d+)\.mlp\.gate_proj\.weight
+        right: m1::model.layers.\1.mlp.gate_proj.weight
+  - assert:
+      equal:
+        left: m0::model.layers\.(\d+)\.mlp\.up_proj\.weight
+        right: m1::model.layers.\1.mlp.up_proj.weight
+  - assert:
+      equal:
+        left: m0::model.layers\.(\d+)\.mlp\.down_proj\.weight
+        right: m1::model.layers.\1.mlp.down_proj.weight
 
-  # Expert 1 comes from alias m1. In this minimal demo it is the same dense
-  # checkpoint, but the separate alias makes the surgery pattern explicit.
+  # Expert 0 comes from m0 for every layer.
   - copy:
-      from: m1::model.layers.0.mlp.gate_proj.weight
-      to: m0::model.layers.0.mlp.experts.1.gate_proj.weight
+      from: m0::model.layers\.(\d+)\.mlp\.gate_proj\.weight
+      to: m0::model.layers.\1.mlp.experts.0.gate_proj.weight
   - copy:
-      from: m1::model.layers.0.mlp.up_proj.weight
-      to: m0::model.layers.0.mlp.experts.1.up_proj.weight
+      from: m0::model.layers\.(\d+)\.mlp\.up_proj\.weight
+      to: m0::model.layers.\1.mlp.experts.0.up_proj.weight
   - copy:
-      from: m1::model.layers.0.mlp.down_proj.weight
-      to: m0::model.layers.0.mlp.experts.1.down_proj.weight
+      from: m0::model.layers\.(\d+)\.mlp\.down_proj\.weight
+      to: m0::model.layers.\1.mlp.experts.0.down_proj.weight
 
-  # Sanity checks on the new expert tensors.
+  # Expert 1 comes from m1 for every layer.
+  - copy:
+      from: m1::model.layers\.(\d+)\.mlp\.gate_proj\.weight
+      to: m0::model.layers.\1.mlp.experts.1.gate_proj.weight
+  - copy:
+      from: m1::model.layers\.(\d+)\.mlp\.up_proj\.weight
+      to: m0::model.layers.\1.mlp.experts.1.up_proj.weight
+  - copy:
+      from: m1::model.layers\.(\d+)\.mlp\.down_proj\.weight
+      to: m0::model.layers.\1.mlp.experts.1.down_proj.weight
+
+  # Initialize a simple zero router per layer. We use a sliced q_proj tensor as
+  # the shape template so each new gate has shape [2, 2048].
+  - fill:
+      from: m0::model.layers\.(\d+)\.self_attn\.q_proj\.weight::[:2, :]
+      to: m0::model.layers.\1.mlp.gate.weight
+      mode: constant
+      value: 0
+
+  # Spot-check the rewritten tensors on layer 0.
   - assert:
       equal:
         left: m0::model.layers.0.mlp.gate_proj.weight::[:16, :16]
@@ -66,19 +128,19 @@ transforms:
       equal:
         left: m1::model.layers.0.mlp.gate_proj.weight::[:16, :16]
         right: m0::model.layers.0.mlp.experts.1.gate_proj.weight::[:16, :16]
-
-  # Initialize a simple 2-expert router for the upcycled layer.
-  - zeroes:
-      target: m0::model.layers.0.mlp.gate.weight
-      shape: [2, 2048]
-
   - assert:
       shape:
-        of: m0::model.layers.0.mlp.gate.weight
+        of: m0::model.layers\.(\d+)\.mlp\.gate\.weight
         is: [2, 2048]
 
-  # Optionally remove the original dense MLP weights from layer 0 so the output
-  # state dict more clearly reflects the MoE-style rewrite.
-  - delete: { target: m0::model.layers.0.mlp.gate_proj.weight }
-  - delete: { target: m0::model.layers.0.mlp.up_proj.weight }
-  - delete: { target: m0::model.layers.0.mlp.down_proj.weight }
+  # Remove the original dense MLP tensors from the output alias now that every
+  # layer has been rewritten into experts.
+  - delete: { target: m0::model.layers\.(\d+)\.mlp\.gate_proj\.weight }
+  - delete: { target: m0::model.layers\.(\d+)\.mlp\.up_proj\.weight }
+  - delete: { target: m0::model.layers\.(\d+)\.mlp\.down_proj\.weight }
+
+  # Final checks: expert tensors exist everywhere and the dense tensors are gone.
+  - assert: { exists: m0::model.layers\.15\.mlp\.experts\.0\.gate_proj\.weight }
+  - assert: { exists: m0::model.layers\.15\.mlp\.experts\.1\.down_proj\.weight }
+  - assert: { not: { exists: m0::model.layers\.0\.mlp\.gate_proj\.weight } }
+  - assert: { not: { exists: m0::model.layers\.15\.mlp\.down_proj\.weight } }

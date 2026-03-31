@@ -27,7 +27,7 @@ dependencies = [
     'torch',
     'tqdm',
     'typer',
-    'huggingface_hub
+    'huggingface_hub'
 ]
 
 [project.optional-dependencies]

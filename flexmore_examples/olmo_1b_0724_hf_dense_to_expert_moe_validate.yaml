@@ -1,0 +1,6 @@
+inputs:
+  - yaml::models/olmo_1b_0724_hf_dense_moe_demo
+  - ref::models/olmo_1b_0724_hf_dense_moe_reference
+
+transforms:
+  - diff: { mode: aliases, left_alias: ref, right_alias: yaml }
