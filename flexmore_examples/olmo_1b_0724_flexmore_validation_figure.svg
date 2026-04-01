@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="1120" viewBox="0 0 1680 1120" role="img" aria-labelledby="title desc">
+  <title id="title">From MoE upcycling to FlexMoRE compression and validation in BrainSurgery</title>
+  <desc id="desc">Four-panel paper-ready figure showing MoE upcycling, two FlexMoRE-style compression variants, diff-based validation, and a synapse bridge from checkpoint surgery to executable model structure.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f2e9; }
+      .panel { fill: #fffdf9; stroke: #1f2937; stroke-width: 2; rx: 20; ry: 20; }
+      .header-a { fill: #9f2f21; }
+      .header-b { fill: #155e63; }
+      .header-c { fill: #2f5f2f; }
+      .header-d { fill: #5b3a8e; }
+      .title { font-family: Georgia, "Times New Roman", serif; font-size: 28px; font-weight: 700; fill: #ffffff; }
+      .label { font-family: Georgia, "Times New Roman", serif; font-size: 24px; font-weight: 700; fill: #17202a; }
+      .body { font-family: "Courier New", monospace; font-size: 19px; fill: #17202a; }
+      .small { font-family: Georgia, "Times New Roman", serif; font-size: 20px; fill: #334155; }
+      .caption { font-family: Georgia, "Times New Roman", serif; font-size: 24px; fill: #17202a; }
+      .bullet { font-family: Georgia, "Times New Roman", serif; font-size: 20px; fill: #17202a; }
+      .callout { fill: #f3e3cf; stroke: #9a6b2f; stroke-width: 1.5; rx: 12; ry: 12; }
+      .okbox { fill: #edf7ed; stroke: #2f5f2f; stroke-width: 1.5; rx: 12; ry: 12; }
+      .bridge { fill: #efe7fb; stroke: #5b3a8e; stroke-width: 1.5; rx: 12; ry: 12; }
+      .arrow { stroke: #7c3f00; stroke-width: 4; fill: none; marker-end: url(#arrowhead); }
+      .arrow-soft { stroke: #5b3a8e; stroke-width: 3; fill: none; marker-end: url(#arrowhead-soft); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0,0 10,4 0,8" fill="#7c3f00"/>
+    </marker>
+    <marker id="arrowhead-soft" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0,0 10,4 0,8" fill="#5b3a8e"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1680" height="1120"/>
+
+  <text x="840" y="58" text-anchor="middle" class="label" style="font-size:34px;">
+    Cohesive BrainSurgery Story for the Paper: Upcycling, FlexMoRE Compression, Validation, and a Synapse Bridge
+  </text>
+  <text x="840" y="92" text-anchor="middle" class="small">
+    The package does not stop at checkpoint rewriting: it makes the rewrite explicit, validates it against references, and can feed structured model descriptions through SYNAPSE.
+  </text>
+
+  <rect class="panel" x="50" y="140" width="360" height="760"/>
+  <rect class="header-a" x="50" y="140" width="360" height="74" rx="20" ry="20"/>
+  <text x="230" y="185" text-anchor="middle" class="title">A. MoE Upcycling</text>
+  <text x="75" y="255" class="body">dense_a + dense_b</text>
+  <text x="75" y="290" class="body">  -> copy experts.0 / experts.1</text>
+  <text x="75" y="325" class="body">  -> fill router gate.weight = 0</text>
+  <text x="75" y="360" class="body">  -> delete dense mlp.* weights</text>
+  <text x="75" y="430" class="body">olmo_1b_0724_hf_dense_to_expert_moe.yaml</text>
+  <text x="75" y="500" class="body">reference.py</text>
+  <text x="75" y="535" class="body">validate.yaml</text>
+  <rect class="okbox" x="75" y="585" width="310" height="125"/>
+  <text x="100" y="630" class="body">diff:</text>
+  <text x="100" y="665" class="body">  Missing on left:  (none)</text>
+  <text x="100" y="700" class="body">  Missing on right: (none)</text>
+  <text x="100" y="735" class="body">  Differing:        (none)</text>
+  <rect class="callout" x="72" y="782" width="315" height="86"/>
+  <text x="90" y="820" class="bullet">BrainSurgery first establishes a</text>
+  <text x="90" y="848" class="bullet">clean, validated MoE checkpoint.</text>
+
+  <rect class="panel" x="450" y="140" width="360" height="760"/>
+  <rect class="header-b" x="450" y="140" width="360" height="74" rx="20" ry="20"/>
+  <text x="630" y="185" text-anchor="middle" class="title">B. FlexMoRE Factors</text>
+  <text x="475" y="255" class="body">moe checkpoint</text>
+  <text x="475" y="290" class="body">  -> copy expert_1 to delta</text>
+  <text x="475" y="325" class="body">  -> subtract_ expert_0</text>
+  <text x="475" y="360" class="body">  -> phlora delta -> A/B</text>
+  <text x="475" y="395" class="body">  -> delete dense expert_1</text>
+  <text x="475" y="465" class="body">..._moe_to_flexmore_phlora.yaml</text>
+  <text x="475" y="535" class="body">expert_1 ~= expert_0 + B @ A</text>
+  <rect class="okbox" x="475" y="585" width="310" height="125"/>
+  <text x="500" y="630" class="body">reference.py + validate.yaml</text>
+  <text x="500" y="665" class="body">confirm factorized layout</text>
+  <text x="500" y="700" class="body">matches the Python baseline</text>
+  <rect class="callout" x="472" y="782" width="315" height="86"/>
+  <text x="490" y="820" class="bullet">This panel makes the memory-saving</text>
+  <text x="490" y="848" class="bullet">checkpoint layout explicit.</text>
+
+  <rect class="panel" x="850" y="140" width="360" height="760"/>
+  <rect class="header-c" x="850" y="140" width="360" height="74" rx="20" ry="20"/>
+  <text x="1030" y="185" text-anchor="middle" class="title">C. Low-Rank Expert</text>
+  <text x="875" y="255" class="body">moe checkpoint</text>
+  <text x="875" y="290" class="body">  -> subtract_ expert_0 from expert_1</text>
+  <text x="875" y="325" class="body">  -> phlora_ expert_1 delta</text>
+  <text x="875" y="360" class="body">  -> add_ expert_0 back</text>
+  <text x="875" y="430" class="body">..._moe_to_low_rank_expert.yaml</text>
+  <text x="875" y="500" class="body">expert_1 stays dense, but becomes</text>
+  <text x="875" y="535" class="body">a rank-limited approximation</text>
+  <rect class="okbox" x="875" y="585" width="310" height="125"/>
+  <text x="900" y="630" class="body">reference.py + validate.yaml</text>
+  <text x="900" y="665" class="body">confirm literal parity with</text>
+  <text x="900" y="700" class="body">low_rank_expert.py semantics</text>
+  <rect class="callout" x="872" y="782" width="315" height="86"/>
+  <text x="890" y="820" class="bullet">This panel is the closest declarative</text>
+  <text x="890" y="848" class="bullet">match to the original imperative idea.</text>
+
+  <rect class="panel" x="1250" y="140" width="380" height="760"/>
+  <rect class="header-d" x="1250" y="140" width="380" height="74" rx="20" ry="20"/>
+  <text x="1440" y="185" text-anchor="middle" class="title">D. Synapse Bridge</text>
+  <text x="1278" y="255" class="body">synapse: 1</text>
+  <text x="1278" y="290" class="body">model:</text>
+  <text x="1278" y="325" class="body">  graph:</text>
+  <text x="1278" y="360" class="body">    - moe_select_tokens ...</text>
+  <text x="1278" y="395" class="body">    - moe_scatter_add ...</text>
+  <text x="1278" y="430" class="body">    - linear / expert_ffn paths ...</text>
+  <rect class="bridge" x="1275" y="488" width="330" height="164"/>
+  <text x="1300" y="532" class="body">Checkpoint surgery answers:</text>
+  <text x="1300" y="567" class="body">  "What weights should exist?"</text>
+  <text x="1300" y="612" class="body">Synapse answers:</text>
+  <text x="1300" y="647" class="body">  "How should the model execute?"</text>
+  <rect class="callout" x="1272" y="782" width="335" height="86"/>
+  <text x="1290" y="820" class="bullet">In the paper, SYNAPSE can be framed as</text>
+  <text x="1290" y="848" class="bullet">the architectural continuation of surgery.</text>
+
+  <path class="arrow" d="M 410 520 C 430 520, 432 520, 450 520"/>
+  <path class="arrow" d="M 810 520 C 830 520, 832 520, 850 520"/>
+  <path class="arrow-soft" d="M 1210 520 C 1230 520, 1232 520, 1250 520"/>
+
+  <text x="840" y="958" text-anchor="middle" class="caption">
+    Dense checkpoints
+    &#160;&#160;→&#160;&#160;
+    validated MoE upcycling
+    &#160;&#160;→&#160;&#160;
+    validated FlexMoRE compression variants
+    &#160;&#160;→&#160;&#160;
+    optional SYNAPSE-level architectural specification
+  </text>
+  <text x="840" y="1000" text-anchor="middle" class="small">
+    The cohesive claim is not only that BrainSurgery edits checkpoints, but that it makes the edits inspectable, reproducible, and composable with higher-level model descriptions.
+  </text>
+  <text x="840" y="1040" text-anchor="middle" class="small">
+    Suggested assets: olmo_1b_0724_hf_dense_to_expert_moe.yaml, olmo_1b_0724_hf_moe_to_flexmore_phlora.yaml, olmo_1b_0724_hf_moe_to_low_rank_expert.yaml, SYNAPSE examples/spec.
+  </text>
+</svg>

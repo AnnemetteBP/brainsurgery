@@ -196,6 +196,9 @@ The reference script can also emit:
 - `olmo_1b_0724_dense_to_expert_moe_figure.svg`
   A paper-ready vector figure comparing the imperative script, the BrainSurgery
   YAML plan, and the final diff-based validation result.
+- `olmo_1b_0724_flexmore_validation_figure.svg`
+  A paper-ready vector figure tying the MoE upcycling workflow to the two
+  FlexMoRE companion conversions and a SYNAPSE-level architectural bridge.
 
 ## Figure Asset
 
@@ -215,6 +218,27 @@ BrainSurgery instead expresses the conversion as a declarative plan consisting o
 assertions, tensor copies, initialization, and deletions. The resulting checkpoint
 is then validated against the reference implementation using BrainSurgery's built-in
 diffing, which reports no missing or differing tensors.
+```
+
+Additional figure asset:
+
+```text
+flexmore_examples/olmo_1b_0724_flexmore_validation_figure.svg
+```
+
+Suggested caption:
+
+```text
+BrainSurgery provides a cohesive workflow from checkpoint upcycling to validated
+FlexMoRE-style compression. First, two dense OLMo checkpoints are rewritten into
+a validated 2-expert MoE checkpoint. From that shared intermediate, BrainSurgery
+then expresses two complementary compression strategies: a factorized PHLoRA
+layout that stores expert deltas explicitly, and an in-place low-rank rewrite
+that preserves a dense expert tensor interface. In both cases, declarative YAML
+plans are paired with independent Python references and diff-based validation.
+This checkpoint-surgery workflow also provides a natural bridge to SYNAPSE, where
+the resulting tensor layouts can be connected to explicit executable model
+structure.
 ```
 
 ## Scope
