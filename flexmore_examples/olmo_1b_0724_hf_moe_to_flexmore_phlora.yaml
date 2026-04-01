@@ -1,0 +1,114 @@
+inputs:
+  - model::models/olmo_1b_0724_hf_dense_moe_demo
+
+output:
+  path: models/olmo_1b_0724_hf_flexmore_phlora_r64_demo
+
+transforms:
+  # FlexMoRE-style companion demo: start from the 2-expert MoE checkpoint
+  # produced by olmo_1b_0724_hf_dense_to_expert_moe.yaml and rewrite expert 1
+  # into PHLoRA delta factors relative to expert 0.
+  #
+  # Conceptually, each expert-1 MLP matrix becomes:
+  #   expert_1 ~= expert_0 + (phlora_b @ phlora_a)
+  #
+  # This preserves expert 0 as a full dense anchor while storing expert 1 as a
+  # low-rank delta, which is the checkpoint-surgery core of a heterogeneous
+  # FlexMoRE-style layout.
+  #
+  # Important: this is still a weight-layout example. A framework-specific
+  # runtime/metadata layer is responsible for interpreting the generated PHLoRA
+  # tensors as "expert 0 + low-rank delta" during execution.
+
+  # Preflight: verify the MoE-style source checkpoint is present.
+  - assert: { exists: model::model.layers\.0\.mlp\.experts\.0\.gate_proj\.weight }
+  - assert: { exists: model::model.layers\.0\.mlp\.experts\.1\.gate_proj\.weight }
+  - assert: { exists: model::model.layers\.0\.mlp\.experts\.0\.up_proj\.weight }
+  - assert: { exists: model::model.layers\.0\.mlp\.experts\.1\.up_proj\.weight }
+  - assert: { exists: model::model.layers\.0\.mlp\.experts\.0\.down_proj\.weight }
+  - assert: { exists: model::model.layers\.0\.mlp\.experts\.1\.down_proj\.weight }
+
+  # Expected OLMo-1B / MoE tensor layout.
+  - assert:
+      shape:
+        of: model::model.layers\.0\.mlp\.experts\.0\.gate_proj\.weight
+        is: [8192, 2048]
+  - assert:
+      shape:
+        of: model::model.layers\.0\.mlp\.experts\.0\.up_proj\.weight
+        is: [8192, 2048]
+  - assert:
+      shape:
+        of: model::model.layers\.0\.mlp\.experts\.0\.down_proj\.weight
+        is: [2048, 8192]
+
+  # Materialize explicit expert-1 delta tensors before subtracting expert 0.
+  - copy:
+      from: model::model.layers\.(\d+)\.mlp\.experts\.1\.gate_proj\.weight
+      to: model::model.layers.\1.mlp.experts.1.gate_proj.delta.weight
+  - copy:
+      from: model::model.layers\.(\d+)\.mlp\.experts\.1\.up_proj\.weight
+      to: model::model.layers.\1.mlp.experts.1.up_proj.delta.weight
+  - copy:
+      from: model::model.layers\.(\d+)\.mlp\.experts\.1\.down_proj\.weight
+      to: model::model.layers.\1.mlp.experts.1.down_proj.delta.weight
+
+  # Convert those copies into deltas: expert_1 - expert_0.
+  - subtract_:
+      from: model::model.layers\.(\d+)\.mlp\.experts\.0\.gate_proj\.weight
+      to: model::model.layers.\1.mlp.experts.1.gate_proj.delta.weight
+  - subtract_:
+      from: model::model.layers\.(\d+)\.mlp\.experts\.0\.up_proj\.weight
+      to: model::model.layers.\1.mlp.experts.1.up_proj.delta.weight
+  - subtract_:
+      from: model::model.layers\.(\d+)\.mlp\.experts\.0\.down_proj\.weight
+      to: model::model.layers.\1.mlp.experts.1.down_proj.delta.weight
+
+  # PHLoRA factorize the deltas. The temporary delta tensors are deleted by
+  # default once the factor pairs are written.
+  - phlora:
+      target: model::model.layers\.(\d+)\.mlp\.experts\.1\.gate_proj\.delta\.weight
+      target_a: model::model.layers.\1.mlp.experts.1.gate_proj.phlora_a.weight
+      target_b: model::model.layers.\1.mlp.experts.1.gate_proj.phlora_b.weight
+      rank: 64
+  - phlora:
+      target: model::model.layers\.(\d+)\.mlp\.experts\.1\.up_proj\.delta\.weight
+      target_a: model::model.layers.\1.mlp.experts.1.up_proj.phlora_a.weight
+      target_b: model::model.layers.\1.mlp.experts.1.up_proj.phlora_b.weight
+      rank: 64
+  - phlora:
+      target: model::model.layers\.(\d+)\.mlp\.experts\.1\.down_proj\.delta\.weight
+      target_a: model::model.layers.\1.mlp.experts.1.down_proj.phlora_a.weight
+      target_b: model::model.layers.\1.mlp.experts.1.down_proj.phlora_b.weight
+      rank: 64
+
+  # Remove the original dense expert-1 tensors to leave the checkpoint in a
+  # dense-expert-0 + PHLoRA-delta form.
+  - delete: { target: model::model.layers\.(\d+)\.mlp\.experts\.1\.gate_proj\.weight }
+  - delete: { target: model::model.layers\.(\d+)\.mlp\.experts\.1\.up_proj\.weight }
+  - delete: { target: model::model.layers\.(\d+)\.mlp\.experts\.1\.down_proj\.weight }
+
+  # Spot-check the generated factor shapes on layer 0.
+  - assert:
+      shape:
+        of: model::model.layers\.0\.mlp\.experts\.1\.gate_proj\.phlora_a\.weight
+        is: [64, 2048]
+  - assert:
+      shape:
+        of: model::model.layers\.0\.mlp\.experts\.1\.gate_proj\.phlora_b\.weight
+        is: [8192, 64]
+  - assert:
+      shape:
+        of: model::model.layers\.0\.mlp\.experts\.1\.down_proj\.phlora_a\.weight
+        is: [64, 8192]
+  - assert:
+      shape:
+        of: model::model.layers\.0\.mlp\.experts\.1\.down_proj\.phlora_b\.weight
+        is: [2048, 64]
+
+  # Final checks: dense expert 0 is still present, expert 1 is now factorized.
+  - assert: { exists: model::model.layers\.15\.mlp\.experts\.0\.gate_proj\.weight }
+  - assert: { exists: model::model.layers\.15\.mlp\.experts\.1\.gate_proj\.phlora_a\.weight }
+  - assert: { exists: model::model.layers\.15\.mlp\.experts\.1\.down_proj\.phlora_b\.weight }
+  - assert: { not: { exists: model::model.layers\.0\.mlp\.experts\.1\.gate_proj\.weight } }
+  - assert: { not: { exists: model::model.layers\.15\.mlp\.experts\.1\.down_proj\.weight } }

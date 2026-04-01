@@ -1,7 +1,10 @@
 # FlexMore Examples
 
-This directory now contains a paper-ready OLMo-1B dense-to-expert-MoE example
-with three complementary pieces:
+This directory now contains paper-ready OLMo-1B checkpoint surgery examples for
+both dense-to-expert-MoE upcycling and PHLoRA-based FlexMoRE-style expert
+compression.
+
+The dense-to-expert-MoE workflow has three complementary pieces:
 
 1. `olmo_1b_0724_hf_dense_to_expert_moe.yaml`
    BrainSurgery conversion plan that rewrites the dense HF checkpoint into a
@@ -20,6 +23,40 @@ with three complementary pieces:
 3. `olmo_1b_0724_hf_dense_to_expert_moe_validate.yaml`
    Validation plan that diffs the BrainSurgery output against the reference
    output.
+
+The PHLoRA companion example is:
+
+4. `olmo_1b_0724_hf_moe_to_flexmore_phlora.yaml`
+   BrainSurgery conversion plan that starts from the 2-expert MoE checkpoint
+   produced by the previous example and rewrites expert 1 into PHLoRA delta
+   factors relative to expert 0 by:
+   - copying each expert-1 MLP matrix into an explicit temporary delta tensor
+   - subtracting the matching expert-0 matrix to form `expert_1 - expert_0`
+   - factorizing those deltas with `phlora`
+   - deleting the original dense expert-1 matrices to leave a dense-anchor +
+     low-rank-delta layout
+
+   This is the checkpoint-surgery core of a heterogeneous FlexMoRE-style model:
+   expert 0 stays dense, while expert 1 is represented as a low-rank adaptor.
+   A framework-specific runtime or metadata layer is still responsible for
+   interpreting the generated `phlora_a/phlora_b` tensors during execution.
+   Reference + validation companions:
+   - `olmo_1b_0724_hf_moe_to_flexmore_phlora_reference.py`
+   - `olmo_1b_0724_hf_moe_to_flexmore_phlora_validate.yaml`
+
+5. `olmo_1b_0724_hf_moe_to_low_rank_expert.yaml`
+   More literal companion to `low_rank_expert.py`. This plan keeps the output
+   as a dense 2-expert MoE checkpoint, but rewrites expert 1 in place as a
+   rank-limited approximation around expert 0 by:
+   - subtracting expert 0 from expert 1
+   - applying `phlora_` to the delta in place
+   - adding expert 0 back
+
+   This is the closest declarative BrainSurgery analogue to the imperative
+   "dense expert plus low-rank correction" flow in the Python script.
+   Reference + validation companions:
+   - `olmo_1b_0724_hf_moe_to_low_rank_expert_reference.py`
+   - `olmo_1b_0724_hf_moe_to_low_rank_expert_validate.yaml`
 
 ## Suggested demo flow
 
@@ -91,6 +128,57 @@ No differences found.
 
 That output means the BrainSurgery plan and the reference Python converter
 produced equivalent checkpoints.
+
+After that MoE upcycling step, you can also derive the complementary
+FlexMoRE-style PHLoRA checkpoint:
+
+```bash
+brainsurgery flexmore_examples/olmo_1b_0724_hf_moe_to_flexmore_phlora.yaml
+```
+
+This produces a checkpoint where expert 0 remains dense and expert 1 is stored
+as PHLoRA delta factors relative to expert 0. It is a useful paper/demo example
+for showing that BrainSurgery can express not only expert creation, but also
+heterogeneous expert compression.
+
+Build the matching reference output:
+
+```bash
+python3 flexmore_examples/olmo_1b_0724_hf_moe_to_flexmore_phlora_reference.py \
+  --model models/olmo_1b_0724_hf_dense_moe_demo \
+  --target models/olmo_1b_0724_hf_flexmore_phlora_r64_reference \
+  --copy-metadata \
+  --write-example-config
+```
+
+Diff the YAML and reference outputs:
+
+```bash
+brainsurgery flexmore_examples/olmo_1b_0724_hf_moe_to_flexmore_phlora_validate.yaml
+```
+
+If you want the output to remain a dense MoE checkpoint while still compressing
+expert 1 through a rank-limited delta approximation, run:
+
+```bash
+brainsurgery flexmore_examples/olmo_1b_0724_hf_moe_to_low_rank_expert.yaml
+```
+
+Build the matching reference output:
+
+```bash
+python3 flexmore_examples/olmo_1b_0724_hf_moe_to_low_rank_expert_reference.py \
+  --model models/olmo_1b_0724_hf_dense_moe_demo \
+  --target models/olmo_1b_0724_hf_low_rank_expert_r64_reference \
+  --copy-metadata \
+  --write-example-config
+```
+
+Diff the YAML and reference outputs:
+
+```bash
+brainsurgery flexmore_examples/olmo_1b_0724_hf_moe_to_low_rank_expert_validate.yaml
+```
 
 If you instead see many `model.layers.*.mlp.*` tensors reported as missing on
 one side and `model.layers.*.mlp.experts.*` tensors reported as missing on the

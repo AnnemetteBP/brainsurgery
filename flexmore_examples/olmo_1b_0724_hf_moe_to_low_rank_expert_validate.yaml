@@ -1,0 +1,6 @@
+inputs:
+  - yaml::models/olmo_1b_0724_hf_low_rank_expert_r64_demo
+  - ref::models/olmo_1b_0724_hf_low_rank_expert_r64_reference
+
+transforms:
+  - diff: { mode: aliases, left_alias: ref, right_alias: yaml }
