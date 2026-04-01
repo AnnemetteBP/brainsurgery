@@ -230,6 +230,8 @@ The reference script can also emit:
   A small manifest documenting the conversion settings and validation assets.
 - `run_olmo_1b_0724_demo.py`
   A one-command runner for the full convert/reference/diff flow.
+- `generate_paper_figures.py`
+  Generates paper-friendly comparison and pipeline figures in PDF, SVG, and PNG.
 - `olmo_1b_0724_dense_to_expert_moe_figure.svg`
   A paper-ready vector figure comparing the imperative script, the BrainSurgery
   YAML plan, and the final diff-based validation result.
@@ -237,9 +239,22 @@ The reference script can also emit:
   A paper-ready vector figure tying the MoE upcycling workflow to the two
   FlexMoRE companion conversions and a SYNAPSE-level architectural bridge.
 
-## Figure Asset
+## Figure Assets
 
-The figure asset is:
+LaTeX-friendly PDF outputs are generated in:
+
+```text
+flexmore_examples/figures/olmo_1b_0724_comparison.pdf
+flexmore_examples/figures/olmo_1b_0724_pipeline.pdf
+```
+
+They can be regenerated with:
+
+```bash
+python3 flexmore_examples/generate_paper_figures.py
+```
+
+The original standalone SVG asset is:
 
 ```text
 flexmore_examples/olmo_1b_0724_dense_to_expert_moe_figure.svg
