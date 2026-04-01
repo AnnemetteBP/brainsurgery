@@ -58,6 +58,13 @@ The PHLoRA companion example is:
    - `olmo_1b_0724_hf_moe_to_low_rank_expert_reference.py`
    - `olmo_1b_0724_hf_moe_to_low_rank_expert_validate.yaml`
 
+6. `olmo_1b_0724_low_rank_expert_bridge.axon`
+   A small SYNAPSE/Axon companion showing how the checkpoint produced by
+   `olmo_1b_0724_hf_moe_to_low_rank_expert.yaml` can still be consumed by a
+   conventional MoE execution graph. This is the narrative bridge:
+   - BrainSurgery YAML plans decide which weights exist and how they are rewritten
+   - SYNAPSE/Axon describes how that resulting checkpoint is executed
+
 ## Suggested demo flow
 
 Use fresh output directories when rerunning the demo. Reusing an older output
@@ -179,6 +186,36 @@ Diff the YAML and reference outputs:
 ```bash
 brainsurgery flexmore_examples/olmo_1b_0724_hf_moe_to_low_rank_expert_validate.yaml
 ```
+
+## SYNAPSE Bridge
+
+For the paper narrative, the simplest cohesive bridge is:
+
+1. Upcycle dense checkpoints into a validated MoE checkpoint.
+2. Optionally rewrite expert 1 with the low-rank expert plan while preserving
+   the same MoE tensor interface.
+3. Point a SYNAPSE/Axon model description at that resulting checkpoint layout.
+
+The bridge asset is:
+
+```text
+flexmore_examples/olmo_1b_0724_low_rank_expert_bridge.axon
+```
+
+You can lower it to a SYNAPSE YAML spec with:
+
+```bash
+brainsurgery synapse axon-to-synapse \
+  flexmore_examples/olmo_1b_0724_low_rank_expert_bridge.axon \
+  /tmp/olmo_1b_0724_low_rank_expert_bridge_synapse.yaml \
+  --main-module flexmore_low_rank_bridge \
+  --force
+```
+
+This bridge is intentionally lightweight. It does not try to introduce a new
+runtime for explicit PHLoRA factors; instead, it shows the cleanest continuity
+between BrainSurgery checkpoint surgery and SYNAPSE execution graphs by using
+the low-rank-expert output that still matches a standard MoE tensor interface.
 
 If you instead see many `model.layers.*.mlp.*` tensors reported as missing on
 one side and `model.layers.*.mlp.experts.*` tensors reported as missing on the

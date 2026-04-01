@@ -1,0 +1,72 @@
+D    = 2048
+V    = 50304
+L    = 16
+H    = 16
+HD   = 128
+E    = 2
+EPT  = 2
+C    = 4096
+FFN  = 8192
+EPS  = 1e-05
+THETA = 10000.0
+ATTN_SCALE = 0.08838834764831845
+
+import Cache
+import MoE
+
+-- Paper bridge companion for the BrainSurgery FlexMoRE examples.
+--
+-- Intended checkpoint inputs:
+--   1. olmo_1b_0724_hf_dense_to_expert_moe.yaml
+--      Produces a standard 2-expert MoE checkpoint.
+--   2. olmo_1b_0724_hf_moe_to_low_rank_expert.yaml
+--      Rewrites expert 1 in place as a low-rank approximation while preserving
+--      the same MoE tensor interface.
+--
+-- This means the resulting checkpoint can still be consumed by a conventional
+-- MoE-style execution graph. BrainSurgery handles the weight surgery; SYNAPSE
+-- specifies the executable model structure that uses those weights.
+
+expert_ffn :: Tensor[N,D] -> Tensor[N,D]
+expert_ffn x = do
+  gate <- linear@gate_proj x dim=FFN
+  up <- linear@up_proj x dim=FFN
+  hidden <- gate |> _activations_silu |> mul up
+  y <- linear@down_proj hidden dim=D
+  return y
+
+flexmore_decoder_block :: Tensor[B,S,D] -> Tensor[B,S] -> ?Tensor[B,S] -> ?CacheLayer -> (Tensor[B,S,D], ?CacheLayer)
+flexmore_decoder_block x pos_ids attn_mask past_kv = do
+  xn <- rmsnorm@input_layernorm x eps=EPS dim=D
+  q <- xn |> linear@self_attn.q_proj dim=D |> reshape_heads heads=H
+  k <- xn |> linear@self_attn.k_proj dim=D |> reshape_heads heads=H
+  v <- xn |> linear@self_attn.v_proj dim=D |> reshape_heads heads=H
+  qr, kr <- rope_pair q k position_ids=pos_ids theta=THETA
+  k_ctx, v_ctx, new_kv <- Cache.update past_kv kr v
+  mask <- causal_mask qr k_ctx window=C padding_mask=attn_mask
+  a <- attention qr k_ctx v_ctx mask=mask scale=ATTN_SCALE |> merge_heads
+  a <- linear@self_attn.o_proj a dim=D
+  x <- x + a
+
+  xn <- rmsnorm@post_attention_layernorm x eps=EPS dim=D
+  topk_scores, topk_indices <- linear@mlp.gate xn dim=E |>
+    softmax dim=-1 dtype=float32 |> topk k=EPT dim=-1
+  m <- zeros_like xn
+  for@mlp.experts e <- [0..E) do
+    x_sel, token_idx, topk_pos, sel_scores <- MoE.select xn topk_scores topk_indices expert=e
+    x_upd <- expert_ffn x_sel
+    m <- MoE.scatter_add m token_idx x_upd sel_scores
+  return x + m, new_kv
+
+flexmore_low_rank_bridge :: TokenIds[B,S] -> ?Tensor[B,S] -> ?Cache -> ?Bool -> (Tensor[B,S,V], ?Cache)
+flexmore_low_rank_bridge input_ids attn_mask past_kv use_cache = do
+  pos_ids <- position_ids input_ids attn_mask past_length=(Cache.past_length past_kv)
+  x <- embedding@model.embed_tokens input_ids dim=D
+  new_kv <- use_cache ? Cache.init : null
+  for@model.layers i <- [0..L) do
+    past_i <- Cache.index past_kv i
+    x, new_i <- flexmore_decoder_block x pos_ids attn_mask past_i
+    new_kv <- use_cache ? Cache.append new_kv new_i : new_kv
+  x <- rmsnorm@model.norm x eps=EPS dim=D
+  logits <- linear@lm_head x dim=V
+  return logits, new_kv

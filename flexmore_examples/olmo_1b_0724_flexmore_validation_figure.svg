@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1680" height="1120" viewBox="0 0 1680 1120" role="img" aria-labelledby="title desc">
   <title id="title">From MoE upcycling to FlexMoRE compression and validation in BrainSurgery</title>
-  <desc id="desc">Four-panel paper-ready figure showing MoE upcycling, two FlexMoRE-style compression variants, diff-based validation, and a synapse bridge from checkpoint surgery to executable model structure.</desc>
+  <desc id="desc">Four-panel paper-ready figure showing MoE upcycling, two FlexMoRE-style compression variants, diff-based validation, and a concrete Axon/SYNAPSE bridge from checkpoint surgery to executable model structure.</desc>
   <defs>
     <style>
       .bg { fill: #f7f2e9; }
@@ -96,19 +96,19 @@
   <rect class="panel" x="1250" y="140" width="380" height="760"/>
   <rect class="header-d" x="1250" y="140" width="380" height="74" rx="20" ry="20"/>
   <text x="1440" y="185" text-anchor="middle" class="title">D. Synapse Bridge</text>
-  <text x="1278" y="255" class="body">synapse: 1</text>
-  <text x="1278" y="290" class="body">model:</text>
-  <text x="1278" y="325" class="body">  graph:</text>
-  <text x="1278" y="360" class="body">    - moe_select_tokens ...</text>
-  <text x="1278" y="395" class="body">    - moe_scatter_add ...</text>
-  <text x="1278" y="430" class="body">    - linear / expert_ffn paths ...</text>
+  <text x="1278" y="245" class="body">olmo_1b_0724_low_rank_expert_bridge.axon</text>
+  <text x="1278" y="285" class="body">flexmore_low_rank_bridge input_ids ... = do</text>
+  <text x="1278" y="320" class="body">  topk_scores, topk_indices &lt;- ...</text>
+  <text x="1278" y="355" class="body">  x_sel, token_idx, topk_pos, sel_scores &lt;-</text>
+  <text x="1278" y="390" class="body">    MoE.select xn topk_scores topk_indices ...</text>
+  <text x="1278" y="425" class="body">  m &lt;- MoE.scatter_add m token_idx x_upd ...</text>
   <rect class="bridge" x="1275" y="488" width="330" height="164"/>
-  <text x="1300" y="532" class="body">Checkpoint surgery answers:</text>
-  <text x="1300" y="567" class="body">  "What weights should exist?"</text>
-  <text x="1300" y="612" class="body">Synapse answers:</text>
-  <text x="1300" y="647" class="body">  "How should the model execute?"</text>
+  <text x="1300" y="530" class="body">Checkpoint surgery answers:</text>
+  <text x="1300" y="565" class="body">  "What weights should exist?"</text>
+  <text x="1300" y="610" class="body">Axon/SYNAPSE answers:</text>
+  <text x="1300" y="645" class="body">  "How should those weights execute?"</text>
   <rect class="callout" x="1272" y="782" width="335" height="86"/>
-  <text x="1290" y="820" class="bullet">In the paper, SYNAPSE can be framed as</text>
+  <text x="1290" y="820" class="bullet">In the paper, this Axon asset can be framed as</text>
   <text x="1290" y="848" class="bullet">the architectural continuation of surgery.</text>
 
   <path class="arrow" d="M 410 520 C 430 520, 432 520, 450 520"/>
@@ -128,6 +128,6 @@
     The cohesive claim is not only that BrainSurgery edits checkpoints, but that it makes the edits inspectable, reproducible, and composable with higher-level model descriptions.
   </text>
   <text x="840" y="1040" text-anchor="middle" class="small">
-    Suggested assets: olmo_1b_0724_hf_dense_to_expert_moe.yaml, olmo_1b_0724_hf_moe_to_flexmore_phlora.yaml, olmo_1b_0724_hf_moe_to_low_rank_expert.yaml, SYNAPSE examples/spec.
+    Suggested assets: olmo_1b_0724_hf_dense_to_expert_moe.yaml, olmo_1b_0724_hf_moe_to_flexmore_phlora.yaml, olmo_1b_0724_hf_moe_to_low_rank_expert.yaml, olmo_1b_0724_low_rank_expert_bridge.axon.
   </text>
 </svg>
