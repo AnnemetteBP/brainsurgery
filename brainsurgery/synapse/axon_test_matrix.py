@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import gc
 import io
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,11 +26,18 @@ class _SummaryRow:
     hf_runtime_s: str
     axon_runtime_s: str
     runtime_ratio: str
-    max_logit_diff: str
+    eval_max_abs_diff: str
+    eval_max_rel_diff: str
+    debug_max_logit_diff: str
+    debug_max_rel_diff: str
     mean_rel_diff: str
+    masked_max_diff: str
+    masked_last_max_diff: str
     masked_mean_rel_diff: str
     masked_max_rel_diff: str
-    top1_eq: str
+    eval_top1_eq: str
+    debug_top1_eq: str
+    masked_top1_eq: str
 
 
 def _parse_args() -> argparse.Namespace:
@@ -75,6 +83,21 @@ def _parse_args() -> argparse.Namespace:
         help="Show per-run output from synapse axon-test.",
     )
     parser.add_argument(
+        "--exclude-axon",
+        action="append",
+        default=None,
+        help="Exclude specific .axon files by name (repeatable, e.g. gpt2.axon).",
+    )
+    parser.add_argument(
+        "--force-include-axon",
+        action="append",
+        default=None,
+        help=(
+            "Force include specific .axon files by name, even if a model dir would otherwise "
+            "be skipped as duplicate (repeatable, e.g. gpt2_kv.axon)."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Only resolve and print matching pairs; do not run tests.",
@@ -85,10 +108,60 @@ def _parse_args() -> argparse.Namespace:
         choices=["plain", "markdown"],
         help="Summary table format (plain or markdown).",
     )
+    parser.add_argument(
+        "--compile-hf",
+        action="store_true",
+        help="Compile the HF reference model with torch.compile.",
+    )
+    parser.add_argument(
+        "--compile-axon",
+        action="store_true",
+        help="Compile the Axon-derived model with torch.compile.",
+    )
+    parser.add_argument(
+        "--compile-backend",
+        default=None,
+        help="Optional torch.compile backend (e.g. inductor).",
+    )
+    parser.add_argument(
+        "--compile-mode",
+        default=None,
+        help="Optional torch.compile mode (e.g. default/reduce-overhead/max-autotune).",
+    )
+    parser.add_argument(
+        "--compile-fullgraph",
+        action="store_true",
+        help="Set torch.compile(fullgraph=True).",
+    )
+    parser.add_argument(
+        "--compile-dynamic",
+        action="store_true",
+        help="Set torch.compile(dynamic=True).",
+    )
     return parser.parse_args()
 
 
-def _resolve_pairs(examples_dir: Path, models_dir: Path) -> list[_Pair]:
+def _normalize_axon_names(values: list[str] | None) -> set[str]:
+    out: set[str] = set()
+    if not values:
+        return out
+    for value in values:
+        name = str(value).strip()
+        if not name:
+            continue
+        if not name.endswith(".axon"):
+            name = f"{name}.axon"
+        out.add(name)
+    return out
+
+
+def _resolve_pairs(
+    examples_dir: Path,
+    models_dir: Path,
+    *,
+    excluded_axons: set[str] | None = None,
+    force_included_axons: set[str] | None = None,
+) -> list[_Pair]:
     if not examples_dir.is_dir():
         raise FileNotFoundError(f"Examples directory not found: {examples_dir}")
     if not models_dir.is_dir():
@@ -98,11 +171,28 @@ def _resolve_pairs(examples_dir: Path, models_dir: Path) -> list[_Pair]:
     model_by_name = {path.name: path for path in model_dirs}
     explicit_model_aliases = {
         "flexolmo": "flexmath",
+        "black_mamba": "black_mamba_2_8b",
+        "mamba": "mamba_tiny_random",
+        "mamba_2_8b": "mamba_2_8b_hf",
+        "jamba": "jamba_tiny_random",
+    }
+    excluded_stems = {
+        "glm_4_5_air",
+        "nemotron-3",
+        "nemotron3",
     }
 
+    excluded = set() if excluded_axons is None else set(excluded_axons)
+    forced = set() if force_included_axons is None else set(force_included_axons)
+
     pairs: list[_Pair] = []
+    seen_model_dirs: set[Path] = set()
     for axon_path in sorted(examples_dir.glob("*.axon")):
+        if axon_path.name in excluded:
+            continue
         stem = axon_path.stem
+        if stem in excluded_stems:
+            continue
         model_dir = model_by_name.get(explicit_model_aliases.get(stem, stem))
         if model_dir is None:
             parts = stem.split("_")
@@ -113,7 +203,15 @@ def _resolve_pairs(examples_dir: Path, models_dir: Path) -> list[_Pair]:
                     break
 
         if model_dir is not None:
+            if model_dir in seen_model_dirs and axon_path.name not in forced:
+                print(
+                    f"Skipping {axon_path.name} because model dir {model_dir.name} is already covered"
+                )
+                continue
+            seen_model_dirs.add(model_dir)
             pairs.append(_Pair(axon_path=axon_path, model_dir=model_dir))
+        else:
+            print(f"Igoring {axon_path} as I did not locate model_dir from stem {stem}")
 
     return pairs
 
@@ -125,11 +223,18 @@ def _format_table(rows: list[_SummaryRow]) -> str:
         "HF runtime (s)",
         "AxonDerived runtime (s)",
         "AxonDerived runtime/HF runtime",
-        "max logit diff",
+        "eval max abs diff",
+        "eval max rel diff",
+        "eval top1_eq",
+        "masked max abs diff",
+        "masked last max abs diff",
+        "masked max rel diff",
+        "masked_top1_eq",
+        "debug max abs diff",
+        "debug max rel diff",
+        "debug top1_eq",
         "mean rel diff",
         "masked mean rel diff",
-        "masked max rel diff",
-        "top1_eq",
     ]
 
     body = [
@@ -139,11 +244,18 @@ def _format_table(rows: list[_SummaryRow]) -> str:
             row.hf_runtime_s,
             row.axon_runtime_s,
             row.runtime_ratio,
-            row.max_logit_diff,
+            row.eval_max_abs_diff,
+            row.eval_max_rel_diff,
+            row.eval_top1_eq,
+            row.masked_max_diff,
+            row.masked_last_max_diff,
+            row.masked_max_rel_diff,
+            row.masked_top1_eq,
+            row.debug_max_logit_diff,
+            row.debug_max_rel_diff,
+            row.debug_top1_eq,
             row.mean_rel_diff,
             row.masked_mean_rel_diff,
-            row.masked_max_rel_diff,
-            row.top1_eq,
         ]
         for row in rows
     ]
@@ -169,11 +281,18 @@ def _format_table_markdown(rows: list[_SummaryRow]) -> str:
         "HF runtime (s)",
         "AxonDerived runtime (s)",
         "AxonDerived runtime/HF runtime",
-        "max logit diff",
+        "eval max abs diff",
+        "eval max rel diff",
+        "eval top1_eq",
+        "masked max abs diff",
+        "masked last max abs diff",
+        "masked max rel diff",
+        "masked_top1_eq",
+        "debug max abs diff",
+        "debug max rel diff",
+        "debug top1_eq",
         "mean rel diff",
         "masked mean rel diff",
-        "masked max rel diff",
-        "top1_eq",
     ]
 
     body = [
@@ -183,11 +302,18 @@ def _format_table_markdown(rows: list[_SummaryRow]) -> str:
             row.hf_runtime_s,
             row.axon_runtime_s,
             row.runtime_ratio,
-            row.max_logit_diff,
+            row.eval_max_abs_diff,
+            row.eval_max_rel_diff,
+            row.eval_top1_eq,
+            row.masked_max_diff,
+            row.masked_last_max_diff,
+            row.masked_max_rel_diff,
+            row.masked_top1_eq,
+            row.debug_max_logit_diff,
+            row.debug_max_rel_diff,
+            row.debug_top1_eq,
             row.mean_rel_diff,
             row.masked_mean_rel_diff,
-            row.masked_max_rel_diff,
-            row.top1_eq,
         ]
         for row in rows
     ]
@@ -209,6 +335,12 @@ def _run_pair(
     max_len: int,
     text: list[str],
     verbose: bool,
+    compile_hf: bool,
+    compile_axon: bool,
+    compile_backend: str | None,
+    compile_mode: str | None,
+    compile_fullgraph: bool,
+    compile_dynamic: bool,
 ) -> dict[str, Any]:
     kwargs: dict[str, Any] = {
         "axon_file": pair.axon_path,
@@ -218,8 +350,13 @@ def _run_pair(
         "dtype": dtype,
         "max_len": max_len,
         "text": text,
+        "compile_hf": compile_hf,
+        "compile_axon": compile_axon,
+        "compile_backend": compile_backend,
+        "compile_mode": compile_mode,
+        "compile_fullgraph": compile_fullgraph,
+        "compile_dynamic": compile_dynamic,
     }
-
     if verbose:
         print(f"Running: {kwargs}")
         return run_axon_test(**kwargs)
@@ -239,12 +376,25 @@ def run_axon_test_matrix(
     verbose: bool = False,
     dry_run: bool = False,
     table_format: str = "plain",
+    compile_hf: bool = False,
+    compile_axon: bool = False,
+    compile_backend: str | None = None,
+    compile_mode: str | None = None,
+    compile_fullgraph: bool = False,
+    compile_dynamic: bool = False,
+    exclude_axon: list[str] | None = None,
+    force_include_axon: list[str] | None = None,
 ) -> int:
     if table_format not in {"plain", "markdown"}:
         raise ValueError("table_format must be 'plain' or 'markdown'")
 
     prompts = text if text else ["The future of AI is"]
-    pairs = _resolve_pairs(examples_dir.resolve(), models_dir.resolve())
+    pairs = _resolve_pairs(
+        examples_dir.resolve(),
+        models_dir.resolve(),
+        excluded_axons=_normalize_axon_names(exclude_axon),
+        force_included_axons=_normalize_axon_names(force_include_axon),
+    )
     if not pairs:
         print("No matching .axon/model directory pairs found.")
         return 1
@@ -257,11 +407,18 @@ def run_axon_test_matrix(
                 hf_runtime_s="DRY-RUN",
                 axon_runtime_s="DRY-RUN",
                 runtime_ratio="DRY-RUN",
-                max_logit_diff="DRY-RUN",
+                eval_max_abs_diff="DRY-RUN",
+                eval_max_rel_diff="DRY-RUN",
+                debug_max_logit_diff="DRY-RUN",
+                debug_max_rel_diff="DRY-RUN",
                 mean_rel_diff="DRY-RUN",
+                masked_max_diff="DRY-RUN",
+                masked_last_max_diff="DRY-RUN",
                 masked_mean_rel_diff="DRY-RUN",
                 masked_max_rel_diff="DRY-RUN",
-                top1_eq="DRY-RUN",
+                eval_top1_eq="DRY-RUN",
+                debug_top1_eq="DRY-RUN",
+                masked_top1_eq="DRY-RUN",
             )
             for pair in pairs
         ]
@@ -286,6 +443,28 @@ def run_axon_test_matrix(
                 max_len=max_len,
                 text=prompts,
                 verbose=verbose,
+                compile_hf=compile_hf,
+                compile_axon=compile_axon,
+                compile_backend=compile_backend,
+                compile_mode=compile_mode,
+                compile_fullgraph=compile_fullgraph,
+                compile_dynamic=compile_dynamic,
+            )
+            masked_max_diff_value = result.get("masked_max_diff")
+            masked_max_rel_diff_value = result.get("masked_max_rel_diff")
+            masked_top1_eq_value = result.get("masked_top1_eq")
+            eval_max_abs_diff_value = (
+                masked_max_diff_value if masked_max_diff_value is not None else result["max_diff"]
+            )
+            eval_max_rel_diff_value = (
+                masked_max_rel_diff_value
+                if masked_max_rel_diff_value is not None
+                else result["max_rel_diff"]
+            )
+            eval_top1_eq_value = (
+                bool(masked_top1_eq_value)
+                if masked_top1_eq_value is not None
+                else bool(result["top1_eq"])
             )
             rows.append(
                 _SummaryRow(
@@ -294,8 +473,21 @@ def run_axon_test_matrix(
                     hf_runtime_s=f"{result['hf_time']:.6g}",
                     axon_runtime_s=f"{result['axon_time']:.6g}",
                     runtime_ratio=f"{result['speed_ratio_axon_over_hf']:.3f}",
-                    max_logit_diff=f"{result['max_diff']:.6g}",
+                    eval_max_abs_diff=f"{float(eval_max_abs_diff_value):.6g}",
+                    eval_max_rel_diff=f"{float(eval_max_rel_diff_value):.6g}",
+                    debug_max_logit_diff=f"{result['max_diff']:.6g}",
+                    debug_max_rel_diff=f"{float(result['max_rel_diff']):.6g}",
                     mean_rel_diff=f"{float(result['mean_rel_diff']):.6g}",
+                    masked_max_diff=(
+                        "N/A"
+                        if result.get("masked_max_diff") is None
+                        else f"{float(result['masked_max_diff']):.6g}"
+                    ),
+                    masked_last_max_diff=(
+                        "N/A"
+                        if result.get("masked_last_max_diff") is None
+                        else f"{float(result['masked_last_max_diff']):.6g}"
+                    ),
                     masked_mean_rel_diff=(
                         "N/A"
                         if result.get("masked_mean_rel_diff") is None
@@ -306,7 +498,13 @@ def run_axon_test_matrix(
                         if result.get("masked_max_rel_diff") is None
                         else f"{float(result['masked_max_rel_diff']):.6g}"
                     ),
-                    top1_eq=str(bool(result["top1_eq"])),
+                    eval_top1_eq=str(eval_top1_eq_value),
+                    debug_top1_eq=str(bool(result["top1_eq"])),
+                    masked_top1_eq=(
+                        "N/A"
+                        if result.get("masked_top1_eq") is None
+                        else str(bool(result["masked_top1_eq"]))
+                    ),
                 )
             )
             passed += 1
@@ -318,15 +516,23 @@ def run_axon_test_matrix(
                     hf_runtime_s="ERROR",
                     axon_runtime_s="ERROR",
                     runtime_ratio="ERROR",
-                    max_logit_diff="ERROR",
+                    eval_max_abs_diff="ERROR",
+                    eval_max_rel_diff="ERROR",
+                    debug_max_logit_diff="ERROR",
+                    debug_max_rel_diff="ERROR",
                     mean_rel_diff="ERROR",
+                    masked_max_diff="ERROR",
+                    masked_last_max_diff="ERROR",
                     masked_mean_rel_diff="ERROR",
                     masked_max_rel_diff="ERROR",
-                    top1_eq=f"ERROR: {type(exc).__name__}: {exc}",
+                    eval_top1_eq=f"ERROR: {type(exc).__name__}: {exc}",
+                    debug_top1_eq="ERROR",
+                    masked_top1_eq="ERROR",
                 )
             )
             failed += 1
         finally:
+            gc.collect()
             progress.update(1)
             progress.set_postfix_str(f"passed={passed} failed={failed}")
 
@@ -354,6 +560,14 @@ def main() -> int:
         verbose=args.verbose,
         dry_run=args.dry_run,
         table_format=args.table_format,
+        compile_hf=bool(args.compile_hf),
+        compile_axon=bool(args.compile_axon),
+        compile_backend=(str(args.compile_backend) if args.compile_backend is not None else None),
+        compile_mode=str(args.compile_mode) if args.compile_mode is not None else None,
+        compile_fullgraph=bool(args.compile_fullgraph),
+        compile_dynamic=bool(args.compile_dynamic),
+        exclude_axon=args.exclude_axon,
+        force_include_axon=args.force_include_axon,
     )
 
 

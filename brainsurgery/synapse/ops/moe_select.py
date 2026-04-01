@@ -21,6 +21,21 @@ def lowering_known_output_arity(*, kwargs: dict[str, Any]) -> int:
     return 4
 
 
+def lowering_normalize_kwargs(
+    *, args: list[str], out: str | list[str], kwargs: dict[str, Any], ctx: Any
+) -> None:
+    del out, ctx
+    if "expert" in kwargs:
+        return
+    if len(args) >= 4:
+        expert_token = str(args[3]).strip()
+        if expert_token and expert_token.lstrip("-").isdigit():
+            kwargs["expert"] = int(expert_token)
+        else:
+            kwargs["expert"] = expert_token
+        del args[3:]
+
+
 def lowering_validate_signature(
     *, args: list[str], out: str | list[str], kwargs: dict[str, Any], ctx: Any
 ) -> None:
@@ -101,11 +116,14 @@ def interpret(
     hidden_flat, topk_scores_flat, topk_indices_flat = _flatten_routing_inputs(
         hidden, topk_scores, topk_indices
     )
-    expert_pos = (topk_indices_flat == expert).nonzero(as_tuple=False)
-    token_idx = expert_pos[:, 0]
-    topk_pos = expert_pos[:, 1]
+    # Match HF GptOssExperts ordering:
+    # expert_mask has layout [expert, top_k, tokens], and torch.where iterates
+    # with top_k as the major axis before token_idx.
+    expert_pos = (topk_indices_flat.transpose(0, 1) == expert).nonzero(as_tuple=False)
+    topk_pos = expert_pos[:, 0]
+    token_idx = expert_pos[:, 1]
     selected_hidden = hidden_flat[token_idx]
-    selected_scores = topk_scores_flat[token_idx, topk_pos].to(selected_hidden.dtype)
+    selected_scores = topk_scores_flat[token_idx, topk_pos]
     env[outs[0]] = selected_hidden
     env[outs[1]] = token_idx
     env[outs[2]] = topk_pos
@@ -149,14 +167,12 @@ def compile(
         f"{indent}{topk_indices_flat} = {topk_indices}.reshape(-1, {topk_indices}.shape[-1])"
     )
     lines.append(
-        f"{indent}{expert_pos} = ({topk_indices_flat} == int({expert})).nonzero(as_tuple=False)"
+        f"{indent}{expert_pos} = ({topk_indices_flat}.transpose(0, 1) == int({expert})).nonzero(as_tuple=False)"
     )
-    lines.append(f"{indent}{token_idx} = {expert_pos}[:, 0]")
-    lines.append(f"{indent}{topk_pos} = {expert_pos}[:, 1]")
+    lines.append(f"{indent}{topk_pos} = {expert_pos}[:, 0]")
+    lines.append(f"{indent}{token_idx} = {expert_pos}[:, 1]")
     lines.append(f"{indent}{selected_hidden} = {hidden_flat}[{token_idx}]")
-    lines.append(
-        f"{indent}{selected_scores} = {topk_scores_flat}[{token_idx}, {topk_pos}].to({selected_hidden}.dtype)"
-    )
+    lines.append(f"{indent}{selected_scores} = {topk_scores_flat}[{token_idx}, {topk_pos}]")
     return lines
 
 
@@ -166,6 +182,7 @@ __all__ = [
     "LOWERING_REQUIRED_KWARGS",
     "LOWERING_KWARG_KINDS",
     "OP_NAME",
+    "lowering_normalize_kwargs",
     "lowering_known_output_arity",
     "lowering_validate_signature",
     "interpret",

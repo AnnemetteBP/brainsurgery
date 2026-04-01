@@ -1,5 +1,6 @@
 import json
 import logging
+from _thread import LockType
 from contextlib import nullcontext
 from pathlib import Path
 from threading import Lock
@@ -412,7 +413,7 @@ def resolve_safetensor_shards_from_index(index_file: Path, base_dir: Path) -> li
 def load_state_dict_from_file(
     path: Path,
     global_state_dict: StateDictLike,
-    merge_lock: Lock | None = None,
+    merge_lock: LockType | None = None,
 ) -> int:
     suffix = path.suffix.lower()
     if suffix == ".safetensors":
@@ -431,7 +432,7 @@ def _merge_loaded_state_dict(
     global_state_dict: StateDictLike,
     *,
     path: Path,
-    merge_lock: Lock | None = None,
+    merge_lock: LockType | None = None,
 ) -> int:
     loaded_count = 0
     for key, tensor in loaded.items():

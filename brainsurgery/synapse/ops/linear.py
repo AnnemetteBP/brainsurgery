@@ -7,9 +7,23 @@ from torch.nn import functional as F
 
 OP_NAME = "linear"
 LOWERING_ARITY = (1, 1)
-LOWERING_ALLOWED_KWARGS: set[str] = {"dim", "transpose", "bias"}
+LOWERING_ALLOWED_KWARGS: set[str] = {
+    "dim",
+    "transpose",
+    "bias",
+    "expert",
+    "weight",
+    "bias_path",
+}
 LOWERING_REQUIRED_KWARGS: set[str] = set()
-LOWERING_KWARG_KINDS: dict[str, Any] = {"dim": "dim", "bias": "bool", "transpose": "bool"}
+LOWERING_KWARG_KINDS: dict[str, Any] = {
+    "dim": "dim",
+    "bias": "bool",
+    "transpose": "bool",
+    "expert": "dim",
+    "weight": "str",
+    "bias_path": "str",
+}
 
 
 def _validate_linear_keys(node_spec: dict[str, Any]) -> None:
@@ -100,17 +114,33 @@ def interpret(
     scope: str,
     symbols: dict[str, int],
 ) -> None:
-    del scope, symbols
+    del scope
     x = model._read_tensor_input(node_spec.get("_args"), env)
     linear_weight_path = model._infer_param_path(
         node_spec, node_path=node_path, param_name="weight"
     )
     weight = model._state[linear_weight_path]
+    expert_expr = node_spec.get("expert")
+    if expert_expr is not None:
+        expert_idx = int(model._eval_expr(expert_expr, env, symbols))
+        if weight.ndim < 2:
+            raise ValueError("linear expert selection requires at least rank-2 weight tensor")
+        if expert_idx < 0 or expert_idx >= int(weight.shape[0]):
+            raise ValueError(
+                f"linear expert index out of range: {expert_idx} for shape {tuple(weight.shape)}"
+            )
+        weight = weight[expert_idx]
 
     bias = None
     if node_spec.get("bias", False):
-        bias_path = model._infer_param_path(node_spec, node_path=node_path, param_name="bias")
+        bias_path = model._infer_param_path(
+            node_spec,
+            node_path=node_path,
+            param_name=("bias_path" if isinstance(node_spec.get("bias_path"), str) else "bias"),
+        )
         bias = model._state.get(bias_path)
+        if bias is not None and expert_expr is not None and bias.ndim >= 2:
+            bias = bias[expert_idx]
 
     transpose = _resolve_transpose(node_spec)
     out = model._require_name(node_spec.get("_bind"), field="linear._bind")

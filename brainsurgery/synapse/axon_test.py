@@ -13,10 +13,13 @@ import safetensors
 import torch
 from mltiming import timing
 from omegaconf import OmegaConf
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+from transformers.utils.quantization_config import Mxfp4Config
 
 from .axon import lower_axon_program_to_synapse_spec, parse_axon_program_from_path
+from .black_mamba_reference import BlackMambaReferenceModel, is_black_mamba_config_dir
 from .codegen import emit_model_code_from_synapse_spec
+from .mxfp4 import materialize_mxfp4_aliases
 
 
 def _resolve_device(requested: str) -> torch.device:
@@ -86,6 +89,7 @@ def _load_state_dict(
             else:
                 tensor = tensor.to(device=device)
             out[key] = tensor
+    materialize_mxfp4_aliases(out, dtype=dtype, drop_packed=True)
     return out
 
 
@@ -149,12 +153,77 @@ def _load_tokenizer(tokenizer_source: str, *, fallback_repo_id: str | None = Non
         )
 
 
+def _normalize_rope_numeric_fields(config: Any) -> Any:
+    def _normalize_dict(mapping: Any) -> None:
+        if not isinstance(mapping, dict):
+            return
+        for key in ("factor", "beta_fast", "beta_slow", "mscale", "mscale_all_dim"):
+            value = mapping.get(key)
+            if isinstance(value, int) and not isinstance(value, bool):
+                mapping[key] = float(value)
+
+    rope_scaling = getattr(config, "rope_scaling", None)
+    _normalize_dict(rope_scaling)
+    rope_parameters = getattr(config, "rope_parameters", None)
+    _normalize_dict(rope_parameters)
+    return config
+
+
+def _read_quant_method(config: Any) -> str | None:
+    quant_cfg = getattr(config, "quantization_config", None)
+    if quant_cfg is None:
+        return None
+    if isinstance(quant_cfg, dict):
+        value = quant_cfg.get("quant_method")
+        return None if value is None else str(value)
+    value = getattr(quant_cfg, "quant_method", None)
+    if value is None:
+        return None
+    if hasattr(value, "value"):
+        value = value.value
+    return str(value)
+
+
+def _build_non_mxfp4_quantization_config(config: Any) -> Mxfp4Config | None:
+    if _read_quant_method(config) != "mxfp4":
+        return None
+    quant_cfg = getattr(config, "quantization_config", None)
+    modules_to_not_convert: list[str] | None = None
+    if isinstance(quant_cfg, dict):
+        raw = quant_cfg.get("modules_to_not_convert")
+        if isinstance(raw, list):
+            modules_to_not_convert = [str(item) for item in raw]
+    return Mxfp4Config(
+        modules_to_not_convert=modules_to_not_convert,
+        dequantize=True,
+    )
+
+
 def _looks_like_tokenizer_dir(path: Path) -> bool:
     return (
         (path / "tokenizer.json").exists()
         or (path / "tokenizer.model").exists()
         or ((path / "vocab.json").exists() and (path / "merges.txt").exists())
     )
+
+
+def _candidate_tokenizer_dirs(model_dir: Path) -> list[Path]:
+    candidates: list[Path] = []
+    candidates.append(model_dir)
+    candidates.append(model_dir.with_name(f"{model_dir.name}.old"))
+    parts = model_dir.name.split("_")
+    for cut in range(len(parts) - 1, 1, -1):
+        candidates.append(model_dir.with_name("_".join(parts[:cut])))
+
+    out: list[Path] = []
+    seen: set[Path] = set()
+    for path in candidates:
+        resolved = path.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        out.append(resolved)
+    return out
 
 
 def _load_generated_class(py_path: Path, class_name: str) -> type[Any]:
@@ -178,6 +247,31 @@ def _time_generate(label: str, fn: Any) -> tuple[Any, float]:
     return out, dt
 
 
+def _maybe_compile_model(
+    model: Any,
+    *,
+    enabled: bool,
+    backend: str | None,
+    mode: str | None,
+    fullgraph: bool,
+    dynamic: bool,
+) -> Any:
+    if not enabled:
+        return model
+    compile_fn = getattr(torch, "compile", None)
+    if compile_fn is None:
+        raise ValueError("torch.compile is not available in this PyTorch build")
+    kwargs: dict[str, Any] = {
+        "fullgraph": bool(fullgraph),
+        "dynamic": bool(dynamic),
+    }
+    if backend:
+        kwargs["backend"] = backend
+    if mode:
+        kwargs["mode"] = mode
+    return compile_fn(model, **kwargs)
+
+
 def _normalize_texts(text: str | Sequence[str]) -> list[str]:
     if isinstance(text, str):
         return [text]
@@ -189,6 +283,41 @@ def _normalize_texts(text: str | Sequence[str]) -> list[str]:
     if not out:
         return ["The future of AI is"]
     return out
+
+
+def _extract_hidden_tensor(value: Any) -> torch.Tensor:
+    if torch.is_tensor(value):
+        return value
+    if isinstance(value, tuple) and value and torch.is_tensor(value[0]):
+        return value[0]
+    raise ValueError(f"Unable to extract hidden tensor from type: {type(value).__name__}")
+
+
+def _to_cpu_float(tensor: torch.Tensor) -> torch.Tensor:
+    return tensor.detach().to(dtype=torch.float32, device="cpu")
+
+
+def _spec_padding_side(spec: dict[str, Any]) -> str | None:
+    model = spec.get("model", {})
+    if not isinstance(model, dict):
+        return None
+    meta = model.get("meta", {})
+    if not isinstance(meta, dict):
+        return None
+    value = meta.get("padding_side")
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    if normalized not in {"left", "right"}:
+        raise ValueError(f"Invalid model.meta.padding_side={value!r}; expected 'left' or 'right'.")
+    return normalized
+
+
+def _preferred_padding_side(spec: dict[str, Any]) -> str:
+    explicit = _spec_padding_side(spec)
+    if explicit is not None:
+        return explicit
+    return "left"
 
 
 def run_axon_test(
@@ -203,12 +332,19 @@ def run_axon_test(
     class_name: str = "AxonGeneratedModel",
     main_module: str | None = None,
     dtype: str = "float32",
+    trace_layers: bool = False,
     hf_align_bf16_profile: bool = False,
     hf_align_mask_contract: bool = False,
     hf_align_position_ids: bool = False,
     hf_align_add_fp32_accum: bool = False,
     hf_align_linear_fp32_accum: bool = False,
     hf_align_norm_fp32: bool = False,
+    compile_hf: bool = False,
+    compile_axon: bool = False,
+    compile_backend: str | None = None,
+    compile_mode: str | None = None,
+    compile_fullgraph: bool = False,
+    compile_dynamic: bool = False,
 ) -> dict[str, Any]:
     resolved_device = _resolve_device(device)
     resolved_dtype = _resolve_dtype(dtype)
@@ -230,11 +366,10 @@ def run_axon_test(
     resolved_hf_model_dir = (hf_model_dir or default_hf_dir).resolve()
     tokenizer_source = tokenizer or str(resolved_hf_model_dir)
     if tokenizer is None:
-        candidate_old = resolved_hf_model_dir.with_name(f"{resolved_hf_model_dir.name}.old")
-        if not _looks_like_tokenizer_dir(resolved_hf_model_dir) and _looks_like_tokenizer_dir(
-            candidate_old
-        ):
-            tokenizer_source = str(candidate_old)
+        for candidate in _candidate_tokenizer_dirs(resolved_hf_model_dir):
+            if _looks_like_tokenizer_dir(candidate):
+                tokenizer_source = str(candidate)
+                break
     tokenizer_fallback = resolved_hf_model_dir.name if tokenizer is None else None
     prompts = _normalize_texts(text)
 
@@ -261,17 +396,51 @@ def run_axon_test(
         model_cls = _load_generated_class(generated_py_path, class_name)
 
         tokenizer_obj = _load_tokenizer(tokenizer_source, fallback_repo_id=tokenizer_fallback)
-        hf_model: Any = AutoModelForCausalLM.from_pretrained(
-            str(resolved_hf_model_dir), local_files_only=True, dtype=resolved_dtype
+        state_dict: dict[str, torch.Tensor] | None = None
+        try:
+            hf_config = AutoConfig.from_pretrained(
+                str(resolved_hf_model_dir), local_files_only=True
+            )
+            hf_config = _normalize_rope_numeric_fields(hf_config)
+            non_mxfp4_quant_config = _build_non_mxfp4_quantization_config(hf_config)
+            hf_model: Any = AutoModelForCausalLM.from_pretrained(
+                str(resolved_hf_model_dir),
+                local_files_only=True,
+                dtype=resolved_dtype,
+                config=hf_config,
+                quantization_config=non_mxfp4_quant_config,
+            )
+            hf = hf_model.to(device=resolved_device, dtype=resolved_dtype).eval()
+        except Exception:
+            if not is_black_mamba_config_dir(resolved_hf_model_dir):
+                raise
+            state_dict = _load_state_dict(
+                safetensors_files,
+                device=resolved_device,
+                dtype=resolved_dtype,
+            )
+            hf = (
+                BlackMambaReferenceModel.from_state_dict(
+                    model_dir=resolved_hf_model_dir, state_dict=state_dict
+                )
+                .to(resolved_device)
+                .eval()
+            )
+        hf = _maybe_compile_model(
+            hf,
+            enabled=compile_hf,
+            backend=compile_backend,
+            mode=compile_mode,
+            fullgraph=compile_fullgraph,
+            dynamic=compile_dynamic,
         )
-        hf = hf_model.to(resolved_device).eval()
         if hasattr(hf, "generation_config"):
             hf.generation_config.do_sample = False
             hf.generation_config.top_p = None
             hf.generation_config.top_k = None
 
         if len(prompts) > 1:
-            tokenizer_obj.padding_side = "left"
+            tokenizer_obj.padding_side = _preferred_padding_side(lowered_spec)
             if tokenizer_obj.pad_token_id is None:
                 if tokenizer_obj.eos_token_id is None:
                     raise ValueError(
@@ -314,23 +483,63 @@ def run_axon_test(
             pos_ids = attention_mask.to(torch.long).cumsum(dim=-1) - 1
             pos_ids = pos_ids.masked_fill(attention_mask == 0, 1)
             hf_forward_inputs["position_ids"] = pos_ids
+        hf_layer_inputs: dict[int, torch.Tensor] = {}
+        hf_layer_outputs: dict[int, torch.Tensor] = {}
+        hf_hook_handles: list[Any] = []
+        if trace_layers:
+            hf_layers = getattr(getattr(hf, "model", None), "layers", None)
+            if hf_layers is not None:
+                for idx, layer in enumerate(hf_layers):
+
+                    def _hf_pre_hook(
+                        module: Any, args: tuple[Any, ...], *, _idx: int = idx
+                    ) -> None:
+                        del module
+                        if not args:
+                            return
+                        hidden = _extract_hidden_tensor(args[0])
+                        hf_layer_inputs[_idx] = _to_cpu_float(hidden)
+
+                    def _hf_post_hook(
+                        module: Any, args: tuple[Any, ...], out: Any, *, _idx: int = idx
+                    ) -> None:
+                        del module, args
+                        hidden = _extract_hidden_tensor(out)
+                        hf_layer_outputs[_idx] = _to_cpu_float(hidden)
+
+                    hf_hook_handles.append(layer.register_forward_pre_hook(_hf_pre_hook))
+                    hf_hook_handles.append(layer.register_forward_hook(_hf_post_hook))
         with torch.no_grad():
             hf_logits = hf(**hf_forward_inputs, use_cache=False).logits
+        for handle in hf_hook_handles:
+            handle.remove()
 
         del hf
         _cleanup(resolved_device)
 
-        state_dict = _load_state_dict(
-            safetensors_files,
-            device=resolved_device,
-            dtype=resolved_dtype,
-        )
+        if state_dict is None:
+            state_dict = _load_state_dict(
+                safetensors_files,
+                device=resolved_device,
+                dtype=resolved_dtype,
+            )
         syn = model_cls.from_state_dict(state_dict).to(resolved_device).eval()
+        state_dict.clear()
+        del state_dict
+        _cleanup(resolved_device)
         setattr(syn, "_hf_align_mask_contract", align_mask_contract)
         setattr(syn, "_hf_align_position_ids", align_position_ids)
         setattr(syn, "_hf_align_add_fp32_accum", align_add_fp32)
         setattr(syn, "_hf_align_linear_fp32_accum", align_linear_fp32)
         setattr(syn, "_hf_align_norm_fp32", align_norm_fp32)
+        syn = _maybe_compile_model(
+            syn,
+            enabled=compile_axon,
+            backend=compile_backend,
+            mode=compile_mode,
+            fullgraph=compile_fullgraph,
+            dynamic=compile_dynamic,
+        )
 
         def _run_syn_generate(model: Any = syn) -> torch.Tensor:
             generate_kwargs: dict[str, Any] = {
@@ -348,8 +557,34 @@ def run_axon_test(
         syn_inputs: dict[str, Any] = {"input_ids": input_ids}
         if use_mask_for_syn and attention_mask is not None and syn_mask_key is not None:
             syn_inputs[syn_mask_key] = attention_mask
+        syn_layer_inputs: dict[int, torch.Tensor] = {}
+        syn_layer_outputs: dict[int, torch.Tensor] = {}
+        original_block_call = getattr(syn, "_block_gpt_oss_block", None)
+        if trace_layers and callable(original_block_call):
+
+            def _syn_block_wrapper(
+                *, x: Any, i: Any, pos_ids: Any, attn_mask: Any, past_kv: Any, scope: str
+            ) -> Any:
+                layer_idx = int(i)
+                if torch.is_tensor(x):
+                    syn_layer_inputs[layer_idx] = _to_cpu_float(x)
+                out = original_block_call(
+                    x=x,
+                    i=i,
+                    pos_ids=pos_ids,
+                    attn_mask=attn_mask,
+                    past_kv=past_kv,
+                    scope=scope,
+                )
+                if isinstance(out, tuple) and out and torch.is_tensor(out[0]):
+                    syn_layer_outputs[layer_idx] = _to_cpu_float(out[0])
+                return out
+
+            setattr(syn, "_block_gpt_oss_block", _syn_block_wrapper)
         with torch.no_grad():
             syn_logits = _extract_logits(syn(**syn_inputs))
+        if trace_layers and callable(original_block_call):
+            setattr(syn, "_block_gpt_oss_block", original_block_call)
 
         gen_hf = int(hf_gen.shape[1] - input_ids.shape[1])
         gen_syn = int(syn_gen.shape[1] - input_ids.shape[1])
@@ -404,6 +639,38 @@ def run_axon_test(
             masked_last_max_diff = float((syn_last.float() - hf_last.float()).abs().max())
             masked_top1_eq = bool((syn_last.argmax(-1) == hf_last.argmax(-1)).all())
 
+        layer_diffs: list[dict[str, float | int]] = []
+        if trace_layers and hf_layer_outputs and syn_layer_outputs:
+            common_layers = sorted(set(hf_layer_outputs) & set(syn_layer_outputs))
+            for layer_idx in common_layers:
+                hf_out = hf_layer_outputs[layer_idx]
+                syn_out = syn_layer_outputs[layer_idx]
+                if hf_out.shape != syn_out.shape:
+                    continue
+                out_diff = (syn_out - hf_out).abs()
+                out_mean = float(out_diff.mean())
+                out_max = float(out_diff.max())
+                out_last_max = float(out_diff[:, -1, :].max()) if out_diff.ndim >= 3 else out_max
+                in_mean = float("nan")
+                in_max = float("nan")
+                if layer_idx in hf_layer_inputs and layer_idx in syn_layer_inputs:
+                    hf_in = hf_layer_inputs[layer_idx]
+                    syn_in = syn_layer_inputs[layer_idx]
+                    if hf_in.shape == syn_in.shape:
+                        in_diff = (syn_in - hf_in).abs()
+                        in_mean = float(in_diff.mean())
+                        in_max = float(in_diff.max())
+                layer_diffs.append(
+                    {
+                        "layer": int(layer_idx),
+                        "in_mean": in_mean,
+                        "in_max": in_max,
+                        "out_mean": out_mean,
+                        "out_max": out_max,
+                        "out_last_max": out_last_max,
+                    }
+                )
+
         if len(safetensors_files) == 1:
             safetensors_desc = str(safetensors_files[0])
         else:
@@ -416,6 +683,7 @@ def run_axon_test(
         print(f"Weights input:  {weights_path}")
         print(f"HF model dir:   {resolved_hf_model_dir}")
         print(f"Tokenizer:      {tokenizer_source}")
+        print(f"Padding side:   {tokenizer_obj.padding_side}")
         print(f"Device:         {resolved_device}")
         print(f"Prompts:        {len(prompts)}")
         print(f"HF-align bf16 profile: {bool(hf_align_bf16_profile)}")
@@ -424,6 +692,12 @@ def run_axon_test(
         print(f"HF-align add fp32:     {align_add_fp32}")
         print(f"HF-align linear fp32:  {align_linear_fp32}")
         print(f"HF-align norm fp32:    {align_norm_fp32}")
+        print(f"Compile HF:            {bool(compile_hf)}")
+        print(f"Compile Axon:          {bool(compile_axon)}")
+        print(f"Compile backend:       {compile_backend}")
+        print(f"Compile mode:          {compile_mode}")
+        print(f"Compile fullgraph:     {bool(compile_fullgraph)}")
+        print(f"Compile dynamic:       {bool(compile_dynamic)}")
         print()
         print(
             f"HF:             {hf_time:.4f}s total, {gen_hf / max(hf_time, 1e-9):.2f} tok/s, generated={gen_hf}"
@@ -465,6 +739,26 @@ def run_axon_test(
                 masked_mean_rel_diff,
                 masked_max_rel_diff,
             )
+        if trace_layers and layer_diffs:
+            print()
+            print("Layer diffs (HF vs Axon) | layer in_mean in_max out_mean out_max out_last_max")
+            for row in layer_diffs:
+                print(
+                    int(row["layer"]),
+                    row["in_mean"],
+                    row["in_max"],
+                    row["out_mean"],
+                    row["out_max"],
+                    row["out_last_max"],
+                )
+            first_large = next((row for row in layer_diffs if float(row["out_mean"]) > 0.05), None)
+            if first_large is not None:
+                print(
+                    "First large layer diff (out_mean > 0.05):",
+                    int(first_large["layer"]),
+                    first_large["out_mean"],
+                    first_large["out_max"],
+                )
 
         result = {
             "hf_time": hf_time,
@@ -482,13 +776,19 @@ def run_axon_test(
             "masked_mean_rel_diff": masked_mean_rel_diff,
             "masked_max_rel_diff": masked_max_rel_diff,
             "masked_top1_eq": masked_top1_eq,
+            "layer_diffs": layer_diffs if trace_layers else None,
+            "compile_hf": bool(compile_hf),
+            "compile_axon": bool(compile_axon),
+            "compile_backend": compile_backend,
+            "compile_mode": compile_mode,
+            "compile_fullgraph": bool(compile_fullgraph),
+            "compile_dynamic": bool(compile_dynamic),
             "prompts": prompts,
             "generated_hf": hf_gen,
             "generated_axon": syn_gen,
         }
 
         del syn
-        del state_dict
         _cleanup(resolved_device)
         return result
 
