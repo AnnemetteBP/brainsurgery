@@ -2486,9 +2486,13 @@ z
      <use xlink:href="#DejaVuSerif-6f" transform="translate(4328.710938 0)"/>
      <use xlink:href="#DejaVuSerif-6e" transform="translate(4388.916016 0)"/>
      <use xlink:href="#DejaVuSerif-2e" transform="translate(4453.320312 0)"/>
-    </g>
    </g>
-   <g id="text_10">
+  </g>
+  <g id="text_9_overlay">
+   <rect x="262" y="76" width="560" height="26" rx="8" ry="8" style="fill: #f3e3cf; stroke: #9a6b2f; stroke-width: 1.2"/>
+   <text x="279" y="93" style="fill: #17202a; font-family: Georgia, 'Times New Roman', serif; font-size: 11.4px">Axon is the readable authoring language; Synapse is the structured model specification.</text>
+  </g>
+  <g id="text_10">
     <!-- Checkpoint surgery and executable model structure stay separate, but connect cleanly. -->
     <g style="fill: #17202a" transform="translate(273.557969 395.953219) scale(0.092 -0.092)">
      <defs>
@@ -2614,6 +2618,10 @@ z
      <use xlink:href="#DejaVuSerif-2e" transform="translate(4401.789062 0)"/>
     </g>
    </g>
+  </g>
+  <g id="text_10_overlay">
+   <rect x="264" y="381" width="565" height="26" rx="8" ry="8" style="fill: #f3e3cf; stroke: #9a6b2f; stroke-width: 1.2"/>
+   <text x="279" y="398" style="fill: #17202a; font-family: Georgia, 'Times New Roman', serif; font-size: 11.1px">Checkpoint surgery and executable model structure stay separate, but connect cleanly.</text>
   </g>
  </g>
  <defs>
