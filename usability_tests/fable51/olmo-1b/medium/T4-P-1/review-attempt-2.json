@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:34:29+00:00",
+  "finished_at": "2026-09-06T16:34:35+00:00",
+  "wall_clock_s": 6.2,
+  "tokens_in": 2,
+  "tokens_out": 262,
+  "cost_usd": 0.20018575,
+  "verdict": "no",
+  "verdict_text": "NO. The merge computes the second task vector against the already-modified base: `tmp = b + \u03bb(f1 \u2212 b)` and then `tmp + \u03bb(f2 \u2212 tmp)`, which expands to `b + \u03bb(f1\u2212b) + \u03bb(f2\u2212b) \u2212 \u03bb\u00b2(f1\u2212b)`, not the required `base + \u03bb(ft1\u2212base) + \u03bb(ft2\u2212base)`. This violates Required result step 2 and the ordering hazard called out in the Objective (each task vector must be taken against the unmodified base), and the extra `\u2212\u03bb\u00b2(f1\u2212b)` term far exceeds the 1e-5 relative Frobenius tolerance. The regex also lacks anchoring beyond `fullmatch`, but that is fine; the shared-tensor check, merge count, and output count are otherwise implemented correctly.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

@@ -1,0 +1,67 @@
+# T5: LoRA "merge and unload" on OLMo-1B-0724-hf, sharded safetensors export.
+#
+# base : the dense checkpoint (114 tensors, float32) -- also the output alias.
+# lora : the PEFT adapter (64 tensors: lora_A [16, 2048], lora_B [2048, 16]).
+#
+# With fan_in_fan_out = false the adapter factors use the same nn.Linear
+# [out, in] layout as the base weight, so the update is
+#   W += (lora_alpha / r) * (B @ A) = 2 * (B @ A)
+# with no transposition.  The product is materialized in the *base* alias
+# (name suffix `.merged_delta`, deliberately free of the string "lora_"),
+# scaled, added in place, and deleted again before the checkpoint is written,
+# so every write in this plan targets exactly one alias.
+
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+
+  # ---- preflight -------------------------------------------------------
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  - assert: { count: { of: 'lora::.*\.lora_A\.weight', is: 32 } }
+  - assert: { count: { of: 'lora::.*\.lora_B\.weight', is: 32 } }
+  - assert: { shape: { of: 'base::model\.layers\.\d+\.self_attn\.[qv]_proj\.weight', is: [2048, 2048] } }
+  - assert: { shape: { of: 'lora::.*\.lora_A\.weight', is: [16, 2048] } }
+  - assert: { shape: { of: 'lora::.*\.lora_B\.weight', is: [2048, 16] } }
+  - assert: { dtype: { of: 'base::model\.layers\.\d+\.self_attn\.[qv]_proj\.weight', is: float32 } }
+  - assert: { dtype: { of: 'lora::.*\.lora_[AB]\.weight', is: float32 } }
+
+  # ---- delta = B @ A ---------------------------------------------------
+  # Every adapter B is paired with the A of the same layer/module; the
+  # destination name is derived from the same captures, which is what maps
+  # adapter names onto base names.
+  - matmul:
+      from_a: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.([qv])_proj\.lora_B\.weight'
+      from_b: 'lora::base_model.model.model.layers.\1.self_attn.\2_proj.lora_A.weight'
+      to: 'base::model.layers.\1.self_attn.\2_proj.merged_delta'
+
+  # Required check: exactly 32 adapter pairs were found (and thus merged).
+  - assert: { count: { of: 'base::model\.layers\.\d+\.self_attn\.[qv]_proj\.merged_delta', is: 32 } }
+  - assert: { shape: { of: 'base::model\.layers\.\d+\.self_attn\.[qv]_proj\.merged_delta', is: [2048, 2048] } }
+  - assert: { dtype: { of: 'base::model\.layers\.\d+\.self_attn\.[qv]_proj\.merged_delta', is: float32 } }
+
+  # ---- scale by lora_alpha / r = 32 / 16 = 2 ---------------------------
+  - scale_:
+      target: 'base::model\.layers\.\d+\.self_attn\.[qv]_proj\.merged_delta'
+      by: 2.0
+
+  # ---- W += scale * (B @ A) -------------------------------------------
+  - add_:
+      from: 'base::model\.layers\.(\d+)\.self_attn\.([qv])_proj\.merged_delta'
+      to: 'base::model.layers.\1.self_attn.\2_proj.weight'
+
+  # ---- unload: no adapter and no intermediate tensor survives ----------
+  - delete: { target: 'base::model\.layers\.\d+\.self_attn\.[qv]_proj\.merged_delta' }
+
+  # ---- required checks before writing ----------------------------------
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert: { not: { exists: 'base::.*merged_delta.*' } }
+  - assert: { shape: { of: 'base::model\.layers\.0\.self_attn\.q_proj\.weight', is: [2048, 2048] } }
+  - assert: { dtype: { of: 'base::model\.layers\.0\.self_attn\.q_proj\.weight', is: float32 } }
+  - assert: { count: { of: 'base::.*', is: 114 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

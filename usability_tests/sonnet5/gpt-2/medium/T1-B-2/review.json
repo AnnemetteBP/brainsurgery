@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T1.yaml",
+  "started_at": "2026-09-06T16:00:47+00:00",
+  "finished_at": "2026-09-06T16:01:09+00:00",
+  "wall_clock_s": 22.1,
+  "tokens_in": 2,
+  "tokens_out": 1806,
+  "cost_usd": 0.059479800000000006,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan deletes exactly the 39 tensors of blocks 2/5/8 (asserted), then renumbers the remaining blocks via a sequence of moves ordered so each destination is vacated before it's used as a target (3\u21922, 4\u21923, 6\u21924, 7\u21925, 9\u21926, 10\u21927, 11\u21928), avoiding any overwrite collision. It asserts no block 9/10/11 tensors remain, exactly 9 c_attn.weight tensors exist, and the total count is 121, satisfying all three \"Required checks.\" The non-block tensors are untouched by any transform, and the output path matches `out/T1/model.safetensors` with the correct final tensor count.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "a2bf58fa161beaa548001c9117f50c54170d38a853ccd19b3279192a1eb2dcdb"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T06:05:10+00:00",
+  "finished_at": "2026-09-06T06:05:23+00:00",
+  "wall_clock_s": 13.9,
+  "tokens_in": 2,
+  "tokens_out": 1203,
+  "cost_usd": 0.05455580000000001,
+  "verdict_text": "YES\n\nThe script casts exactly the 112 named projection matrices to bfloat16 via `float().to(bfloat16)` (equivalent to a direct `.to(bfloat16)` from float32), leaves every other tensor in float32, preserves all tensor names, and includes assertions matching each \"Required check\" (112 bf16 tensors, `q_proj.weight` of layer 0 bf16, `embed_tokens.weight` fp32, total 114 tensors) before writing via `save_sharded_safetensors` with the 256 MiB shard limit. The `buffer_re` pattern (`(?!)` empty negative lookahead) can never match anything, but since the spec states this checkpoint has no buffers to delete, that dead branch causes no incorrect deletions and is harmless.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

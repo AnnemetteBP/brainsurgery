@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "artifact_sha256": "c853a23e2b6879d190c754b8ad01ba13b9e6b628b241b1be72b6e7567bc9060f",
+  "started_at": "2026-09-06T18:16:56+00:00",
+  "finished_at": "2026-09-06T18:17:16+00:00",
+  "wall_clock_s": 20.4,
+  "tokens_in": 2,
+  "tokens_out": 1475,
+  "cost_usd": 0.0565638,
+  "verdict": "yes",
+  "verdict_text": "YES. The script verifies identical tensor names via `set` equality and checks bit-exact equality of every non-MLP tensor across all three checkpoints before any merging, aborting via `assert` if violated (satisfying Required checks item 1). It computes the merge for exactly the 64 MLP tensors (matched by the given regex) using `base + \u03bb(ft1-base) + \u03bb(ft2-base)` with \u03bb=0.4, both task vectors taken against the unmodified `base` dict (no ordering hazard), in float32 then cast back to the base dtype. It asserts `merged == 64` and `len(out) == 244` before writing, and writes a single `out/T4/model.safetensors` with all 244 tensors, non-MLP ones taken unchanged from base.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

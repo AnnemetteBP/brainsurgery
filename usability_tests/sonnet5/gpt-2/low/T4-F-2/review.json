@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "artifact_sha256": "bf1aaff64bce9adc7af3eb4f382f30b5f5cb81a9425f65767ce23de6c1f8a7b6",
+  "started_at": "2026-09-06T18:14:07+00:00",
+  "finished_at": "2026-09-06T18:14:10+00:00",
+  "wall_clock_s": 3.4,
+  "tokens_in": 2,
+  "tokens_out": 94,
+  "cost_usd": 0.0418828,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script verifies name equality and bit-exact equality of all non-MLP tensors before touching anything, computes each merged tensor from the unmodified base (not sequentially), asserts exactly 48 merged and 160 total tensors, and writes a single output file, all matching the spec.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

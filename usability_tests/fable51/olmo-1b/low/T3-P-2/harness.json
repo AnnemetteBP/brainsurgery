@@ -1,0 +1,43 @@
+{
+  "phase": "solve",
+  "driver": "run_claude.py",
+  "model_id": "claude-fable-5-1",
+  "agent": "fable51",
+  "target": "olmo-1b",
+  "effort": "low",
+  "test": "T3",
+  "condition": "P",
+  "repeat": 2,
+  "started_at": "2026-09-06T09:00:38+00:00",
+  "finished_at": "2026-09-06T09:01:33+00:00",
+  "wall_clock_s": 55.0,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "max_turns": 40,
+  "timeout_s": 1800,
+  "turns": 5,
+  "tool_calls": 4,
+  "tokens_in": 130,
+  "tokens_out": 3242,
+  "cache_read_tokens": 128506,
+  "cache_write_tokens": 18098,
+  "tokens_in_total": 146734,
+  "cost_usd": 0.5598695,
+  "duration_api_ms": 43150,
+  "session_id": "2c741ad9-6d91-43ee-b46f-8e2ab5062029",
+  "result_subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "executions": 2,
+  "failed_executions": [
+    {
+      "n": 1,
+      "command": "mkdir -p out/T3 && cat > out/T3/solution.py <<'EOF'\n\"\"\"T3: mixed-precision sharded export of OLMo-1B-0724-hf.\"\"\"\nimport json\nimport os\nimport re\nimport sys\n\nimport torch\nfrom safetensors.torch import load_file, save_file\n\nBASE = \"inputs/base\"\nOUT = \"out/T3\"\nSHARD_BUDGET = 256 * 1024 * 1024  # 268,43",
+      "message": "CHECK FAILED: shard model-00001-of-00010.safetensors exceeds budget: 412090368",
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Done. The export is written under `out/T3/` and the self-report is in place.\n\n**What the script does** (`out/T3/solution.py`): loads both input shards, casts only tensors matching an anchored regex for the seven per-layer projection weights to bfloat16, keeps everything else float32 and untouched, runs the required checks (112 bf16, layer-0 q_proj bf16, embed_tokens float32, 114 tensors, unchanged names and shapes), then packs shards greedily in original key order with a 256 MiB budget and writes the index file.\n\n**Result:**\n\n| Item | Value |\n|---|---|\n| Shards written | 10 |\n| Tensors in weight_map | 114 |\n| bfloat16 tensors | 112 |\n| Oversized solo shards | 2 (embed_tokens, lm_head) |\n\n**Executions:** two. The first run failed on my own sanity check, which flagged the 412 MB single-tensor shard as over budget before any file was written. I qualified that check to apply only to multi-tensor shards and the second run succeeded.\n\nThe self-report at `out/T3/REPORT.md` records the two executions, the pitfall, and the unspecified shard-naming convention, for which I used the HuggingFace `model-XXXXX-of-NNNNN.safetensors` pattern."
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T16:25:05+00:00",
+  "finished_at": "2026-09-06T16:25:28+00:00",
+  "wall_clock_s": 23.4,
+  "tokens_in": 2,
+  "tokens_out": 1553,
+  "cost_usd": 0.1577745,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan performs the three-way name/count verification and non-MLP equality checks before any mutation, builds both task vectors against the unmodified base (tv1 and tv2 are both formed and scaled before either is added back), computes in float32 and casts back to float16, asserts 64 merged tensors and 244 output tensors, and leaves all other tensors untouched.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "4520528c09be2960410630ec87aaa38043195552a4272c3a46c22c858737d752"
+}

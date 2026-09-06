@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:58:54+00:00",
+  "finished_at": "2026-09-06T16:59:10+00:00",
+  "wall_clock_s": 15.1,
+  "tokens_in": 2,
+  "tokens_out": 1022,
+  "cost_usd": 0.26027174999999997,
+  "verdict": "yes",
+  "verdict_text": "YES. The script casts exactly the 112 layer projection matrices (matched by full name with `fullmatch`) to bfloat16 via a float32-to-bfloat16 round-to-nearest-even cast, leaves all other tensors float32 with unchanged values, deletes nothing (the buffer pattern `(?!)` can never match, and there are no buffers), preserves names, enforces all four required checks with loud assertions before writing, and writes shards capped at 268,435,456 bytes of tensor data with oversized tensors placed alone plus a `model.safetensors.index.json` whose `weight_map` covers every tensor.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "290fb5d27c5146e7ca4ba58700f2848f1be69af03d5dfc0f099fe8daed8118df"
+}

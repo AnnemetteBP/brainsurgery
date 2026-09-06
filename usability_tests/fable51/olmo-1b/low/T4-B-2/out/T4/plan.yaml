@@ -1,0 +1,59 @@
+# T4: task-vector merge, lambda = 0.4
+# out[X] = base[X] + 0.4*(ft1[X]-base[X]) + 0.4*(ft2[X]-base[X]) for the 48 MLP tensors.
+# Both task vectors are computed against the unmodified base (as temporaries)
+# before anything is added into base.
+inputs:
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # ---- Step 1: verification (before touching anything) ----
+  # same tensor count in all three checkpoints
+  - assert: { count: { of: 'base::.+', is: 114 } }
+  - assert: { count: { of: 'ft1::.+', is: 114 } }
+  - assert: { count: { of: 'ft2::.+', is: 114 } }
+  # the 48 MLP tensors exist in all three
+  - assert: { count: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft1::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft2::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  # every non-MLP tensor of base exists with the same name in ft1/ft2 and is
+  # exactly equal (no eps -> exact). Together with the counts above this
+  # proves the three name sets are identical.
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' } }
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft2::\g<0>' } }
+  - assert: { dtype: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: float32 } }
+
+  # ---- Step 2: task vectors against the unmodified base ----
+  # tv1 = ft1 - base
+  - copy: { from: 'ft1::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', to: 'base::tv1.\g<0>' }
+  - subtract_: { from: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', to: 'base::tv1.\g<0>' }
+  # tv2 = ft2 - base
+  - copy: { from: 'ft2::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', to: 'base::tv2.\g<0>' }
+  - subtract_: { from: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', to: 'base::tv2.\g<0>' }
+  # exactly 48 task-vector tensors each
+  - assert: { count: { of: 'base::tv1\..+', is: 48 } }
+  - assert: { count: { of: 'base::tv2\..+', is: 48 } }
+  # scale by lambda
+  - scale_: { target: 'base::tv1\..+', by: 0.4 }
+  - scale_: { target: 'base::tv2\..+', by: 0.4 }
+
+  # ---- Step 3: merge into base ----
+  - add_: { from: 'base::tv1\.(.+)', to: 'base::\1' }
+  - add_: { from: 'base::tv2\.(.+)', to: 'base::\1' }
+  - delete: { target: 'base::tv[12]\..+' }
+
+  # ---- Required checks ----
+  # exactly 48 merged tensors: they differ from base-as-loaded in ft1/ft2 form
+  # is not checkable here, but the MLP set is 48 and nothing else was written
+  - assert: { count: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { writes: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 3 } }
+  - assert: { writes: { of: 'base::(?!model\.layers\.\d+\.mlp\.).+', is: 1 } }
+  # output has exactly 114 tensors
+  - assert: { count: { of: 'base::.+', is: 114 } }
+  # non-MLP tensors still equal ft1 (i.e. unchanged base)
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

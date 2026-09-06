@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T11:33:50+00:00",
+  "finished_at": "2026-09-06T11:34:12+00:00",
+  "wall_clock_s": 22.3,
+  "tokens_in": 2,
+  "tokens_out": 1597,
+  "cost_usd": 0.27269974999999996,
+  "verdict_text": "YES\n\nThe script matches the specification on every clause:\n\n- **Step 1 verification** runs before any merge: it asserts equal key sets across all three checkpoints, then asserts bit-exact equality via torch.equal for every non-MLP tensor against both fine-tunes. A failed assertion aborts with an error message.\n- **Step 2 arithmetic** takes both task vectors against the unmodified base tensor b, scales each by 0.4, and computes in float32. The cast back to the base dtype is a no-op for float32 inputs.\n- **Step 3** copies every non-MLP tensor from the base unchanged, with names preserved.\n- **Step 4 and required checks** are enforced: exactly 48 merged tensors and exactly 114 output tensors are asserted before writing a single file at the required path.\n\nTwo caveats that do not violate the spec but are worth knowing. The script depends on an unshown helper module for loading the sharded base directory, so correct shard handling is assumed rather than visible. The checks use bare assert statements, which would be stripped if run with the Python optimize flag.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

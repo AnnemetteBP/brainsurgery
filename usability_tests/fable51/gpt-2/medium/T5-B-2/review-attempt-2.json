@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T12:04:51+00:00",
+  "finished_at": "2026-09-06T12:05:09+00:00",
+  "wall_clock_s": 17.4,
+  "tokens_in": 2,
+  "tokens_out": 1190,
+  "cost_usd": 0.28009675,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan computes `B @ A` per layer from the adapter, transposes it to `[768, 2304]`, scales by alpha/r = 2, adds it in place to `h.<i>.attn.c_attn.weight` in float32, deletes both intermediates, and asserts the four required checks (12 pairs via the `lora_A` count plus 12 deltas, no `lora_` names in the model namespace, the `h.0` shape, and 160 tensors) before writing a sharded safetensors checkpoint to `out/T5` with a 100 MiB shard limit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

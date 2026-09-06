@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "artifact_sha256": "58c8f3b6928ed87177fb23f201e2133a96666f8e34cf6bf02687953191f81bd4",
+  "started_at": "2026-09-06T18:17:15+00:00",
+  "finished_at": "2026-09-06T18:17:38+00:00",
+  "wall_clock_s": 22.6,
+  "tokens_in": 2,
+  "tokens_out": 1914,
+  "cost_usd": 0.0654168,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly maps `base_model.model.gpt_neox.layers.<i>.<module>.{lora_A,lora_B}.weight` to `gpt_neox.layers.<i>.<module>.weight`, computes `scale=alpha/r=2`, forms `B @ A` without transposition (respecting `fan_in_fan_out=false`), does the add in float32 and casts back to the base's float16 dtype, and never inserts adapter or intermediate tensors into `sd`. The sharding logic packs greedily up to 536,870,912 bytes of tensor data (headers excluded) and isolates an oversized tensor alone in its own shard via the empty-`cur` special case, then writes a correct `weight_map`. All four required-check assertions (16 merges, no `lora_` names, unchanged shape on layer 0's QKV, 244 total tensors) are present and run before the save.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

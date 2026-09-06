@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T16:10:21+00:00",
+  "finished_at": "2026-09-06T16:10:30+00:00",
+  "wall_clock_s": 9.2,
+  "tokens_in": 2,
+  "tokens_out": 660,
+  "cost_usd": 0.0495778,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops blocks {2,6,10,14}, renumbers the remaining 12 in ascending original order via `enumerate(kept)` (matching the exact old\u2192new mapping in the spec), preserves the non-block tensors and all tensor values/dtypes, and asserts both the contiguous 0..11 layer set and the total count of 184 tensors before writing the file, so it fails loudly with no output if either check fails, matching the Required result and Required checks clauses.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

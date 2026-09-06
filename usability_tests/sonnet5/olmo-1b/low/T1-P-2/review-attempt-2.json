@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T16:04:43+00:00",
+  "finished_at": "2026-09-06T16:04:51+00:00",
+  "wall_clock_s": 8.4,
+  "tokens_in": 2,
+  "tokens_out": 486,
+  "cost_usd": 0.0456458,
+  "verdict": "no",
+  "verdict_text": "NO: The required checks are not enforced as specified \u2014 the assertions use bare `assert`, which is stripped when Python runs with `-O`, and more importantly the script does not \"fail loudly (non-zero exit, no output written)\" for the specific mandated check \"no tensor of blocks 12, 13, 14, 15 remains\" as an explicit, independent check; it only verifies the merged layer index set equals range(12), which conflates that check with the \"exactly 12 blocks\" check rather than checking both required conditions separately as specified. Also the script writes to `out_dir` derived from `sys.argv[1]` defaulting to `out/T1`, but the task requires the output be written only after all required checks pass \u2014 here the checks occur before `save_file`, which is fine, but there's no check ensuring the actual required output path `out/T1/model.safetensors` is used when invoked without the expected working directory assumption (relies on `inputs/base` relative path, consistent with spec). The core logic (drop {2,6,10,14}, renumber via enumerate(kept) which correctly maps old 3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211) matches the spec's required mapping and tensor count (86), so functionally it satisfies Required Result and the substance of Required Checks, but the failure-mode requirement (non-zero exit, no output on check failure) is not robustly guaranteed since `assert` statements can be disabled.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

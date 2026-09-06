@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:49:06+00:00",
+  "finished_at": "2026-09-06T16:49:20+00:00",
+  "wall_clock_s": 13.7,
+  "tokens_in": 2,
+  "tokens_out": 1057,
+  "cost_usd": 0.052829799999999996,
+  "verdict": "yes",
+  "verdict_text": "YES. The script's `keep_index` builds, for each of the three 768-wide segments (q/k/v) and separately for the single 768-wide c_proj segment, the correct column/row ranges (heads 0\u20134 and 6\u201311, each 64 wide) in the exact order the spec requires, verified against the literal ranges given for c_attn.weight/bias and c_proj.weight. It applies this to all 12 layers, leaves all other tensors untouched, includes the four required pre-write assertions (shapes and tensor count), and writes a single `out/T2/model.safetensors` with all 160 keys.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "92365477d5a2b031d04772e00c37605dd514b7028b7484314cd0975b48bb00f5"
+}

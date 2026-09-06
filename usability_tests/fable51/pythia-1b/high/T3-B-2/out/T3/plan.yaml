@@ -1,0 +1,43 @@
+# T3: mixed-precision export of Pythia-1B with sharding.
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # Sanity: the input is what TASK.md describes (244 tensors, 48 buffers, 64 projections).
+  - assert:
+      all:
+        - count: { of: '.*', is: 244 }
+        - count: { of: 'gpt_neox\.layers\.\d+\.attention\.(bias|masked_bias|rotary_emb\.inv_freq)', is: 48 }
+        - count: { of: 'gpt_neox\.layers\.\d+\.(attention\.(query_key_value|dense)|mlp\.dense_(h_to_4h|4h_to_h))\.weight', is: 64 }
+
+  # 3. Drop the non-parameter buffers (causal mask, masked_bias scalar, rotary inv_freq).
+  - delete:
+      target: 'gpt_neox\.layers\.\d+\.attention\.(bias|masked_bias|rotary_emb\.inv_freq)'
+
+  # 2. Upcast everything that remains to float32 (float16 -> float32 is exact).
+  - cast_:
+      target: '.*'
+      to: float32
+
+  # 1. Cast exactly the 64 projection matrices to bfloat16 (round-to-nearest-even).
+  - cast_:
+      target: 'gpt_neox\.layers\.\d+\.(attention\.(query_key_value|dense)|mlp\.dense_(h_to_4h|4h_to_h))\.weight'
+      to: bfloat16
+
+  # Required checks: fail loudly before writing.
+  - assert:
+      all:
+        # exactly 64 tensors are bfloat16: the 64 projections are bfloat16 ...
+        - count: { of: 'gpt_neox\.layers\.\d+\.(attention\.(query_key_value|dense)|mlp\.dense_(h_to_4h|4h_to_h))\.weight', is: 64 }
+        - dtype: { of: 'gpt_neox\.layers\.\d+\.(attention\.(query_key_value|dense)|mlp\.dense_(h_to_4h|4h_to_h))\.weight', is: bfloat16 }
+        # ... and every other tensor is float32 (so nothing else is bfloat16).
+        - dtype: { of: '(?!gpt_neox\.layers\.\d+\.(attention\.(query_key_value|dense)|mlp\.dense_(h_to_4h|4h_to_h))\.weight$).+', is: float32 }
+        - dtype: { of: 'gpt_neox\.layers\.0\.attention\.query_key_value\.weight', is: bfloat16 }
+        - dtype: { of: 'gpt_neox\.embed_in\.weight', is: float32 }
+        - not: { exists: 'gpt_neox\.layers\.\d+\.attention\.(bias|masked_bias|rotary_emb\.inv_freq)' }
+        - count: { of: '.*', is: 196 }
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 256MB

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-06T16:03:20+00:00",
+  "finished_at": "2026-09-06T16:04:48+00:00",
+  "wall_clock_s": 88.2,
+  "tokens_in": 2,
+  "tokens_out": 8001,
+  "cost_usd": 0.1248978,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan front-loads count checks (ft1==114, ft2==114) and equal checks that compare every base tensor excluded by the MLP negative-lookahead against both ft1 and ft2 before any mutation, satisfying \"verify same names / everything outside the 48 identical, abort otherwise.\" It then builds `tv1 = 0.4*(ft1-base)` and `tv2 = 0.4*(ft2-base)` from copies of ft1/ft2, subtracting/scaling against the still-untouched base tensors, asserts 48 of each exist, adds both into base (base += tv1; base += tv2, yielding `base + 0.4*(ft1-base) + 0.4*(ft2-base)`, matching the required formula regardless of addition order), deletes the scratch tensors, and asserts the final count is 114 \u2014 matching every \"Required result\" and \"Required checks\" clause.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "2cf409b1da371959521150b9b3039e08d2b7510a90837141d22e3cf7265a8976"
+}

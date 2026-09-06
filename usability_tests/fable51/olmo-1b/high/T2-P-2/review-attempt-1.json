@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T11:27:18+00:00",
+  "finished_at": "2026-09-06T11:27:28+00:00",
+  "wall_clock_s": 9.5,
+  "tokens_in": 2,
+  "tokens_out": 560,
+  "cost_usd": 0.23208875,
+  "verdict_text": "YES\n\nThe script keeps head blocks 0\u20134 and 6\u201315 (rows 0..639 and 768..2047) on axis 0 for q/k/v and axis 1 for o_proj across all 16 layers, leaves every other tensor untouched, asserts the five required conditions before writing, and saves a single `out/T2/model.safetensors`. The only unverifiable dependency is `_ckpt.load_checkpoint`, which must merge both shards into a 114-entry dict; given that, the artifact meets every clause.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

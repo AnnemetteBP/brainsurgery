@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T16:05:39+00:00",
+  "finished_at": "2026-09-06T16:05:55+00:00",
+  "wall_clock_s": 16.0,
+  "tokens_in": 2,
+  "tokens_out": 1051,
+  "cost_usd": 0.0512588,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops exactly blocks {2,6,10,14}, renumbers the surviving blocks with the exact old\u2192new mapping specified (0\u21920,1\u21921,3\u21922,4\u21923,5\u21924,7\u21925,8\u21926,9\u21927,11\u21928,12\u21929,13\u219210,15\u219211), leaves non-layer tensors untouched, and asserts both that the resulting layer indices are exactly 0..11 and that the tensor count is 86 before writing `out/T1/model.safetensors`, so it fails loudly (via uncaught AssertionError, non-zero exit, no file written) before any output if a check fails.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

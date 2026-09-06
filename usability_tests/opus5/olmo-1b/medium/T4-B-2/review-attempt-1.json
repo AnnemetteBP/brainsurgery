@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-06T07:53:11+00:00",
+  "finished_at": "2026-09-06T07:53:38+00:00",
+  "wall_clock_s": 26.2,
+  "tokens_in": 2,
+  "tokens_out": 1765,
+  "cost_usd": 0.1511125,
+  "verdict_text": "NO\n\nThe merge arithmetic and its ordering are correct (both task vectors are formed against the unmodified base before either is added in), and the shared-tensor verification and the 114-tensor output count are asserted. What is missing is the second bullet of \"Required checks\": there is no `assert` that exactly 48 tensors were merged \u2014 no count assertion over the MLP match set or over the `.tv1`/`.tv2` temporaries before they are deleted. Consequently, if the MLP regex matched fewer names than expected (e.g. a missing or renamed MLP tensor in `ft1`/`ft2`, which the negative-lookahead equality asserts deliberately exclude), the plan would silently merge fewer than 48 tensors and still pass the 114-tensor count, violating the requirement to fail loudly.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

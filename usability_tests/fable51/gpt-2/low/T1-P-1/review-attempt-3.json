@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T1-defective.py",
+  "started_at": "2026-09-06T16:57:27+00:00",
+  "finished_at": "2026-09-06T16:57:33+00:00",
+  "wall_clock_s": 6.4,
+  "tokens_in": 2,
+  "tokens_out": 208,
+  "cost_usd": 0.20388574999999998,
+  "verdict": "no",
+  "verdict_text": "NO. The script drops blocks {2, 5, 9} instead of the required {2, 5, 8}, violating \"Required result\" clause 1. As a consequence the renumbering also differs from clause 2 (old 8 is kept and becomes 6, old 9 is removed, old 10 becomes 7, old 11 becomes 8), so the output does not match the hidden reference. The script also does not implement the required check that no tensor of blocks 9, 10, 11 remains, nor an explicit count of exactly 9 blocks via a per-block tensor like `attn.c_attn.weight`, though the block-set assert partly covers the latter.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "73006bcd507d9d8cbcbdc2140f66c953050261c4fb52c2a20d47dfe508b3c3f5"
+}

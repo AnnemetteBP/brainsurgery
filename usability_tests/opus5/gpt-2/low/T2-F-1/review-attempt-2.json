@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T2-defective.py",
+  "started_at": "2026-09-06T16:14:15+00:00",
+  "finished_at": "2026-09-06T16:14:20+00:00",
+  "wall_clock_s": 5.2,
+  "tokens_in": 2,
+  "tokens_out": 197,
+  "cost_usd": 0.10525250000000001,
+  "verdict": "no",
+  "verdict_text": "NO. It drops head 6 instead of head 5 (`DROP_HEAD = 6`), so it keeps columns/rows `0..383`, `448..767`, etc., violating \"Required result\" clauses 1\u20133, which specify removing head 5 (keep `0..319`, `384..767`, ...). The shape assertions still pass because any single head removal yields the same shapes, so the checks do not catch it; values will fail the bit-exact grading. Also, `c_proj.weight` heads are row blocks in a single 768 segment, which the spec handles correctly, but the wrong head index applies there too.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The removed head is off by one (head N+1 instead of head N). All shapes are still correct, so the artifact's own shape checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

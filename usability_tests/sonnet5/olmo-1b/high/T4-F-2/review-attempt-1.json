@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T06:47:09+00:00",
+  "finished_at": "2026-09-06T06:47:53+00:00",
+  "wall_clock_s": 43.8,
+  "tokens_in": 2,
+  "tokens_out": 3940,
+  "cost_usd": 0.0802198,
+  "verdict_text": "YES\n\nThe script verifies matching tensor names and bit-identical non-MLP tensors before any modification, applies the exact `base + \u03bb(ft1-base) + \u03bb(ft2-base)` formula in float32 to precisely the 48 MLP tensors via the regex, copies all other tensors unchanged from `base`, and asserts both `merged == 48` and `len(out) == 114` before writing `out/T4/model.safetensors`. This matches every clause of the Required result and Required checks sections.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

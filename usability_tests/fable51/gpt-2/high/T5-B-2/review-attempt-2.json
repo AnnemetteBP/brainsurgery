@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T12:03:41+00:00",
+  "finished_at": "2026-09-06T12:04:07+00:00",
+  "wall_clock_s": 26.4,
+  "tokens_in": 2,
+  "tokens_out": 1784,
+  "cost_usd": 0.30711675000000005,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan computes `B @ A` per layer (shape `[2304, 768]`), transposes it to `[768, 2304]`, scales by 2 in float32, adds it in place to `h.<i>.attn.c_attn.weight`, and deletes both intermediates so only the 160 base names remain in the `model::` namespace. All four required checks are present as `assert` transforms that fail before writing: 12 adapter pairs found and 12 deltas produced, no `lora_` names, the `[768, 2304]` shape of layer 0, and a count of 160. Output goes to `out/T5` as sharded safetensors with a 100 MiB cap, which satisfies the stated sharding rule and leaves the oversized `wte.weight` alone in its own shard.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

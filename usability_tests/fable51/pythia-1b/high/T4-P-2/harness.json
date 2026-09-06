@@ -1,0 +1,43 @@
+{
+  "phase": "solve",
+  "driver": "run_claude.py",
+  "model_id": "claude-fable-5-1",
+  "agent": "fable51",
+  "target": "pythia-1b",
+  "effort": "high",
+  "test": "T4",
+  "condition": "P",
+  "repeat": 2,
+  "started_at": "2026-09-06T11:40:38+00:00",
+  "finished_at": "2026-09-06T11:42:01+00:00",
+  "wall_clock_s": 83.2,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "max_turns": 40,
+  "timeout_s": 1800,
+  "turns": 5,
+  "tool_calls": 4,
+  "tokens_in": 130,
+  "tokens_out": 4525,
+  "cache_read_tokens": 136058,
+  "cache_write_tokens": 21052,
+  "tokens_in_total": 157240,
+  "cost_usd": 0.6848335,
+  "duration_api_ms": 53130,
+  "session_id": "5e59440e-eb44-4e66-88c5-a350439699a0",
+  "result_subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "executions": 2,
+  "failed_executions": [
+    {
+      "n": 1,
+      "command": "cat > out/T4/solution.py <<'EOF'\n\"\"\"T4: task-vector merge of two frozen-backbone fine-tunes into a Pythia-1B base.\n\nout[X] = base[X] + lam*(ft1[X]-base[X]) + lam*(ft2[X]-base[X])  for the 64 MLP tensors,\ncomputed in float32 against the *unmodified* base, cast back to float16.\nEverything else is copi",
+      "message": "python out/T4/solution.py  19,05s user 21,29s system 444% cpu 9,077 total",
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Done. The merged checkpoint is written to `out/T4/model.safetensors` with 244 tensors, and the report is at `out/T4/REPORT.md`.\n\nWhat the script does, in `out/T4/solution.py`:\n\n- **Verifies first.** Confirms all three checkpoints share the same 244 names, selects the 64 MLP tensors with an anchored regex, and checks the remaining 180 tensors are bit-identical across base, ft1 and ft2 before any arithmetic.\n- **Merges against the unmodified base.** Both task vectors are computed from the same float32 copy of the base tensor, scaled by 0.4, summed, and cast back to float16.\n- **Copies everything else from the base** unchanged, then asserts 64 merged and 244 total, writes the file, and reopens it to confirm key set, shapes and dtypes against the base.\n\nTwo executions. The first failed on my own post-write sanity check, which assumed every tensor is float16. The base's `attention.bias` mask buffers are not float16, so I changed the check to compare each written tensor's dtype and shape against the base. The merge itself was already correct on the first run. The second run passed cleanly."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T3.yaml",
+  "started_at": "2026-09-06T08:43:34+00:00",
+  "finished_at": "2026-09-06T08:45:13+00:00",
+  "wall_clock_s": 98.6,
+  "tokens_in": 2,
+  "tokens_out": 7480,
+  "cost_usd": 0.2935715,
+  "verdict_text": "YES\n\nThe plan is correct on every clause I can check by reading:\n\n- **Deletes (clause 3):** the pattern matches only `attention.bias`, `attention.masked_bias`, `attention.rotary_emb.inv_freq` per layer \u2014 48 tensors. It cannot hit `attention.dense.bias` or the MLP biases, since those have an extra path component between `attention.`/`mlp.` and `bias`. Done first, so the uint8 mask buffers never reach the blanket cast.\n- **Dtypes (clauses 1\u20132):** blanket `.*` \u2192 float32, then the precise projection pattern \u2192 bfloat16. The pattern matches exactly the 4 named matrices \u00d7 16 layers and nothing else (no `.*weight` over-reach into `embed_in`, `embed_out`, or the layer norms). fp16 \u2192 fp32 \u2192 bf16 is bit-identical to a direct `to(torch.bfloat16)`, as the spec itself states.\n- **Names (clause 4):** no `copy`/`move`, so names are untouched.\n- **Sharding (clause 5):** `out/T3`, safetensors, 256 MB cap. Even read as 10\u2076 bytes rather than 2\u00b2\u2070, the cap is still \u2264 268,435,456, and the layout is unchanged: a layer is ~100.8 MB, so two layers pack per shard and three (~302 MB) do not, under either interpretation; the two 412 MB fp32 embedding matrices exceed both caps and land alone.\n\nOne deviation worth naming: the \"exactly 64 tensors are bfloat16\" check is encoded as a *name*-count over the projection pattern, evaluated *before* the cast, so it never inspects a dtype. It is nonetheless equivalent here \u2014 everything is float32 at that point, and the assert uses the identical pattern string as the following `cast_`, so 64 matches implies exactly 64 bfloat16 tensors afterwards. The other three checks (`layers.0...query_key_value.weight` is bfloat16, `embed_in.weight` is float32, 196 tensors total) are asserted directly and all precede the write.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

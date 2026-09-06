@@ -1,0 +1,64 @@
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB
+
+transforms:
+  # --- preflight ---------------------------------------------------------
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.(q|v)_proj\.lora_A\.weight'
+        is: 32
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.(q|v)_proj\.lora_B\.weight'
+        is: 32
+  - assert:
+      count:
+        of: 'base::.*'
+        is: 114
+  - assert:
+      shape:
+        of: 'base::model\.layers\.0\.self_attn\.q_proj\.weight'
+        is: [2048, 2048]
+
+  # --- delta = B @ A  (fan_in_fan_out = false, so no transpose) -----------
+  - matmul:
+      from_a: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.(q|v)_proj\.lora_B\.weight'
+      from_b: 'lora::base_model.model.model.layers.\1.self_attn.\2_proj.lora_A.weight'
+      to: 'base::bsdelta.\1.\2.weight'
+  - assert:
+      count:
+        of: 'base::bsdelta\.(\d+)\.(q|v)\.weight'
+        is: 32
+  - assert:
+      shape:
+        of: 'base::bsdelta\.0\.q\.weight'
+        is: [2048, 2048]
+
+  # --- scale by alpha / r = 32 / 16 = 2, then fold into the base weights --
+  - scale_:
+      target: 'base::bsdelta\.(\d+)\.(q|v)\.weight'
+      by: 2.0
+  - add_:
+      from: 'base::bsdelta\.(\d+)\.(q|v)\.weight'
+      to: 'base::model.layers.\1.self_attn.\2_proj.weight'
+
+  # --- drop the intermediates --------------------------------------------
+  - delete: { target: 'base::bsdelta\..*' }
+
+  # --- required post-checks ----------------------------------------------
+  - assert: { not: { exists: 'base::.*bsdelta.*' } }
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert:
+      shape:
+        of: 'base::model\.layers\.0\.self_attn\.q_proj\.weight'
+        is: [2048, 2048]
+  - assert:
+      count:
+        of: 'base::.*'
+        is: 114

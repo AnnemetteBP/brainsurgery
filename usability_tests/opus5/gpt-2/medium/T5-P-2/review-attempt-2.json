@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:16:36+00:00",
+  "finished_at": "2026-09-06T16:16:45+00:00",
+  "wall_clock_s": 9.0,
+  "tokens_in": 2,
+  "tokens_out": 563,
+  "cost_usd": 0.11493450000000001,
+  "verdict": "yes",
+  "verdict_text": "YES. The script scales by `lora_alpha / r = 2`, computes `(B @ A).T` under `fan_in_fan_out = true` giving the required `[768, 2304]` delta in float32, adds it to each of the 12 `h.<i>.attn.c_attn.weight` tensors, never inserts adapter or intermediate names into the state dict, asserts all four required checks before writing, and delegates the sharded write with the 104,857,600-byte limit to the provided helper.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

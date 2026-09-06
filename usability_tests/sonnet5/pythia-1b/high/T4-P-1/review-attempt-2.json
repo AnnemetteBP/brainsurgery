@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:08:36+00:00",
+  "finished_at": "2026-09-06T16:08:45+00:00",
+  "wall_clock_s": 9.4,
+  "tokens_in": 2,
+  "tokens_out": 747,
+  "cost_usd": 0.0480768,
+  "verdict": "no",
+  "verdict_text": "NO. Step 2 requires `out[X] = base[X] + \u03bb(ft1[X]-base[X]) + \u03bb(ft2[X]-base[X])`, which for \u03bb=0.4 gives coefficients (0.2\u00b7base + 0.4\u00b7ft1 + 0.4\u00b7ft2). The script instead computes `tmp = base + \u03bb(ft1-base)` then `out = tmp + \u03bb(ft2-tmp)`, i.e. sequential blending with coefficients (0.36\u00b7base + 0.24\u00b7ft1 + 0.4\u00b7ft2) \u2014 a materially different formula, not just a different summation order (which the grading tolerance explicitly allows). This produces merged-tensor values well outside the 1e-3 relative Frobenius error tolerance, so the artifact fails the \"Required result\" step 2 specification despite passing checks 1, 3, and 4 structurally.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

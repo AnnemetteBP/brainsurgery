@@ -1,0 +1,24 @@
+# Read-only verification of out/T1/model.safetensors against the input.
+# No output section: nothing is written.
+inputs:
+  - base::inputs/base/model.safetensors
+  - out::out/T1/model.safetensors
+transforms:
+  - assert: { count: { of: 'out::.*', is: 121 } }
+  - assert: { count: { of: 'base::.*', is: 160 } }
+  - assert: { not: { exists: 'out::h\.(9|10|11)\..*' } }
+  - assert: { count: { of: 'out::h\.\d+\.attn\.c_attn\.weight', is: 9 } }
+  # non-block tensors unchanged (bit-exact)
+  - assert: { equal: { left: 'out::(wte\.weight|wpe\.weight|ln_f\.weight|ln_f\.bias)', right: 'base::\1' } }
+  # untouched blocks 0, 1
+  - assert: { equal: { left: 'out::h\.([01])\.(.*)', right: 'base::h.\1.\2' } }
+  # renumbered blocks: new -> old
+  - assert: { equal: { left: 'out::h\.2\.(.*)', right: 'base::h.3.\1' } }
+  - assert: { equal: { left: 'out::h\.3\.(.*)', right: 'base::h.4.\1' } }
+  - assert: { equal: { left: 'out::h\.4\.(.*)', right: 'base::h.6.\1' } }
+  - assert: { equal: { left: 'out::h\.5\.(.*)', right: 'base::h.7.\1' } }
+  - assert: { equal: { left: 'out::h\.6\.(.*)', right: 'base::h.9.\1' } }
+  - assert: { equal: { left: 'out::h\.7\.(.*)', right: 'base::h.10.\1' } }
+  - assert: { equal: { left: 'out::h\.8\.(.*)', right: 'base::h.11.\1' } }
+  - assert: { count: { of: 'out::h\.[0-8]\..*', is: 117 } }
+  - dump: { target: 'out::h\.[0-8]\.attn\.c_attn\.weight', format: compact }

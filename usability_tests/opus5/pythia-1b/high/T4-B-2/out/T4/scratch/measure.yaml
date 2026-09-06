@@ -1,0 +1,29 @@
+# Scratch measurement (NOT the solution plan): how far the written checkpoint is
+# from the literal-formula recomputation, in float32.
+inputs:
+  - out::out/T4/model.safetensors
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  - cast_: { target: 'base::gpt_neox\.layers\.\d+\.mlp\..+', to: float32 }
+  - cast: { from: 'ft1::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::d1.\1', dtype: float32 }
+  - subtract_: { from: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::d1.\1' }
+  - scale_: { target: 'base::d1\..+', by: 0.4 }
+  - cast: { from: 'ft2::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::d2.\1', dtype: float32 }
+  - subtract_: { from: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::d2.\1' }
+  - scale_: { target: 'base::d2\..+', by: 0.4 }
+  - add_: { from: 'base::d1\.(.+)', to: 'base::\1' }
+  - add_: { from: 'base::d2\.(.+)', to: 'base::\1' }
+  - cast_: { target: 'base::gpt_neox\.layers\.\d+\.mlp\..+', to: float16 }
+  - delete: { target: 'base::d\d\..+' }
+
+  # err = reference - written, in float32.
+  - cast: { from: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::err.\1', dtype: float32 }
+  - cast: { from: 'out::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::got.\1', dtype: float32 }
+  - subtract_: { from: 'base::got\.(.+)', to: 'base::err.\1' }
+  - dump: { target: 'base::err\.gpt_neox\.layers\.0\.mlp\..+', format: compact, verbosity: stat }
+  - dump: { target: 'base::got\.gpt_neox\.layers\.0\.mlp\..+', format: compact, verbosity: stat }
+  # Absolute agreement to within a fraction of one float16 ULP at these magnitudes.
+  - assert: { iszero: { of: 'base::err\..+', eps: 0.0005 } }

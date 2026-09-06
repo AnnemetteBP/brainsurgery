@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T16:10:06+00:00",
+  "finished_at": "2026-09-06T16:10:12+00:00",
+  "wall_clock_s": 6.6,
+  "tokens_in": 2,
+  "tokens_out": 271,
+  "cost_usd": 0.0432678,
+  "verdict": "no",
+  "verdict_text": "NO: The script uses assert statements for all required checks (shared-tensor verification, merged==64, output count==244), which raise `AssertionError` only in non-optimized mode \u2014 running with `python -O` would silently skip these checks, violating the \"fail loudly\" requirement in Required checks. Additionally, it writes to `out_dir / \"model.safetensors\"` where `out_dir` defaults to `out/T4` but is taken from `sys.argv[1]`, so if invoked without that argument as `python out/T4/solution.py` per the task's execution convention, the relative path `out/T4` would be resolved from the current working directory, which is fine only if cwd is the sandbox root\u2014this is fragile but not clearly a violation. The primary violation is the use of bare `assert` for required checks instead of explicit error handling that cannot be disabled.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

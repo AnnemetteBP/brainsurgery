@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T16:15:52+00:00",
+  "finished_at": "2026-09-06T16:16:19+00:00",
+  "wall_clock_s": 26.7,
+  "tokens_in": 2,
+  "tokens_out": 1780,
+  "cost_usd": 0.1404665,
+  "verdict": "no",
+  "verdict_text": "NO. Clauses 1\u20134 and all four required checks are implemented correctly by the visible code: the two `fullmatch` regexes select exactly the 48 projection matrices and the 12 `h.<i>.attn.bias` buffers, everything else is passed through as float32, names are untouched, and the four assertions run before writing.\n\nHowever, clause 5 \u2014 the entire sharded output requirement (shard packing to at most 67,108,864 bytes of tensor data, storing the oversized `wte.weight` alone in its own shard, and emitting `model.safetensors.index.json` with a complete `weight_map`) \u2014 is delegated wholesale to `save_sharded_safetensors` in an unshown `_ckpt` module, as is the input reading in `load_checkpoint`. Nothing in the artifact as submitted implements or constrains that behaviour, so the shard layout, index file and its `weight_map` cannot be confirmed to meet the specification. On the evidence provided, the artifact does not demonstrably satisfy clause 5; the correctness verdict hinges entirely on a file that is not part of it.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

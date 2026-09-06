@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "artifact_sha256": "1403be5a301448a3be36cef9201cdc2800acea2b4cfbb5c8de76cd3a94e33689",
+  "started_at": "2026-09-06T18:15:53+00:00",
+  "finished_at": "2026-09-06T18:15:58+00:00",
+  "wall_clock_s": 4.5,
+  "tokens_in": 2,
+  "tokens_out": 111,
+  "cost_usd": 0.0474208,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script correctly maps adapter names to base names, applies scale = alpha/r without transposition (fan_in_fan_out is false), merges in float32, enforces all four required checks before writing, and shards output at 512 MiB with an oversized tensor allowed alone in its own shard, producing 114 tensors with no lora_ names.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

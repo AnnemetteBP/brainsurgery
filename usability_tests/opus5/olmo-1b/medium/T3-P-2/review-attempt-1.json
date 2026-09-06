@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T07:45:42+00:00",
+  "finished_at": "2026-09-06T07:45:54+00:00",
+  "wall_clock_s": 11.5,
+  "tokens_in": 2,
+  "tokens_out": 715,
+  "cost_usd": 0.11950150000000001,
+  "verdict_text": "YES\n\nThe script casts exactly the 112 named projection matrices with `.to(torch.bfloat16)`, leaves every other tensor as float32 with unchanged values, deletes nothing (the `buffer_re` with the always-failing `(?!)` lookahead never matches, which is harmless here since there are no buffers), preserves names, and asserts all four required checks before writing. The only part I cannot verify from reading is the shard-size and index behaviour, which lives in the unshown `_ckpt.save_sharded_safetensors` helper; the caller passes the correct 268,435,456-byte limit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

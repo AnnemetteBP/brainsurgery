@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/B/T5-defective.yaml",
+  "started_at": "2026-09-06T16:20:03+00:00",
+  "finished_at": "2026-09-06T16:20:08+00:00",
+  "wall_clock_s": 5.6,
+  "tokens_in": 2,
+  "tokens_out": 229,
+  "cost_usd": 0.1118535,
+  "verdict": "no",
+  "verdict_text": "NO. The plan never applies the LoRA scaling factor `scale = lora_alpha / r = 2`: it computes `delta = B @ A` and adds it unscaled, so every merged weight is off by a factor of 2 in the delta term, violating Required result clause 1 (`weight += scale * B @ A`) and the 1e-5 relative Frobenius tolerance in Grading. The plan's own comment (\"defect: the alpha / r scale is missing\") confirms this. Everything else \u2014 pair count assert, delta cleanup, no-`lora_` assert, shape assert, 114-tensor assert, and 512 MiB sharded safetensors output to `out/T5` \u2014 matches the specification.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The adapter scaling factor alpha / r is missing: the raw low-rank product is added.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

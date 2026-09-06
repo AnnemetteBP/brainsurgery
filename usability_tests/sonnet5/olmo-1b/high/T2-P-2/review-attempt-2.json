@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T16:02:56+00:00",
+  "finished_at": "2026-09-06T16:03:11+00:00",
+  "wall_clock_s": 15.6,
+  "tokens_in": 2,
+  "tokens_out": 1201,
+  "cost_usd": 0.054938799999999996,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script correctly slices each per-layer q/k/v projection along dim 0 and o_proj along dim 1, dropping the 128-wide block for head 5 (rows/cols 640\u2013767) while keeping 0\u2013639 and 768\u20132047 in order, leaves all other tensors (including MLP weights) untouched, asserts the four required shapes plus the 114-tensor count before writing, and saves a single `model.safetensors` to `out/T2/`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

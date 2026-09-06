@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:05:00+00:00",
+  "finished_at": "2026-09-06T16:05:04+00:00",
+  "wall_clock_s": 4.4,
+  "tokens_in": 2,
+  "tokens_out": 141,
+  "cost_usd": 0.043517799999999995,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script correctly identifies the 112 projection matrices via `matrix_re`, casts them to bfloat16, keeps everything else float32, has no actual buffers to drop (the `buffer_re` is a vacuous never-matching pattern, consistent with \"no buffers to delete\"), preserves all 114 names, includes the required assertions, and shards via `save_sharded_safetensors` with the 256 MiB limit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:48:10+00:00",
+  "finished_at": "2026-09-06T16:48:29+00:00",
+  "wall_clock_s": 19.0,
+  "tokens_in": 2,
+  "tokens_out": 1534,
+  "cost_usd": 0.0575918,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script's `keep_index` logic correctly reproduces the required column/row keep-sets for all three head-bearing tensors per layer (splitting each into 768-wide q/k/v segments or the single 768-row c_proj block, then keeping all 64-wide head blocks except head 5, in original order), matching the exact ranges specified in \"Required result\" items 1\u20133. It leaves all other tensors (including `attn.c_proj.bias` and `attn.bias`) untouched and unrenamed, preserves the 160-tensor count, includes all four required pre-write assertions verbatim, and writes the single output file to `out/T2/model.safetensors` as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "92365477d5a2b031d04772e00c37605dd514b7028b7484314cd0975b48bb00f5"
+}

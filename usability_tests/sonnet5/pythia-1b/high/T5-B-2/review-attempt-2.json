@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T16:08:50+00:00",
+  "finished_at": "2026-09-06T16:09:46+00:00",
+  "wall_clock_s": 55.8,
+  "tokens_in": 2,
+  "tokens_out": 4975,
+  "cost_usd": 0.0945318,
+  "verdict": "no",
+  "verdict_text": "NO. The plan never deletes the source `lora::...lora_A.weight` / `lora_B.weight` tensors after the `matmul` step \u2014 only the intermediate `delta` tensors are deleted via `delete: { target: 'model::...delta(_t)?' }`. Since `matmul` (unlike the trailing-underscore `scale_`/`cast_`/`add_` in-place transforms) does not consume its inputs, the 32 adapter tensors remain in the final tensor set and would be written into the sharded output, violating \"No adapter tensor... appears in the output\" and the \"output has exactly 244 tensors\" requirement (actual would be 276). Both the `not: { exists: 'model::.*lora_.*' } }` and `count: { of: 'model::.*', is: 244 } }` asserts are scoped only to the `model::` provider namespace, so they never inspect the still-present `lora::` tensors and would pass despite the defect \u2014 meaning the \"Required checks\" are not actually enforced as specified.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

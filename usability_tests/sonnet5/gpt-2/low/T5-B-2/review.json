@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "artifact_sha256": "97c9ec6048c2b6d15d287cbb28b36e82c31d7b3254598c605116286cd1cc8a42",
+  "started_at": "2026-09-06T18:14:10+00:00",
+  "finished_at": "2026-09-06T18:14:17+00:00",
+  "wall_clock_s": 7.0,
+  "tokens_in": 2,
+  "tokens_out": 362,
+  "cost_usd": 0.0474318,
+  "verdict": "no",
+  "verdict_text": "NO: matmul with `from_a=lora_B` and `from_b=lora_A` computes B @ A giving shape [2304,16]@[16,768]=[2304,768], which is then permuted with order [1,0] to [768,2304] before scaling \u2014 this is actually consistent with the spec's transpose requirement, so let me reconsider... Actually the plan is correct on that count. The real problem is the `assert: not: exists: 'model::.*lora_.*'` check runs before the `lora::` namespace tensors are deleted from output consideration, but since only `model::` is written this check is redundant not wrong. The actual flaw: `scale_` targets `'model::h\\.\\d+\\.(attn\\.c_attn)\\.delta'` but this pattern also matches after permute renamed to `.delta`, fine \u2014 but `delete` targets `delta(_t)?` which would also try to delete already-consumed `delta_t` (unpermuted originals still exist since permute creates new name `delta` from `delta_t`, leaving original `delta_t` present) \u2014 that's intended and handled. No violation found; artifact appears correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

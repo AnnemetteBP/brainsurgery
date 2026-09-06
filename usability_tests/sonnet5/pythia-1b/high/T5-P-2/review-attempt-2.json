@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:09:12+00:00",
+  "finished_at": "2026-09-06T16:09:43+00:00",
+  "wall_clock_s": 31.1,
+  "tokens_in": 2,
+  "tokens_out": 2613,
+  "cost_usd": 0.0690708,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly identifies the 16 LoRA pairs, computes `scale = alpha/r = 2`, forms `delta = B @ A` in float32 without transposition (respecting `fan_in_fan_out=false`), adds it to the correct base key, and casts back to the original float16 dtype before reassigning \u2014 matching the \"Required result\" clause exactly. It also implements all four \"Required checks\" (pair count, no `lora_` names, base shape, total tensor count) as loud asserts before writing, and delegates sharded output with the 512 MiB limit to `save_sharded_safetensors`, consistent with the sharding clause.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

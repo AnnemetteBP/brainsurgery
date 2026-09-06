@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T08:37:02+00:00",
+  "finished_at": "2026-09-06T08:37:23+00:00",
+  "wall_clock_s": 21.1,
+  "tokens_in": 2,
+  "tokens_out": 1457,
+  "cost_usd": 0.1402895,
+  "verdict_text": "YES\n\nThe slicing logic matches the specification exactly. For both `query_key_value` tensors the index builder walks `6144 // 768 = 8` head blocks along dim 0 and skips block 5, yielding rows `0..3839` then `4608..6143` in order (shape `[5376, 2048]` and `[5376]`). For `attention.dense.weight` it walks `2048 // 256 = 8` blocks along dim 1 and skips block 5, yielding columns `0..1279` then `1536..2047` (shape `[2048, 1792]`). All 16 layers are covered, no other tensor is touched, names are preserved, `index_select` preserves float16, and all four required checks are asserted before `save_file` writes the single `out/T2/model.safetensors`.\n\nOne thing I could not verify from reading alone: the script delegates loading to a local `_ckpt.load_checkpoint` helper that was not provided, so the assumption that it returns the full 244-key float16 state dict unmodified rests on the `len(sd) == 244` assertion that does run before writing.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T2.yaml",
+  "started_at": "2026-09-06T06:47:48+00:00",
+  "finished_at": "2026-09-06T06:48:25+00:00",
+  "wall_clock_s": 37.8,
+  "tokens_in": 2,
+  "tokens_out": 3385,
+  "cost_usd": 0.10784479999999999,
+  "verdict_text": "YES\n\nThe BrainSurgery plan correctly slices and reassembles all four head-bearing projections per layer for all 16 layers (rows 0:640 + 768:2048 via dim=0 concat for q/k/v, columns 0:640 + 768:2048 via dim=1 concat for o_proj), matching the exact keep-ranges and piece order the spec requires. It deletes the originals before recreating them under the same names, cleans up its temporary tensors, leaves MLP and all other tensors untouched, and includes the exact required shape/count asserts before the single output write to `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

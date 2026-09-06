@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T16:14:36+00:00",
+  "finished_at": "2026-09-06T16:14:54+00:00",
+  "wall_clock_s": 18.7,
+  "tokens_in": 2,
+  "tokens_out": 1202,
+  "cost_usd": 0.1378635,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan verifies name/shape agreement and non-MLP bit-equality of ft1 and ft2 against the base (the 160-count asserts on ft1/ft2 plus the `equal` asserts over all non-MLP base names, together with the copies that would fail on any missing MLP name, pin the key sets to be identical), builds both task vectors from the *unmodified* base before either is applied, scales each by 0.4, asserts 48 tensors per task-vector set, adds them in, deletes the scratch tensors, and asserts 160 tensors in the output written to `out/T4/model.safetensors`. All inputs are float32, so the arithmetic stays in float32 and untouched tensors remain bit-exact from the base.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "8adafa570c1e0368dca8be6f08d2fd86ce3b24b61e44ee0c9d0892ee32f0ab0f"
+}

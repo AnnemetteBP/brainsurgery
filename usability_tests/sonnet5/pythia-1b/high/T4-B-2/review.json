@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T16:08:12+00:00",
+  "finished_at": "2026-09-06T16:09:19+00:00",
+  "wall_clock_s": 67.6,
+  "tokens_in": 2,
+  "tokens_out": 6129,
+  "cost_usd": 0.11134279999999999,
+  "verdict": "no",
+  "verdict_text": "NO. The plan loads `base`, `ft1`, and `ft2` as three separate providers but never deletes the `ft1::` and `ft2::` tensor namespaces before writing output \u2014 it only removes the intermediate `.tv1`/`.tv2` tensors it created under `base::`. Since the engine's state after transforms carries all still-present tensors from every provider into `save_output`, the written file would contain the base's 244 tensors plus all 244 `ft1` tensors plus all 244 `ft2` tensors (732 total), not the required 244, violating Required-result clause 4 (\"a single file ... with exactly 244 tensors\"). The final `assert: { count: { of: 'base::.*', is: 244 } }` only checks the `base::` partition and would pass even though the actual output is wrong, so it fails to satisfy the \"output has exactly 244 tensors\" required check as well.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "4520528c09be2960410630ec87aaa38043195552a4272c3a46c22c858737d752"
+}

@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:05:03+00:00",
+  "finished_at": "2026-09-06T16:05:09+00:00",
+  "wall_clock_s": 6.5,
+  "tokens_in": 2,
+  "tokens_out": 375,
+  "cost_usd": 0.0454038,
+  "verdict": "no",
+  "verdict_text": "NO \u2014 the script casts `float32.to(bfloat16)` which is `tensor.float().to(torch.bfloat16)` \u2014 this is fine \u2014 but `save_sharded_safetensors` sharding correctness and single-tensor-alone rule cannot be verified without seeing `_ckpt.py`, so that's not the issue; the actual flaw is the `buffer_re = re.compile(r\"model\\.layers\\.(\\d+)\\.((?!))\")` pattern, which uses an empty negative lookahead `(?!)` that always fails to match, making `buffer_re` match nothing \u2014 harmless here since there are no buffers, but it is dead/meaningless logic that doesn't correctly implement \"drop non-parameter buffers\" (clause: Required result #3) as a general mechanism; more critically, embedding/lm_head tensors go through `tensor.float()` which is a no-op copy that doesn't cast bit-exact values incorrectly, so no violation there. Given the only real defect is a vacuous/no-op buffer filter that happens not to break this specific checkpoint, the artifact still satisfies all stated required results and required checks for this input.\n\nYES",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

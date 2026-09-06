@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "artifact_sha256": "1403be5a301448a3be36cef9201cdc2800acea2b4cfbb5c8de76cd3a94e33689",
+  "started_at": "2026-09-06T18:15:16+00:00",
+  "finished_at": "2026-09-06T18:15:38+00:00",
+  "wall_clock_s": 22.5,
+  "tokens_in": 2,
+  "tokens_out": 1938,
+  "cost_usd": 0.0657058,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script computes `delta = B @ A` (shapes `[2048,16]@[16,2048]=[2048,2048]`), applies no transpose since `fan_in_fan_out` is false, scales by `lora_alpha/r=2`, adds in float32, and writes back with the original dtype and name, satisfying requirement 1. It never introduces adapter/intermediate tensors into `sd` (requirement 2), leaves all other keys untouched (requirement 3), and all four required checks (32 merges, no `lora_` keys, q_proj shape, 114 total tensors) run as asserts before the sharded write. The sharding routine correctly limits each shard to 512 MiB of tensor data and isolates oversized tensors (embed_tokens, lm_head) alone in their own shard, matching requirement 4.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

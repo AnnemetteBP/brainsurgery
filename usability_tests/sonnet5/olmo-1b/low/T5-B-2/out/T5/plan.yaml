@@ -1,0 +1,60 @@
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Preflight: exactly 32 adapter pairs (16 layers x {q_proj,v_proj}).
+  - assert:
+      count:
+        of: lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(?:q_proj|v_proj)\.lora_A\.weight
+        is: 32
+  - assert:
+      count:
+        of: lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(?:q_proj|v_proj)\.lora_B\.weight
+        is: 32
+  - assert:
+      shape:
+        of: base::model\.layers\.0\.self_attn\.q_proj\.weight
+        is: [2048, 2048]
+  - assert:
+      count:
+        of: base::.*
+        is: 114
+
+  # delta = B @ A for every layer/module, computed in float32.
+  - matmul:
+      from_a: lora::base_model\.model\.model\.layers\.(\d+)\.(self_attn\.(?:q_proj|v_proj))\.lora_B\.weight
+      from_b: lora::base_model.model.model.layers.\1.\2.lora_A.weight
+      to: base::model.layers.\1.\2.delta
+
+  # scale = lora_alpha / r = 32 / 16 = 2
+  - scale_:
+      target: base::model\.layers\.\d+\.self_attn\.(?:q_proj|v_proj)\.delta
+      by: 2
+
+  # merge: weight += scaled delta
+  - add_:
+      from: base::model\.layers\.(\d+)\.(self_attn\.(?:q_proj|v_proj))\.delta
+      to: base::model.layers.\1.\2.weight
+
+  # drop intermediates
+  - delete:
+      target: base::model\.layers\.\d+\.self_attn\.(?:q_proj|v_proj)\.delta
+
+  # Required checks before writing output.
+  - assert:
+      not:
+        exists: base::.*lora_.*
+  - assert:
+      shape:
+        of: base::model\.layers\.0\.self_attn\.q_proj\.weight
+        is: [2048, 2048]
+  - assert:
+      count:
+        of: base::.*
+        is: 114
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

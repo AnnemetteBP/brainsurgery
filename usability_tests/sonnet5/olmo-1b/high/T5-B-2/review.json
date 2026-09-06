@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "artifact_sha256": "20662e56e24cc92ac1a397e08b3a6d7a58ec37f2a36fe05b73125419dec16218",
+  "started_at": "2026-09-06T18:15:15+00:00",
+  "finished_at": "2026-09-06T18:15:53+00:00",
+  "wall_clock_s": 38.8,
+  "tokens_in": 2,
+  "tokens_out": 3607,
+  "cost_usd": 0.0807218,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 The plan correctly computes delta = B @ A via `matmul` (from_a=lora_B, from_b=lora_A, giving [2048,2048]), scales by 2 (=alpha/r), adds in-place to the corresponding base weights, deletes all intermediate delta and lora-namespace tensors before writing, and implements all four required checks (32 pairs, no `lora_` names, q_proj shape, 114 total tensors) as literal `assert` transforms prior to output. The sharded safetensors output with `shard: 512MB` satisfies the \u2264512 MiB constraint under either a binary or decimal interpretation of \"MB,\" so no clause is violated either way.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

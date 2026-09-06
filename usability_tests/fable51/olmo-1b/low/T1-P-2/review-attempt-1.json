@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T08:58:17+00:00",
+  "finished_at": "2026-09-06T08:58:30+00:00",
+  "wall_clock_s": 12.6,
+  "tokens_in": 2,
+  "tokens_out": 768,
+  "cost_usd": 0.23222375,
+  "verdict_text": "YES\n\nThe script drops blocks 2, 6, 10, 14, renumbers survivors in original order to 0..11, passes the two non-block tensors through unchanged, asserts the surviving block index set is exactly {0..11} (which also rules out any block 12..15) and that the total is 86 tensors, and only then writes the single `out/T1/model.safetensors`. The one thing not visible is the `_ckpt.load_checkpoint` helper, which must merge both shards; assuming it does, the artifact meets the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T07:51:36+00:00",
+  "finished_at": "2026-09-06T07:51:52+00:00",
+  "wall_clock_s": 15.7,
+  "tokens_in": 2,
+  "tokens_out": 1006,
+  "cost_usd": 0.1298515,
+  "verdict_text": "YES\n\nThe script drops blocks 2, 6, 10, 14, builds the mapping from the surviving indices in original order (0\u21920, 1\u21921, 3\u21922, \u2026 15\u219211), and writes into a fresh dict so no rename can overwrite a survivor. Names are rebuilt from the captured suffix only, and tensors are passed through untouched, so values, shapes and dtypes are preserved; the 4 non-block tensors fall through the `fullmatch is None` branch unchanged. All three required checks run before `mkdir`/`save_file`, so a failure exits non-zero with nothing written, and the output path defaults to `out/T1/model.safetensors`.\n\nOne non-blocking note: the checks are bare `assert`s, which would be stripped under `python -O`, and correctness of `_ckpt.load_checkpoint` is assumed since that module was not part of the artifact shown.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T07:39:58+00:00",
+  "finished_at": "2026-09-06T07:40:22+00:00",
+  "wall_clock_s": 24.2,
+  "tokens_in": 2,
+  "tokens_out": 1792,
+  "cost_usd": 0.1439015,
+  "verdict_text": "NO\n\nClause 5 requires shards of at most 64 MiB = 67,108,864 bytes, but the plan sets `shard: 64MB`, i.e. 64,000,000 bytes under the decimal-suffix convention (the plan's own comment says 64 MiB, so the unit is a slip, not a choice). The smaller limit changes where shard boundaries fall as tensors are packed, so the emitted shard files and `weight_map` will not match the hidden reference layout that `grade.py` compares against, even though every individual shard still satisfies \"at most 64 MiB\". Secondarily, the required check \"exactly 48 tensors are bfloat16\" is not implemented as stated: the plan asserts a *name-pattern* count of 48 before the cast, which verifies the pattern's arity rather than the post-cast dtype, so a stray bfloat16 tensor elsewhere would not be caught. The remaining requirements (buffer deletion, 148-tensor count, unchanged names, float32 preservation, the `h.0.attn.c_attn.weight` and `wte.weight` dtype asserts) are correctly expressed.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

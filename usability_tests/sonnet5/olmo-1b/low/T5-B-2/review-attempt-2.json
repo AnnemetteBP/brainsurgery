@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T16:05:19+00:00",
+  "finished_at": "2026-09-06T16:05:25+00:00",
+  "wall_clock_s": 6.0,
+  "tokens_in": 2,
+  "tokens_out": 340,
+  "cost_usd": 0.0478898,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan correctly computes delta = B@A per adapter pair, scales by alpha/r=2, adds to the base weights, deletes intermediates, and asserts all four required checks (32 pairs found, 32 deltas merged, no lora_ tensors remain, correct shape, 114 total tensors) before writing a 512 MiB-sharded safetensors output.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

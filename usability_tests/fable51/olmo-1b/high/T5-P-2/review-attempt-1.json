@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T11:34:46+00:00",
+  "finished_at": "2026-09-06T11:35:08+00:00",
+  "wall_clock_s": 22.1,
+  "tokens_in": 2,
+  "tokens_out": 1595,
+  "cost_usd": 0.28489175,
+  "verdict_text": "YES\n\nThe visible logic matches the specification: adapter names are mapped to `model.layers.<i>.<module>.weight`, the delta is `B @ A` with shape `[2048, 2048]`, scaled by `lora_alpha / r = 2`, added in float32 and kept at the base dtype, no transpose because `fan_in_fan_out` is false, and all four required checks are asserted before anything is written. The 512 MiB limit is passed as 536,870,912 bytes.\n\nOne caveat: the shard packing, the single-tensor-per-shard rule for the two 412 MB tensors, and the index file's `weight_map` are delegated to `save_sharded_safetensors` in the imported `_ckpt` helper, which is not part of the artifact shown, so those clauses are verified only under the assumption that the helper implements them correctly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

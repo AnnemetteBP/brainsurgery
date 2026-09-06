@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T16:11:07+00:00",
+  "finished_at": "2026-09-06T16:11:12+00:00",
+  "wall_clock_s": 4.7,
+  "tokens_in": 2,
+  "tokens_out": 209,
+  "cost_usd": 0.043074799999999996,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script verifies shared tensors across all three checkpoints via `assert set(base) == set(ft1) == set(ft2)` and the equality loop over non-MLP tensors (step 1), computes the merge in float32 then casts back per the given formula (step 2), leaves all other tensors as unmodified base copies with unchanged names (step 3), and asserts `merged == 64` and `len(out) == 244` before writing a single `model.safetensors` (step 4 and required checks). The order-independence noted in the grading section is respected since each fine-tune's delta is computed against the untouched `base` dict, not against a partially-merged result.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

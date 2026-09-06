@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T07:42:09+00:00",
+  "finished_at": "2026-09-06T07:42:35+00:00",
+  "wall_clock_s": 26.0,
+  "tokens_in": 2,
+  "tokens_out": 1862,
+  "cost_usd": 0.1538665,
+  "verdict_text": "NO\n\nThe plan omits one of the three Required checks: nothing asserts that exactly 48 tensors were merged (e.g. a `count` of the `.tv1`/`.tv2` staging tensors or of the MLP pattern being 48), so a regex that silently matched fewer layers would produce a partially merged checkpoint that still passes the two `count: 160` asserts. This violates the \"Required checks\" clause, which requires the solution to fail loudly if the merged-tensor count is not 48. Secondarily, step 1's \"same tensor names\" verification is only implied (160-count asserts on ft1/ft2/base plus `equal` over the 112 non-MLP tensors), never asserted directly as a name-set comparison across the three checkpoints. The arithmetic itself looks correct: both task vectors are formed against the unmodified base before either `add_` is applied, scaled by 0.4, and the staging tensors are deleted before output.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

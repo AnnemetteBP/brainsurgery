@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:13:48+00:00",
+  "finished_at": "2026-09-06T16:14:13+00:00",
+  "wall_clock_s": 24.7,
+  "tokens_in": 2,
+  "tokens_out": 1800,
+  "cost_usd": 0.1464545,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe merge math is right: `B @ A` is `[2304, 768]` = `[out, in]`, transposed under `fan_in_fan_out = true` to `[768, 2304]`, scaled by `lora_alpha / r = 2` and added in float32, keeping name, shape and dtype. All twelve `attn.c_attn` pairs are covered, no adapter or intermediate tensor ever enters `sd`, and all four required checks run before the write. One caveat outside the shown code: clause 4 (index file, 100 MiB shard budget, `wte.weight` alone) is delegated entirely to `_ckpt.save_sharded_safetensors`, which is not part of this artifact, so my YES covers the merge and the checks and assumes that helper implements the sharding rules as its name and the passed `MAX_SHARD` suggest.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

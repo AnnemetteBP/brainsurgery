@@ -1,0 +1,15 @@
+inputs:
+  - base::inputs/base
+  - out::out/T2/model.safetensors
+transforms:
+  - assert: { count: { of: 'out::.*', is: 114 } }
+  - assert: { dtype: { of: 'out::.*', is: float32 } }
+  - assert: { shape: { of: 'out::model\.layers\.\d+\.self_attn\.[qkv]_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'out::model\.layers\.\d+\.self_attn\.o_proj\.weight', is: [2048, 1920] } }
+  # every non-attention-projection tensor is bit-identical
+  - assert: { equal: { left: 'out::(?!model\.layers\.\d+\.self_attn\.[qkvo]_proj\.weight).+', right: 'base::\g<0>' } }
+  # pruned tensors: piece-wise identical to the kept slices of the input, all 16 layers
+  - assert: { equal: { left: 'out::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight::[:640]',  right: 'base::model.layers.\1.self_attn.\2_proj.weight::[:640]' } }
+  - assert: { equal: { left: 'out::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight::[640:]', right: 'base::model.layers.\1.self_attn.\2_proj.weight::[768:]' } }
+  - assert: { equal: { left: 'out::model\.layers\.(\d+)\.self_attn\.o_proj\.weight::[:, :640]',  right: 'base::model.layers.\1.self_attn.o_proj.weight::[:, :640]' } }
+  - assert: { equal: { left: 'out::model\.layers\.(\d+)\.self_attn\.o_proj\.weight::[:, 640:]', right: 'base::model.layers.\1.self_attn.o_proj.weight::[:, 768:]' } }

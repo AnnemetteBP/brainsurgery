@@ -1,0 +1,92 @@
+# T4: task-vector merge of two fine-tunes (Pythia-1B), lambda = 0.4
+#
+#   out[X] = base[X] + 0.4 * (ft1[X] - base[X]) + 0.4 * (ft2[X] - base[X])
+#
+# for the 64 MLP tensors only; every other tensor is the base tensor untouched.
+# Both task vectors are taken against the *unmodified* base: the merge is
+# accumulated in float32 scratch tensors (acc.*), and the base slots are only
+# written at the very end (assign), so nothing reads an already-merged base.
+
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # ---------------------------------------------------------------- step 1
+  # Same tensor names in all three checkpoints: 244 total, of which exactly
+  # 64 are the enumerated MLP tensors (layers 0..15, four names per layer)
+  # and 180 are outside the MLP.
+  - assert:
+      all:
+        - count: { of: 'base::.*', is: 244 }
+        - count: { of: 'ft1::.*', is: 244 }
+        - count: { of: 'ft2::.*', is: 244 }
+        - count: { of: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 }
+        - count: { of: 'ft1::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 }
+        - count: { of: 'ft2::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 }
+        - count: { of: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', is: 180 }
+        - count: { of: 'ft1::(?!gpt_neox\.layers\.\d+\.mlp\.).+', is: 180 }
+        - count: { of: 'ft2::(?!gpt_neox\.layers\.\d+\.mlp\.).+', is: 180 }
+
+  # Every tensor outside the 64 MLP tensors is bit-identical in all three
+  # checkpoints (equal also checks name existence on the right, shape and dtype).
+  - assert:
+      all:
+        - equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' }
+        - equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'ft2::\g<0>' }
+
+  # The merged tensors are float16 in all three checkpoints.
+  - assert:
+      all:
+        - dtype: { of: 'base::gpt_neox\.layers\.\d+\.mlp\..+', is: float16 }
+        - dtype: { of: 'ft1::gpt_neox\.layers\.\d+\.mlp\..+', is: float16 }
+        - dtype: { of: 'ft2::gpt_neox\.layers\.\d+\.mlp\..+', is: float16 }
+
+  # ---------------------------------------------------------------- step 2
+  # float32 scratch copies of the 64 MLP tensors, all held on the base alias.
+  - cast: { from: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::acc.\1', dtype: float32 }
+  - cast: { from: 'ft1::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::d1.\1', dtype: float32 }
+  - cast: { from: 'ft2::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::d2.\1', dtype: float32 }
+
+  - assert:
+      all:
+        - count: { of: 'base::acc\..+', is: 64 }
+        - count: { of: 'base::d1\..+', is: 64 }
+        - count: { of: 'base::d2\..+', is: 64 }
+
+  # task vectors against the unmodified base: d1 <- ft1 - base, d2 <- ft2 - base
+  - subtract: { from_a: 'base::d1\.(gpt_neox\..+)', from_b: 'base::acc.\1', to: 'base::d1.\1' }
+  - subtract: { from_a: 'base::d2\.(gpt_neox\..+)', from_b: 'base::acc.\1', to: 'base::d2.\1' }
+
+  # scale both task vectors by lambda = 0.4
+  - scale_: { target: 'base::d1\..+', by: 0.4 }
+  - scale_: { target: 'base::d2\..+', by: 0.4 }
+
+  # acc <- base + 0.4*(ft1-base) + 0.4*(ft2-base)
+  - add_: { from: 'base::d1\.(gpt_neox\..+)', to: 'base::acc.\1' }
+  - add_: { from: 'base::d2\.(gpt_neox\..+)', to: 'base::acc.\1' }
+
+  # ------------------------------------------------- required check: 64 merged
+  - assert: { count: { of: 'base::acc\..+', is: 64 } }
+
+  # back to the base dtype and into the base slots (names unchanged)
+  - cast_: { target: 'base::acc\..+', to: float16 }
+  - assign: { from: 'base::acc\.(gpt_neox\..+)', to: 'base::\1' }
+
+  # drop the scratch tensors
+  - delete: { target: 'base::(?:acc|d1|d2)\..+' }
+
+  # ---------------------------------------------------------------- step 3/4
+  # 244 tensors, unchanged names, MLP still float16, non-MLP still bit-identical
+  # to the base inputs (they were never written).
+  - assert:
+      all:
+        - count: { of: 'base::.*', is: 244 }
+        - count: { of: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 }
+        - dtype: { of: 'base::gpt_neox\.layers\.\d+\.mlp\..+', is: float16 }
+        - equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

@@ -1,0 +1,53 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Sanity: exactly 16 adapter pairs of each factor.
+  - assert: { count: { of: 'lora::.*lora_A\.weight', is: 16 } }
+  - assert: { count: { of: 'lora::.*lora_B\.weight', is: 16 } }
+  - assert:
+      shape:
+        of: 'base::gpt_neox.layers.0.attention.query_key_value.weight'
+        is: [6144, 2048]
+
+  # delta_i = B_i @ A_i  (float32, shape [6144, 2048]), materialized on the
+  # base alias so the output alias stays uniquely inferable as "base".
+  - matmul:
+      from_a: 'lora::base_model\.model\.gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_B\.weight'
+      from_b: 'lora::base_model.model.gpt_neox.layers.\1.attention.query_key_value.lora_A.weight'
+      to: 'base::delta.layers.\1.weight'
+
+  # scale = lora_alpha / r = 32 / 16 = 2
+  - scale_:
+      target: 'base::delta\.layers\.\d+\.weight'
+      by: 2.0
+
+  # cast the scaled delta down to the base dtype before folding it in.
+  - cast:
+      from: 'base::delta\.layers\.(\d+)\.weight'
+      to: 'base::delta_fp16.layers.\1.weight'
+      dtype: float16
+
+  # fold: base weight += scaled, casted delta
+  - add_:
+      from: 'base::delta_fp16\.layers\.(\d+)\.weight'
+      to: 'base::gpt_neox.layers.\1.attention.query_key_value.weight'
+
+  # drop the intermediate delta tensors
+  - delete: { target: 'base::delta\..*' }
+  - delete: { target: 'base::delta_fp16\..*' }
+
+  # Required checks, re-verified after the merge.
+  - assert:
+      shape:
+        of: 'base::gpt_neox.layers.0.attention.query_key_value.weight'
+        is: [6144, 2048]
+  - assert: { count: { of: 'base::.*', is: 244 } }
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert: { not: { exists: 'base::delta.*' } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

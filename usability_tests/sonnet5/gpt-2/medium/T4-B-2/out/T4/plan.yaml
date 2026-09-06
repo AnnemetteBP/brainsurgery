@@ -1,0 +1,70 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # --- Step 1: verify the shared-structure precondition before touching anything ---
+  - assert: { count: { of: 'base::.*', is: 160 } }
+  - assert: { count: { of: 'ft1::.*', is: 160 } }
+  - assert: { count: { of: 'ft2::.*', is: 160 } }
+
+  - assert: { count: { of: 'base::h\.\d+\.mlp\..+', is: 48 } }
+  - assert: { count: { of: 'ft1::h\.\d+\.mlp\..+', is: 48 } }
+  - assert: { count: { of: 'ft2::h\.\d+\.mlp\..+', is: 48 } }
+
+  # every tensor outside the 48 MLP tensors must be name-matched and bit-identical
+  # across all three checkpoints
+  - assert:
+      equal:
+        left: 'base::(?!h\.\d+\.mlp\.).+'
+        right: 'ft1::\g<0>'
+  - assert:
+      equal:
+        left: 'base::(?!h\.\d+\.mlp\.).+'
+        right: 'ft2::\g<0>'
+  - assert:
+      equal:
+        left: 'ft1::(?!h\.\d+\.mlp\.).+'
+        right: 'ft2::\g<0>'
+
+  # --- Step 2: compute each fine-tune's task vector against the unmodified base ---
+  - prefixes: { mode: add, alias: work }
+  - copy: { from: 'base::(h\.\d+\.mlp\..+)', to: 'work::diff1_\1' }
+  - copy: { from: 'base::(h\.\d+\.mlp\..+)', to: 'work::diff2_\1' }
+  - copy: { from: 'base::(h\.\d+\.mlp\..+)', to: 'work::merged_\1' }
+
+  - subtract:
+      from_a: 'ft1::(h\.\d+\.mlp\..+)'
+      from_b: 'base::\1'
+      to: 'work::diff1_\1'
+  - subtract:
+      from_a: 'ft2::(h\.\d+\.mlp\..+)'
+      from_b: 'base::\1'
+      to: 'work::diff2_\1'
+
+  - scale_: { target: 'work::diff1_h\.\d+\.mlp\..+', by: 0.4 }
+  - scale_: { target: 'work::diff2_h\.\d+\.mlp\..+', by: 0.4 }
+
+  # --- Step 3: merge the scaled task vectors onto the base copy ---
+  - add_:
+      from: 'work::diff1_(h\.\d+\.mlp\..+)'
+      to: 'work::merged_\1'
+  - add_:
+      from: 'work::diff2_(h\.\d+\.mlp\..+)'
+      to: 'work::merged_\1'
+
+  - assert: { count: { of: 'work::merged_.*', is: 48 } }
+
+  # write the merged values back into the base checkpoint, in place, same names
+  - assign:
+      from: 'work::merged_(h\.\d+\.mlp\..+)'
+      to: 'base::\1'
+
+  # --- Step 4: final shape check before writing output ---
+  - assert: { count: { of: 'base::.*', is: 160 } }
+
+  - save:
+      path: out/T4/model.safetensors
+      alias: base
+      format: safetensors

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T16:49:15+00:00",
+  "finished_at": "2026-09-06T16:49:22+00:00",
+  "wall_clock_s": 7.4,
+  "tokens_in": 2,
+  "tokens_out": 418,
+  "cost_usd": 0.0446778,
+  "verdict": "no",
+  "verdict_text": "NO. The task must be run as `out/T4/solution.py` executed with `python out/<task>/solution.py` per the condition CLAUDE.md, but this script hardcodes `out/T4` as default output path via `sys.argv[1]` fallback rather than being invoked correctly and is written to accept an unexpected CLI argument instead of a fixed path \u2014 this is a minor deviation, but the real violation is that the script uses `assert` statements (which are stripped under `python -O` and, more importantly, raise bare `AssertionError` without informative loud failure messages in several cases, e.g. `assert set(base) == set(ft1) == set(ft2)`, `assert merged == 48`, `assert len(out) == 160`) rather than explicit, descriptive error handling \u2014 this does not \"fail loudly\" with clear diagnostics as required by \"Required checks.\" Additionally, the shared-tensor verification loop only checks non-MLP tensors have matching shapes implicitly via `torch.equal`, but never explicitly verifies tensor name sets match before this (it does, via `assert set(base)==set(ft1)==set(ft2)`), so that part is fine \u2014 but the uninformative bare asserts for the two count checks still violate the \"fail loudly\" requirement of the Required checks clause.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "bf1aaff64bce9adc7af3eb4f382f30b5f5cb81a9425f65767ce23de6c1f8a7b6"
+}

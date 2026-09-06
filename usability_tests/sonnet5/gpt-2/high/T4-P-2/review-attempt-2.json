@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T15:43:54+00:00",
+  "finished_at": "2026-09-06T15:44:25+00:00",
+  "wall_clock_s": 30.5,
+  "tokens_in": 2,
+  "tokens_out": 2742,
+  "cost_usd": 0.06741380000000001,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script verifies name-set equality across the three checkpoints, asserts bit-exact equality on every non-MLP tensor via `torch.equal`, computes `base + \u03bb(ft1-base) + \u03bb(ft2-base)` in float32 against the unmodified base for exactly the 48 MLP tensors (matching the regex for `mlp.c_fc.{weight,bias}` and `mlp.c_proj.{weight,bias}` per layer), copies all other tensors unchanged, and asserts `merged == 48` and `len(out) == 160` before writing a single `model.safetensors` to the default `out/T4` path. All required checks fail loudly via `assert`, and the arithmetic ordering avoids the chained-base hazard the spec warns about.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

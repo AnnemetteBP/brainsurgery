@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "artifact_sha256": "63e961f65f68035058405429c48417a6756d6db8724a96905eba48c9befd56f3",
+  "started_at": "2026-09-06T18:17:57+00:00",
+  "finished_at": "2026-09-06T18:18:06+00:00",
+  "wall_clock_s": 8.8,
+  "tokens_in": 2,
+  "tokens_out": 629,
+  "cost_usd": 0.0529528,
+  "verdict": "yes",
+  "verdict_text": "YES. The script casts exactly the 64 named projection matrices to bfloat16, upcasts everything else (including embeddings, norms, biases) to float32, drops the 48 named buffers while preserving all parameters, keeps names unchanged, and shards by cumulative tensor-byte size with oversized tensors correctly isolated into their own shard, writing a proper `weight_map` index. The required pre-write assertions (64 bfloat16 tensors, `query_key_value.weight` layer 0 is bfloat16, `embed_in.weight` is float32, total of 196 tensors) are all present and match spec exactly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

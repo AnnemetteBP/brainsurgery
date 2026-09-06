@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:06:12+00:00",
+  "finished_at": "2026-09-06T16:06:22+00:00",
+  "wall_clock_s": 9.8,
+  "tokens_in": 2,
+  "tokens_out": 808,
+  "cost_usd": 0.048396800000000004,
+  "verdict": "no",
+  "verdict_text": "NO. Step 2's formula requires each task vector to be added against the *unmodified* base (`out = base + \u03bb(ft1\u2212base) + \u03bb(ft2\u2212base)`), but the script computes `tmp = base + \u03bb(ft1\u2212base)` and then folds ft2 in as `tmp + \u03bb(ft2\u2212tmp)`, i.e. it applies the second task vector against the already-merged `tmp` instead of the original base. Algebraically this yields `out = base(1\u2212\u03bb)\u00b2 + \u03bb(1\u2212\u03bb)ft1 + \u03bb\u00b7ft2`, not `base(1\u22122\u03bb) + \u03bb\u00b7ft1 + \u03bb\u00b7ft2` \u2014 for \u03bb=0.4 the base coefficient is 0.36 instead of the required 0.2, so the merged tensors will fail the grader's 1e-5 relative-Frobenius-error check. This is precisely the ordering hazard the spec warns about in \"Why it is meaningful\" and violates Required result step 2.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:11:26+00:00",
+  "finished_at": "2026-09-06T16:11:33+00:00",
+  "wall_clock_s": 7.5,
+  "tokens_in": 2,
+  "tokens_out": 466,
+  "cost_usd": 0.0475938,
+  "verdict": "yes",
+  "verdict_text": "YES. The script computes delta = B @ A in float32 (both loaded as float32), applies scale, adds to the float32 base tensor, then casts back to the original dtype (float16) \u2014 matching the required computation and layout (no transpose since `fan_in_fan_out=false`). All four required checks are asserted before the sharded write, and the write goes through `save_sharded_safetensors` with the correct 512 MiB shard limit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T08:56:56+00:00",
+  "finished_at": "2026-09-06T08:57:09+00:00",
+  "wall_clock_s": 13.0,
+  "tokens_in": 2,
+  "tokens_out": 710,
+  "cost_usd": 0.23600275,
+  "verdict_text": "NO\n\nThe merge itself is correct: `B @ A` gives `[2304, 768]`, the transpose under `fan_in_fan_out` yields `[768, 2304]`, it is scaled by alpha/r = 2 and added in float32, and all four required checks are asserted before writing. However, the sharded export required by \"Required result\" clause 4 is entirely delegated to `save_sharded_safetensors` from a helper module `_ckpt` that is not part of the artifact, so the 100 MiB per-shard cap, the isolated `wte.weight` shard, and the `model.safetensors.index.json` weight map cannot be confirmed from the script. The artifact as shown therefore does not itself implement the sharding rules, and its correctness on that clause rests on unseen code.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

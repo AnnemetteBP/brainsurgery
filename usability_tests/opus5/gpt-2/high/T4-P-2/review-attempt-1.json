@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T08:13:17+00:00",
+  "finished_at": "2026-09-06T08:13:53+00:00",
+  "wall_clock_s": 35.6,
+  "tokens_in": 2,
+  "tokens_out": 2920,
+  "cost_usd": 0.16993149999999999,
+  "verdict_text": "YES\n\nThe script verifies identical key sets and bit-exact equality of all non-MLP tensors against the base before touching anything, selects exactly the 48 `h.<i>.mlp.c_{fc,proj}.{weight,bias}` names with an anchored `fullmatch` (so `h.<i>.attn.bias` and the rest are excluded), computes `b + 0.4*(f1-b) + 0.4*(f2-b)` in float32 against the *unmodified* base dict (the result goes into a separate `out` dict, so no read-after-write hazard), carries every other tensor over from base unchanged, and asserts `merged == 48` and `len(out) == 160` before writing `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

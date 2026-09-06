@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:27:44+00:00",
+  "finished_at": "2026-09-06T16:27:57+00:00",
+  "wall_clock_s": 12.9,
+  "tokens_in": 2,
+  "tokens_out": 827,
+  "cost_usd": 0.23754675,
+  "verdict": "yes",
+  "verdict_text": "YES. The script slices every layer's `attn.c_attn.weight` on axis 1, `attn.c_attn.bias` on axis 0, and `attn.c_proj.weight` on axis 0 with the exact keep ranges from the specification (dropping the 64-wide block for head 5 inside each 768-wide segment, in the required order), leaves all other tensors and names unchanged, asserts the four required checks before saving, and writes a single `out/T2/model.safetensors` with 160 tensors. The only unverifiable piece is the imported `_ckpt.load_checkpoint` helper, which must return the full 160-tensor dict for the checks to pass.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "artifact_sha256": "52d337326395ce9beac3adc73e35e8c7c2d2892cc99e856b24330c90669f0535",
+  "started_at": "2026-09-06T18:13:44+00:00",
+  "finished_at": "2026-09-06T18:14:07+00:00",
+  "wall_clock_s": 22.4,
+  "tokens_in": 2,
+  "tokens_out": 1916,
+  "cost_usd": 0.0647348,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script correctly maps adapter names to base names, computes `scale=2`, applies `(B @ A).T` (respecting `fan_in_fan_out`), adds in float32, asserts the four required checks before writing, and shards tensors by cumulative byte size so the oversized `wte.weight` lands alone in its own shard while all others stay \u2264100 MiB, writing a valid `weight_map` index. Shapes, names, tensor count (160), and merge count (12) all match the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

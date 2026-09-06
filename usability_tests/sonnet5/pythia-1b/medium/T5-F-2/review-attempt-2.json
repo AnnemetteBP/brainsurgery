@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:11:20+00:00",
+  "finished_at": "2026-09-06T16:11:26+00:00",
+  "wall_clock_s": 5.4,
+  "tokens_in": 2,
+  "tokens_out": 189,
+  "cost_usd": 0.0452628,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script correctly maps each of the 16 layers' `attention.query_key_value` adapter pairs to base names, computes `scale * B @ A` in float32 (via `.float()`), adds it, casts back to the base dtype, and respects `fan_in_fan_out` via the transpose branch (dead code here since it's false, but correct per spec). It enforces all four required checks with asserts before writing, and delegates sharding/index writing to `save_sharded_safetensors` with the 512 MiB limit, leaving no adapter or intermediate tensors in `sd`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

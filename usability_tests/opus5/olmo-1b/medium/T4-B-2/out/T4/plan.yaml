@@ -1,0 +1,92 @@
+# T4: task-vector merge of two fine-tunes into the OLMo-1B base.
+#
+#   out[X] = base[X] + lambda*(ft1[X] - base[X]) + lambda*(ft2[X] - base[X])
+#
+# is computed for the 48 MLP tensors as
+#
+#   acc = ft1 + ft2 - base - base          (both task vectors, against the
+#   acc = 0.4 * acc                         *unmodified* base)
+#   base += acc
+#
+# so the base MLP tensors are only touched by the very last accumulation and
+# neither task vector is ever taken against an already-merged base.
+# All writes go to the `base` alias; the scratch tensors live under the
+# `tv.` prefix on that alias and are deleted before the output is written.
+
+inputs:
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # ---------------------------------------------------------------- step 1
+  # Same tensor names in all three checkpoints.
+  # 114 tensors each, of which exactly 48 match the MLP pattern; every
+  # non-MLP name of the base must exist (and be bit-identical) in both
+  # fine-tunes, and every MLP name of the base is required to exist in both
+  # fine-tunes by the copy/add_/subtract_ rewrites below.
+  - assert:
+      all:
+        - count: { of: 'base::.+', is: 114 }
+        - count: { of: 'ft1::.+', is: 114 }
+        - count: { of: 'ft2::.+', is: 114 }
+        - count: { of: 'base::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', is: 48 }
+        - count: { of: 'ft1::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', is: 48 }
+        - count: { of: 'ft2::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', is: 48 }
+
+  # Every tensor outside the 48 MLP tensors is identical in all three.
+  - assert:
+      equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' }
+  - assert:
+      equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft2::\g<0>' }
+
+  # The merge arithmetic is float32.
+  - assert:
+      all:
+        - dtype: { of: 'base::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', is: float32 }
+        - dtype: { of: 'ft1::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', is: float32 }
+        - dtype: { of: 'ft2::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', is: float32 }
+
+  # ---------------------------------------------------------------- step 2
+  # acc <- ft1
+  - copy:
+      from: 'ft1::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight'
+      to: 'base::tv.\g<0>'
+  # acc <- acc + ft2
+  - add_:
+      from: 'ft2::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight'
+      to: 'base::tv.\g<0>'
+  # acc <- acc - base  (twice: one base per task vector)
+  - subtract_:
+      from: 'base::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight'
+      to: 'base::tv.\g<0>'
+  - subtract_:
+      from: 'base::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight'
+      to: 'base::tv.\g<0>'
+  # acc <- lambda * acc
+  - scale_:
+      target: 'base::tv\.model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight'
+      by: 0.4
+
+  # Exactly 48 task-vector tensors, i.e. exactly 48 tensors get merged.
+  - assert:
+      count: { of: 'base::tv\.model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', is: 48 }
+
+  # base <- base + acc
+  - add_:
+      from: 'base::tv\.(model\.layers\.\d+\.mlp\.(?:gate|up|down)_proj\.weight)'
+      to: 'base::\1'
+
+  # ---------------------------------------------------------------- step 3
+  # Drop the scratch tensors; everything else is the untouched base.
+  - delete: { target: 'base::tv\.model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight' }
+
+  - assert:
+      all:
+        - count: { of: 'base::.+', is: 114 }
+        - count: { of: 'base::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', is: 48 }
+        - not: { exists: 'base::tv\..+' }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

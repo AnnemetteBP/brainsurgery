@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T16:00:33+00:00",
+  "finished_at": "2026-09-06T16:00:38+00:00",
+  "wall_clock_s": 5.3,
+  "tokens_in": 2,
+  "tokens_out": 162,
+  "cost_usd": 0.041842800000000006,
+  "verdict": "no",
+  "verdict_text": "NO \u2014 the required checks use plain `assert` statements, which are stripped when Python runs with optimizations (`-O`/`PYTHONOPTIMIZE`), so the script would not \"fail loudly\" in that mode, violating the \"Required checks\" clause that mandates failure if verification, the 48-tensor count, or the 160-tensor count do not hold. Otherwise the logic (verification order, lambda formula, unmodified base for other tensors, float32 computation) matches the specification correctly.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

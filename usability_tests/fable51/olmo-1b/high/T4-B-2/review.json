@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-06T16:32:06+00:00",
+  "finished_at": "2026-09-06T16:32:42+00:00",
+  "wall_clock_s": 35.7,
+  "tokens_in": 2,
+  "tokens_out": 2645,
+  "cost_usd": 0.34181475,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan performs the shared-tensor verification first (the two `equal` asserts over every non-MLP name against ft1 and ft2, plus the 114-count checks), computes both task vectors as temporaries against the still-unmodified base, scales each by 0.4, asserts 48 of each before applying, adds both to the base MLP tensors, deletes the temporaries, and asserts 114 output tensors, matching every clause in Required result and Required checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "2cf409b1da371959521150b9b3039e08d2b7510a90837141d22e3cf7265a8976"
+}

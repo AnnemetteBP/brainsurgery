@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T07:07:50+00:00",
+  "finished_at": "2026-09-06T07:08:27+00:00",
+  "wall_clock_s": 36.6,
+  "tokens_in": 2,
+  "tokens_out": 2929,
+  "cost_usd": 0.0731358,
+  "verdict_text": "YES\n\nThe merge logic matches the spec exactly: it uses `lora_alpha/r` as `scale`, computes `B @ A` (no transpose since `fan_in_fan_out=False`) in float32 (adapter tensors are loaded as float32), adds it to the base weight cast to float32, and casts the result back to the base tensor's original dtype (float16). It iterates over all 16 layers \u00d7 1 target module, asserts `merged == 16`, asserts no `lora_` names remain, checks the layer-0 QKV shape is `[6144, 2048]`, and asserts the final dict has 244 tensors \u2014 matching all four required checks before writing. It then delegates to `save_sharded_safetensors(sd, out_dir, 536870912)` for the sharded output with the correct byte-size cap.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "artifact_sha256": "39971c56f8f1ba950debcebf4fb42e1685eb2910891739a543fbb747ba8a390c",
+  "started_at": "2026-09-06T18:16:07+00:00",
+  "finished_at": "2026-09-06T18:16:14+00:00",
+  "wall_clock_s": 7.3,
+  "tokens_in": 2,
+  "tokens_out": 359,
+  "cost_usd": 0.0447128,
+  "verdict": "no",
+  "verdict_text": "NO. The `assert` statements are not \"fail loudly\" in a production sense but more critically, asserts can be stripped with `python -O`, though that alone isn't necessarily disqualifying since the spec just says \"fail loudly if any of these does not hold.\" The real defect: the equality check for shared tensors uses `torch.equal`, which requires bit-exact match, but per-tensor dtype is never verified independently\u2014shape/dtype mismatches between checkpoints would surface only indirectly via `torch.equal` raising or returning False, which is acceptable. However, the script does not verify that `ft1`/`ft2` tensor **shapes** match base for non-MLP tensors before calling `torch.equal` (it would error rather than raise the required abort message, which is arguably still \"failing loudly\"). The more concrete violation: the script computes the merge using `base[name].float()` etc. but writes `out[name] = ... .to(base[name].dtype)`, which is fine\u2014no violation there. On closer inspection, the script correctly implements steps 1\u20134 and the required checks; I do not find a specification violation.\n\nYES",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

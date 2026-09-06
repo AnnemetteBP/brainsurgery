@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "artifact_sha256": "ead4a3730e294c1ca26fd37fb820749a51f66ac0bb4eadf5d4411870d220e3d4",
+  "started_at": "2026-09-06T18:17:06+00:00",
+  "finished_at": "2026-09-06T18:17:57+00:00",
+  "wall_clock_s": 50.8,
+  "tokens_in": 2,
+  "tokens_out": 4357,
+  "cost_usd": 0.0885208,
+  "verdict": "yes",
+  "verdict_text": "YES: the plan computes delta = B @ A via `matmul` (from_a=lora_B, from_b=lora_A) with no transpose (matching `fan_in_fan_out=false`), scales by 2 (=alpha/r), adds it to the float32-cast weight, casts back to float16, deletes the delta and all `lora::` tensors, and asserts the four required checks (16 lora_A pairs, 16 deltas, no `lora_` names, layer-0 QKV shape `[6144,2048]`, and total count 244) before writing a 512MB-sharded safetensors output to `out/T5`. All Required-result clauses (dtype/shape/scale/order-of-cast, exclusion of adapter/intermediate tensors, unchanged-tensor preservation, sharded output) and all four Required-checks are implemented as literal asserts, matching the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

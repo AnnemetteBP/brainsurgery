@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "artifact_sha256": "445483f5b51837497d7a08eb024b2a58686278532f4e520bfcee7541bc7697c1",
+  "started_at": "2026-09-06T18:23:08+00:00",
+  "finished_at": "2026-09-06T18:23:19+00:00",
+  "wall_clock_s": 11.2,
+  "tokens_in": 2,
+  "tokens_out": 715,
+  "cost_usd": 0.1237825,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops blocks 2, 6, 10, 14, maps the surviving blocks in original order to contiguous indices 0..11 via `renumber` (old 3\u21922, 15\u219211, etc.), copies tensors by reference so values, shapes and dtypes are untouched, passes the 4 non-block tensors through unchanged, and writes a single `out/T1/model.safetensors`. The two assertions (surviving layer index set equals `{0..11}`, which subsumes \"no blocks 12\u201315 remain\" and \"exactly 12 blocks\", and total tensor count equals 184) run before `mkdir`/`save_file`, so a failure aborts with a non-zero exit and no output written.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

@@ -1,0 +1,113 @@
+transforms:
+- assert:
+    count:
+      of: lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_A\.weight
+      is: 12
+- assert:
+    count:
+      of: lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight
+      is: 12
+- assert:
+    count:
+      of: lora::.*
+      is: 24
+- assert:
+    count:
+      of: base::.*
+      is: 160
+- assert:
+    shape:
+      of: lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_A\.weight
+      is:
+      - 16
+      - 768
+- assert:
+    shape:
+      of: lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight
+      is:
+      - 2304
+      - 16
+- assert:
+    shape:
+      of: base::h\.(\d+)\.attn\.c_attn\.weight
+      is:
+      - 768
+      - 2304
+- assert:
+    dtype:
+      of: lora::.*
+      is: float32
+- assert:
+    dtype:
+      of: base::h\.(\d+)\.attn\.c_attn\.weight
+      is: float32
+- matmul:
+    from_a: lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight
+    from_b: lora::base_model.model.h.\1.attn.c_attn.lora_A.weight
+    to: base::tmp.h.\1.delta
+- assert:
+    count:
+      of: base::tmp\.h\.(\d+)\.delta
+      is: 12
+- assert:
+    shape:
+      of: base::tmp\.h\.(\d+)\.delta
+      is:
+      - 2304
+      - 768
+- scale_:
+    target: base::tmp\.h\.(\d+)\.delta
+    by: 2.0
+- permute:
+    from: base::tmp\.h\.(\d+)\.delta
+    to: base::tmp.h.\1.delta_t
+    order:
+    - 1
+    - 0
+- assert:
+    count:
+      of: base::tmp\.h\.(\d+)\.delta_t
+      is: 12
+- assert:
+    shape:
+      of: base::tmp\.h\.(\d+)\.delta_t
+      is:
+      - 768
+      - 2304
+- add_:
+    from: base::tmp\.h\.(\d+)\.delta_t
+    to: base::h.\1.attn.c_attn.weight
+- delete:
+    target: base::tmp\..*
+- assert:
+    count:
+      of: lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_A\.weight
+      is: 12
+- assert:
+    count:
+      of: base::h\.(\d+)\.attn\.c_attn\.weight
+      is: 12
+- assert:
+    writes:
+      of: base::h\.(\d+)\.attn\.c_attn\.weight
+      ge: 1
+- assert:
+    not:
+      exists: base::.*lora_.*
+- assert:
+    not:
+      exists: base::tmp\..*
+- assert:
+    shape:
+      of: base::h.0.attn.c_attn.weight
+      is:
+      - 768
+      - 2304
+- assert:
+    dtype:
+      of: base::h\.(\d+)\.attn\.c_attn\.weight
+      is: float32
+- assert:
+    count:
+      of: base::.*
+      is: 160

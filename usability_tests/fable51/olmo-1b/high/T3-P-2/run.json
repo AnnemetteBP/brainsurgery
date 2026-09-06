@@ -1,0 +1,13 @@
+{
+  "run_id": "T3-P-2",
+  "agent": "fable51",
+  "target": "olmo-1b",
+  "effort": "high",
+  "test": "T3",
+  "condition": "P",
+  "repeat": 2,
+  "created_at": "2026-09-06T11:29:15+00:00",
+  "repo_commit": "8047059ca1ff670730e185aea613d691c827fb46",
+  "venv": true,
+  "env_freeze_lines": 31
+}

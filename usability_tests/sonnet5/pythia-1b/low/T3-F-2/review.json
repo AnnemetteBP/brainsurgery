@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "artifact_sha256": "63e961f65f68035058405429c48417a6756d6db8724a96905eba48c9befd56f3",
+  "started_at": "2026-09-06T18:17:29+00:00",
+  "finished_at": "2026-09-06T18:17:33+00:00",
+  "wall_clock_s": 3.6,
+  "tokens_in": 2,
+  "tokens_out": 143,
+  "cost_usd": 0.048069799999999996,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script casts exactly the 64 named projection matrices to bfloat16 via `.float().to(torch.bfloat16)`, upcasts everything else to float32, drops the 48 named buffers, preserves names, includes the required pre-write assertions, and shards by \u2264256 MiB tensor-data with oversized tensors (embed_in/embed_out) naturally landing alone since each exceeds MAX_SHARD.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

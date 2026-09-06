@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T16:37:51+00:00",
+  "finished_at": "2026-09-06T16:38:04+00:00",
+  "wall_clock_s": 13.2,
+  "tokens_in": 2,
+  "tokens_out": 512,
+  "cost_usd": 0.33379774999999995,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan slices exactly the required row ranges (0:3840 and 4608:6144) for the fused weight and bias, and the required column ranges (0:1280 and 1536:2048) for the dense weight, for all 16 layers via the regex copy. It concatenates the two pieces in the correct order along the correct dim (0 for weight and bias, 1 for dense), writes them back under the original names, removes all temporaries, and leaves every other tensor untouched. The four required checks are present as assert transforms before the single output is written, so the key set, shapes, dtypes (float16 preserved by slicing) and values match the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "ce3d418dfa996b948706d0c8bc5f3178e62e5967e85257dfd660f25ad2aa75e9"
+}

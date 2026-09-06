@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "artifact_sha256": "445483f5b51837497d7a08eb024b2a58686278532f4e520bfcee7541bc7697c1",
+  "started_at": "2026-09-06T18:16:26+00:00",
+  "finished_at": "2026-09-06T18:16:56+00:00",
+  "wall_clock_s": 30.0,
+  "tokens_in": 2,
+  "tokens_out": 2728,
+  "cost_usd": 0.0714708,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script's `DROP = {2, 6, 10, 14}` and `renumber` mapping via `enumerate(kept)` produce exactly the mapping required (0\u21920, 1\u21921, 3\u21922, ..., 15\u219211), non-block tensors pass through unchanged, and the two assertions (`layers == set(range(12))` and `len(out) == 184`) run before `save_file`, so any deviation (missing renumbering, wrong block count, wrong total) raises `AssertionError` before the output is written, satisfying \"fail loudly, no output written.\" Output path defaults to `out/T1/model.safetensors` as required, and the 12\u00d715+4=184 tensor count matches the spec.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

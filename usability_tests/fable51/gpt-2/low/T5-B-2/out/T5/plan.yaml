@@ -1,0 +1,56 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Preflight: exactly 12 adapter pairs, matching base weights present.
+  - assert: { count: { of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_A\.weight', is: 12 } }
+  - assert: { count: { of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_B\.weight', is: 12 } }
+  - assert: { count: { of: 'lora::.*', is: 24 } }
+  - assert: { count: { of: 'base::h\.\d+\.attn\.c_attn\.weight', is: 12 } }
+  - assert: { count: { of: 'base::.*', is: 160 } }
+  - assert: { shape: { of: 'lora::base_model.model.h.0.attn.c_attn.lora_A.weight', is: [16, 768] } }
+  - assert: { shape: { of: 'lora::base_model.model.h.0.attn.c_attn.lora_B.weight', is: [2304, 16] } }
+  - assert: { dtype: { of: 'lora::base_model.model.h.0.attn.c_attn.lora_A.weight', is: float32 } }
+
+  # delta = B @ A  -> [2304, 768]  (nn.Linear [out, in] layout), float32
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'base::tmp.h.\1.delta'
+  - assert: { count: { of: 'base::tmp\.h\.\d+\.delta', is: 12 } }
+  - assert: { shape: { of: 'base::tmp.h.0.delta', is: [2304, 768] } }
+
+  # fan_in_fan_out = true: transpose to Conv1D [in, out] layout
+  - permute:
+      from: 'base::tmp\.h\.(\d+)\.delta'
+      to: 'base::tmp.h.\1.delta_t'
+      order: [1, 0]
+  - assert: { count: { of: 'base::tmp\.h\.\d+\.delta_t', is: 12 } }
+  - assert: { shape: { of: 'base::tmp.h.0.delta_t', is: [768, 2304] } }
+
+  # scale = lora_alpha / r = 32 / 16 = 2
+  - scale_: { target: 'base::tmp\.h\.\d+\.delta_t', by: 2.0 }
+
+  # W += scale * (B @ A).T
+  - add_:
+      from: 'base::tmp\.h\.(\d+)\.delta_t'
+      to: 'base::h.\1.attn.c_attn.weight'
+  # load counts as one write; merged tensors have exactly one more, others none
+  - assert: { writes: { of: 'base::h\.\d+\.attn\.c_attn\.weight', is: 2 } }
+  - assert: { writes: { of: 'base::(?!h\.\d+\.attn\.c_attn\.weight$)(?!tmp\.).+', lt: 2 } }
+
+  # remove intermediates
+  - delete: { target: 'base::tmp\..*' }
+
+  # Required checks
+  - assert: { not: { exists: 'base::tmp\..*' } }
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert: { shape: { of: 'base::h.0.attn.c_attn.weight', is: [768, 2304] } }
+  - assert: { dtype: { of: 'base::h.0.attn.c_attn.weight', is: float32 } }
+  - assert: { count: { of: 'base::.*', is: 160 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB

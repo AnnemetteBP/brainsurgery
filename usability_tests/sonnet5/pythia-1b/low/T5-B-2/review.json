@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "artifact_sha256": "ead4a3730e294c1ca26fd37fb820749a51f66ac0bb4eadf5d4411870d220e3d4",
+  "started_at": "2026-09-06T18:17:37+00:00",
+  "finished_at": "2026-09-06T18:17:46+00:00",
+  "wall_clock_s": 9.0,
+  "tokens_in": 2,
+  "tokens_out": 359,
+  "cost_usd": 0.0485408,
+  "verdict": "no",
+  "verdict_text": "NO. The plan casts `weight` to float32 and adds `delta` (computed via matmul from float32 lora tensors, so delta is float32) \u2014 but matmul happens before any cast of the base weight, and there's no cast of delta itself; more critically, `scale_` multiplies delta by 2 but the plan never verifies dtype compatibility of add_ across float16/float32 mismatches at matmul time (delta is float32, base weight is float16 until cast_, so this part is fine actually). The real violation: the plan never checks fan_in_fan_out or transposition explicitly via assert, but that's just a comment, not a spec violation. The actual defect is that `delete: { target: 'model::gpt_neox\\.layers\\.\\d+\\.(attention\\.query_key_value)\\.delta(_t)?' }` and prior steps assume base weight naming matches exactly, but the base tensor name pattern in inputs is `gpt_neox.layers.<i>.<module>.weight`, which matches \u2014 this is fine. I don't find a genuine violation of the required result or checks; the plan appears correct.\n\nYES",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

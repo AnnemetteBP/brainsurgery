@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T4-defective.py",
+  "started_at": "2026-09-06T16:00:29+00:00",
+  "finished_at": "2026-09-06T16:00:35+00:00",
+  "wall_clock_s": 6.1,
+  "tokens_in": 2,
+  "tokens_out": 205,
+  "cost_usd": 0.0423288,
+  "verdict": "no",
+  "verdict_text": "NO: The merge computes `out = base + \u03bb(ft1-base)` then applies `\u03bb(ft2-tmp)` to that intermediate result instead of computing both task vectors against the unmodified base, violating the ordering requirement in step 2 (`out[X] = base[X] + \u03bb(ft1[X]-base[X]) + \u03bb(ft2[X]-base[X])`). This yields `base + \u03bb(f1-b) + \u03bb(f2-b) - \u03bb\u00b2(f2-f1)`, an extra `\u03bb\u00b2` cross term not present in the spec's formula, so merged values will fail the 1e-5 relative Frobenius error check.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

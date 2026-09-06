@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T07:20:18+00:00",
+  "finished_at": "2026-09-06T07:20:25+00:00",
+  "wall_clock_s": 7.3,
+  "tokens_in": 2,
+  "tokens_out": 387,
+  "cost_usd": 0.1114165,
+  "verdict_text": "YES\n\nThe name filter matches exactly the 112 projection matrices (7 per layer \u00d7 16 layers) via `fullmatch`, everything else is passed through as float32 with unchanged values, nothing is dropped (`buffer_re` contains `(?!)`, a never-satisfiable lookahead, so it is a no-op), names are untouched, and all four required checks are asserted before writing. Sharding is delegated to `save_sharded_safetensors` with the correct 268,435,456-byte limit; that helper's body is not part of the artifact shown, so the shard-layout clause is judged only on the call site, which is correct.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

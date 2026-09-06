@@ -1,0 +1,39 @@
+# T1: depth pruning of GPT-2 (124M): drop blocks 2, 5, 8 and renumber 0..8.
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # Sanity: 12 blocks, 160 tensors before surgery.
+  - assert: { count: { of: 'h\.\d+\.attn\.c_attn\.weight', is: 12 } }
+  - assert: { count: { of: '.*', is: 160 } }
+
+  # 1. Remove every tensor of blocks 2, 5, 8 (13 each).
+  - assert: { count: { of: 'h\.(2|5|8)\..*', is: 39 } }
+  - delete: { target: 'h\.(2|5|8)\..*' }
+  - assert: { not: { exists: 'h\.(2|5|8)\..*' } }
+
+  # 2. Renumber survivors in ascending order: each destination index is
+  #    already vacant (deleted, or moved away by the preceding step), and
+  #    move refuses existing destinations, so a collision would fail loudly.
+  - move: { from: 'h\.3\.(.*)', to: 'h.2.\1' }
+  - move: { from: 'h\.4\.(.*)', to: 'h.3.\1' }
+  - move: { from: 'h\.6\.(.*)', to: 'h.4.\1' }
+  - move: { from: 'h\.7\.(.*)', to: 'h.5.\1' }
+  - move: { from: 'h\.9\.(.*)', to: 'h.6.\1' }
+  - move: { from: 'h\.10\.(.*)', to: 'h.7.\1' }
+  - move: { from: 'h\.11\.(.*)', to: 'h.8.\1' }
+
+  # Required checks.
+  - assert: { not: { exists: 'h\.(9|10|11)\..*' } }
+  - assert: { count: { of: 'h\.\d+\.attn\.c_attn\.weight', is: 9 } }
+  - assert: { count: { of: 'h\.(0|1|2|3|4|5|6|7|8)\..*', is: 117 } }
+  - assert: { count: { of: '.*', is: 121 } }
+  # Non-block tensors still present with expected shapes.
+  - assert: { shape: { of: wte.weight, is: [50257, 768] } }
+  - assert: { shape: { of: wpe.weight, is: [1024, 768] } }
+  - assert: { shape: { of: ln_f.weight, is: [768] } }
+  - assert: { shape: { of: ln_f.bias, is: [768] } }
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors

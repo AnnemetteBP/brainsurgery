@@ -1,0 +1,13 @@
+{
+  "run_id": "T3-P-2",
+  "agent": "sonnet5",
+  "target": "gpt-2",
+  "effort": "high",
+  "test": "T3",
+  "condition": "P",
+  "repeat": 2,
+  "created_at": "2026-09-06T06:28:13+00:00",
+  "repo_commit": "ae8994acad9d677f039887fd1002943b9bd358ff",
+  "venv": true,
+  "env_freeze_lines": 31
+}

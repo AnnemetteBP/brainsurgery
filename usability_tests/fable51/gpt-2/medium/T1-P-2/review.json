@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T16:57:50+00:00",
+  "finished_at": "2026-09-06T16:57:59+00:00",
+  "wall_clock_s": 9.3,
+  "tokens_in": 2,
+  "tokens_out": 506,
+  "cost_usd": 0.21918074999999998,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops every tensor whose name matches `h.{2,5,8}.*`, renumbers the survivors via an order-preserving map into a fresh dict (so no collision is possible), leaves the 4 non-block tensors untouched with values, shapes and dtypes intact, and asserts before saving that the surviving block indices are exactly {0..8} (which rules out any leftover block 9, 10 or 11 and proves exactly 9 blocks) and that the output has exactly 121 tensors; both assertions fire with a non-zero exit before any file is written, and the result lands at `out/T1/model.safetensors` as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "86c4df1bf481a3ef792ee9229bb90618bb7950a8c1fe8610059fe3411ee71f43"
+}

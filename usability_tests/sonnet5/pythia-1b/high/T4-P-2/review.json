@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T16:51:33+00:00",
+  "finished_at": "2026-09-06T16:51:54+00:00",
+  "wall_clock_s": 21.3,
+  "tokens_in": 2,
+  "tokens_out": 1646,
+  "cost_usd": 0.0578258,
+  "verdict": "yes",
+  "verdict_text": "YES. The script verifies name-set equality across all three checkpoints and bit-exact equality on every non-MLP tensor, aborting otherwise (step 1). It computes `base + \u03bb(ft1-base) + \u03bb(ft2-base)` in float32 against the unmodified base tensors (not sequentially), then casts to the base dtype (step 2), copies everything else unchanged (step 3), and asserts exactly 64 merged tensors and 244 total output tensors (Required checks). It writes a single `model.safetensors` file to `out/T4` by default, matching the specified output location.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "c853a23e2b6879d190c754b8ad01ba13b9e6b628b241b1be72b6e7567bc9060f"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T2.yaml",
+  "started_at": "2026-09-06T07:21:47+00:00",
+  "finished_at": "2026-09-06T07:21:56+00:00",
+  "wall_clock_s": 9.1,
+  "tokens_in": 2,
+  "tokens_out": 522,
+  "cost_usd": 0.18620249999999997,
+  "verdict_text": "YES\n\nThe plan slices each head-bearing tensor around head 5 (rows/cols 640\u2013767), deletes the originals, reconcatenates the two pieces in order on dim 0 for q/k/v and dim 1 for o_proj, for all 16 layers; temporaries are removed before the required shape and 114-tensor count asserts, and the output path matches `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T05:29:42+00:00",
+  "finished_at": "2026-09-06T05:29:55+00:00",
+  "wall_clock_s": 13.3,
+  "tokens_in": 2,
+  "tokens_out": 926,
+  "cost_usd": 0.0495988,
+  "verdict_text": "YES\n\nThe script's `keep_index` produces exactly the required column/row keep-sets in the required order for `c_attn.weight`, `c_attn.bias`, and `c_proj.weight`, leaves all other tensors (including `c_proj.bias` and `attn.bias`) untouched, asserts all four required shape/count checks before writing, and writes a single `out/T2/model.safetensors` with 160 tensors \u2014 matching every clause of the Required result and Required checks sections.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

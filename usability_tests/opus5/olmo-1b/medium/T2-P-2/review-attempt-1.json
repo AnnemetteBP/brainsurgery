@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T07:43:59+00:00",
+  "finished_at": "2026-09-06T07:44:11+00:00",
+  "wall_clock_s": 12.8,
+  "tokens_in": 2,
+  "tokens_out": 845,
+  "cost_usd": 0.1254845,
+  "verdict_text": "YES\n\nThe `keep_index` helper with `segments=1, seg_size=2048, block=128` enumerates heads 0..15 and skips head 5, producing indices `0..639` followed by `768..2047` in ascending order \u2014 exactly the required keep order. It is applied along dim 0 for `q_proj`/`k_proj`/`v_proj` and dim 1 for `o_proj`, for all 16 layers, leaving every other tensor (the three MLP matrices per layer, embeddings, lm_head) untouched with unchanged names and dtypes. The four shape assertions and the 114-tensor count check run before `save_file`, and the output goes to `out/T2/model.safetensors` as a single file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

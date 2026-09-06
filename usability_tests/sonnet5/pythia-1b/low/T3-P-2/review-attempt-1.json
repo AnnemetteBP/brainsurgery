@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T05:20:34+00:00",
+  "finished_at": "2026-09-06T05:20:40+00:00",
+  "wall_clock_s": 5.9,
+  "tokens_in": 2,
+  "tokens_out": 320,
+  "cost_usd": 0.0444988,
+  "verdict_text": "NO\n\n`tensor.float().to(torch.bfloat16)` upcasts the float16 tensor to float32 first, then rounds to bfloat16, which is exactly the round-trip the spec permits (\"upcast to float32 first or cast directly, both give the same result\") \u2014 this part is fine. However, the script never verifies the sharding correctness itself (shard size limit, single-tensor-per-oversized-shard rule, weight_map completeness) with its own checks; it fully delegates shard construction to an unseen `_ckpt.save_sharded_safetensors` helper without asserting per-shard byte totals \u2264268,435,456 or that embed_in/embed_out are isolated, so a bug in that helper would not \"fail loudly\" as required by the Required Checks section's spirit (clause 5's shard-size and single-tensor-shard rule is not locally validated). This is a soundness gap against clause 5, since correctness of the deployable output entirely hinges on an unverified external function.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

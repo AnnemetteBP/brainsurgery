@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T16:21:52+00:00",
+  "finished_at": "2026-09-06T16:22:09+00:00",
+  "wall_clock_s": 17.6,
+  "tokens_in": 2,
+  "tokens_out": 1321,
+  "cost_usd": 0.13716250000000002,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script builds a fresh output dict rather than mutating in place, so there is no renumbering collision; `kept = [0,1,3,4,5,7,8,9,11,12,13,15]` with `enumerate` yields exactly the mapping required by clause 2, blocks 2/6/10/14 are dropped, and the four non-block tensors fall through the `fullmatch` unchanged with their original values, shapes and dtypes. Both required checks are enforced before anything is written \u2014 `layers == set(range(12))` covers both \"exactly 12 blocks remain\" and \"no tensor of blocks 12\u201315 remains\", and `len(out) == 184` covers the tensor count \u2014 so a failure aborts with a non-zero exit and no output file. The result is written to the required single file `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

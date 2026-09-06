@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T05:31:37+00:00",
+  "finished_at": "2026-09-06T05:31:55+00:00",
+  "wall_clock_s": 17.2,
+  "tokens_in": 2,
+  "tokens_out": 1573,
+  "cost_usd": 0.0566898,
+  "verdict_text": "YES\n\nThe script's `keep_index` logic correctly reproduces the required column/row selections for `c_attn.weight` (dim=1, 3 segments of 768, block 64, dropping head 5 per segment), `c_attn.bias` (same layout, dim=0), and `c_proj.weight` (dim=0, 1 segment, block 64), yielding shapes `[768,2112]`, `[2112]`, and `[704,768]` respectively with the exact kept ranges (`0..319, 384..767, ...`) specified. All non-head-bearing tensors are left untouched and keys/names are preserved, giving 160 tensors total. The required pre-write assertions (shapes and tensor count) are present and match the spec exactly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

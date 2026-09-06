@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T07:34:52+00:00",
+  "finished_at": "2026-09-06T07:35:04+00:00",
+  "wall_clock_s": 12.1,
+  "tokens_in": 2,
+  "tokens_out": 836,
+  "cost_usd": 0.11983049999999999,
+  "verdict_text": "YES\n\nThe script maps old\u2192new indices via `kept`/`renumber` ({0:0, 1:1, 3:2, 4:3, 6:4, 7:5, 9:6, 10:7, 11:8}), matching clause 2 exactly, and writes into a fresh dict so renaming cannot overwrite a survivor. Blocks 2/5/8 are skipped (clause 1), the four non-block names fail `h\\.(\\d+)\\.(.+)` fullmatch and pass through untouched with original values/shapes/dtypes (clause 3), and both asserts run before `save_file`, so a failure exits non-zero with nothing written (required checks, clause 4).",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

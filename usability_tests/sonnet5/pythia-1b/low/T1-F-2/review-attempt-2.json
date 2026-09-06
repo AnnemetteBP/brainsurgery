@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T16:09:35+00:00",
+  "finished_at": "2026-09-06T16:09:42+00:00",
+  "wall_clock_s": 7.2,
+  "tokens_in": 2,
+  "tokens_out": 279,
+  "cost_usd": 0.0461788,
+  "verdict": "no",
+  "verdict_text": "NO: the checks use `assert`, which raises `AssertionError` only when run without `-O`/`PYTHONOPTIMIZE`; if the run.sh or environment strips assertions (e.g. `python -O`), the script would silently write a wrong/incomplete output without failing loudly, violating \"Required checks... must fail loudly.\" Also the check for \"no tensor of blocks 12,13,14,15 remains\" is not verified directly\u2014only the final renumbered set {0..11} is asserted, so a bug in `renumber` mapping (e.g. collision) could still pass the layers==range(12) check without specifically confirming old indices 12-15 are absent as distinct old-key checks, though this is implicitly covered. The main violation is reliance on bare `assert` for the required fail-loud checks, which is fragile and not guaranteed under `-O`.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T08:36:58+00:00",
+  "finished_at": "2026-09-06T08:37:17+00:00",
+  "wall_clock_s": 18.9,
+  "tokens_in": 2,
+  "tokens_out": 1422,
+  "cost_usd": 0.1412965,
+  "verdict_text": "YES\n\nThe script drops blocks 2, 6, 10, 14, builds the renumbering by enumerating the surviving indices in original order (0\u21920, 1\u21921, 3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211), and writes into a fresh dict so no collision is possible. The regex `gpt_neox\\.layers\\.(\\d+)\\.(.+)` under `fullmatch` leaves the four non-block tensors untouched and preserves the remainder of each block key, with values, shapes and dtypes carried through unchanged. Both assertions (`layers == set(range(12))`, which also rules out any residual block 12\u201315, and `len(out) == 184`) run before `save_file`, so a failure exits non-zero with no output written. Output goes to `out/T1/model.safetensors` as a single file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

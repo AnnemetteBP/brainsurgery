@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T10:56:58+00:00",
+  "finished_at": "2026-09-06T10:57:21+00:00",
+  "wall_clock_s": 23.2,
+  "tokens_in": 2,
+  "tokens_out": 1775,
+  "cost_usd": 0.29795575,
+  "verdict_text": "I'll check the docpack for the semantics of the `equal` assert and the `\\g<0>` backreference before judging.\n\n\n<invoke name=\"Grep\">\n<parameter name=\"pattern\">g<0>|\\\\\\\\g<|count|equal</parameter>\n<parameter name=\"path\">docpack/help.txt</parameter>\n<parameter name=\"output_mode\">content</parameter>\n<parameter name=\"-C\">3</parameter>\n</invoke>\n<invoke name=\"Grep\">\n<parameter name=\"pattern\">g<0>|backref|\\\\\\\\1</parameter>\n<parameter name=\"path\">docpack/README.md</parameter>\n<parameter name=\"output_mode\">content</parameter>\n<parameter name=\"-C\">2</parameter>\n</invoke>\n<invoke name=\"Bash\">\n<parameter name=\"command\">ls out/T4 2>/dev/null; cat out/T4/REPORT.md 2>/dev/null | head -40</parameter>\n</invoke>\n<invoke name=\"Grep\">\n<parameter name=\"pattern\">equal|count</parameter>\n<parameter name=\"path\">docpack/help.txt</parameter>\n<parameter name=\"output_mode\">content</parameter>\n<parameter name=\"-A\">12</parameter>\n</invoke>\n<invoke name=\"Grep\">\n<parameter name=\"pattern\">\\\\\\\\g<|\\\\\\\\1|backreference</parameter>\n<parameter name=\"path\">docpack</parameter>\n<parameter name=\"output_mode\">content</parameter>\n<parameter name=\"-C\">2</parameter>\n</invoke>\n<invoke name=\"Grep\">\n<parameter name=\"pattern\">equal|count</parameter>\n<parameter name=\"path\">docpack/README.md</parameter>\n<parameter name=\"output_mode\">content</parameter>\n<parameter name=\"-C\">3</parameter>\n</invoke>",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

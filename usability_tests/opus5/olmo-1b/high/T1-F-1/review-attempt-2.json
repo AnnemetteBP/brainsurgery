@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T1-defective.py",
+  "started_at": "2026-09-06T16:16:51+00:00",
+  "finished_at": "2026-09-06T16:17:02+00:00",
+  "wall_clock_s": 10.4,
+  "tokens_in": 2,
+  "tokens_out": 596,
+  "cost_usd": 0.1138105,
+  "verdict": "no",
+  "verdict_text": "NO. The script sets `DROP = {2, 6, 10, 15}`, dropping block 15 and keeping block 14, whereas Required result clause 1 requires removing blocks 2, 6, 10, **14**. Consequently the surviving list is `[0,1,3,4,5,7,8,9,11,12,13,14]` and old block 14 is renumbered to index 11, while clause 2's mapping requires old 15 to become 11. The output therefore has the correct key set, shapes, dtypes and tensor count (86), but the tensors at `model.layers.11.*` hold the wrong block's values, so the bit-exact value comparison in grading fails. Everything else \u2014 the renumbering order (no collisions, ascending assignment), the untouched non-block tensors, and the pre-write assertions on contiguous indices and the 86-tensor count \u2014 is correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,38 @@
+# Independent verification of out/T5 against inputs/ (no output written).
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+  - out::out/T5
+
+transforms:
+  - assert: { count: { of: 'out::.*', is: 114 } }
+  - assert: { not: { exists: 'out::.*lora_.*' } }
+
+  # every tensor that is not an adapted q/v projection must be bit-identical
+  - assert:
+      equal:
+        left: 'out::(?!model\.layers\.\d+\.self_attn\.[qv]_proj\.weight$).+'
+        right: 'base::\g<0>'
+
+  # observed delta = out - base
+  - copy:
+      from: 'out::model\.layers\.(\d+)\.self_attn\.([qv])_proj\.weight'
+      to: 'base::model.layers.\1.self_attn.\2_proj.obs'
+  - subtract_:
+      from: 'base::model\.layers\.(\d+)\.self_attn\.([qv])_proj\.weight'
+      to: 'base::model.layers.\1.self_attn.\2_proj.obs'
+
+  # expected delta = 2 * B @ A
+  - matmul:
+      from_a: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.([qv])_proj\.lora_B\.weight'
+      from_b: 'lora::base_model.model.model.layers.\1.self_attn.\2_proj.lora_A.weight'
+      to: 'base::model.layers.\1.self_attn.\2_proj.exp'
+  - scale_: { target: 'base::model\.layers\.\d+\.self_attn\.[qv]_proj\.exp', by: 2.0 }
+
+  - assert: { count: { of: 'base::model\.layers\.\d+\.self_attn\.[qv]_proj\.obs', is: 32 } }
+  - assert: { not: { iszero: 'base::model\.layers\.\d+\.self_attn\.[qv]_proj\.obs' } }
+  - assert:
+      equal:
+        left: 'base::model\.layers\.(\d+)\.self_attn\.([qv])_proj\.obs'
+        right: 'base::model.layers.\1.self_attn.\2_proj.exp'
+        eps: 1.0e-6

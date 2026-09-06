@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T07:37:49+00:00",
+  "finished_at": "2026-09-06T07:38:06+00:00",
+  "wall_clock_s": 17.0,
+  "tokens_in": 2,
+  "tokens_out": 1112,
+  "cost_usd": 0.1896485,
+  "verdict_text": "YES\n\nThe slice boundaries match the spec exactly: `0:320`, `384:768`, `768:1088`, `1152:1536`, `1536:1856`, `1920:2304` on the column axis of `c_attn.weight` and on `c_attn.bias` (removing the 64-wide head-5 block from each of the q, k, v segments), and `0:320` + `384:768` on the row axis of `c_proj.weight`, giving `[768, 2112]`, `[2112]` and `[704, 768]`. Pieces are concatenated in the required order (`dim: 1` for the weight, `dim: 0` for the bias and `c_proj`), the originals are deleted before being rebuilt under their unchanged names, all temporaries are removed, and every other tensor passes through untouched. All four required checks are present as `assert` transforms before the single output file `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

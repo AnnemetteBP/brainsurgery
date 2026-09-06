@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:21:08+00:00",
+  "finished_at": "2026-09-06T16:21:17+00:00",
+  "wall_clock_s": 8.4,
+  "tokens_in": 2,
+  "tokens_out": 506,
+  "cost_usd": 0.10950649999999999,
+  "verdict": "no",
+  "verdict_text": "NO. The merge violates required result step 2 (and the explicitly stated ordering hazard): it applies the second task vector against the already-merged tensor rather than the unmodified base. It computes `tmp = b + \u03bb(f1\u2212b)` then `out = tmp + \u03bb(f2\u2212tmp)`, which expands to `0.36\u00b7b + 0.24\u00b7f1 + 0.4\u00b7f2`, whereas the specified `base + \u03bb(ft1\u2212base) + \u03bb(ft2\u2212base)` is `0.2\u00b7b + 0.4\u00b7f1 + 0.4\u00b7f2`. The 48 merged tensors will therefore fail the 1e-5 relative Frobenius tolerance in grading. The verification, count checks, and output layout are otherwise correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T12:03:08+00:00",
+  "finished_at": "2026-09-06T12:03:41+00:00",
+  "wall_clock_s": 33.2,
+  "tokens_in": 2,
+  "tokens_out": 2454,
+  "cost_usd": 0.34690075,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan verifies the precondition first: the two `equal` asserts compare every non-MLP tensor of `base` against the same-named tensor in `ft1` and `ft2` before any edit, and the name-set equality is enforced by the 160-count asserts on `ft1`/`ft2` together with the 48-count asserts on each task-vector set (112 matched non-MLP + 48 MLP = 160, so any missing or extra name fails the run). Both task vectors are built from copies of the fine-tune tensors with the unmodified `base` MLP tensors subtracted, scaled by 0.4, and only then added into `base`, so neither vector is taken against an already-merged base. The 48-count asserts cover \"exactly 48 tensors were merged\", the temporaries are deleted, the final 160-count assert covers the output size, and all non-MLP tensors pass through from `base` untouched in float32 to `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

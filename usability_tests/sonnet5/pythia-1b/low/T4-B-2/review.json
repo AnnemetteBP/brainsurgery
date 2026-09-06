@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T16:09:59+00:00",
+  "finished_at": "2026-09-06T16:10:06+00:00",
+  "wall_clock_s": 6.3,
+  "tokens_in": 2,
+  "tokens_out": 263,
+  "cost_usd": 0.052682799999999995,
+  "verdict": "no",
+  "verdict_text": "NO. The \"shared-tensor verification\" (step 1) only compares base against ft1 and base against ft2 on the non-MLP set, but never verifies ft1 vs ft2 tensor names/equality directly nor checks that all three checkpoints have the *same tensor names* (only counts of 244, not name equality) \u2014 a mismatch in which 244 names ft1/ft2 have (as long as counts match) would slip through. Also the count assertions on `ft1::.*`/`ft2::.*` check total tensor count but not that names match base's names, weakening the \"same tensor names\" requirement of step 1. Otherwise the merge order, lambda, dtype handling, and final counts look correct, but this gap in the verification check is a real violation of the \"verify that the three checkpoints have the same tensor names\" clause.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "4520528c09be2960410630ec87aaa38043195552a4272c3a46c22c858737d752"
+}

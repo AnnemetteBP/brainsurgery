@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-06T16:25:35+00:00",
+  "finished_at": "2026-09-06T16:25:56+00:00",
+  "wall_clock_s": 20.9,
+  "tokens_in": 2,
+  "tokens_out": 1503,
+  "cost_usd": 0.1458715,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan deletes exactly the 60 tensors of blocks 2, 6, 10, 14 (guarded by a count assert), then shifts the survivors in ascending order (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211) so every destination index is vacant at the moment of the move \u2014 no block overwrites a surviving one. The regexes are unambiguous: `layers\\.3\\.` cannot match `layers.13.` since the digit must follow `layers.` directly, and the delete alternation `(2|6|10|14)` followed by `\\.` cannot match 12/13/15. Suffixes are preserved verbatim via the `\\1` backreference, so names, values, shapes and dtypes are otherwise untouched and the 4 non-block tensors are left alone. All three required checks are present as asserts (no blocks 12\u201315, exactly 12 query_key_value weights, exactly 184 tensors = 244 \u2212 60), and the output path matches `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "68c4b3a21b772a8c15f8c90c8a6572ea4f07880480dcf63858334d19b828b3a8"
+}

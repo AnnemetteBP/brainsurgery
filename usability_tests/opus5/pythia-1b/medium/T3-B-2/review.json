@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T3.yaml",
+  "started_at": "2026-09-06T16:26:11+00:00",
+  "finished_at": "2026-09-06T16:26:45+00:00",
+  "wall_clock_s": 34.5,
+  "tokens_in": 2,
+  "tokens_out": 2511,
+  "cost_usd": 0.17136150000000003,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan deletes the 48 buffers first (so the uint8 causal masks are never cast), upcasts the remaining 196 tensors to float32, then casts exactly the 64 projection matrices to bfloat16 \u2014 the double cast float16\u2192float32\u2192bfloat16 is bit-identical to a direct cast, as the spec notes. Names are untouched, and the required checks are present: a count of 64 on the projection pattern, dtype bfloat16 on those 64 plus dtype float32 on the negative-lookahead complement (which together entail \"exactly 64 bfloat16 tensors\"), the two named-tensor dtype checks, and a total count of 196. Output is a sharded safetensors directory at `out/T3` with a 256 MiB budget; each layer occupies ~100.8 MB after casting, so shards greedily hold two layers and the two 412 MB float32 embedding matrices each land alone, matching clause 5.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "af840edb9d2637da189c2ad2f3a8dc65836479683a53af06822ea3ecec6a5c55"
+}

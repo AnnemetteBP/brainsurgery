@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:09:01+00:00",
+  "finished_at": "2026-09-06T16:09:35+00:00",
+  "wall_clock_s": 33.8,
+  "tokens_in": 2,
+  "tokens_out": 2895,
+  "cost_usd": 0.07231480000000001,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script correctly computes `scale = lora_alpha/r = 2`, forms `delta = B @ A` (no transpose, since `fan_in_fan_out` is False, matching the `[out,in]` layout required), does the add in float32 and casts back to the base dtype, and only ever mutates existing base keys so no adapter or intermediate tensor leaks into `sd`. The four required checks (16 merges, no `lora_` names, layer-0 QKV shape `[6144,2048]`, total 244 tensors) are asserted immediately after merging and before the call to `save_sharded_safetensors`, satisfying \"fail loudly ... before writing.\" Sharding is delegated to `save_sharded_safetensors(sd, out_dir, MAX_SHARD)` with `MAX_SHARD = 536,870,912`, consistent with the size cap in clause 4, and nothing else in the visible logic touches key names or values incorrectly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

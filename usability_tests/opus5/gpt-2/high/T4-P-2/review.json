@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T16:52:53+00:00",
+  "finished_at": "2026-09-06T16:53:09+00:00",
+  "wall_clock_s": 16.6,
+  "tokens_in": 2,
+  "tokens_out": 1107,
+  "cost_usd": 0.1247155,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script performs the step-1 verification first (identical key sets across all three checkpoints, and bit-exact equality of every non-MLP tensor against the base) before any merging, aborting via assertions if either fails. The merge uses `base` as the sole reference for both task vectors \u2014 `out` is a separate dict and `base` is never mutated \u2014 so the ordering hazard is avoided, with `lambda = 0.4` applied in float32 and cast back to the original (float32) dtype. Non-MLP tensors are carried over from the base unchanged under their original names, the `merged == 48` and `len(out) == 160` guards are both present, and the result is written to a single `out/T4/model.safetensors`. The regex `fullmatch` restricts merging to exactly the 48 names the specification lists. The duplicated `import json` and the unused sharded-directory branch in `load_checkpoint` are cosmetic and do not affect behaviour.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "bf1aaff64bce9adc7af3eb4f382f30b5f5cb81a9425f65767ce23de6c1f8a7b6"
+}

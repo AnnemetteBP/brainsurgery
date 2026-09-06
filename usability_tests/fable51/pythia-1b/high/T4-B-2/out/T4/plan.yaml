@@ -1,0 +1,61 @@
+# T4: task-vector merge of two fine-tunes (Pythia-1B), lambda = 0.4
+#   out[X] = base[X] + 0.4*(ft1[X] - base[X]) + 0.4*(ft2[X] - base[X])   for the 64 MLP tensors
+# All edits land on alias `base`, which therefore becomes the output model.
+# MLP name pattern (64 tensors): gpt_neox.layers.<i>.mlp.dense_{h_to_4h,4h_to_h}.{weight,bias}
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # ---- Step 1: verify the three checkpoints share names and all non-MLP tensors ----
+  - assert: { count: { of: 'base::.*', is: 244 } }
+  - assert: { count: { of: 'ft1::.*', is: 244 } }
+  - assert: { count: { of: 'ft2::.*', is: 244 } }
+  # 180 non-MLP + 64 MLP = 244 in each checkpoint => identical name sets
+  - assert: { count: { of: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', is: 180 } }
+  - assert: { count: { of: 'base::gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+  - assert: { count: { of: 'ft1::gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+  - assert: { count: { of: 'ft2::gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+  # every non-MLP base tensor must exist under the same name in ft1/ft2 and be identical (shape, dtype, values)
+  - assert: { equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' } }
+  - assert: { equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'ft2::\g<0>' } }
+
+  # ---- Step 2: float32 working copies (all on alias base, scratch prefixes w./t1./t2.) ----
+  - cast: { from: 'base::(gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))', to: 'base::w.\1', dtype: float32 }
+  - cast: { from: 'ft1::(gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))', to: 'base::t1.\1', dtype: float32 }
+  - cast: { from: 'ft2::(gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))', to: 'base::t2.\1', dtype: float32 }
+  - assert: { count: { of: 'base::w\..+', is: 64 } }
+  - assert: { count: { of: 'base::t1\..+', is: 64 } }
+  - assert: { count: { of: 'base::t2\..+', is: 64 } }
+
+  # task vectors against the UNMODIFIED base (w. still holds base values here): t1 = ft1 - base, t2 = ft2 - base
+  - subtract_: { from: 'base::w\.(.+)', to: 'base::t1.\1' }
+  - subtract_: { from: 'base::w\.(.+)', to: 'base::t2.\1' }
+  # scale both task vectors by lambda
+  - scale_: { target: 'base::t1\..+', by: 0.4 }
+  - scale_: { target: 'base::t2\..+', by: 0.4 }
+  # accumulate into the base copy: w = base + 0.4*t1 + 0.4*t2  (float32)
+  - add_: { from: 'base::t1\.(.+)', to: 'base::w.\1' }
+  - add_: { from: 'base::t2\.(.+)', to: 'base::w.\1' }
+  # back to the base dtype
+  - cast_: { target: 'base::w\..+', to: float16 }
+  - assert: { dtype: { of: 'base::w\..+', is: float16 } }
+
+  # ---- Step 3: write merged values into the 64 original MLP slots (names unchanged) ----
+  - assert: { count: { of: 'base::w\..+', is: 64 } }
+  - assign: { from: 'base::w\.(gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))', to: 'base::\1' }
+  - assert: { equal: { left: 'base::w\.(.+)', right: 'base::\1' } }
+
+  # ---- cleanup scratch tensors and final checks ----
+  - delete: { target: 'base::(?:w|t1|t2)\..+' }
+  - assert: { not: { exists: 'base::(?:w|t1|t2)\..+' } }
+  - assert: { count: { of: 'base::.*', is: 244 } }
+  - assert: { count: { of: 'base::gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+  # non-MLP tensors are still bit-identical to the (verified-shared) fine-tunes, i.e. untouched
+  - assert: { equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' } }
+  - assert: { dtype: { of: 'base::gpt_neox\.layers\.\d+\.mlp\..+', is: float16 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T07:40:51+00:00",
+  "finished_at": "2026-09-06T07:41:03+00:00",
+  "wall_clock_s": 12.4,
+  "tokens_in": 2,
+  "tokens_out": 761,
+  "cost_usd": 0.1220385,
+  "verdict_text": "YES\n\nMerge math matches the spec: `scale = lora_alpha / r = 2`, `delta = (B @ A).T` under `fan_in_fan_out = true`, accumulated in float32 and cast back to the base dtype (float32), keeping name and shape `[768, 2304]`; all four required checks are asserted before writing, and no adapter or intermediate tensor is ever added to the state dict. The only thing I cannot verify from reading is `save_sharded_safetensors`/`load_checkpoint` in the unshown `_ckpt` module, on which the 100 MiB shard rule and index file depend.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

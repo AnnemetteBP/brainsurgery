@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T3-defective.py",
+  "started_at": "2026-09-06T16:07:44+00:00",
+  "finished_at": "2026-09-06T16:07:52+00:00",
+  "wall_clock_s": 8.1,
+  "tokens_in": 2,
+  "tokens_out": 490,
+  "cost_usd": 0.048483799999999994,
+  "verdict": "no",
+  "verdict_text": "NO. The `matrix_re` pattern in the artifact omits `attention.dense.weight`, matching only `query_key_value.weight`, `dense_h_to_4h.weight`, and `dense_4h_to_h.weight` \u2014 3 of the 4 required projection matrices per layer, giving 48 bfloat16 tensors instead of the required 64. This violates Required Result clause 1 (\"cast exactly the 64 projection matrices\"), and the artifact's own guard asserts `== 48` instead of implementing the Required Checks clause \"exactly 64 tensors are bfloat16,\" so it passes its self-check while still being wrong. `attention.dense.weight` tensors are consequently left as float32 instead of bfloat16, which will also fail bit-exact grading against the hidden reference.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "One projection family is missing from the bfloat16 cast pattern (the attention output projection stays float32); the artifact's own count check was adjusted to the wrong number.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

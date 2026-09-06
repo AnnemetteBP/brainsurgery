@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-06T06:14:33+00:00",
+  "finished_at": "2026-09-06T06:15:05+00:00",
+  "wall_clock_s": 31.2,
+  "tokens_in": 2,
+  "tokens_out": 2600,
+  "cost_usd": 0.07046680000000001,
+  "verdict_text": "NO\n\nThe plan never asserts that exactly 48 MLP tensors are the ones being merged, which the \"Required checks\" section explicitly mandates (\"exactly 48 tensors were merged\"). It only asserts total tensor counts for ft1 (114), ft2 (114), and the final base output (114), never verifying that the set of tensors touched by the copy/subtract/scale/add chain has cardinality 48. If the MLP-name regex accidentally matched more or fewer tensors (e.g., due to a typo in the pattern), nothing in the plan would catch it, contrary to the requirement to \"fail loudly\" on that specific condition.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

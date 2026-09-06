@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T05:52:45+00:00",
+  "finished_at": "2026-09-06T05:53:12+00:00",
+  "wall_clock_s": 26.4,
+  "tokens_in": 2,
+  "tokens_out": 2217,
+  "cost_usd": 0.0618808,
+  "verdict_text": "NO\n\nThe plan specifies `shard: 64MB` for the output, but the specification requires shard packing based on exactly 64 MiB = 67,108,864 bytes of tensor data per shard (clause 5). \"64MB\" is conventionally interpreted as a decimal megabyte (64,000,000 bytes), not the binary mebibyte threshold the task defines, so the shard boundaries the tool computes will not match the exact 67,108,864-byte cutoff the grader's hidden reference uses for its sharding rules. This risks producing a different (though still under 64 MiB) shard layout than the reference, which the grading step explicitly checks (\"sharding rules, exact key set, shapes, dtypes and bit-exact values\"). Everything else in the plan (delete order, cast order/targets, count/dtype asserts, key preservation) correctly matches the required-result and required-checks clauses.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T08:53:20+00:00",
+  "finished_at": "2026-09-06T08:53:36+00:00",
+  "wall_clock_s": 15.7,
+  "tokens_in": 2,
+  "tokens_out": 1018,
+  "cost_usd": 0.320722,
+  "verdict_text": "YES\n\nThe script drops blocks 2, 5, 8, maps the surviving indices in original order to 0..8 exactly as clause 2 requires, passes the 4 non-block tensors through untouched, and only writes after asserting that the surviving block index set is exactly {0..8} (which also rules out any block 9, 10, 11 tensor) and that the count is 121. Renumbering is a bijection on kept indices, so no collision can occur. One caveat outside the task spec proper: it depends on a local `_ckpt.load_checkpoint` helper rather than reading with `safetensors` directly, so it is only as standalone as that helper is.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

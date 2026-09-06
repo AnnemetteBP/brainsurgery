@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-06T16:19:49+00:00",
+  "finished_at": "2026-09-06T16:20:07+00:00",
+  "wall_clock_s": 18.3,
+  "tokens_in": 2,
+  "tokens_out": 1177,
+  "cost_usd": 0.1367005,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan verifies the precondition before any mutation (114 tensors in each fine-tune, and every non-MLP base tensor equal to its counterpart in ft1 and ft2 via the negative-lookahead regex), then builds both task vectors against the still-unmodified base: `tv2` is copied and `subtract_`ed from base MLP before either `add_` runs, so the ordering hazard is avoided. Both scalings are 0.4, the 48-tensor counts are asserted for each task-vector set, the scratch tensors are deleted, and the final `count ... is: 114` guards the output. Non-MLP tensors are never touched, names are unchanged, and the output goes to `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "2cf409b1da371959521150b9b3039e08d2b7510a90837141d22e3cf7265a8976"
+}

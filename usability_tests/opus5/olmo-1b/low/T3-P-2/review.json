@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:54:47+00:00",
+  "finished_at": "2026-09-06T16:54:57+00:00",
+  "wall_clock_s": 10.0,
+  "tokens_in": 2,
+  "tokens_out": 567,
+  "cost_usd": 0.12077749999999998,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script casts exactly the 112 listed projection matrices to bfloat16 via `tensor.to(torch.bfloat16)`, leaves all other tensors float32 with unchanged values, deletes nothing (the `buffer_re` with `(?!)` can never match, which is correct here since there are no buffers), preserves names, performs all four required checks before writing, and packs tensors greedily into \u2264256 MiB shards so each 412 MB embedding/lm_head tensor lands alone in its own shard, with a `model.safetensors.index.json` weight_map covering all 114 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "290fb5d27c5146e7ca4ba58700f2848f1be69af03d5dfc0f099fe8daed8118df"
+}

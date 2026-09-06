@@ -1,0 +1,13 @@
+{
+  "run_id": "T2-F-2",
+  "agent": "fable51",
+  "target": "gpt-2",
+  "effort": "high",
+  "test": "T2",
+  "condition": "F",
+  "repeat": 2,
+  "created_at": "2026-09-06T11:17:27+00:00",
+  "repo_commit": "8047059ca1ff670730e185aea613d691c827fb46",
+  "venv": true,
+  "env_freeze_lines": 84
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T09:05:42+00:00",
+  "finished_at": "2026-09-06T09:05:55+00:00",
+  "wall_clock_s": 12.4,
+  "tokens_in": 2,
+  "tokens_out": 664,
+  "cost_usd": 0.23764075,
+  "verdict_text": "YES\n\nThe script drops every tensor whose block index is in {2, 6, 10, 14}, renumbers survivors by enumerating the kept indices in ascending order (yielding exactly the mapping in clause 2), passes the 4 non-block tensors through untouched, and writes a single `out/T1/model.safetensors`. The renumbering is done into a fresh dict, so no collision is possible. The asserts run before `save_file`, so a failure produces a non-zero exit with no output written; the set-equality assert on surviving layer indices implies both \"no block 12..15 remains\" and \"exactly 12 blocks\", and the length assert enforces 184 tensors.\n\nOne note outside the specification text: the script imports `load_checkpoint` from a sibling `_ckpt` module, which makes it not strictly self-contained, but the task specification itself does not prohibit that.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

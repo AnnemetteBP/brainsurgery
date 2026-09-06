@@ -1,0 +1,43 @@
+{
+  "phase": "solve",
+  "driver": "run_claude.py",
+  "model_id": "claude-fable-5-1",
+  "agent": "fable51",
+  "target": "gpt-2",
+  "effort": "low",
+  "test": "T5",
+  "condition": "B",
+  "repeat": 2,
+  "started_at": "2026-09-06T08:58:21+00:00",
+  "finished_at": "2026-09-06T09:00:12+00:00",
+  "wall_clock_s": 110.4,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "max_turns": 40,
+  "timeout_s": 1800,
+  "turns": 10,
+  "tool_calls": 9,
+  "tokens_in": 290,
+  "tokens_out": 6368,
+  "cache_read_tokens": 375929,
+  "cache_write_tokens": 36296,
+  "tokens_in_total": 412515,
+  "cost_usd": 1.14369925,
+  "duration_api_ms": 81604,
+  "session_id": "39951981-fe32-4dd8-bfef-50a6dee3599e",
+  "result_subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "executions": 4,
+  "failed_executions": [
+    {
+      "n": 3,
+      "command": "python - <<'EOF'\np='out/T5/plan.yaml'; s=open(p).read()\ns=s.replace(\"  - assert: { writes: { of: 'base::h\\\\.\\\\d+\\\\.attn\\\\.c_attn\\\\.weight', is: 1 } }\\n\",\n\"  # load counts as one write; merged tensors have exactly one more, others none\\n  - assert: { writes: { of: 'base::h\\\\.\\\\d+\\\\.attn\\\\.c_attn\\\\.we",
+      "message": "FileNotFoundError: [Errno 2] No such file or directory: 'out/T5/model.safetensors.index.json'",
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": true,
+  "executions_until_first_success": 1,
+  "final_text": "Done. The plan at `out/T5/plan.yaml` merges the adapter and writes the sharded checkpoint to `out/T5/`.\n\n**How the plan works.** It loads the base and adapter as two aliases, asserts 12 A/B pairs and 160 base tensors, then per layer computes `B @ A` with `matmul`, transposes with `permute` (order `[1, 0]`), scales in place by 2, and adds into the base weight with `add_`. Intermediates live under a `tmp.` prefix on the base alias and are deleted before writing. The required checks are asserts: 12 pairs found, no `lora_` or `tmp.` name in the output, `h.0.attn.c_attn.weight` still `[768, 2304]` float32, exactly 160 tensors, plus write-count checks that only the 12 merged weights were modified. Output is `shard: 100MB`.\n\n**Result.** 5 shards plus the index. Four shards are under the 100 MiB budget and `wte.weight` sits alone in the fifth. An independent recomputation of layer 3 gave zero relative error.\n\n**Attempts.** 4 executions, 3 failures before success:\n- Escaped dots in rewrite strings are literal, so `from_b` did not resolve.\n- My write-count check was off by one because loading counts as a write.\n- `count is: 0` raises on zero matches, so I switched to `not: exists`.\n\nThe self-report with these details is in `out/T5/REPORT.md`."
+}

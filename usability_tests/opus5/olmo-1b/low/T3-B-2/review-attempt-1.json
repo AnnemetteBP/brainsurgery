@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T07:23:05+00:00",
+  "finished_at": "2026-09-06T07:23:18+00:00",
+  "wall_clock_s": 12.3,
+  "tokens_in": 2,
+  "tokens_out": 623,
+  "cost_usd": 0.1189305,
+  "verdict_text": "NO\n\nTwo problems. (1) The required check \"exactly 112 tensors are bfloat16\" is not implemented: the plan's `count` assert counts tensors *matching the projection name pattern* (which is 112 by construction of the regex, independent of dtype), so it would pass even if the cast produced the wrong dtype \u2014 it is a tautology, not a dtype check, violating the first bullet of \"Required checks\". (2) `shard: 256MB` specifies a decimal 256,000,000-byte limit, whereas clause 5 requires the 256 MiB / 268,435,456-byte limit; since grading compares sharding rules against a hidden reference, the different threshold can place tensors on different shard boundaries and produce a non-matching layout. The remaining checks (q_proj bfloat16, embed_tokens float32, 114 tensors) and the cast targeting itself are correct, and the no-op `.*` cast to float32 is harmless.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

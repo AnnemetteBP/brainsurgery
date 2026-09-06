@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T12:08:02+00:00",
+  "finished_at": "2026-09-06T12:08:54+00:00",
+  "wall_clock_s": 52.1,
+  "tokens_in": 2,
+  "tokens_out": 4059,
+  "cost_usd": 0.237975,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan deletes exactly the 12 `h.<i>.attn.bias` buffers (the escaped pattern cannot also reach `h.<i>.attn.c_attn.bias` / `c_proj.bias`), casts everything to float32 as a no-op baseline, then casts exactly the 48 projection matrices \u2014 guarded by a count-48 assert \u2014 to bfloat16, leaving names untouched and 148 tensors. The required checks are all present before the output stage: the pair of dtype asserts (48 projections bfloat16, complement via negative lookahead float32) is strictly stronger than \"exactly 48 tensors are bfloat16\", plus the two named-tensor dtype asserts and the count-148 assert. Output is a sharded safetensors directory at `out/T3` with the 64 MiB shard limit, so `wte.weight` lands alone in its own shard and the index file is emitted.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

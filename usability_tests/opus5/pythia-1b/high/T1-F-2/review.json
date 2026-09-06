@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "artifact_sha256": "445483f5b51837497d7a08eb024b2a58686278532f4e520bfcee7541bc7697c1",
+  "started_at": "2026-09-06T18:21:54+00:00",
+  "finished_at": "2026-09-06T18:22:12+00:00",
+  "wall_clock_s": 17.4,
+  "tokens_in": 2,
+  "tokens_out": 1250,
+  "cost_usd": 0.1371375,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script drops exactly blocks 2, 6, 10, 14, builds the surviving mapping from the kept list in original order (0\u21920, 1\u21921, 3\u21922, \u2026, 15\u219211) into a fresh dict, so no rename can overwrite a survivor; non-block tensors and all values, shapes and dtypes pass through untouched. Both assertions \u2014 that the surviving block indices are exactly `set(range(12))` (which subsumes \"no blocks 12\u201315 remain\" and \"exactly 12 blocks remain\") and that the tensor count is 184 \u2014 run before `mkdir`/`save_file`, so a failure aborts with a non-zero exit and no output. Output goes to `out/T1/model.safetensors` as a single file. The only caveat is that the checks are `assert` statements, which would be stripped under `python -O`; under normal invocation they fail loudly as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

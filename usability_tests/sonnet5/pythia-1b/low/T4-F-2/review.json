@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "artifact_sha256": "c853a23e2b6879d190c754b8ad01ba13b9e6b628b241b1be72b6e7567bc9060f",
+  "started_at": "2026-09-06T18:17:33+00:00",
+  "finished_at": "2026-09-06T18:17:37+00:00",
+  "wall_clock_s": 4.5,
+  "tokens_in": 2,
+  "tokens_out": 126,
+  "cost_usd": 0.0430738,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script checks name/shape equality via set comparison and torch.equal on all non-MLP tensors (aborting via assert if not equal), computes the merge for the 64 MLP tensors in float32 then casts back to float16, asserts exactly 64 merged and 244 total output tensors, and writes a single `out/T4/model.safetensors`, matching all required steps and checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

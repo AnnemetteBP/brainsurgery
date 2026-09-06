@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T16:01:28+00:00",
+  "finished_at": "2026-09-06T16:02:34+00:00",
+  "wall_clock_s": 65.8,
+  "tokens_in": 2,
+  "tokens_out": 5525,
+  "cost_usd": 0.1003458,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 The plan correctly verifies tensor-name/value parity outside the 48 MLP tensors via regex-matched `equal` asserts, checks `ft1`/`ft2` tensor counts, computes each task vector against the untouched base (copy \u2192 subtract_ \u2192 scale_ done for both tv1 and tv2 before either is added), asserts 48 tensors per task vector before merging, applies `add_` for both vectors in-place (order-independent per spec's tolerance), deletes the scratch tv tensors, and asserts a final count of 160 output tensors, matching the required result and required checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "8adafa570c1e0368dca8be6f08d2fd86ce3b24b61e44ee0c9d0892ee32f0ab0f"
+}

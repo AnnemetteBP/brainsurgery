@@ -1,0 +1,16 @@
+# Scratch diagnostic (NOT the solution plan): validates the assertion forms.
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Name/shape/dtype parity restricted to the 64 MLP tensors (finite values).
+  - assert: { equal: { left: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', right: 'ft1::\1', eps: 1.0e+30 } }
+  - assert: { equal: { left: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', right: 'ft2::\1', eps: 1.0e+30 } }
+  # Exact identity outside the MLP tensors (inf-safe: uses torch.equal).
+  - assert: { equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' } }
+  - assert: { equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'ft2::\g<0>' } }
+  # The MLP tensors really do differ (so this is a real merge, not a no-op).
+  - assert: { not: { equal: { left: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', right: 'ft1::\1' } } }
+  - assert: { not: { equal: { left: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', right: 'ft2::\1' } } }

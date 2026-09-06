@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T16:07:44+00:00",
+  "finished_at": "2026-09-06T16:08:27+00:00",
+  "wall_clock_s": 43.5,
+  "tokens_in": 2,
+  "tokens_out": 3989,
+  "cost_usd": 0.08353880000000001,
+  "verdict": "yes",
+  "verdict_text": "YES. The script's regexes correctly select exactly the 64 named projection weights for bfloat16 casting via `tensor.float().to(torch.bfloat16)`, correctly `continue`s (deletes) exactly the 48 named buffers via `fullmatch` on the exact buffer names, and applies `tensor.float()` (\u2192float32) to everything else, including embeddings, norms, and all biases, satisfying requirements 1\u20134. The pre-save assertions reproduce the four required checks verbatim (64 bfloat16 tensors, layer-0 QKV weight is bfloat16, `embed_in.weight` is float32, exactly 196 output tensors), and sharding is delegated to `save_sharded_safetensors` with the correct 268,435,456-byte cap, matching requirement 5.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

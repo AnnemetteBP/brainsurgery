@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T16:56:29+00:00",
+  "finished_at": "2026-09-06T16:56:39+00:00",
+  "wall_clock_s": 9.8,
+  "tokens_in": 2,
+  "tokens_out": 560,
+  "cost_usd": 0.1243235,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script drops exactly the 48 buffers, casts exactly the 64 listed projection matrices to bfloat16 and everything else to float32, preserves names, runs all four required checks before writing, and its greedy packer keeps each shard's tensor data within 268,435,456 bytes while leaving an oversized tensor (the two 412 MB float32 embedding matrices) alone in its own shard, with a `weight_map` covering every tensor in `out/T3/model.safetensors.index.json`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "63e961f65f68035058405429c48417a6756d6db8724a96905eba48c9befd56f3"
+}

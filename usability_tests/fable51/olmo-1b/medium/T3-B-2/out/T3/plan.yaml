@@ -1,0 +1,30 @@
+# T3: mixed-precision export of OLMo-1B-0724-hf with 256 MiB sharding.
+inputs:
+  - model::inputs/base
+
+transforms:
+  # Sanity: the input has 114 tensors and exactly 112 projection matrices.
+  - assert: { count: { of: '.*', is: 114 } }
+  - assert: { count: { of: 'model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight', is: 112 } }
+
+  # Cast exactly the 112 projection matrices in place (round-to-nearest-even).
+  - cast_: { target: 'model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight', to: bfloat16 }
+
+  # Required checks (fail loudly before writing).
+  # "exactly 112 tensors are bfloat16": the 112 projections are bfloat16 and every
+  # other tensor (the complement pattern) is float32.
+  - assert:
+      all:
+        - count: { of: 'model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight', is: 112 }
+        - dtype: { of: 'model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight', is: bfloat16 }
+        - count: { of: '(?!model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight$).+', is: 2 }
+        - dtype: { of: '(?!model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight$).+', is: float32 }
+  - assert: { dtype: { of: 'model\.layers\.0\.self_attn\.q_proj\.weight', is: bfloat16 } }
+  - assert: { dtype: { of: 'model\.embed_tokens\.weight', is: float32 } }
+  - assert: { dtype: { of: 'lm_head\.weight', is: float32 } }
+  - assert: { count: { of: '.*', is: 114 } }
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 256MB

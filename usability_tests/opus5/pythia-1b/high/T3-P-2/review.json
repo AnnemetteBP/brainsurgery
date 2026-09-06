@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T16:55:52+00:00",
+  "finished_at": "2026-09-06T16:56:32+00:00",
+  "wall_clock_s": 40.5,
+  "tokens_in": 2,
+  "tokens_out": 3279,
+  "cost_usd": 0.19228349999999997,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script drops exactly the 48 buffers via a fully-anchored regex that cannot match parameter names like `attention.dense.bias`, casts exactly the 64 listed projection matrices to bfloat16 and upcasts every remaining tensor to float32, preserves names, and asserts all four required checks before writing. The greedy packer keeps each shard's tensor data at or below 268,435,456 bytes and, because it flushes a non-empty shard before appending and again on the next tensor, places each oversized tensor (`embed_out.weight`, `gpt_neox.embed_in.weight`) alone in its own shard; the index file's `weight_map` covers all 196 tensors in `out/T3/`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "63e961f65f68035058405429c48417a6756d6db8724a96905eba48c9befd56f3"
+}

@@ -1,0 +1,46 @@
+# T5: merge a PEFT LoRA adapter (r=16, alpha=32 -> scale 2, fan_in_fan_out=false)
+# into Pythia-1B attention.query_key_value weights and write a sharded checkpoint.
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Pre-checks: exactly 16 A/B pairs, and the matching base weights exist.
+  - assert: { count: { of: 'lora::base_model\.model\.gpt_neox\.layers\.\d+\.attention\.query_key_value\.lora_A\.weight', is: 16 } }
+  - assert: { count: { of: 'lora::base_model\.model\.gpt_neox\.layers\.\d+\.attention\.query_key_value\.lora_B\.weight', is: 16 } }
+  - assert: { count: { of: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight', is: 16 } }
+  - assert: { count: { of: 'base::.*', is: 244 } }
+
+  # delta_i = B_i @ A_i  (float32, shape [6144, 2048]), created on the base alias.
+  - matmul:
+      from_a: 'lora::base_model\.model\.gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_B\.weight'
+      from_b: 'lora::base_model.model.gpt_neox.layers.\1.attention.query_key_value.lora_A.weight'
+      to: 'base::gpt_neox.layers.\1.attention.query_key_value.lora_delta'
+  - assert: { count: { of: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.lora_delta', is: 16 } }
+  - assert: { shape: { of: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.lora_delta', is: [6144, 2048] } }
+  - assert: { dtype: { of: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.lora_delta', is: float32 } }
+
+  # delta *= alpha / r = 2
+  - scale_: { target: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.lora_delta', by: 2.0 }
+
+  # W = float16( float32(W) + delta )
+  - cast_: { target: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight', to: float32 }
+  - add_:
+      from: 'base::gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_delta'
+      to: 'base::gpt_neox.layers.\1.attention.query_key_value.weight'
+  - cast_: { target: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight', to: float16 }
+
+  # Drop intermediates.
+  - delete: { target: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.lora_delta' }
+
+  # Required checks before writing.
+  - assert: { writes: { of: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight', ge: 1 } }
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert: { shape: { of: 'base::gpt_neox.layers.0.attention.query_key_value.weight', is: [6144, 2048] } }
+  - assert: { dtype: { of: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight', is: float16 } }
+  - assert: { count: { of: 'base::.*', is: 244 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

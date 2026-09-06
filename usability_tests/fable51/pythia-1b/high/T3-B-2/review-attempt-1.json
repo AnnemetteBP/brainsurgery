@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T3.yaml",
+  "started_at": "2026-09-06T11:42:53+00:00",
+  "finished_at": "2026-09-06T11:43:48+00:00",
+  "wall_clock_s": 55.1,
+  "tokens_in": 2,
+  "tokens_out": 4519,
+  "cost_usd": 0.43443575,
+  "verdict_text": "YES\n\nThe plan matches the specification on every clause I can verify by reading. The delete regex removes exactly the 48 named buffers, leaving 244 minus 48 equals 196 tensors. Casting everything to float32 and then casting only the four projection-matrix names per layer to bfloat16 yields exactly the 64 bfloat16 matrices with all other tensors float32, and names are never changed. The three dtype and count asserts sit before the output stage, so they fail loudly before writing.\n\nTwo caveats that do not change the verdict:\n\n- **The \"exactly 64 bfloat16\" check** is implemented as a name-count assert on the projection pattern before the cast, rather than a dtype count. Because the same pattern drives the bfloat16 cast and everything else was just cast to float32, the pattern count of 64 guarantees the dtype property, so it is an equivalent guard.\n- **The shard limit** is written as `256MB`. If the tool reads that as decimal megabytes, shards will be capped at 256,000,000 bytes, which is still within the spec's \"at most 268,435,456 bytes\" rule, and both embedding matrices remain singleton shards either way. Whether the tool writes the index file under the exact name `model.safetensors.index.json` could not be confirmed from the plan text alone.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

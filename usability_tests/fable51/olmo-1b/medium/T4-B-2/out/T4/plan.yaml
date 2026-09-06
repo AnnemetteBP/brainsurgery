@@ -1,0 +1,53 @@
+# T4: task-vector merge of two fine-tunes into the base (lambda = 0.4).
+# out[X] = base[X] + 0.4*(ft1[X]-base[X]) + 0.4*(ft2[X]-base[X]) for the 48 MLP tensors.
+inputs:
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # ---- Step 1: verify the three checkpoints agree before touching anything ----
+  # Same tensor count in all three.
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  - assert: { count: { of: 'ft1::.*', is: 114 } }
+  - assert: { count: { of: 'ft2::.*', is: 114 } }
+  # Exactly the 48 MLP tensors in each checkpoint.
+  - assert: { count: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft1::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft2::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  # Every non-MLP tensor of ft1 / ft2 exists in base with the same name, shape,
+  # dtype and bit-identical values (66 tensors each).
+  - assert: { count: { of: 'ft1::(?!model\.layers\.\d+\.mlp\.).+', is: 66 } }
+  - assert: { count: { of: 'ft2::(?!model\.layers\.\d+\.mlp\.).+', is: 66 } }
+  - assert: { equal: { left: 'ft1::(?!model\.layers\.\d+\.mlp\.).+', right: 'base::\g<0>' } }
+  - assert: { equal: { left: 'ft2::(?!model\.layers\.\d+\.mlp\.).+', right: 'base::\g<0>' } }
+
+  # ---- Step 2: task vectors, both taken against the unmodified base ----
+  # tv1.<X> = ft1[X] ; tv2.<X> = ft2[X]   (scratch tensors inside the base alias)
+  - copy: { from: 'ft1::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', to: 'base::tv1.\g<0>' }
+  - copy: { from: 'ft2::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', to: 'base::tv2.\g<0>' }
+  # tv1.<X> -= base[X] ; tv2.<X> -= base[X]   (base still unmodified here)
+  - subtract_: { from: 'base::(model\.layers\.\d+\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)', to: 'base::tv1.\1' }
+  - subtract_: { from: 'base::(model\.layers\.\d+\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)', to: 'base::tv2.\1' }
+  # Exactly 48 task-vector tensors per fine-tune.
+  - assert: { count: { of: 'base::tv1\..+', is: 48 } }
+  - assert: { count: { of: 'base::tv2\..+', is: 48 } }
+  # lambda scaling
+  - scale_: { target: 'base::tv1\..+', by: 0.4 }
+  - scale_: { target: 'base::tv2\..+', by: 0.4 }
+
+  # ---- Step 3: merge into the base ----
+  - add_: { from: 'base::tv1\.(.+)', to: 'base::\1' }
+  - add_: { from: 'base::tv2\.(.+)', to: 'base::\1' }
+
+  # ---- Cleanup and final checks ----
+  - delete: { target: 'base::tv[12]\..+' }
+  - assert: { not: { exists: 'base::tv[12]\..+' } }
+  - assert: { count: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  # Non-MLP tensors are still bit-identical to the original fine-tunes (i.e. untouched base).
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

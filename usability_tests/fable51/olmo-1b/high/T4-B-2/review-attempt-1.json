@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-06T11:36:36+00:00",
+  "finished_at": "2026-09-06T11:36:59+00:00",
+  "wall_clock_s": 23.8,
+  "tokens_in": 2,
+  "tokens_out": 1658,
+  "cost_usd": 0.29204175000000004,
+  "verdict_text": "NO\n\nThe plan never asserts that exactly 48 tensors were merged, which the \"Required checks\" section lists as mandatory. There is no `count` assert on the `tv1`/`tv2` tensors (or on the MLP pattern) before the `add_` steps, and the final `count: 114` on `base` cannot detect it: the temporaries are deleted first, so the output count is 114 whether 48, 47 or 0 tensors matched the merge pattern. The step 1 name verification is also incomplete: the plan checks ft1 and ft2 have 114 tensors and that base's 66 non-MLP tensors have equal counterparts, but never asserts base has 114 tensors nor that ft1/ft2 contain the 48 MLP names, so a fine-tune missing an MLP tensor would pass the pre-checks and silently merge fewer tensors. The arithmetic itself is ordered correctly: both task vectors are taken against the unmodified base before either is added.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

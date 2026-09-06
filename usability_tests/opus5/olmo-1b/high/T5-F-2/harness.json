@@ -1,0 +1,43 @@
+{
+  "phase": "solve",
+  "driver": "run_claude.py",
+  "model_id": "claude-opus-5",
+  "agent": "opus5",
+  "target": "olmo-1b",
+  "effort": "high",
+  "test": "T5",
+  "condition": "F",
+  "repeat": 2,
+  "started_at": "2026-09-06T08:29:33+00:00",
+  "finished_at": "2026-09-06T08:33:41+00:00",
+  "wall_clock_s": 248.2,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "max_turns": 40,
+  "timeout_s": 1800,
+  "turns": 13,
+  "tool_calls": 12,
+  "tokens_in": 26,
+  "tokens_out": 18245,
+  "cache_read_tokens": 474484,
+  "cache_write_tokens": 38635,
+  "tokens_in_total": 513145,
+  "cost_usd": 1.082354,
+  "duration_api_ms": 199306,
+  "session_id": "3fa96d49-5a6d-4974-8507-05392eb87de2",
+  "result_subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "executions": 3,
+  "failed_executions": [
+    {
+      "n": 2,
+      "command": "cat > out/T5/REPORT.md <<'MD'\n# T5 \u2014 LoRA adapter merge with sharded export (OLMo-1B-0724-hf), condition F\n\n## Participant self-report\n\n- **Final artifact path:** `out/T5/solution.py` (run as\n  `.venv/bin/python out/T5/solution.py` from the sandbox root)\n- **Number of times you executed the script o",
+      "message": "ugrep: warning: out/T5/solution.py: No such file or directory",
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": true,
+  "executions_until_first_success": 1,
+  "final_text": "Done. `out/T5/` holds the merged checkpoint, `solution.py`, and `REPORT.md`.\n\n**Approach.** Direct file-level merge, no model instantiation: `safetensors` to read the base shards and the adapter, `torch` for the float32 `B @ A`, and `huggingface_hub.split_torch_state_dict_into_shards` at `max_shard_size = 512 MiB` for the sharding and `weight_map`. I deliberately skipped the \"obvious\" `peft.merge_and_unload` + `save_pretrained` route \u2014 it instantiates a 1B-parameter model to apply a 32-tensor rank-16 update, and routes the output through a saver whose key set depends on weight tying. The file route runs in ~10 s and keeps the 82 untouched tensors bit-identical by construction.\n\n**Checks.** All four required checks are assertions that raise and exit non-zero, and each runs twice: on the in-memory state dict before any write, and again in `verify_written()` on the checkpoint re-read from disk. Extra guards: `fan_in_fan_out` must be false (the script refuses rather than guessing a transpose), factor shapes must agree with `r`, each merged tensor must actually differ from its pre-merge value, and every shard's tensor payload must be \u2264 536,870,912 bytes.\n\n**Result.** 114 tensors across 10 shards, largest payload exactly 536,870,912 bytes, `lm_head.weight` alone in shard 1. An independent re-check outside the script: key set identical to the base, no `lora_` names, 82 unchanged tensors bit-exact, 32 merged tensors at relative Frobenius error 0.0 versus `base + 2\u00b7B@A`, all float32.\n\nTwo executions, and the reason is worth flagging: execution 1 produced correct output and exited 0, but `write_sharded()` cleaned the output directory with `rmtree(out/T5)` \u2014 the same directory the rules require the artifact to live in, so the script deleted its own source. I narrowed the cleanup to the `*.safetensors` files and the index and re-ran. Both the failure and the fix are recorded in the report."
+}

@@ -1,0 +1,33 @@
+inputs:
+  - model::inputs/base
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors
+
+transforms:
+  # Preflight: confirm the starting shape we expect (16 blocks, 114 tensors).
+  - assert: { count: { of: 'model\.layers\.\d+\.self_attn\.q_proj\.weight', is: 16 } }
+  - assert: { count: { of: '.*', is: 114 } }
+
+  # Remove every tensor of blocks 2, 6, 10, 14 outright.
+  - delete: { target: 'model\.layers\.(2|6|10|14)\..*' }
+
+  # Renumber the surviving blocks in ascending old-index order so each source
+  # is moved out of its old slot before that slot number is needed as a
+  # target further down the list (avoids any collision).
+  - move: { from: 'model\.layers\.3\.(.*)', to: 'model.layers.2.\1' }
+  - move: { from: 'model\.layers\.4\.(.*)', to: 'model.layers.3.\1' }
+  - move: { from: 'model\.layers\.5\.(.*)', to: 'model.layers.4.\1' }
+  - move: { from: 'model\.layers\.7\.(.*)', to: 'model.layers.5.\1' }
+  - move: { from: 'model\.layers\.8\.(.*)', to: 'model.layers.6.\1' }
+  - move: { from: 'model\.layers\.9\.(.*)', to: 'model.layers.7.\1' }
+  - move: { from: 'model\.layers\.11\.(.*)', to: 'model.layers.8.\1' }
+  - move: { from: 'model\.layers\.12\.(.*)', to: 'model.layers.9.\1' }
+  - move: { from: 'model\.layers\.13\.(.*)', to: 'model.layers.10.\1' }
+  - move: { from: 'model\.layers\.15\.(.*)', to: 'model.layers.11.\1' }
+
+  # Required checks: fail loudly if the result is wrong.
+  - assert: { not: { exists: 'model\.layers\.(12|13|14|15)\..*' } }
+  - assert: { count: { of: 'model\.layers\.\d+\.self_attn\.q_proj\.weight', is: 12 } }
+  - assert: { count: { of: '.*', is: 86 } }

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "artifact_sha256": "58c8f3b6928ed87177fb23f201e2133a96666f8e34cf6bf02687953191f81bd4",
+  "started_at": "2026-09-06T18:23:29+00:00",
+  "finished_at": "2026-09-06T18:23:41+00:00",
+  "wall_clock_s": 12.2,
+  "tokens_in": 2,
+  "tokens_out": 771,
+  "cost_usd": 0.12983950000000002,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script uses `scale = lora_alpha / r = 2`, computes `B @ A` in float32 without transposition (correct for `fan_in_fan_out = false`), adds to the float32-upcast base and casts back to float16, leaving names/shapes/dtypes intact and every other tensor untouched. All four required checks are asserted before writing, and the sharding packs in order with a 536,870,912-byte cap, flushing before any tensor that would exceed it so an oversized tensor lands alone, with a `weight_map` covering all 244 names.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

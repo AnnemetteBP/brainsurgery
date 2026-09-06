@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:03:08+00:00",
+  "finished_at": "2026-09-06T16:03:20+00:00",
+  "wall_clock_s": 11.5,
+  "tokens_in": 2,
+  "tokens_out": 961,
+  "cost_usd": 0.051718799999999995,
+  "verdict": "yes",
+  "verdict_text": "YES. The script casts exactly the 112 named projection matrices to bfloat16 via a precise regex, leaves all other tensors (including embed_tokens and lm_head) as float32, and the buffer regex `(?!)` never matches so nothing is dropped \u2014 consistent with there being no buffers to delete. The four required assertions run before `save_sharded_safetensors`, satisfying the \"fail loudly before writing\" requirement, and sharding/index generation is delegated to the shared `_ckpt.save_sharded_safetensors` with the correct 268,435,456-byte cap.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

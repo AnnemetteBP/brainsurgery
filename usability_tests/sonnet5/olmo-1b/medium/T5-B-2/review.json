@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "artifact_sha256": "20662e56e24cc92ac1a397e08b3a6d7a58ec37f2a36fe05b73125419dec16218",
+  "started_at": "2026-09-06T18:16:14+00:00",
+  "finished_at": "2026-09-06T18:16:26+00:00",
+  "wall_clock_s": 11.2,
+  "tokens_in": 2,
+  "tokens_out": 813,
+  "cost_usd": 0.0527898,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 The plan correctly computes `scale * B @ A` (matmul of `lora_B` [2048,16] \u00d7 `lora_A` [16,2048] \u2192 [2048,2048], no transpose needed since layout matches), adds it into the base weight, deletes the delta and adapter namespace, and asserts all four required checks (32 pairs found, 32 deltas merged, no `lora_` tensors, correct shape, 114 total tensors) before writing a 512 MiB-sharded safetensors output.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

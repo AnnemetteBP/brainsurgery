@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T1.yaml",
+  "started_at": "2026-09-06T09:01:09+00:00",
+  "finished_at": "2026-09-06T09:01:21+00:00",
+  "wall_clock_s": 12.7,
+  "tokens_in": 2,
+  "tokens_out": 529,
+  "cost_usd": 0.22854575,
+  "verdict_text": "YES\n\nThe plan deletes all 28 tensors of blocks 2, 6, 10, 14, then shifts the survivors in ascending order (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211), so every destination index is empty at the time of the move and no collision occurs. Names change only in the block index, and no tensor values are touched. The three required checks are implemented as asserts: no tensor of blocks 12\u201315 remains, exactly 12 q_proj tensors remain, and exactly 86 tensors total. Output goes to `out/T1/model.safetensors` as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

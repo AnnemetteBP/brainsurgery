@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:52:02+00:00",
+  "finished_at": "2026-09-06T16:52:09+00:00",
+  "wall_clock_s": 7.5,
+  "tokens_in": 2,
+  "tokens_out": 439,
+  "cost_usd": 0.0502188,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script correctly maps adapter names to base names for each of the 16 layers, computes `scale * B @ A` in float32 and casts back to float16, respects `fan_in_fan_out`, enforces all four required checks before writing, and shards with the correct 512 MiB rule (oversized tensors end up alone since any addition would exceed the cap) while producing a valid index file mapping all 244 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "58c8f3b6928ed87177fb23f201e2133a96666f8e34cf6bf02687953191f81bd4"
+}

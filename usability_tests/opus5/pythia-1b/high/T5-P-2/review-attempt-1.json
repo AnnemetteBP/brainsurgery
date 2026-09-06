@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T08:45:48+00:00",
+  "finished_at": "2026-09-06T08:46:26+00:00",
+  "wall_clock_s": 37.3,
+  "tokens_in": 2,
+  "tokens_out": 2964,
+  "cost_usd": 0.1786785,
+  "verdict_text": "YES\n\nThe merge is correct: it targets `base_model.model.gpt_neox.layers.<i>.attention.query_key_value.lora_{A,B}.weight`, forms `delta = B @ A` as `[6144, 2048]`, skips the transpose because `fan_in_fan_out` is false, scales by `lora_alpha / r = 2`, accumulates in float32 (`sd[key].float() + scale * delta`) and casts back to the base float16 dtype, leaving the other 228 tensors untouched and adding no adapter or intermediate keys. All four required checks are present and precede the write, and the shard budget passed to the writer is exactly 536,870,912 bytes.\n\nOne caveat I cannot resolve from reading: the sharding and index-file behaviour lives in the unshown `_ckpt.save_sharded_safetensors` helper, so requirement 4 (shard packing, `model.safetensors.index.json` weight map) is delegated to code outside this artifact and is unverified here.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

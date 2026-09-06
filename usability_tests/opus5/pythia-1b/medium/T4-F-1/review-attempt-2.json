@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:26:40+00:00",
+  "finished_at": "2026-09-06T16:26:47+00:00",
+  "wall_clock_s": 7.2,
+  "tokens_in": 2,
+  "tokens_out": 430,
+  "cost_usd": 0.1092865,
+  "verdict": "no",
+  "verdict_text": "NO. The second task vector is taken against the already-merged intermediate rather than the unmodified base: `out[name] = (tmp + LAMBDA * (f2 - tmp))` expands to `base + 0.24*(ft1-base) + 0.4*(ft2-base)`, not the required `base + 0.4*(ft1-base) + 0.4*(ft2-base)`. This violates Required result step 2 and is exactly the ordering hazard the specification warns about; the ft1 contribution is scaled by 0.24 instead of 0.4, far beyond the 1e-3 relative Frobenius tolerance. The verification, count and output checks are otherwise correct, though using bare `assert` means all Required checks vanish under `python -O`.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

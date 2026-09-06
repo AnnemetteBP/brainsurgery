@@ -1,0 +1,35 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # B @ A  ->  [2304, 768]
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'base::merge_tmp.\1.prod'
+  - assert: { count: { of: 'base::merge_tmp\..*\.prod', is: 12 } }
+
+  # transpose (fan_in_fan_out) -> [768, 2304], scale by alpha/r = 2
+  - permute:
+      from: 'base::merge_tmp\.(\d+)\.prod'
+      to: 'base::merge_tmp.\1.prodT'
+      order: [1, 0]
+  - scale_: { target: 'base::merge_tmp\..*\.prodT', by: 2.0 }
+  - assert: { shape: { of: 'base::merge_tmp\.0\.prodT', is: [768, 2304] } }
+
+  - add_:
+      from: 'base::merge_tmp\.(\d+)\.prodT'
+      to: 'base::h.\1.attn.c_attn.weight'
+
+  - delete: { target: 'base::merge_tmp\..*' }
+
+  # no tensor containing 'lora_' remains: the count of non-lora tensors equals the total (160)
+  - assert: { count: { of: 'base::(?!.*lora_).*', is: 160 } }
+  - assert: { shape: { of: 'base::h\.0\.attn\.c_attn\.weight', is: [768, 2304] } }
+  - assert: { count: { of: 'base::.*', is: 160 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB

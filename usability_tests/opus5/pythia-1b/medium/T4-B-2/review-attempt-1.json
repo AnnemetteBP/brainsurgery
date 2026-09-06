@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T08:02:34+00:00",
+  "finished_at": "2026-09-06T08:03:07+00:00",
+  "wall_clock_s": 32.5,
+  "tokens_in": 2,
+  "tokens_out": 2324,
+  "cost_usd": 0.1756655,
+  "verdict_text": "NO\n\nThe plan omits one of the three mandatory checks: nothing asserts that exactly 64 tensors were merged. It asserts `count: 244` on `ft1`, `ft2` and on the final `base` namespace, and it asserts equality of the non-MLP tensors, but there is no `count ... is: 64` (or equivalent) over the MLP pattern, so if the regex matched a wrong number of MLP tensors \u2014 e.g. a typo silently matching only some layers, or the intermediate `tv1`/`tv2` set being incomplete \u2014 the run would still succeed. This violates the \"Required checks\" clause (\"exactly 64 tensors were merged\"). The rest of the plan is sound: both task vectors are formed against the unmodified base before either `add_`, lambda 0.4 is applied to each, the arithmetic is done in float32 and cast back to float16, the scratch `tv1`/`tv2` tensors are deleted, and non-MLP tensors are untouched.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

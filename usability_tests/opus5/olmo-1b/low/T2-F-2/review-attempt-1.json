@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T07:19:09+00:00",
+  "finished_at": "2026-09-06T07:19:16+00:00",
+  "wall_clock_s": 6.6,
+  "tokens_in": 2,
+  "tokens_out": 326,
+  "cost_usd": 0.1136495,
+  "verdict_text": "YES\n\nThe script's `keep_index(1, 2048, 128)` yields exactly rows `0..639` then `768..2047` in ascending order, applied along dim 0 for q/k/v and dim 1 for o_proj across all 16 layers; all other tensors are untouched, names are unchanged, the five required checks are asserted before writing, and the result is saved as a single `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

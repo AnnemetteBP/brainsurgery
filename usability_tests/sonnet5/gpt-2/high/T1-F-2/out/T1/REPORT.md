@@ -1,0 +1,11 @@
+# T1 — Participant self-report (condition F)
+
+- **Final artifact path:** `out/T1/solution.py` (invoked via `out/T1/run.sh`), output at `out/T1/model.safetensors`.
+- **Number of times you executed the script or plan:** 2 (1 real run producing the final output, plus 1 deliberate negative-control run against a sabotaged copy of the remap dict, in `/tmp`, to confirm the collision check actually fires and that no output is written on failure — this control run is not the submitted attempt).
+- **Which executions failed, and why (one line each):** none of the executions against `out/T1/` failed; the sabotage test outside `out/T1/` failed on purpose (`RuntimeError: collision: h.8.attn.bias already produced (from old block 11)`) to validate the check.
+- **Pitfalls or surprises you hit (one line each):**
+  - None on this run — the tensor-name scheme matched the spec exactly (13 tensors/block including the `attn.bias` causal-mask buffer, 4 non-block tensors), so no regex overreach or off-by-one surprises.
+  - Worth flagging generically: renaming blocks in-place (e.g. shifting a dict by key) is the classic collision hazard here if done in ascending order without a fresh target dict; building an entirely new dict keyed by the *new* index avoids it by construction, which is what this script does.
+- **Anything in the task text or documentation that was unclear:** no.
+- **Tools used (condition F): name, version, and why:** plain Python script on top of `safetensors` 0.5.3 (`load_file`/`save_file`) and `torch` 2.14.0 tensors. I considered `mergekit`'s passthrough layer-slicing and `torch-state-bridge`'s regex rename/collision-detection utility, both listed as plausible routes, but a ~90-line script gives full, auditable control over the exact old→new index map and lets me assert all three required checks in-memory before any bytes are written, with no dependency on a YAML merge config's slice-range semantics or a separate rule-DSL. The task is a single deterministic bulk rename with a small explicit mapping, which a plain script expresses more directly than either toolkit's config surface.
+- **Approximate time spent, if you can tell:** ~10 minutes (read task + inputs, write script, run, verify output layout, verify failure path).

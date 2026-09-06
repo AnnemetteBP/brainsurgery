@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T1-defective.py",
+  "started_at": "2026-09-06T16:16:59+00:00",
+  "finished_at": "2026-09-06T16:17:10+00:00",
+  "wall_clock_s": 10.2,
+  "tokens_in": 2,
+  "tokens_out": 593,
+  "cost_usd": 0.1127455,
+  "verdict": "no",
+  "verdict_text": "NO.\n\nThe script sets `DROP = {2, 6, 10, 15}`, but Required result clause 1 says to remove blocks 2, 6, 10, **14**; block 15 is deleted while block 14 survives. This also breaks clause 2's renumbering table: old 11\u21928, old 12\u21929, old 13\u219210 hold by luck, but old 14 lands at index 11 where the spec requires old 15, so the tensors at `model.layers.11.*` have the wrong values and grading against the hidden reference will fail on bit-exact comparison. The self-checks do not catch it: the assertion only verifies that the resulting indices are exactly 0..11 and that the count is 86, both of which hold for this wrong drop set, so the \"no tensor of blocks 12\u201315 remains\" check is satisfied vacuously rather than by dropping the right block. The fix is a one-character change of `15` to `14` in `DROP`.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

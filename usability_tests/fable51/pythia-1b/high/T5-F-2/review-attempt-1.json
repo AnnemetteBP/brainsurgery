@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T11:45:35+00:00",
+  "finished_at": "2026-09-06T11:46:06+00:00",
+  "wall_clock_s": 31.4,
+  "tokens_in": 2,
+  "tokens_out": 2406,
+  "cost_usd": 0.32688775,
+  "verdict_text": "I'll check whether the `_ckpt` helper the script depends on is present, since the sharding and index behaviour live there.\n\n\n<invoke name=\"Glob\">\n<parameter name=\"pattern\">**/_ckpt.py</parameter>\n</invoke>\n\n\n\n<invoke name=\"Glob\">\n<parameter name=\"pattern\">_ckpt.py</parameter>\n<parameter name=\"path\">/home/rootkidd/Projects/brainsurgery/usability_tests</parameter>\n</invoke>\n\n\n\n<invoke name=\"Grep\">\n<parameter name=\"pattern\">def save_sharded_safetensors</parameter>\n<parameter name=\"path\">/home/rootkidd/Projects/brainsurgery/usability_tests</parameter>\n<parameter name=\"output_mode\">files_with_matches</parameter>\n</invoke>\n\n\n\n<invoke name=\"Grep\">\n<parameter name=\"pattern\">def save_sharded_safetensors</parameter>\n<parameter name=\"path\">/home/rootkidd/Projects/brainsurgery</parameter>\n<parameter name=\"output_mode\">files_with_matches</parameter>\n</invoke>\n\n\n\n<invoke name=\"Grep\">\n<parameter name=\"pattern\">save_sharded_safetensors</parameter>\n<parameter name=\"path\">/home/rootkidd/Projects/brainsurgery</parameter>\n<parameter name=\"output_mode\">files_with_matches</parameter>\n</invoke>\nThe helper module is not present anywhere in the repository, so its sharding behaviour cannot be verified by reading. Judging the script itself:\n\nYES\n\nThe merge logic matches the specification: for each of the 16 layers it computes `B @ A` in float32 from the float32 adapter factors, scales by alpha over r, adds to the base weight upcast to float32, and casts back to the base dtype. No transposition is applied since the config's layout flag is false, and the transpose branch would be correct if it were true. The delta is never stored in the state dict, so no adapter or intermediate tensor reaches the output. All four required checks are asserted before the write, and the shape assertion works because a torch size compares equal to a tuple.\n\nOne caveat: shard splitting, the 512 MiB limit, the single-tensor-per-shard rule for the two embedding matrices, and the index file are all delegated to `save_s",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

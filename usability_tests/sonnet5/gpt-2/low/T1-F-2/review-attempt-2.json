@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T15:59:53+00:00",
+  "finished_at": "2026-09-06T15:59:59+00:00",
+  "wall_clock_s": 5.9,
+  "tokens_in": 2,
+  "tokens_out": 268,
+  "cost_usd": 0.0438468,
+  "verdict": "no",
+  "verdict_text": "NO \u2014 the required checks must \"fail loudly (non-zero exit, no output written)\" if the conditions don't hold, but this script uses bare `assert` statements after the checkpoint is already loaded correctly (they'd only trigger on a bug in the logic itself, not as an independent verification gate), and critically the output directory/file is written via `save_file` unconditionally after the asserts pass \u2014 there's no check that blocks 9, 10, 11 specifically are absent (the code only verifies `layers == set(range(9))`, which is logically equivalent here but the required checks explicitly ask for that as a distinct, literal verification). More importantly, `assert` statements are stripped when Python is run with `-O`, so this does not robustly satisfy \"fail loudly\" as a guaranteed enforcement mechanism per the Required checks section.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "artifact_sha256": "63e961f65f68035058405429c48417a6756d6db8724a96905eba48c9befd56f3",
+  "started_at": "2026-09-06T18:22:04+00:00",
+  "finished_at": "2026-09-06T18:22:49+00:00",
+  "wall_clock_s": 44.6,
+  "tokens_in": 2,
+  "tokens_out": 3580,
+  "cost_usd": 0.2009385,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script matches the specification on every clause: `matrix_re.fullmatch` selects exactly the 4 projection matrices per layer (64 total) and casts them via `.float().to(torch.bfloat16)`; `buffer_re.fullmatch` drops exactly the 48 attention buffers without touching `attention.dense.bias` or the layer norms (the alternation is anchored by `fullmatch`, so `attention.bias` does not match `attention.dense.bias`); everything else goes through `.float()`, leaving 196 float32-or-bfloat16 tensors under unchanged names. All four required checks are asserted before `save_sharded_safetensors` is called, so the run aborts before writing if any fails. The greedy packer keeps each shard's tensor bytes at or below 268,435,456 and, because it flushes the current shard before appending a tensor that would overflow it, an oversized tensor such as `gpt_neox.embed_in.weight` (412 MB in float32) always lands alone in its own shard, and the emitted `model.safetensors.index.json` maps every tensor name to its shard file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

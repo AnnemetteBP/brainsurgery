@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T16:35:09+00:00",
+  "finished_at": "2026-09-06T16:35:17+00:00",
+  "wall_clock_s": 8.8,
+  "tokens_in": 2,
+  "tokens_out": 390,
+  "cost_usd": 0.32769275,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan slices rows 0..3839 and 4608..6143 of the fused weight and bias and columns 0..1279 and 1536..2047 of the dense weight for every layer, deletes the originals, concatenates the two kept pieces back under the original names in the correct order along the correct axis, removes the temporaries, asserts the three layer-0 shapes and the 244-tensor count before writing, and emits the single output file at the required path with all other tensors untouched.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "ce3d418dfa996b948706d0c8bc5f3178e62e5967e85257dfd660f25ad2aa75e9"
+}

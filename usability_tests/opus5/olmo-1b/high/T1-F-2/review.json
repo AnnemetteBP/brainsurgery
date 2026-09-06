@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "artifact_sha256": "2e3d85542db24c3ba5659fcde0db87634ab4438d0de4e40d4df970a213244889",
+  "started_at": "2026-09-06T18:20:07+00:00",
+  "finished_at": "2026-09-06T18:20:23+00:00",
+  "wall_clock_s": 16.6,
+  "tokens_in": 2,
+  "tokens_out": 1234,
+  "cost_usd": 0.1315005,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script loads the sharded input via the index, drops exactly blocks 2, 6, 10, 14, and rebuilds names with `renumber` derived from the ordered surviving list, which reproduces the required mapping (0\u21920, 1\u21921, 3\u21922, \u2026 15\u219211) into a fresh dict, so no overwrite is possible. Non-block tensors pass through untouched, and tensor objects are reused so values, shapes and dtypes are preserved. Both assertions \u2014 surviving indices equal to `set(range(12))` and 86 total tensors \u2014 run before `save_file`, so a violation aborts with a non-zero exit and no output; the \"no block 12\u201315\" and \"exactly 12 blocks\" conditions follow from those two together with the 7-tensors-per-block structure. Output lands at `out/T1/model.safetensors` by default.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

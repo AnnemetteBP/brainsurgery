@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T16:20:17+00:00",
+  "finished_at": "2026-09-06T16:20:27+00:00",
+  "wall_clock_s": 10.2,
+  "tokens_in": 2,
+  "tokens_out": 587,
+  "cost_usd": 0.1136355,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script drops blocks 2, 6, 10, 14, renumbers the survivors in original order via `renumber = {old: new for new, old in enumerate(kept)}` (old 3\u21922, 7\u21925, 11\u21928, 15\u219211, as specified), builds a fresh dict so no rename can collide, and passes non-block tensors (`model.embed_tokens.weight`, `lm_head.weight`) through untouched with values, shapes and dtypes preserved. Both required checks run before any write \u2014 the layer-index set must equal `{0..11}` (which rules out any residual block 12\u201315 and enforces exactly 12 blocks) and the total must be exactly 86 tensors \u2014 so a failure aborts with a non-zero exit and leaves `out/T1/model.safetensors` unwritten. The output is the single required file at the required path.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

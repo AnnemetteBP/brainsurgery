@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T07:29:05+00:00",
+  "finished_at": "2026-09-06T07:29:16+00:00",
+  "wall_clock_s": 11.4,
+  "tokens_in": 2,
+  "tokens_out": 462,
+  "cost_usd": 0.11073550000000001,
+  "verdict_text": "YES\n\nThe script loads all three checkpoints, asserts identical key sets, verifies bit-exact equality against the base for every non-MLP tensor before any modification, computes the merge in float32 against the unmodified base (`out` is a separate dict, and `b/f1/f2` are always read from the original inputs, so no ordering hazard), casts back to the base dtype, asserts exactly 64 merged and 244 total tensors, and writes the single `model.safetensors` under the output directory. The MLP regex matches exactly the 64 named tensors per layer, and all other entries are carried over from `base` unchanged with unchanged names.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

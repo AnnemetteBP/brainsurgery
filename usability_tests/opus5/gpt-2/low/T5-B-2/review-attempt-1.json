@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T07:18:33+00:00",
+  "finished_at": "2026-09-06T07:18:55+00:00",
+  "wall_clock_s": 21.7,
+  "tokens_in": 2,
+  "tokens_out": 1090,
+  "cost_usd": 0.13218850000000001,
+  "verdict_text": "NO\n\nThe plan sets `shard: 100MB` while the specification requires a shard budget of 100 MiB (104,857,600 bytes) \u2014 the plan's own comment states MiB but the value written is decimal MB (100,000,000 bytes). Under the \"Required result\" clause 4, shard membership is determined by that exact 104,857,600-byte budget, and the reference checkpoint is built with it, so a 100,000,000-byte budget will pack fewer tensors per shard and produce a different shard assignment/`weight_map` than the hidden reference, failing the sharding-rules comparison in \"Grading\". Everything else is correct: the `B @ A` product, the `[1,0]` permute implementing the `fan_in_fan_out = true` transpose, the `scale = alpha/r = 2`, the in-place add, deletion of both intermediates, and the four required asserts.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T11:35:51+00:00",
+  "finished_at": "2026-09-06T11:36:00+00:00",
+  "wall_clock_s": 8.6,
+  "tokens_in": 2,
+  "tokens_out": 423,
+  "cost_usd": 0.22839175,
+  "verdict_text": "YES\n\nThe script maps each adapter pair to its base tensor name, computes `B @ A` in float32, applies scale 32/16 = 2, honors `fan_in_fan_out` by transposing only when true, adds in place, and keeps dtype. All four required checks run as assertions before the write, and the write uses a 512 MiB cap. The one part not visible here is the `_ckpt.save_sharded_safetensors` helper, which is what must produce the index file and isolate the two oversize tensors, so shard-layout correctness rests on that helper rather than this script.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,75 @@
+transforms:
+- assert:
+    count:
+      of: .+
+      is: 244
+- assert:
+    count:
+      of: gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight
+      is: 16
+- delete:
+    target: gpt_neox\.layers\.(2|6|10|14)\..+
+- assert:
+    not:
+      exists: gpt_neox\.layers\.(2|6|10|14)\..+
+- assert:
+    count:
+      of: .+
+      is: 184
+- move:
+    from: gpt_neox\.layers\.3\.(.+)
+    to: gpt_neox.layers.2.\1
+- move:
+    from: gpt_neox\.layers\.4\.(.+)
+    to: gpt_neox.layers.3.\1
+- move:
+    from: gpt_neox\.layers\.5\.(.+)
+    to: gpt_neox.layers.4.\1
+- move:
+    from: gpt_neox\.layers\.7\.(.+)
+    to: gpt_neox.layers.5.\1
+- move:
+    from: gpt_neox\.layers\.8\.(.+)
+    to: gpt_neox.layers.6.\1
+- move:
+    from: gpt_neox\.layers\.9\.(.+)
+    to: gpt_neox.layers.7.\1
+- move:
+    from: gpt_neox\.layers\.11\.(.+)
+    to: gpt_neox.layers.8.\1
+- move:
+    from: gpt_neox\.layers\.12\.(.+)
+    to: gpt_neox.layers.9.\1
+- move:
+    from: gpt_neox\.layers\.13\.(.+)
+    to: gpt_neox.layers.10.\1
+- move:
+    from: gpt_neox\.layers\.15\.(.+)
+    to: gpt_neox.layers.11.\1
+- assert:
+    not:
+      exists: gpt_neox\.layers\.(12|13|14|15)\..+
+- assert:
+    count:
+      of: gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight
+      is: 12
+- assert:
+    count:
+      of: gpt_neox\.layers\.(0|1|2|3|4|5|6|7|8|9|10|11)\.attention\.query_key_value\.weight
+      is: 12
+- assert:
+    count:
+      of: gpt_neox\.layers\.(0|1|2|3|4|5|6|7|8|9|10|11)\..+
+      is: 180
+- assert:
+    exists: gpt_neox\.embed_in\.weight
+- assert:
+    exists: embed_out\.weight
+- assert:
+    exists: gpt_neox\.final_layer_norm\.weight
+- assert:
+    exists: gpt_neox\.final_layer_norm\.bias
+- assert:
+    count:
+      of: .+
+      is: 184

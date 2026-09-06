@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "artifact_sha256": "52d337326395ce9beac3adc73e35e8c7c2d2892cc99e856b24330c90669f0535",
+  "started_at": "2026-09-06T18:18:50+00:00",
+  "finished_at": "2026-09-06T18:19:21+00:00",
+  "wall_clock_s": 31.7,
+  "tokens_in": 2,
+  "tokens_out": 2359,
+  "cost_usd": 0.16782450000000002,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe merge is correct: `delta = B @ A` gives `[2304, 768]` (`[out, in]`), the `fan_in_fan_out = true` flag from the config triggers the transpose to `[768, 2304]`, `scale = lora_alpha / r = 2` is read from the config and applied, the accumulation is done in float32 and the result is written back under the same name, shape and dtype, so the 12 adapted weights satisfy clause 1 and the other 148 tensors are untouched (clauses 2 and 3). All four required checks are asserted before any file is written, and they fail loudly. The sharding satisfies clause 4: the greedy packer flushes whenever the next tensor would exceed 104,857,600 bytes of tensor data, which guarantees the 154 MB `wte.weight` lands alone in its own shard regardless of its position in the key order, and the index file's `weight_map` covers every one of the 160 names; tensors are made contiguous before saving, so the transposed views are stored correctly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

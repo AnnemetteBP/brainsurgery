@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T1-defective.py",
+  "started_at": "2026-09-06T15:42:28+00:00",
+  "finished_at": "2026-09-06T15:42:36+00:00",
+  "wall_clock_s": 8.1,
+  "tokens_in": 2,
+  "tokens_out": 231,
+  "cost_usd": 0.05134,
+  "verdict": "no",
+  "verdict_text": "NO: the script drops blocks {2, 5, 9} instead of the required {2, 5, 8}, violating Required result clause 1/2 (block 8 must be removed and block 9 must survive, renumbered to 6). Consequently the surviving set and renumbering mapping are wrong (e.g., old block 9 is deleted instead of becoming new block 6, and old block 8 survives as new block 6 instead of being removed), so the \"no tensor of blocks 9, 10, 11 remains\" check would actually pass by coincidence but the content is wrong against the specified mapping. This also means bit-exact comparison against the hidden reference in Grading will fail since the wrong blocks were kept/dropped.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

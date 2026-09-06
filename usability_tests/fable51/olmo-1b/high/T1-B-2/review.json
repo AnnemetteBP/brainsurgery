@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T1.yaml",
+  "started_at": "2026-09-06T16:31:11+00:00",
+  "finished_at": "2026-09-06T16:31:22+00:00",
+  "wall_clock_s": 10.4,
+  "tokens_in": 2,
+  "tokens_out": 634,
+  "cost_usd": 0.23084675,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan deletes blocks 2, 6, 10, 14, then shifts the survivors in ascending order so every destination index is free before it is written, which avoids collisions. It then asserts no block 12 through 15 remains, exactly 12 q_proj tensors, and exactly 86 tensors total, and writes a single `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "ac8d878c4268e6d53726e6c963cc5e9aa04c9af2a392ccb8fb6c4f5d6719b099"
+}

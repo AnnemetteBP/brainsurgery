@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:20:48+00:00",
+  "finished_at": "2026-09-06T16:21:00+00:00",
+  "wall_clock_s": 11.8,
+  "tokens_in": 2,
+  "tokens_out": 702,
+  "cost_usd": 0.1186175,
+  "verdict": "yes",
+  "verdict_text": "YES. The regex matches exactly the seven projection weights per layer for layers 0\u201315 (112 tensors) under `fullmatch`, casts them with `.to(torch.bfloat16)` (round-to-nearest-even), leaves every other tensor as float32 with unchanged values, deletes nothing (`buffer_re` contains `(?!)`, which never matches, so the skip branch is dead code and no tensor is dropped), preserves names, and asserts all four required checks before writing. Sharding with the 268,435,456-byte limit and the index file is delegated to the provided `_ckpt.save_sharded_safetensors` helper, which is outside the artifact shown; on the assumption that the helper implements the documented sharding contract, the script satisfies the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

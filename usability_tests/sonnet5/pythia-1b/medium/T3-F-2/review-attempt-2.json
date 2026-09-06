@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T16:10:49+00:00",
+  "finished_at": "2026-09-06T16:10:58+00:00",
+  "wall_clock_s": 8.9,
+  "tokens_in": 2,
+  "tokens_out": 565,
+  "cost_usd": 0.0492968,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script correctly excludes the 48 buffer tensors via `buffer_re`, casts exactly the 64 layer-projection matrices to bfloat16 via `matrix_re` (matching all four projection types per layer), upcasts everything else to float32, and includes all four required pre-write assertions before calling `save_sharded_safetensors` with the specified 268,435,456-byte shard limit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

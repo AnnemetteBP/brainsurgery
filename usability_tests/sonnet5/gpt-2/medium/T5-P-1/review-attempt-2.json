@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T5-defective.py",
+  "started_at": "2026-09-06T16:02:03+00:00",
+  "finished_at": "2026-09-06T16:02:06+00:00",
+  "wall_clock_s": 3.6,
+  "tokens_in": 2,
+  "tokens_out": 129,
+  "cost_usd": 0.043416800000000005,
+  "verdict": "no",
+  "verdict_text": "NO. The script sets `scale = 1.0` instead of `alpha / r = 2`, so it violates Required result clause 1 (`h.<i>.<module>.weight += scale * (B @ A).T` with `scale = lora_alpha / r = 2`), producing merged weights that are off by a factor of 2 and will fail the 1e-5 relative Frobenius error check in grading.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The adapter scaling factor alpha / r is missing: the raw low-rank product is added.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

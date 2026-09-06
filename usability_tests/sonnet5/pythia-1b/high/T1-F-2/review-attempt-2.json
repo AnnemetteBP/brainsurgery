@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T16:06:48+00:00",
+  "finished_at": "2026-09-06T16:07:52+00:00",
+  "wall_clock_s": 64.6,
+  "tokens_in": 2,
+  "tokens_out": 5635,
+  "cost_usd": 0.0997388,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 The script drops blocks {2,6,10,14}, builds the renumbering exactly as specified (old\u2192new mapping matches the spec's explicit table via `enumerate(kept)`), passes through the 4 non-block tensors unchanged, and preserves all values/dtypes/shapes since tensors are only copied, never mutated. Before saving, it asserts `layers == set(range(12))` (which simultaneously enforces \"no index \u226512 remains\" and \"exactly 12 blocks remain\") and `len(out) == 184`, both of which raise `AssertionError` (non-zero exit) prior to any `save_file` call, so no partial output is written on failure. The output path defaults to `out/T1/model.safetensors` as required, and the arithmetic (244 \u2212 4\u00d715 = 184) is correct.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "artifact_sha256": "1403be5a301448a3be36cef9201cdc2800acea2b4cfbb5c8de76cd3a94e33689",
+  "started_at": "2026-09-06T18:16:15+00:00",
+  "finished_at": "2026-09-06T18:17:10+00:00",
+  "wall_clock_s": 54.9,
+  "tokens_in": 2,
+  "tokens_out": 2268,
+  "cost_usd": 0.0690138,
+  "verdict": "no",
+  "verdict_text": "NO. The spec requires `model.embed_tokens.weight` and `lm_head.weight` (412 MB each, under the 512 MiB cap) to be stored alone in their own shard as a special rule, but `save_sharded_safetensors` has no such special-casing \u2014 it only starts a new shard when adding the *next* tensor would exceed `max_bytes`. Since 412 MB + a following small layer tensor (~16 MB) can still fit under 512 MiB, these two large tensors can end up packed together with other tensors in the same shard, violating the \"Required result\" sharding clause 4. The rest of the logic (scale = alpha/r, `B @ A` without transpose, exactly 32 merges, dropping adapter keys, required-check asserts before writing) is correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T16:01:17+00:00",
+  "finished_at": "2026-09-06T16:01:55+00:00",
+  "wall_clock_s": 38.0,
+  "tokens_in": 2,
+  "tokens_out": 3558,
+  "cost_usd": 0.0774648,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan deletes the 12 `attn.bias` buffers, upcasts everything to float32, casts exactly the 48 named projection matrices to bfloat16, and asserts the required checks (48-count via the pre-cast assertion, dtype of the 48 projection matrices, the complementary float32 dtype for all other tensors via the negative-lookahead pattern, `h.0.attn.c_attn.weight` bfloat16, `wte.weight` float32, and total count 148) before writing. The output targets `out/T3` in sharded safetensors format with a 64 MiB shard cap, which satisfies the \"at most 64 MiB per shard\" requirement regardless of whether the tool parses `64MB` as decimal or binary units. No parameter is deleted and tensor names are unchanged, matching all required-result clauses.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "93394a22ec30786239ce4e8f33732f68fd4b4b76310b64169ddce745c2a0924e"
+}

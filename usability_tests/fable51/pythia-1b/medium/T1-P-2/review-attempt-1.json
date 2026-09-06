@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T11:06:48+00:00",
+  "finished_at": "2026-09-06T11:07:00+00:00",
+  "wall_clock_s": 12.0,
+  "tokens_in": 2,
+  "tokens_out": 637,
+  "cost_usd": 0.23655575,
+  "verdict_text": "YES\n\nThe script builds a fresh dict, so renumbering cannot collide. It drops blocks 2, 6, 10, 14, maps the survivors in original order to 0..11, leaves non-block tensors and all values, shapes and dtypes untouched, and asserts before writing that the surviving indices are exactly {0..11} and the tensor count is 184. Those assertions cover all three required checks, since indices confined to 0..11 rule out any block 12 to 15 and give exactly 12 blocks. The only caveat is that it depends on a sibling helper module named `_ckpt` for loading, which is outside the script itself but does not affect correctness against the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

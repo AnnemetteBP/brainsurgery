@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T09:05:38+00:00",
+  "finished_at": "2026-09-06T09:05:48+00:00",
+  "wall_clock_s": 10.1,
+  "tokens_in": 2,
+  "tokens_out": 513,
+  "cost_usd": 0.23239174999999998,
+  "verdict_text": "YES\n\nThe script maps each adapter pair to its base tensor, computes `B @ A` in float32, scales by `lora_alpha / r` (2), adds it without transposition since `fan_in_fan_out` is false, and leaves no adapter or intermediate tensor in the state dict. All four required checks are enforced with assertions before writing. Sharding at the 512 MiB limit and index generation are delegated to `save_sharded_safetensors` in `_ckpt`, which is not shown; the verdict assumes that helper respects the byte limit and writes `model.safetensors.index.json` as its name suggests.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

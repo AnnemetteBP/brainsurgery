@@ -1,0 +1,51 @@
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # Drop non-parameter buffers first.
+  - delete:
+      target: 'gpt_neox\.layers\.\d+\.attention\.(bias|masked_bias|rotary_emb\.inv_freq)'
+
+  # Upcast everything remaining to float32 (values unchanged: float16 is exact in float32).
+  - cast_:
+      target: '.*'
+      to: float32
+
+  # Cast exactly the 64 large projection matrices down to bfloat16.
+  - cast_:
+      target: 'gpt_neox\.layers\.\d+\.(attention\.(query_key_value|dense)|mlp\.(dense_h_to_4h|dense_4h_to_h))\.weight'
+      to: bfloat16
+
+  - assert:
+      count:
+        of: '.*'
+        is: 196
+
+  - assert:
+      dtype:
+        of: 'gpt_neox\.layers\.\d+\.(attention\.(query_key_value|dense)|mlp\.(dense_h_to_4h|dense_4h_to_h))\.weight'
+        is: bfloat16
+
+  - assert:
+      count:
+        of: 'gpt_neox\.layers\.\d+\.(attention\.(query_key_value|dense)|mlp\.(dense_h_to_4h|dense_4h_to_h))\.weight'
+        is: 64
+
+  - assert:
+      dtype:
+        of: 'gpt_neox.layers.0.attention.query_key_value.weight'
+        is: bfloat16
+
+  - assert:
+      dtype:
+        of: 'gpt_neox.embed_in.weight'
+        is: float32
+
+  - assert:
+      not:
+        exists: 'gpt_neox\.layers\.\d+\.attention\.(bias|masked_bias|rotary_emb\.inv_freq)'
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 256MB

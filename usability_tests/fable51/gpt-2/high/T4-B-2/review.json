@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T16:28:16+00:00",
+  "finished_at": "2026-09-06T16:28:55+00:00",
+  "wall_clock_s": 38.9,
+  "tokens_in": 2,
+  "tokens_out": 2964,
+  "cost_usd": 0.35875275,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan asserts before modifying anything: ft1 and ft2 each have 160 tensors, and every non-MLP base tensor (selected by a negative lookahead on the four MLP names) equals its same-named counterpart in ft1 and in ft2, which transitively covers ft1 vs ft2 and, together with the later 48-count checks on the copied MLP tensors, pins the three name sets to the same 160 names. Both task vectors are formed as copies of the fine-tune MLP tensors with the still-unmodified base subtracted and scaled by 0.4, and only afterwards are both added into the base, so ordering is correct and the result is base + 0.4(ft1-base) + 0.4(ft2-base) in float32. The 48-merged check is enforced by counting 48 tv1 and 48 tv2 temporaries, the temporaries are deleted, non-MLP tensors pass through from base untouched with unchanged names, and the final count assert enforces exactly 160 tensors written to out/T4/model.safetensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "8adafa570c1e0368dca8be6f08d2fd86ce3b24b61e44ee0c9d0892ee32f0ab0f"
+}

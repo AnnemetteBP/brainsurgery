@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T16:06:33+00:00",
+  "finished_at": "2026-09-06T16:06:38+00:00",
+  "wall_clock_s": 5.0,
+  "tokens_in": 2,
+  "tokens_out": 195,
+  "cost_usd": 0.04490979999999999,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script correctly identifies all 32 adapter pairs, computes `scale = lora_alpha/r = 2`, merges `B @ A` without transposition (since `fan_in_fan_out = false`) in float32 and casts back to the original dtype, and enforces all four required checks before saving. It excludes adapter tensors from the output dict (only `sd` is written, not `adapter`), leaves other tensors untouched, and delegates sharding to `save_sharded_safetensors` with the correct 512 MiB limit. This matches the spec's Required Result and Required Checks clauses.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

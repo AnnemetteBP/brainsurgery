@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "artifact_sha256": "63e961f65f68035058405429c48417a6756d6db8724a96905eba48c9befd56f3",
+  "started_at": "2026-09-06T18:16:42+00:00",
+  "finished_at": "2026-09-06T18:17:21+00:00",
+  "wall_clock_s": 38.6,
+  "tokens_in": 2,
+  "tokens_out": 3763,
+  "cost_usd": 0.0842748,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script correctly casts exactly the 64 named projection matrices to bfloat16 via `float().to(bfloat16)`, upcasts every other retained tensor to float32, and deletes exactly the 48 named buffers via `buffer_re` scoped to per-layer attention bias/masked_bias/rotary inv_freq (not matching embed_in/embed_out or top-level norms). It asserts the four required checks (64 bfloat16 tensors, layer-0 QKV weight is bfloat16, embed_in.weight is float32, total 196 tensors) before writing, satisfying \"fail loudly.\" The shard-packing logic isolates any tensor whose size alone exceeds `max_bytes` into its own shard (the `cur and cur_size+size>max_bytes` check triggers regardless of `cur`'s prior contents when the new tensor alone exceeds the cap), which correctly handles embed_in/embed_out once upcast to float32 (~412MB > 256MiB). The index file's `weight_map` covers every tensor, and names are left unchanged throughout.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

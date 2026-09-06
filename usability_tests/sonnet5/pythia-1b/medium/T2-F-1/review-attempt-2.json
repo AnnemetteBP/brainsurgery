@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T2-defective.py",
+  "started_at": "2026-09-06T16:10:33+00:00",
+  "finished_at": "2026-09-06T16:10:37+00:00",
+  "wall_clock_s": 4.3,
+  "tokens_in": 2,
+  "tokens_out": 208,
+  "cost_usd": 0.0451738,
+  "verdict": "no",
+  "verdict_text": "NO. The spec requires removing head 5, but the artifact hardcodes `DROP_HEAD = 6`, dropping the wrong head from every layer's `query_key_value.weight`/`bias` and `dense.weight`, violating Required result clauses 1\u20133 (which specify keeping rows/columns corresponding to head 5, i.e. `0..3839,4608..6143` and `0..1279,1536..2047`). The shape assertions still pass since the shapes are identical regardless of which head is dropped, so this bug goes undetected by the required checks, but it will fail bit-exact comparison against the hidden reference in grading.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The removed head is off by one (head N+1 instead of head N). All shapes are still correct, so the artifact's own shape checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

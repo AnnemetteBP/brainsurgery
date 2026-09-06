@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "artifact_sha256": "2fd5493f92201b4bd4eeafbe2f09248e3e2ad15df2598636a1af3d3e677a1a02",
+  "started_at": "2026-09-06T18:13:19+00:00",
+  "finished_at": "2026-09-06T18:13:53+00:00",
+  "wall_clock_s": 34.3,
+  "tokens_in": 2,
+  "tokens_out": 3034,
+  "cost_usd": 0.07384579999999999,
+  "verdict": "yes",
+  "verdict_text": "YES. The script casts exactly the 48 named projection matrices to bfloat16 via `.float().to(torch.bfloat16)` (identity + correct RNE cast since source is already float32), drops the 12 `h.<i>.attn.bias` buffers via a precise non-overlapping regex, and leaves every other tensor as unchanged float32, satisfying clauses 1\u20134. The four literal `assert` checks match the \"Required checks\" section exactly and run before writing output. The shard-packing routine bounds each shard's raw tensor bytes to \u226467,108,864 (verified by the accumulate-then-flush logic) while naturally isolating the oversized `wte.weight` in its own shard, and it writes a `model.safetensors.index.json` with a complete `weight_map`, satisfying clause 5.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

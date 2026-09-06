@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T1-defective.py",
+  "started_at": "2026-09-06T16:02:29+00:00",
+  "finished_at": "2026-09-06T16:02:33+00:00",
+  "wall_clock_s": 4.7,
+  "tokens_in": 2,
+  "tokens_out": 234,
+  "cost_usd": 0.0431418,
+  "verdict": "no",
+  "verdict_text": "NO. The script drops block 14 is missing from DROP: it defines `DROP = {2, 6, 10, 15}` instead of `{2, 6, 10, 14}`, so it removes block 15 instead of block 14 and keeps block 14, violating clause 1 (\"Remove every tensor of blocks 2, 6, 10, 14\"). Consequently the renumbering mapping (old 15 becomes 11) is also wrong since block 15 was deleted rather than renumbered, violating clause 2. The required check \"no tensor of blocks 12, 13, 14, 15 remains\" would fail on this output since block 14's tensors survive (renumbered), so the artifact does not satisfy the required checks either.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

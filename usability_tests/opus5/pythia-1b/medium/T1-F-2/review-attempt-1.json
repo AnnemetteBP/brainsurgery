@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T07:53:46+00:00",
+  "finished_at": "2026-09-06T07:53:57+00:00",
+  "wall_clock_s": 10.4,
+  "tokens_in": 2,
+  "tokens_out": 663,
+  "cost_usd": 0.12233149999999998,
+  "verdict_text": "YES\n\nThe script deletes all tensors of blocks 2, 6, 10, 14, renumbers the surviving blocks in original order via `renumber` (built from `kept` in ascending order, giving exactly the required 0,1,3\u21922,\u2026,15\u219211 mapping), preserves the rest of each name and the tensor objects unchanged, and passes the 4 non-block tensors through untouched. The two assertions run before any file is written: `layers == set(range(12))` simultaneously enforces \"exactly 12 blocks\" and \"no block 12\u201315 remains\", and `len(out) == 184` enforces the tensor count, so a failure exits non-zero with no output. Output goes to `out/T1/model.safetensors` as a single file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

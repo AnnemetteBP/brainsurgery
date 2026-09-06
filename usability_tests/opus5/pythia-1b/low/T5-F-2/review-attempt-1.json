@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T07:31:18+00:00",
+  "finished_at": "2026-09-06T07:31:25+00:00",
+  "wall_clock_s": 6.7,
+  "tokens_in": 2,
+  "tokens_out": 320,
+  "cost_usd": 0.1139685,
+  "verdict_text": "YES\n\nThe script derives `scale` and `fan_in_fan_out` from `adapter_config.json`, computes `B @ A` in float32 (both factors are float32), adds `scale * delta` to the float32-upcast base weight and casts back to the base dtype, writes only base keys (adapter tensors are never inserted into `sd`), and asserts all four required checks before calling the sharded writer. The only part not visible here is `_ckpt.save_sharded_safetensors`, which is passed the correct 536,870,912-byte limit and `out/T5` destination.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

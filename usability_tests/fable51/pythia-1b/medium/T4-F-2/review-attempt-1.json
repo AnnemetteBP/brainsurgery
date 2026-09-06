@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T11:12:00+00:00",
+  "finished_at": "2026-09-06T11:12:16+00:00",
+  "wall_clock_s": 16.3,
+  "tokens_in": 2,
+  "tokens_out": 907,
+  "cost_usd": 0.24090974999999998,
+  "verdict_text": "YES\n\nThe script verifies identical key sets across all three checkpoints, then checks every non-MLP tensor for exact equality in base, ft1 and ft2 before any modification, aborting via assertion on failure. Each of the 64 MLP tensors is merged in float32 against the unmodified base tensor (both task vectors use the original `b`), then cast back to the base dtype. All other tensors are carried from the base untouched, names are unchanged, the merged count is checked to be 64, the output size is checked to be 244, and a single `out/T4/model.safetensors` is written. The only caveat is that the checks rely on `assert`, which is disabled under `python -O`, but under normal invocation they fail loudly as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

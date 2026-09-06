@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T07:30:29+00:00",
+  "finished_at": "2026-09-06T07:30:39+00:00",
+  "wall_clock_s": 9.5,
+  "tokens_in": 2,
+  "tokens_out": 443,
+  "cost_usd": 0.1159835,
+  "verdict_text": "YES\n\nThe merge math matches the spec (scale = lora_alpha/r read from the config, `B @ A` added untransposed since `fan_in_fan_out` is false, accumulated in float32 and cast back to the base float16 dtype), adapter tensors are never inserted into the base dict, and all four required checks are asserted before writing. One caveat I cannot resolve from reading alone: the 512 MiB sharding and index emission are delegated to `save_sharded_safetensors` in the unshown `_ckpt` module, so clause 4 is only satisfied if that helper implements the per-shard byte cap and `weight_map` correctly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T11:55:05+00:00",
+  "finished_at": "2026-09-06T11:55:21+00:00",
+  "wall_clock_s": 16.3,
+  "tokens_in": 2,
+  "tokens_out": 1024,
+  "cost_usd": 0.24304974999999998,
+  "verdict_text": "NO\n\nThe transform logic is correct for clauses 1 through 4 and the four required checks run before writing: the buffer regex fullmatches only `h.<i>.attn.bias`, the matrix regex fullmatches exactly the 48 projection weights, everything else is kept as float32 with values unchanged, and names are preserved. What the artifact does not show is clause 5: sharding is delegated entirely to `save_sharded_safetensors` from a `_ckpt` module that is not part of the artifact, so nothing here establishes that an index file named `model.safetensors.index.json` with a complete `weight_map` is written, that each shard holds at most 67,108,864 bytes of tensor data excluding headers, or that the oversized `wte.weight` is placed alone in its own shard. Because the specification's sharding rules cannot be confirmed from the script itself, and the condition also asks for a standalone script rather than one depending on an unshown helper, the artifact cannot be judged to satisfy clause 5 as written.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

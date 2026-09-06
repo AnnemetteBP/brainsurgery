@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T16:22:42+00:00",
+  "finished_at": "2026-09-06T16:22:58+00:00",
+  "wall_clock_s": 16.2,
+  "tokens_in": 2,
+  "tokens_out": 1117,
+  "cost_usd": 0.1326735,
+  "verdict": "yes",
+  "verdict_text": "YES. The two regexes are applied with `fullmatch`, so `matrix_re` selects exactly the 64 projection matrices and `buffer_re` exactly the 48 buffers, with no over-broad `.*weight` targeting; every surviving non-projection tensor goes through `.float()` (clause 2), projections go float16\u2192float32\u2192bfloat16 with RNE (clause 1), names are preserved as dict keys (clause 4), and all four required checks run as assertions before `save_sharded_safetensors` is called (clause: Required checks). Sharding correctness rests on the unshown `_ckpt.save_sharded_safetensors` helper, which is passed the specified 268,435,456-byte limit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

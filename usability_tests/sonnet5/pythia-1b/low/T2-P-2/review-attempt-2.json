@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T16:09:49+00:00",
+  "finished_at": "2026-09-06T16:09:54+00:00",
+  "wall_clock_s": 5.1,
+  "tokens_in": 2,
+  "tokens_out": 160,
+  "cost_usd": 0.04425180000000001,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the query_key_value weight/bias correctly keep 8 blocks of 768 rows minus head 5 (rows 0..3839, 4608..6143), and dense.weight correctly drops column block 5 (256-wide, keeping cols 0..1279, 1536..2047), matching the required index sets exactly. All other tensors pass through unchanged via `sd` reuse, shapes/counts are asserted per the required checks, and output is a single 244-tensor safetensors file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T09:10:26+00:00",
+  "finished_at": "2026-09-06T09:10:37+00:00",
+  "wall_clock_s": 11.1,
+  "tokens_in": 2,
+  "tokens_out": 702,
+  "cost_usd": 0.23099975,
+  "verdict_text": "YES\n\nThe script verifies identical key sets across all three checkpoints, then checks every non-MLP tensor for bit-exact equality against both fine-tunes before any merge. Each task vector is taken against the unmodified base (reads come from `base`, writes go to a separate `out` dict), the arithmetic is done in float32 with lambda 0.4 and cast back to the base dtype, and the remaining tensors are copied from the base unchanged. It asserts exactly 64 merged and 244 output tensors and writes a single `model.safetensors` under `out/T4`, matching the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

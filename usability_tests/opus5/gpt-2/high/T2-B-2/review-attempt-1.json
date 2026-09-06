@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T08:12:11+00:00",
+  "finished_at": "2026-09-06T08:12:40+00:00",
+  "wall_clock_s": 28.7,
+  "tokens_in": 2,
+  "tokens_out": 2170,
+  "cost_usd": 0.21605349999999998,
+  "verdict_text": "YES\n\nAll six column ranges for `c_attn.weight`/`c_attn.bias` (`0:320`, `384:768`, `768:1088`, `1152:1536`, `1536:1856`, `1920:2304`) and the two row ranges for `c_proj.weight` (`0:320`, `384:768`) reproduce the specified inclusive index lists exactly, in the specified order, giving `[768, 2112]`, `[2112]` and `[704, 768]`. The regex-with-backreference copies apply to all 12 layers, the original names are restored by the concats after the deletes so no names change, the 36 temporaries are removed before the final asserts, and no non-head-bearing tensor is touched. All four required checks are present as `assert` transforms ahead of the write, and the output is the single file `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

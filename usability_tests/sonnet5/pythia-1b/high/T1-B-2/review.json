@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-06T16:06:38+00:00",
+  "finished_at": "2026-09-06T16:07:08+00:00",
+  "wall_clock_s": 29.1,
+  "tokens_in": 2,
+  "tokens_out": 2786,
+  "cost_usd": 0.0730538,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan deletes exactly the 60 tensors of blocks 2/6/10/14 (verified by the pre-check assert), then performs the required renumbering moves (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211, leaving 0 and 1 untouched) in an order where each destination is vacated before being written, avoiding collisions. It asserts absence of blocks 12\u201314\u201315/13/14/15, exactly 12 surviving `query_key_value.weight` tensors, and exactly 184 total tensors \u2014 matching all three \"Required checks,\" and writes to `out/T1/model.safetensors` as specified.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "68c4b3a21b772a8c15f8c90c8a6572ea4f07880480dcf63858334d19b828b3a8"
+}

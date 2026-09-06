@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T15:42:50+00:00",
+  "finished_at": "2026-09-06T15:43:21+00:00",
+  "wall_clock_s": 30.5,
+  "tokens_in": 2,
+  "tokens_out": 2868,
+  "cost_usd": 0.09756379999999999,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the plan's column/row slices for `c_attn.weight`, `c_attn.bias`, and `c_proj.weight` exactly match the required keep-ranges and order specified (0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304 for the fused q/k/v tensors, and 0:320, 384:768 for `c_proj.weight`), computed correctly from head 5 occupying columns/rows 320:384 within each 768-wide q/k/v segment. It deletes only the three head-bearing tensor types per layer (leaving `c_proj.bias` and the mask buffer untouched), rebuilds them via per-layer `concat` in the correct piece order, cleans up temporaries, and asserts the four required checks (the three per-tensor shapes on layer 0 and a total tensor count of 160) before writing to `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "2a90440e95bfda5b4824e5a3b755f3e68e122c210829f0e9be6c5734946874bd"
+}

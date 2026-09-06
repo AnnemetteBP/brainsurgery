@@ -1,0 +1,29 @@
+inputs:
+  - a::inputs/lora/adapter_model.safetensors
+  - b::inputs/lora/adapter_model.safetensors
+
+output:
+  path: out/_probe/model.safetensors
+  format: safetensors
+
+transforms:
+  - assert: { count: { of: 'a::.*', is: 64 } }
+  - assert: { count: { of: 'b::.*', is: 64 } }
+  - assert: { equal: { left: 'a::(.+)', right: 'b::\1', eps: 1.0e+30 } }
+  - assert: { equal: { left: 'a::(?!.*lora_A\.weight).+', right: 'b::\g<0>' } }
+  - assert: { count: { of: 'a::(?!.*lora_A\.weight).+', is: 32 } }
+  - assert: { dtype: { of: 'a::.*lora_A\.weight', is: float32 } }
+  - assert: { shape: { of: 'a::.*lora_A\.weight', is: [16, 2048] } }
+  - copy:
+      from: 'b::(base_model\.model\.model\.layers\.\d+\.self_attn\.q_proj\.lora_A\.weight)'
+      to: 'a::tv1.\1'
+  - assert: { count: { of: 'a::tv1\..*', is: 16 } }
+  - subtract_:
+      from: 'a::(base_model\.model\.model\.layers\.\d+\.self_attn\.q_proj\.lora_A\.weight)'
+      to: 'a::tv1.\1'
+  - assert: { iszero: { of: 'a::tv1\..*' } }
+  - scale_: { target: 'a::tv1\..*', by: 0.4 }
+  - add_: { from: 'a::tv1\.(.+)', to: 'a::\1' }
+  - delete: { target: 'a::tv1\..*' }
+  - assert: { not: { exists: 'a::tv1\..*' } }
+  - assert: { count: { of: 'a::.*', is: 64 } }

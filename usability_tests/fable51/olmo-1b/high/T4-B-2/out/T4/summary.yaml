@@ -1,0 +1,146 @@
+transforms:
+- assert:
+    count:
+      of: base::.+
+      is: 114
+- assert:
+    count:
+      of: ft1::.+
+      is: 114
+- assert:
+    count:
+      of: ft2::.+
+      is: 114
+- assert:
+    count:
+      of: base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+      is: 48
+- assert:
+    count:
+      of: ft1::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+      is: 48
+- assert:
+    count:
+      of: ft2::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+      is: 48
+- assert:
+    count:
+      of: base::(?!model\.layers\.\d+\.mlp\.).+
+      is: 66
+- assert:
+    equal:
+      left: base::(?!model\.layers\.\d+\.mlp\.).+
+      right: ft1::\g<0>
+- assert:
+    equal:
+      left: base::(?!model\.layers\.\d+\.mlp\.).+
+      right: ft2::\g<0>
+- assert:
+    shape:
+      of: base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj)\.weight
+      is:
+      - 8192
+      - 2048
+- assert:
+    shape:
+      of: ft1::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj)\.weight
+      is:
+      - 8192
+      - 2048
+- assert:
+    shape:
+      of: ft2::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj)\.weight
+      is:
+      - 8192
+      - 2048
+- assert:
+    shape:
+      of: base::model\.layers\.([0-9]|1[0-5])\.mlp\.down_proj\.weight
+      is:
+      - 2048
+      - 8192
+- assert:
+    shape:
+      of: ft1::model\.layers\.([0-9]|1[0-5])\.mlp\.down_proj\.weight
+      is:
+      - 2048
+      - 8192
+- assert:
+    shape:
+      of: ft2::model\.layers\.([0-9]|1[0-5])\.mlp\.down_proj\.weight
+      is:
+      - 2048
+      - 8192
+- assert:
+    dtype:
+      of: base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+      is: float32
+- assert:
+    dtype:
+      of: ft1::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+      is: float32
+- assert:
+    dtype:
+      of: ft2::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+      is: float32
+- copy:
+    from: ft1::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+    to: base::tv1.\g<0>
+- subtract_:
+    from: base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+    to: base::tv1.\g<0>
+- scale_:
+    target: base::tv1\.model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+    by: 0.4
+- copy:
+    from: ft2::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+    to: base::tv2.\g<0>
+- subtract_:
+    from: base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+    to: base::tv2.\g<0>
+- scale_:
+    target: base::tv2\.model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+    by: 0.4
+- assert:
+    count:
+      of: base::tv1\.model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+      is: 48
+- assert:
+    count:
+      of: base::tv2\.model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+      is: 48
+- assert:
+    count:
+      of: base::tv[12]\..+
+      is: 96
+- assert:
+    dtype:
+      of: base::tv[12]\..+
+      is: float32
+- add_:
+    from: base::tv1\.(model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight)
+    to: base::\1
+- add_:
+    from: base::tv2\.(model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight)
+    to: base::\1
+- delete:
+    target: base::tv[12]\..+
+- assert:
+    not:
+      exists: base::tv[12]\..+
+- assert:
+    count:
+      of: base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+      is: 48
+- assert:
+    dtype:
+      of: base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+      is: float32
+- assert:
+    count:
+      of: base::.+
+      is: 114
+- assert:
+    equal:
+      left: base::(?!model\.layers\.\d+\.mlp\.).+
+      right: ft1::\g<0>

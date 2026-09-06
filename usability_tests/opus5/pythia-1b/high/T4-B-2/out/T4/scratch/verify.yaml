@@ -1,0 +1,32 @@
+# Scratch verification (NOT the solution plan): recomputes the merge with the
+# literal formula from TASK.md -- base + L*(ft1-base) + L*(ft2-base), with both
+# task vectors taken against the unmodified base -- and compares it with the
+# checkpoint that plan.yaml wrote. A different arithmetic order on purpose.
+inputs:
+  - out::out/T4/model.safetensors
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  - cast_: { target: 'base::gpt_neox\.layers\.\d+\.mlp\..+', to: float32 }
+
+  # d1 = 0.4 * (ft1 - base), against the untouched base.
+  - cast: { from: 'ft1::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::d1.\1', dtype: float32 }
+  - subtract_: { from: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::d1.\1' }
+  - scale_: { target: 'base::d1\..+', by: 0.4 }
+
+  # d2 = 0.4 * (ft2 - base), also against the untouched base.
+  - cast: { from: 'ft2::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::d2.\1', dtype: float32 }
+  - subtract_: { from: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'base::d2.\1' }
+  - scale_: { target: 'base::d2\..+', by: 0.4 }
+
+  # base + d1 + d2, back to float16.
+  - add_: { from: 'base::d1\.(.+)', to: 'base::\1' }
+  - add_: { from: 'base::d2\.(.+)', to: 'base::\1' }
+  - cast_: { target: 'base::gpt_neox\.layers\.\d+\.mlp\..+', to: float16 }
+
+  # Bit-exact agreement with what plan.yaml wrote, for all 244 tensors.
+  - assert: { count: { of: 'out::.*', is: 244 } }
+  - assert: { equal: { left: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', right: 'out::\1' } }
+  - assert: { equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.|d\d\.).+', right: 'out::\g<0>' } }

@@ -1,0 +1,36 @@
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # Delete the 12 non-parameter causal-mask buffers.
+  - delete: { target: '^h\.\d+\.attn\.bias$' }
+
+  # Cast exactly the 48 projection weight matrices to bfloat16, in place.
+  - cast_:
+      target: '^h\.\d+\.(attn\.(c_attn|c_proj)|mlp\.(c_fc|c_proj))\.weight$'
+      to: bfloat16
+
+  # Required checks: fail loudly before writing if anything is off.
+  - assert: { count: { of: '.*', is: 148 } }
+  - assert:
+      count:
+        of: '^h\.\d+\.(attn\.(c_attn|c_proj)|mlp\.(c_fc|c_proj))\.weight$'
+        is: 48
+  - assert:
+      dtype:
+        of: '^h\.\d+\.(attn\.(c_attn|c_proj)|mlp\.(c_fc|c_proj))\.weight$'
+        is: bfloat16
+  - assert: { dtype: { of: 'h.0.attn.c_attn.weight', is: bfloat16 } }
+  - assert: { dtype: { of: 'wte.weight', is: float32 } }
+  - assert:
+      dtype:
+        of: '^(?!.*(attn\.(c_attn|c_proj)|mlp\.(c_fc|c_proj))\.weight$).*$'
+        is: float32
+  - assert:
+      not:
+        exists: '^h\.\d+\.attn\.bias$'
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 64MB

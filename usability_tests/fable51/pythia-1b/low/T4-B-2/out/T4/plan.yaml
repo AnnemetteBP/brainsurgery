@@ -1,0 +1,61 @@
+# T4: task-vector merge of two fine-tunes into the base (lambda = 0.4)
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # ---- Step 1: verify the three checkpoints share names and all non-MLP tensors -----------
+  # Same number of tensors in every checkpoint.
+  - assert: { count: { of: 'base::.*', is: 244 } }
+  - assert: { count: { of: 'ft1::.*', is: 244 } }
+  - assert: { count: { of: 'ft2::.*', is: 244 } }
+  # Exactly 64 MLP tensors in each checkpoint.
+  - assert: { count: { of: 'base::gpt_neox\.layers\.\d+\.mlp\..+', is: 64 } }
+  - assert: { count: { of: 'ft1::gpt_neox\.layers\.\d+\.mlp\..+', is: 64 } }
+  - assert: { count: { of: 'ft2::gpt_neox\.layers\.\d+\.mlp\..+', is: 64 } }
+  # Every tensor outside the MLP set is bit-identical (shape, dtype, values) in ft1/ft2 vs base.
+  # Every left match must map to an existing right tensor, so with equal counts this also
+  # proves the name sets are identical.
+  - assert: { equal: { left: 'ft1::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'base::\g<0>' } }
+  - assert: { equal: { left: 'ft2::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'base::\g<0>' } }
+  # MLP tensors must exist in ft1/ft2 under the same names with the same shape/dtype
+  # (equal against itself after checking the name exists on the other side is not possible,
+  # so check shape/dtype via the merge casts below, which fail on mismatch).
+
+  # ---- Step 2: merge in float32 inside the base alias ------------------------------------
+  # f32.X = float32(base[X])
+  - cast: { from: 'base::gpt_neox\.layers\.\d+\.mlp\..+', to: 'base::f32.\g<0>', dtype: float32 }
+  # d1.X = float32(ft1[X]),  d2.X = float32(ft2[X])   (task vectors taken against the unmodified base)
+  - cast: { from: 'ft1::gpt_neox\.layers\.\d+\.mlp\..+', to: 'base::d1.\g<0>', dtype: float32 }
+  - cast: { from: 'ft2::gpt_neox\.layers\.\d+\.mlp\..+', to: 'base::d2.\g<0>', dtype: float32 }
+  # d1.X = ft1[X] - base[X];  d2.X = ft2[X] - base[X]
+  - subtract: { from_a: 'base::d1\.(.+)', from_b: 'base::f32.\1', to: 'base::d1.\1' }
+  - subtract: { from_a: 'base::d2\.(.+)', from_b: 'base::f32.\1', to: 'base::d2.\1' }
+  # scale by lambda
+  - scale_: { target: 'base::d1\..+', by: 0.4 }
+  - scale_: { target: 'base::d2\..+', by: 0.4 }
+  # f32.X += lambda*(ft1-base);  f32.X += lambda*(ft2-base)
+  - add_: { from: 'base::d1\.(.+)', to: 'base::f32.\1' }
+  - add_: { from: 'base::d2\.(.+)', to: 'base::f32.\1' }
+  # exactly 64 tensors were merged
+  - assert: { count: { of: 'base::f32\.gpt_neox\.layers\.\d+\.mlp\..+', is: 64 } }
+  - assert: { count: { of: 'base::f32\..+', is: 64 } }
+  # cast back to the base dtype
+  - cast_: { target: 'base::f32\..+', to: float16 }
+  # swap merged tensors in under the original names, drop scratch
+  - delete: { target: 'base::gpt_neox\.layers\.\d+\.mlp\..+' }
+  - move: { from: 'base::f32\.(.+)', to: 'base::\1' }
+  - delete: { target: 'base::d1\..+' }
+  - delete: { target: 'base::d2\..+' }
+
+  # ---- Step 3/4: final checks -----------------------------------------------------------
+  - assert: { count: { of: 'base::gpt_neox\.layers\.\d+\.mlp\..+', is: 64 } }
+  - assert: { dtype: { of: 'base::gpt_neox\.layers\.\d+\.mlp\..+', is: float16 } }
+  - assert: { count: { of: 'base::.*', is: 244 } }
+  # non-MLP tensors still identical to the base checkpoint on disk (ft1 shares them, verified above)
+  - assert: { equal: { left: 'ft1::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'base::\g<0>' } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

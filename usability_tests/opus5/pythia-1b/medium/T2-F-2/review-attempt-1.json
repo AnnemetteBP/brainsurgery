@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T07:57:21+00:00",
+  "finished_at": "2026-09-06T07:57:30+00:00",
+  "wall_clock_s": 9.1,
+  "tokens_in": 2,
+  "tokens_out": 529,
+  "cost_usd": 0.1181595,
+  "verdict_text": "YES\n\nThe head index set is correct on both sides: for the fused projection (block 768, 8 heads, drop 5) `keep_index` yields rows `0..3839` and `4608..6143` in order, applied along dim 0 to both the `[6144, 2048]` weight and the `[6144]` bias; for `attention.dense.weight` (block 256) it yields columns `0..1279` and `1536..2047` applied along dim 1. All 16 layers are covered, no other tensors are touched, names are preserved, dtype is unchanged by `index_select`, and the four required checks are asserted before `save_file` writes the single `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

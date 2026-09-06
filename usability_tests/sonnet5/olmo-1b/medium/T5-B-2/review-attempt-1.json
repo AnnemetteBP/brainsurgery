@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T06:12:49+00:00",
+  "finished_at": "2026-09-06T06:13:21+00:00",
+  "wall_clock_s": 32.4,
+  "tokens_in": 2,
+  "tokens_out": 2623,
+  "cost_usd": 0.07056779999999999,
+  "verdict_text": "NO\n\nThe plan matmuls the LoRA factors into new `model::\u2026delta` tensors and later deletes those deltas, but it never deletes or otherwise excludes the original `lora_A.weight` / `lora_B.weight` tensors that were loaded under the `lora::` provider namespace \u2014 the plan just leaves them there. Since the output step doesn't scope itself to only the `model::` provider, those raw adapter tensors will end up written into `out/T5`, violating requirement 2 (\"No adapter tensor \u2026 appears in the output\"). This is compounded because both verification asserts are namespace-scoped to `model::` only (`assert: not exists 'model::.*lora_.*'` and `assert: count of 'model::.*' is 114`), so they cannot detect adapter tensors leaking through the `lora::` namespace \u2014 meaning the \"Required checks\" clause (fail loudly if any `lora_` tensor is present, and if the output tensor count isn't 114) is not actually enforced for this failure mode.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

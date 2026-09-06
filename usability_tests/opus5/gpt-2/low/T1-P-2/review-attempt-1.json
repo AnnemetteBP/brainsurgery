@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T07:11:32+00:00",
+  "finished_at": "2026-09-06T07:11:42+00:00",
+  "wall_clock_s": 10.2,
+  "tokens_in": 2,
+  "tokens_out": 587,
+  "cost_usd": 0.142537,
+  "verdict_text": "YES\n\nThe script drops blocks 2/5/8, maps the survivors in original order onto 0..8 (so no rename can collide with a surviving key), copies the 4 non-block tensors untouched, and preserves values/shapes/dtypes by reusing the loaded tensors. Both required assertions \u2014 contiguous layer set `{0..8}` (which also rules out any residual block 9/10/11) and a 121-tensor total \u2014 run before `save_file`, so a failure exits non-zero with no output written.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

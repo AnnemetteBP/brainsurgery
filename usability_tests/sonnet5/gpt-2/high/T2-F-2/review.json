@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "artifact_sha256": "92365477d5a2b031d04772e00c37605dd514b7028b7484314cd0975b48bb00f5",
+  "started_at": "2026-09-06T18:13:13+00:00",
+  "finished_at": "2026-09-06T18:13:31+00:00",
+  "wall_clock_s": 17.3,
+  "tokens_in": 2,
+  "tokens_out": 1530,
+  "cost_usd": 0.06572900000000001,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script's `keep_index` (skip head 5, iterate heads 0..11 within each 768-wide segment, segments in q/k/v order for `c_attn.weight`/`c_attn.bias`, single segment for `c_proj.weight`) produces exactly the column/row ranges required by clauses 1\u20133 (0\u2013319, 384\u2013767, offset by 768 per segment for c_attn), leaves `c_proj.bias` and `attn.bias` untouched per clause 4, preserves the tensor count at 160 for clause 5, and includes the four required pre-write assertions verbatim.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

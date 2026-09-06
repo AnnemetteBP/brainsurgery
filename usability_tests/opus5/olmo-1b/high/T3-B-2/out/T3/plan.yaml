@@ -1,0 +1,51 @@
+# T3: mixed-precision export with sharding (OLMo-1B-0724-hf)
+#
+# Cast only the 112 projection matrices (q/k/v/o_proj, gate/up/down_proj) to
+# bfloat16 in place. Everything else (model.embed_tokens.weight,
+# lm_head.weight) stays float32 with unchanged values. Nothing is deleted and
+# no tensor is renamed. Output is a sharded safetensors directory with a
+# 256 MiB shard budget, which puts each 412 MB embedding matrix in a shard of
+# its own.
+
+inputs:
+  - model::inputs/base
+
+transforms:
+  # Sanity: the input is what the task describes.
+  - assert:
+      all:
+        - count: { of: '.*', is: 114 }
+        - count:
+            of: 'model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight'
+            is: 112
+        - dtype: { of: '.*', is: float32 }
+
+  # The one edit: in-place cast of exactly the projection matrices.
+  - cast_:
+      target: 'model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight'
+      to: bfloat16
+
+  # Required checks, evaluated before the output is written.
+  - assert:
+      all:
+        # exactly 112 tensors are bfloat16
+        - count:
+            of: 'model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight'
+            is: 112
+        - dtype:
+            of: 'model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight'
+            is: bfloat16
+        # nothing outside that set was touched: still float32
+        - dtype:
+            of: '(?!model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight$).*'
+            is: float32
+        # named spot checks from the task
+        - dtype: { of: 'model\.layers\.0\.self_attn\.q_proj\.weight', is: bfloat16 }
+        - dtype: { of: 'model\.embed_tokens\.weight', is: float32 }
+        # the output has exactly 114 tensors
+        - count: { of: '.*', is: 114 }
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 256MB

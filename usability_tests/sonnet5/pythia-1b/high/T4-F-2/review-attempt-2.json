@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T16:08:27+00:00",
+  "finished_at": "2026-09-06T16:08:43+00:00",
+  "wall_clock_s": 15.7,
+  "tokens_in": 2,
+  "tokens_out": 1110,
+  "cost_usd": 0.0520968,
+  "verdict": "yes",
+  "verdict_text": "YES. The script verifies exact key-set equality and bit-exact equality of all non-MLP tensors against the unmodified base before any merging, computes each task vector from the original `base` (never a partially-merged one), performs the arithmetic in float32 before casting back to the base tensor's dtype, and asserts both `merged == 64` and `len(out) == 244` before writing `out/T4/model.safetensors`. This matches steps 1\u20134 and the required checks precisely.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

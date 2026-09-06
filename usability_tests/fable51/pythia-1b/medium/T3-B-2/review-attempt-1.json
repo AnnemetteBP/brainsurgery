@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T3.yaml",
+  "started_at": "2026-09-06T11:12:23+00:00",
+  "finished_at": "2026-09-06T11:12:50+00:00",
+  "wall_clock_s": 27.1,
+  "tokens_in": 2,
+  "tokens_out": 1915,
+  "cost_usd": 0.30423075,
+  "verdict_text": "YES\n\nThe plan deletes exactly the 48 buffers, upcasts everything to float32, then casts only the 64 named projection matrices to bfloat16, leaving names unchanged and yielding 196 tensors written as sharded safetensors under `out/T3`. The \"64 bfloat16\" check is implemented as a count of the projection-matrix pattern immediately before that pattern is cast, which is logically equivalent here since every tensor was just cast to float32 and nothing else becomes bfloat16. One caveat: `shard: 256MB` may be parsed as 256,000,000 bytes rather than 256 MiB, but that is stricter than the 268,435,456-byte limit and still satisfies the sharding rules.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

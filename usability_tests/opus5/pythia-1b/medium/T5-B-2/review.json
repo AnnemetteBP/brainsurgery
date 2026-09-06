@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "artifact_sha256": "ead4a3730e294c1ca26fd37fb820749a51f66ac0bb4eadf5d4411870d220e3d4",
+  "started_at": "2026-09-06T18:23:28+00:00",
+  "finished_at": "2026-09-06T18:23:48+00:00",
+  "wall_clock_s": 21.0,
+  "tokens_in": 2,
+  "tokens_out": 1593,
+  "cost_usd": 0.1474555,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan computes `delta = B @ A` in the adapter's float32 dtype, scales it by `alpha/r = 2`, upcasts the 16 base weights to float32, adds, casts back to float16, and removes both the `delta` intermediates and the whole adapter namespace before writing. No transposition is applied, which matches `fan_in_fan_out = false` with both tensors in `[out, in]` layout. All four required checks are present as `assert` transforms (16 adapter pairs found and 16 deltas merged, no `lora_` name in the output, the layer-0 QKV weight still `[6144, 2048]`, and 244 output tensors), and they are placed before the output stage so a violation aborts the run. The output is a 512 MiB-sharded safetensors directory at `out/T5`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

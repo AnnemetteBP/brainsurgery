@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T16:00:59+00:00",
+  "finished_at": "2026-09-06T16:01:12+00:00",
+  "wall_clock_s": 12.7,
+  "tokens_in": 2,
+  "tokens_out": 1046,
+  "cost_usd": 0.07901979999999999,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan correctly slices `c_attn.weight` (dim 1) and `c_attn.bias` (dim 0) into six per-layer segments (0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304) and `c_proj.weight` (dim 0) into two segments (0:320, 384:768), matching the required keep-ranges exactly, then reconcatenates them in order for all 12 layers, deletes the originals and temporaries, leaves all other tensors untouched, and asserts the required shapes plus the 160-tensor count before writing to `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "2a90440e95bfda5b4824e5a3b755f3e68e122c210829f0e9be6c5734946874bd"
+}

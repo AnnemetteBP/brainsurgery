@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T07:33:44+00:00",
+  "finished_at": "2026-09-06T07:33:53+00:00",
+  "wall_clock_s": 9.6,
+  "tokens_in": 2,
+  "tokens_out": 559,
+  "cost_usd": 0.1217365,
+  "verdict_text": "NO\n\nThe output uses `shard: 512MB`, a decimal 512,000,000-byte limit, whereas the spec's clause 4 fixes the shard budget at 512 MiB = 536,870,912 bytes of tensor data. Since grading compares the sharding against a hidden reference built with the MiB limit, the smaller cap can close a shard early and produce a different shard count/assignment and hence a different `weight_map`, failing the \"sharding rules\" check. Everything else \u2014 the alpha/r = 2 scaling, no transpose for `fan_in_fan_out = false`, float32 accumulate then cast back to float16, deletion of the `.delta` intermediates, and the four required asserts \u2014 matches the specification.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:31:51+00:00",
+  "finished_at": "2026-09-06T16:32:06+00:00",
+  "wall_clock_s": 15.3,
+  "tokens_in": 2,
+  "tokens_out": 980,
+  "cost_usd": 0.24444675000000002,
+  "verdict": "no",
+  "verdict_text": "NO. The artifact delegates the entire sharded write to `save_sharded_safetensors` from a module `_ckpt` that is not part of the artifact, so nothing shown implements Required result clause 5: the 256 MiB per-shard limit measured on tensor data, storing `model.embed_tokens.weight` and `lm_head.weight` alone in their own shards, and emitting `model.safetensors.index.json` with a complete `weight_map`. Loading is likewise delegated to an unshown `load_checkpoint`, so correct handling of the two-shard input cannot be confirmed either. The dtype logic and the four required assertions are correct, but the output layout that grading checks is unverifiable from this script alone.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

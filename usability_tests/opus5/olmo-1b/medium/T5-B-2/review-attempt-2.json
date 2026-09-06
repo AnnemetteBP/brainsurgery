@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T16:21:24+00:00",
+  "finished_at": "2026-09-06T16:21:49+00:00",
+  "wall_clock_s": 24.8,
+  "tokens_in": 2,
+  "tokens_out": 1657,
+  "cost_usd": 0.14803950000000002,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the plan matches the specification.\n\n`matmul` forms `B @ A` (`[2048,16] @ [16,2048]` \u2192 `[2048,2048]`) with no transpose, which is correct for `fan_in_fan_out = false`; `scale_` by 2 applies `alpha/r = 32/16`; `add_` folds the delta into `model.layers.<i>.<module>.weight` in place, keeping name, shape and float32 dtype; `delete` removes the intermediates so no adapter or scratch tensor survives, and the adapter is loaded in a separate `lora::` namespace that is not the output namespace. All four required checks are present as `assert` transforms before the write (32 adapter pairs, no `lora_` name, `[2048, 2048]` for layer 0 `q_proj`, 114 tensors), and `output` writes `out/T5` as sharded safetensors with `shard: 512MB`, which BrainSurgery interprets as 536,870,912 bytes of tensor data per shard, so the two 412 MB tensors land alone in their own shards as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

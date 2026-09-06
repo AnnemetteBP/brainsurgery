@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T4-defective.py",
+  "started_at": "2026-09-06T16:01:32+00:00",
+  "finished_at": "2026-09-06T16:01:39+00:00",
+  "wall_clock_s": 7.9,
+  "tokens_in": 2,
+  "tokens_out": 679,
+  "cost_usd": 0.0468588,
+  "verdict": "no",
+  "verdict_text": "NO. The merge computes `tmp = base + \u03bb(ft1-base)` then `out = tmp + \u03bb(ft2-tmp)`, i.e., ft2's task vector is taken against `tmp` (the already ft1-modified base) rather than against the original `base`. This violates the ordering requirement in step 2 of \"Required result\" \u2014 \"computed in float32\" per the formula `out[X] = base[X] + \u03bb(ft1[X]-base[X]) + \u03bb(ft2[X]-base[X])`, and directly contradicts the explicit warning in \"Why it is meaningful\" that \"each task vector must be taken against the unmodified base, not against a base that the first merge already changed.\" Algebraically this yields `out = base\u00b7(1-2\u03bb+\u03bb\u00b2) + ft1\u00b7(\u03bb-\u03bb\u00b2) + ft2\u00b7\u03bb`, which for \u03bb=0.4 differs materially from the required `base\u00b7(1-2\u03bb) + \u03bb\u00b7ft1 + \u03bb\u00b7ft2`, exceeding the grading tolerance of 1e-5 relative Frobenius error.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

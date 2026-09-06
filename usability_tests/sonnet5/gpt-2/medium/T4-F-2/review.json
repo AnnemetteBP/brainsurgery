@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "artifact_sha256": "bf1aaff64bce9adc7af3eb4f382f30b5f5cb81a9425f65767ce23de6c1f8a7b6",
+  "started_at": "2026-09-06T18:14:32+00:00",
+  "finished_at": "2026-09-06T18:14:36+00:00",
+  "wall_clock_s": 4.3,
+  "tokens_in": 2,
+  "tokens_out": 174,
+  "cost_usd": 0.0426908,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script verifies shared tensors outside the 48 MLP names are bit-identical across base/ft1/ft2, aborts via assert if not, computes each merged tensor as base + lambda*(ft1-base) + lambda*(ft2-base) in float32 before casting back to the original dtype, asserts exactly 48 tensors were merged and 160 total, and writes a single `model.safetensors` with 160 tensors, unchanged tensors taken directly from base. This satisfies steps 1-4 and the required checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

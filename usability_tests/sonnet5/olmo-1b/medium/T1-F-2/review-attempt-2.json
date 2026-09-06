@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T16:05:34+00:00",
+  "finished_at": "2026-09-06T16:05:49+00:00",
+  "wall_clock_s": 15.6,
+  "tokens_in": 2,
+  "tokens_out": 1253,
+  "cost_usd": 0.0537478,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops blocks {2,6,10,14}, renumbers the remaining blocks in ascending original order via `enumerate(kept)`, which reproduces exactly the mapping specified (0\u21920, 1\u21921, 3\u21922, ..., 15\u219211), leaves non-block tensors untouched, and asserts both that surviving layer indices form exactly `{0..11}` (implicitly proving no old-12/13/14/15 index survives and exactly 12 blocks remain) and that the output has exactly 86 tensors, raising before `save_file` is called so no output is written on failure. Regex-based renaming preserves the tensor-name suffix and values unchanged, satisfying \"only the block index changes.\"",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T08:14:06+00:00",
+  "finished_at": "2026-09-06T08:16:15+00:00",
+  "wall_clock_s": 129.3,
+  "tokens_in": 2,
+  "tokens_out": 10226,
+  "cost_usd": 0.3546615,
+  "verdict_text": "I could not read the sandbox files (the tool calls returned nothing), so this is a judgment from the specification and plan text alone, as instructed.\n\n**YES**\n\nThe plan deletes exactly the 12 `h.<i>.attn.bias` buffers (the regex cannot match `c_attn.bias`/`c_proj.bias`, since those need `attn.bias` immediately after `h.<i>.`), normalizes everything to float32, then casts exactly the 4\u00d712 = 48 projection matrices to bfloat16, leaving 148 tensors with unchanged names and values elsewhere. The three dtype/count asserts match the spec directly; the \"exactly 48 bfloat16\" check is expressed as a name-count of the same regex placed before the cast, which is equivalent here only because the preceding `.*` \u2192 float32 cast guarantees nothing else can be bfloat16 \u2014 a dtype-based count would have been the more faithful phrasing. The `shard: 64MB` unit is loose relative to the spec's 64 MiB, but the layout is identical under either reading: `wte.weight` alone, then `wpe` + layers 0\u20133 (59,928,576 B), layers 4\u20137 (56,782,848 B), layers 8\u201311 + `ln_f` (56,788,992 B), since adding one more 14,195,712 B layer would exceed both 64,000,000 and 67,108,864. The one thing I cannot confirm without the doc pack is that `cast_`, `delete`, and the `count`/`dtype` assert operators are spelled as the tool registers them; if `cast_` is not a real transform name the plan would fail to compile rather than produce a wrong result.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}
