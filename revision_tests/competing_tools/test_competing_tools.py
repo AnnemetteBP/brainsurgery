@@ -179,6 +179,7 @@ def test_nonreportable_presentations_suppress_performance_values() -> None:
     assert "no runtime" in narrative
 
 
+@pytest.mark.skipif(sys.platform == "darwin", reason="process I/O counters are unavailable on macOS")
 def test_process_exit_race_does_not_degrade_sampling(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -210,7 +211,7 @@ def test_process_exit_race_does_not_degrade_sampling(
 
     monkeypatch.setattr(competing_run.psutil, "Process", VanishedChildProcess)
     result = competing_run.run_monitored(
-        [sys.executable, "-c", "import time; time.sleep(0.03)"],
+        [sys.executable, "-c", "import time; time.sleep(0.2)"],
         stdout_path=tmp_path / "stdout.txt",
         stderr_path=tmp_path / "stderr.txt",
         timeout=1,

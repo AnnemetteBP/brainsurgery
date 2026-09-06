@@ -8,6 +8,7 @@ import sys
 from copy import deepcopy
 from pathlib import Path
 
+import pytest
 import torch
 from safetensors.torch import load_file, save_file
 
@@ -179,6 +180,7 @@ def test_revision_metadata_is_checked_for_every_checkpoint_file(tmp_path: Path) 
     assert not oracle.verify_huggingface_revision(source, "b" * 40)["passed"]
 
 
+@pytest.mark.skipif(sys.platform == "darwin", reason="process I/O counters are unavailable on macOS")
 def test_transient_sampling_denial_does_not_degrade_scaling_monitor(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -204,7 +206,7 @@ def test_transient_sampling_denial_does_not_degrade_scaling_monitor(
 
     monkeypatch.setattr(scaling_run.psutil, "Process", TransientlyDeniedProcess)
     result = scaling_run.run_monitored(
-        [sys.executable, "-c", "import time; time.sleep(0.03)"],
+        [sys.executable, "-c", "import time; time.sleep(0.2)"],
         stdout_path=tmp_path / "stdout.txt",
         stderr_path=tmp_path / "stderr.txt",
         temp_path=tmp_path / "arena",
