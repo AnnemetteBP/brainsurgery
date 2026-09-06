@@ -150,6 +150,7 @@ outside the sandbox. Nothing from `references/`, `solutions/`, `review/` or
 | `resummarise.py` | Recomputes execution counts in `harness.json` from saved Claude transcripts |
 | `grade.py` | Grades an output against `references/<target>/<test>`; independent of BrainSurgery |
 | `analyze.py` | Aggregates run records into the study tables |
+| `compare_artifacts.py` | Lays the implementations of one test side by side across conditions, agents and tiers, with size and execution counts |
 | `make_manifest.py`, `manifest.sha256` | Checksums of every input, reference and doc-pack file; `--verify` proves another machine runs the same study |
 | `pack_data.sh` | Bundles the generated inputs and references (~35 GB) for transfer to another machine |
 | `solutions/<target>/P/*.py`, `solutions/<target>/B/*.yaml` | Reference baselines and plans. Hidden from participants. The Python ones generate the references |
