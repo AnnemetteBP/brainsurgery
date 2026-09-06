@@ -17,6 +17,8 @@ transforms:
   - add_: { from: 'model::h\.(\d+)\.(attn\.c_attn)\.delta', to: 'model::h.\1.\2.weight' }
   # base is float32 already
   - delete: { target: 'model::h\.\d+\.(attn\.c_attn)\.delta(_t)?' }
+  # Only the `model` alias is written; drop the adapter namespace anyway so no adapter tensor can reach the output.
+  - delete: { target: 'lora::.*' }
   - assert: { not: { exists: 'model::.*lora_.*' } }
   - assert: { shape: { of: model::h.0.attn.c_attn.weight, is: [768, 2304] } }
   - assert: { count: { of: 'model::.*', is: 160 } }

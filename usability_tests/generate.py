@@ -7,7 +7,6 @@ Writes, for every target in targets.TARGETS and every test:
 
     tasks/<test>/TASK-<target>.md          participant-facing specification
     solutions/<target>/P/T<n>.py           reference Python baseline (hidden)
-    solutions/<target>/P/_ckpt.py            shared loader / sharded writer for the baselines
     solutions/<target>/B/T<n>.yaml         reference BrainSurgery plan (hidden)
     review/<target>/P/T<n>-defective.py    baseline with one injected defect (bug-detection phase)
     review/<target>/B/T<n>-defective.yaml  plan with the same injected defect
@@ -171,13 +170,27 @@ exact key set, shapes, dtypes and bit-exact values.
 
 T1_PY = '''"""T1 baseline for ${display}: remove blocks ${drop_list} and renumber the rest contiguously."""
 
+import json
 import re
 import sys
 from pathlib import Path
 
-from safetensors.torch import save_file
+from safetensors.torch import load_file, save_file
 
-from _ckpt import load_checkpoint
+
+def load_checkpoint(path):
+    """Load a single .safetensors file or a sharded directory with model.safetensors.index.json."""
+    path = Path(path)
+    if path.is_file():
+        return load_file(str(path))
+    index = path / "model.safetensors.index.json"
+    if index.exists():
+        weight_map = json.loads(index.read_text())["weight_map"]
+        sd = {}
+        for shard in sorted(set(weight_map.values())):
+            sd.update(load_file(str(path / shard)))
+        return sd
+    return load_file(str(path / "model.safetensors"))
 
 out_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "out/T1")
 DROP = {${drop_set}}
@@ -319,13 +332,27 @@ exact key set, shapes, dtypes and bit-exact values.
 
 T2_PY = '''"""T2 baseline for ${display}: remove attention head ${drop_head} from every layer."""
 
+import json
 import sys
 from pathlib import Path
 
 import torch
-from safetensors.torch import save_file
+from safetensors.torch import load_file, save_file
 
-from _ckpt import load_checkpoint
+
+def load_checkpoint(path):
+    """Load a single .safetensors file or a sharded directory with model.safetensors.index.json."""
+    path = Path(path)
+    if path.is_file():
+        return load_file(str(path))
+    index = path / "model.safetensors.index.json"
+    if index.exists():
+        weight_map = json.loads(index.read_text())["weight_map"]
+        sd = {}
+        for shard in sorted(set(weight_map.values())):
+            sd.update(load_file(str(path / shard)))
+        return sd
+    return load_file(str(path / "model.safetensors"))
 
 out_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "out/T2")
 N_LAYERS = ${n_layers}
@@ -505,13 +532,55 @@ sharding rules, exact key set, shapes, dtypes and bit-exact values.
 
 T3_PY = '''"""T3 baseline for ${display}: bfloat16 projection matrices, float32 everything else, ${shard_text} shards."""
 
+import json
 import re
 import sys
 from pathlib import Path
 
 import torch
 
-from _ckpt import load_checkpoint, save_sharded_safetensors
+from safetensors.torch import load_file, save_file
+
+
+def load_checkpoint(path):
+    """Load a single .safetensors file or a sharded directory with model.safetensors.index.json."""
+    path = Path(path)
+    if path.is_file():
+        return load_file(str(path))
+    index = path / "model.safetensors.index.json"
+    if index.exists():
+        weight_map = json.loads(index.read_text())["weight_map"]
+        sd = {}
+        for shard in sorted(set(weight_map.values())):
+            sd.update(load_file(str(path / shard)))
+        return sd
+    return load_file(str(path / "model.safetensors"))
+
+
+def save_sharded_safetensors(sd, out_dir, max_bytes):
+    """Pack tensors in order into shards of at most max_bytes of tensor data (an oversized
+    tensor goes alone in its own shard) and write model.safetensors.index.json."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    shards, cur, cur_size = [], {}, 0
+    for name, tensor in sd.items():
+        size = tensor.numel() * tensor.element_size()
+        if cur and cur_size + size > max_bytes:
+            shards.append(cur)
+            cur, cur_size = {}, 0
+        cur[name] = tensor.contiguous()
+        cur_size += size
+    if cur:
+        shards.append(cur)
+    weight_map = {}
+    for idx, shard in enumerate(shards, start=1):
+        shard_name = f"model-{idx:05d}-of-{len(shards):05d}.safetensors"
+        save_file(shard, str(out_dir / shard_name))
+        for name in shard:
+            weight_map[name] = shard_name
+    total = sum(t.numel() * t.element_size() for t in sd.values())
+    (out_dir / "model.safetensors.index.json").write_text(
+        json.dumps({"metadata": {"total_size": total}, "weight_map": weight_map}, indent=2)
+    )
 
 out_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "out/T3")
 MAX_SHARD = ${shard_bytes}
@@ -670,14 +739,29 @@ most ${tol} (so a different order of additions is fine).
 
 T4_PY = '''"""T4 baseline for ${display}: task-vector merge of two fine-tunes, lambda 0.4 each, MLP tensors only."""
 
+import json
 import re
+import json
 import sys
 from pathlib import Path
 
 import torch
-from safetensors.torch import save_file
+from safetensors.torch import load_file, save_file
 
-from _ckpt import load_checkpoint
+
+def load_checkpoint(path):
+    """Load a single .safetensors file or a sharded directory with model.safetensors.index.json."""
+    path = Path(path)
+    if path.is_file():
+        return load_file(str(path))
+    index = path / "model.safetensors.index.json"
+    if index.exists():
+        weight_map = json.loads(index.read_text())["weight_map"]
+        sd = {}
+        for shard in sorted(set(weight_map.values())):
+            sd.update(load_file(str(path / shard)))
+        return sd
+    return load_file(str(path / "model.safetensors"))
 
 out_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "out/T4")
 LAMBDA = 0.4
@@ -870,9 +954,48 @@ import json
 import sys
 from pathlib import Path
 
-from safetensors.torch import load_file
+from safetensors.torch import load_file, save_file
 
-from _ckpt import load_checkpoint, save_sharded_safetensors
+
+def load_checkpoint(path):
+    """Load a single .safetensors file or a sharded directory with model.safetensors.index.json."""
+    path = Path(path)
+    if path.is_file():
+        return load_file(str(path))
+    index = path / "model.safetensors.index.json"
+    if index.exists():
+        weight_map = json.loads(index.read_text())["weight_map"]
+        sd = {}
+        for shard in sorted(set(weight_map.values())):
+            sd.update(load_file(str(path / shard)))
+        return sd
+    return load_file(str(path / "model.safetensors"))
+
+
+def save_sharded_safetensors(sd, out_dir, max_bytes):
+    """Pack tensors in order into shards of at most max_bytes of tensor data (an oversized
+    tensor goes alone in its own shard) and write model.safetensors.index.json."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    shards, cur, cur_size = [], {}, 0
+    for name, tensor in sd.items():
+        size = tensor.numel() * tensor.element_size()
+        if cur and cur_size + size > max_bytes:
+            shards.append(cur)
+            cur, cur_size = {}, 0
+        cur[name] = tensor.contiguous()
+        cur_size += size
+    if cur:
+        shards.append(cur)
+    weight_map = {}
+    for idx, shard in enumerate(shards, start=1):
+        shard_name = f"model-{idx:05d}-of-{len(shards):05d}.safetensors"
+        save_file(shard, str(out_dir / shard_name))
+        for name in shard:
+            weight_map[name] = shard_name
+    total = sum(t.numel() * t.element_size() for t in sd.values())
+    (out_dir / "model.safetensors.index.json").write_text(
+        json.dumps({"metadata": {"total_size": total}, "weight_map": weight_map}, indent=2)
+    )
 
 out_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "out/T5")
 N_LAYERS = ${n_layers}
@@ -925,6 +1048,8 @@ ${upcast}
   - add_: { from: 'model::${layer_re}(${module_alt})\\.delta', to: 'model::${layer_to}.weight' }
 ${downcast}
   - delete: { target: 'model::${layer_re_nocap}(${module_alt})\\.delta(_t)?' }
+  # Only the `model` alias is written; drop the adapter namespace anyway so no adapter tensor can reach the output.
+  - delete: { target: 'lora::.*' }
   - assert: { not: { exists: 'model::.*lora_.*' } }
   - assert: { shape: { of: model::${probe}, is: ${weight_shape} } }
   - assert: { count: { of: 'model::.*', is: ${total} } }
@@ -1024,8 +1149,6 @@ def main() -> int:
         rev_b = HERE / "review" / tname / "B"
         for d in (sol_p, sol_b, rev_p, rev_b):
             d.mkdir(parents=True, exist_ok=True)
-        (sol_p / "_ckpt.py").write_text(IO_PY)
-        (rev_p / "_ckpt.py").write_text(IO_PY)
 
         drop = t["drop_layers"]
         drop_bug = drop[:-1] + [drop[-1] + 1]

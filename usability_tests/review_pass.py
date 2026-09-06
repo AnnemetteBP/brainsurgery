@@ -31,7 +31,7 @@ def review_cell(cell: Path, model: str, args) -> str:
     test, cond, rep = run.split("-")
     tag = f"{agent}/{target}/{effort}/{run}"
     rv = cell / "review.json"
-    if rv.exists() and json.loads(rv.read_text()).get("protocol") == args.protocol:
+    if not args.force and rv.exists() and json.loads(rv.read_text()).get("protocol") == args.protocol:
         return f"skip   {tag}"
     cmd = [sys.executable, str(HERE / "run_claude.py"), test, cond, "--agent", agent, "--model", model,
            "--target", target, "--effort", effort, "--repeat", rep, "--review-only"]
@@ -60,13 +60,18 @@ def main() -> int:
     parser.add_argument("--wait-s", type=int, default=20)
     parser.add_argument("--limit-wait-s", type=int, default=900)
     parser.add_argument("--protocol", default="review-v2", help="tag written into review.json when done")
+    parser.add_argument("--tests", nargs="+", default=None, help="only these tests, e.g. T3 T5")
+    parser.add_argument("--conditions", nargs="+", default=None, help="only these conditions, e.g. P B")
+    parser.add_argument("--force", action="store_true", help="redo even cells already tagged with --protocol")
     args = parser.parse_args()
     models = dict(DEFAULT_MODELS)
     for pair in args.models:
         k, v = pair.split("=", 1)
         models[k] = v
     cells = [c for a in args.agents for c in sorted(HERE.glob(f"{a}/*/*/*"))
-             if c.is_dir() and (c / "grade.json").exists() and c.name.split("-")[-1] in args.repeats]
+             if c.is_dir() and (c / "grade.json").exists() and c.name.split("-")[-1] in args.repeats
+             and (args.tests is None or c.name.split("-")[0] in args.tests)
+             and (args.conditions is None or c.name.split("-")[1] in args.conditions)]
     print(f"{len(cells)} cells, parallel={args.parallel}", flush=True)
     with ThreadPoolExecutor(max_workers=args.parallel) as pool:
         futures = [pool.submit(review_cell, c, models[c.parts[-4]], args) for c in cells]
