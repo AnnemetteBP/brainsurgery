@@ -99,8 +99,12 @@ def summarise(events: list[dict]) -> dict:
     executions: list[dict] = []
     pending: dict[str, dict] = {}
     for ev in events:
-        msg = ev.get("message") or {}
+        msg = ev.get("message")
+        if not isinstance(msg, dict):
+            msg = {}
         content = msg.get("content") or []
+        if not isinstance(content, list):
+            content = []
         if ev.get("type") == "assistant":
             for block in content:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
@@ -175,14 +179,26 @@ def main() -> int:
     parser.add_argument("--keep-artifacts", action="store_true",
                         help="keep the sandbox environment and output checkpoints (default: delete them "
                              "after grading and review; the study files stay)")
+    parser.add_argument("--finish", action="store_true",
+                        help="complete an existing cell whose solve phase ended (transcript.jsonl is present) "
+                             "but the driver crashed before grading: summarise, grade, review, clean up")
     parser.add_argument("--root", type=Path, default=HERE)
     args = parser.parse_args()
 
-    sandbox = create_sandbox(args.test, args.condition, agent=args.agent, target=args.target, effort=args.effort,
-                             repeat=args.repeat, venv=args.venv, root=args.root)
-    print(f"[run] sandbox {sandbox}", flush=True)
+    if args.finish:
+        sandbox = (args.root / args.agent / args.target / args.effort /
+                   f"{args.test}-{args.condition}-{args.repeat}").resolve()
+        transcript = sandbox / "transcript.jsonl"
+        if not transcript.exists():
+            print(f"[run] --finish: no transcript in {sandbox}", file=sys.stderr)
+            return 2
+        print(f"[run] finishing {sandbox} from its transcript", flush=True)
+    else:
+        sandbox = create_sandbox(args.test, args.condition, agent=args.agent, target=args.target, effort=args.effort,
+                                 repeat=args.repeat, venv=args.venv, root=args.root)
+        print(f"[run] sandbox {sandbox}", flush=True)
     env = dict(os.environ)
-    if args.venv:
+    if (sandbox / ".venv").exists():
         env["PATH"] = f"{sandbox / '.venv' / 'bin'}:{env.get('PATH', '')}"
         env["VIRTUAL_ENV"] = str(sandbox / ".venv")
     extra = ["--dangerously-skip-permissions"]
@@ -191,10 +207,16 @@ def main() -> int:
 
     # ---- solve
     prompt = (sandbox / "PROMPT.md").read_text()
-    started = now()
-    events, rc, wall, timed_out = run_claude(prompt, cwd=sandbox, model=args.model, effort=args.effort,
-                                             max_turns=args.max_turns, timeout=args.timeout, env=env, extra=extra)
-    (sandbox / "transcript.jsonl").write_text("\n".join(json.dumps(e) for e in events) + "\n")
+    if args.finish:
+        events = [json.loads(line) for line in (sandbox / "transcript.jsonl").read_text().splitlines() if line.strip()]
+        started = json.loads((sandbox / "run.json").read_text()).get("created_at")
+        wall = (sandbox / "transcript.jsonl").stat().st_mtime - (sandbox / "run.json").stat().st_mtime
+        rc, timed_out = 0, False
+    else:
+        started = now()
+        events, rc, wall, timed_out = run_claude(prompt, cwd=sandbox, model=args.model, effort=args.effort,
+                                                 max_turns=args.max_turns, timeout=args.timeout, env=env, extra=extra)
+        (sandbox / "transcript.jsonl").write_text("\n".join(json.dumps(e) for e in events) + "\n")
     summary = summarise(events)
     cap = "time" if timed_out else ("turns" if summary.get("result_subtype") == "error_max_turns" else "none")
     harness = {
