@@ -29,3 +29,6 @@ build/
 tmp
 # Large usability-study transfer bundle (copied between machines, never committed).
 /usability_tests_data.tar
+
+# Team members keep personal notes here; never tracked.
+/private/
