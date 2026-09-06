@@ -22,8 +22,10 @@ import argparse
 import json
 import statistics
 from collections import defaultdict
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 HERE = Path(__file__).resolve().parent
 
 
@@ -52,8 +54,13 @@ def collect(root: Path) -> list[dict]:
         grade = read(sandbox / "grade.json") or {}
         review = read(sandbox / "review.json") or {}
         detected = review.get("detected")
+        verdict = review.get("verdict")
+        if review.get("verdict_text") is not None:
+            from run_claude import parse_verdict
+            verdict = parse_verdict(review.get("verdict_text"))
         if detected is None:
-            detected = review.get("auto_says_defective")
+            # only a real YES/NO verdict counts; "none" (the reviewer did not answer) is excluded
+            detected = None if verdict in (None, "none") else (verdict == "no")
         runs.append({
             "agent": run.get("agent", sandbox.parts[-4]),
             "target": run.get("target", sandbox.parts[-3]),
@@ -73,6 +80,7 @@ def collect(root: Path) -> list[dict]:
             "cap_hit": harness.get("cap_hit"),
             "review_kind": review.get("artifact_kind"),
             "review_detected": detected,
+            "review_no_verdict": verdict == "none",
         })
     return runs
 
@@ -97,6 +105,7 @@ def summarize(rows: list[dict]) -> dict:
         "median_time_to_solution_s": median([r["wall_s"] for r in passed]),
         "bug_detected": rate(sum(1 for r in defective if r["review_detected"]), len(defective)),
         "false_alarms": rate(sum(1 for r in correct if r["review_detected"]), len(correct)),
+        "no_verdict": sum(1 for r in rows if r.get("review_no_verdict")),
     }
 
 

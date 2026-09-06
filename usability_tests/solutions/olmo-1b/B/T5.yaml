@@ -11,6 +11,8 @@ transforms:
       to: 'model::model.layers.\1.\2.delta'
   # nn.Linear layout: no transpose needed
   - scale_: { target: 'model::model\.layers\.\d+\.(self_attn\.q_proj|self_attn\.v_proj)\.delta', by: 2 }
+  # Required check: exactly 32 adapter pairs were found (above) and merged (one delta each).
+  - assert: { count: { of: 'model::model\.layers\.\d+\.(self_attn\.q_proj|self_attn\.v_proj)\.delta', is: 32 } }
   # base is float32 already
   - add_: { from: 'model::model\.layers\.(\d+)\.(self_attn\.q_proj|self_attn\.v_proj)\.delta', to: 'model::model.layers.\1.\2.weight' }
   # base is float32 already
@@ -21,4 +23,5 @@ transforms:
 output:
   path: out/T5
   format: safetensors
+  # BrainSurgery shard units are binary: 512MB = 512 MiB (536,870,912 bytes) of tensor data per shard.
   shard: 512MB

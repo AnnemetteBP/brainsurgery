@@ -150,13 +150,25 @@ def summarise(events: list[dict]) -> dict:
     }
 
 
+def parse_verdict(text: str) -> str:
+    """'yes', 'no', or 'none' from the first word of the reply, ignoring markdown decoration."""
+    for line in (text or "").splitlines():
+        head = re.sub(r"^[^A-Za-z]+", "", line.strip()).upper()
+        if not head:
+            continue
+        return "no" if head.startswith("NO") else "yes" if head.startswith("YES") else "none"
+    return "none"
+
+
 def review_prompt(task_md: str, artifact: str, language: str) -> str:
     return (
-        "You are reviewing a checkpoint-editing artifact against its specification. Read the "
-        "specification, then the artifact, and answer two questions: (1) Does the artifact do exactly "
-        "what the specification requires? Answer YES or NO on the first line. (2) If NO, state precisely "
-        "what is wrong and which specification clause it violates, in at most five sentences. Do not run "
-        "anything; judge from reading alone.\n\n# Specification\n\n" + task_md +
+        "You are reviewing a checkpoint-editing artifact against its specification. Everything you need "
+        "is in this message: the full specification and the full artifact. You have no tools in this "
+        "session: do not try to read files, search, or run anything, and do not narrate what you are "
+        "about to do. Answer directly. The first word of your reply must be YES or NO: YES if the artifact "
+        "does exactly what the specification requires, NO otherwise. If NO, then state precisely what is "
+        "wrong and which specification clause it violates, in at most five sentences."
+        "\n\n# Specification\n\n" + task_md +
         f"\n\n# Artifact ({language})\n\n```\n{artifact}\n```\n"
     )
 
@@ -179,11 +191,28 @@ def main() -> int:
     parser.add_argument("--keep-artifacts", action="store_true",
                         help="keep the sandbox environment and output checkpoints (default: delete them "
                              "after grading and review; the study files stay)")
+    parser.add_argument("--review-only", action="store_true",
+                        help="redo only the bug-detection review of an existing graded cell; the previous "
+                             "review is kept as review-attempt-<n>.json")
     parser.add_argument("--finish", action="store_true",
                         help="complete an existing cell whose solve phase ended (transcript.jsonl is present) "
                              "but the driver crashed before grading: summarise, grade, review, clean up")
     parser.add_argument("--root", type=Path, default=HERE)
     args = parser.parse_args()
+
+    if args.review_only:
+        sandbox = (args.root / args.agent / args.target / args.effort /
+                   f"{args.test}-{args.condition}-{args.repeat}").resolve()
+        if not (sandbox / "grade.json").exists():
+            print(f"[run] --review-only: {sandbox} is not graded", file=sys.stderr)
+            return 2
+        n = 1
+        while (sandbox / f"review-attempt-{n}.json").exists():
+            n += 1
+        if (sandbox / "review.json").exists():
+            (sandbox / "review.json").rename(sandbox / f"review-attempt-{n}.json")
+        run_review(args, sandbox, dict(os.environ))
+        return 0 if json.loads((sandbox / "grade.json").read_text()).get("passed") else 1
 
     if args.finish:
         sandbox = (args.root / args.agent / args.target / args.effort /
@@ -240,33 +269,7 @@ def main() -> int:
 
     # ---- review (bug detection)
     if not args.skip_review:
-        lang = "yaml" if args.condition == "B" else "py"
-        kind = "defective" if args.repeat % 2 == 1 else "correct"
-        if kind == "defective":
-            art = HERE / "review" / args.target / ("B" if lang == "yaml" else "P") / f"{args.test}-defective.{lang}"
-        else:
-            art = HERE / "solutions" / args.target / ("B" if lang == "yaml" else "P") / f"{args.test}.{lang}"
-        rprompt = review_prompt((sandbox / "TASK.md").read_text(), art.read_text(),
-                                "BrainSurgery plan" if lang == "yaml" else "Python script")
-        rstart = now()
-        revents, rrc, rwall, _ = run_claude(rprompt, cwd=sandbox, model=args.model, effort=args.effort, max_turns=1,
-                                            timeout=300, env=env, extra=["--tools", "", "--dangerously-skip-permissions"])
-        rsum = summarise(revents)
-        verdict = rsum["final_text"]
-        first_line = verdict.strip().splitlines()[0] if verdict.strip() else ""
-        says_defective = first_line.strip().upper().startswith("NO") or bool(DEFECT_WORDS.search(first_line))
-        answers = json.loads((HERE / "review" / args.target / "answers.json").read_text())
-        review = {
-            "phase": "review", "artifact_kind": kind, "artifact": str(art.relative_to(HERE)),
-            "started_at": rstart, "finished_at": now(), "wall_clock_s": round(rwall, 1),
-            "tokens_in": rsum["tokens_in"], "tokens_out": rsum["tokens_out"], "cost_usd": rsum["cost_usd"],
-            "verdict_text": verdict, "auto_says_defective": says_defective,
-            "detected": None, "expected_defect": answers[args.test] if kind == "defective" else None,
-            "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a "
-                    "correct artifact, true means a false alarm).",
-        }
-        (sandbox / "review.json").write_text(json.dumps(review, indent=2) + "\n")
-        print(f"[run] review ({kind}): says_defective={says_defective}", flush=True)
+        run_review(args, sandbox, env)
 
     if not args.keep_artifacts:
         cleanup_sandbox(sandbox)
@@ -281,6 +284,43 @@ def cleanup_sandbox(sandbox: Path) -> None:
     for path in (sandbox / "out").rglob("*"):
         if path.is_file() and (path.suffix in {".safetensors", ".pt", ".pth", ".bin"} or path.name.endswith(".index.json")):
             path.unlink()
+
+
+def run_review(args, sandbox: Path, env: dict) -> None:
+    """Single-turn bug-detection review of one artifact for the cell's task; writes review.json.
+
+    The verdict must start with YES or NO. Anything else (the model narrates, or tries to
+    call a tool in a tool-less single turn) is recorded as verdict "none" and excluded from
+    detection and false-alarm rates by analyze.py; redo it with --review-only.
+    """
+    lang = "yaml" if args.condition == "B" else "py"
+    kind = "defective" if args.repeat % 2 == 1 else "correct"
+    if kind == "defective":
+        art = HERE / "review" / args.target / ("B" if lang == "yaml" else "P") / f"{args.test}-defective.{lang}"
+    else:
+        art = HERE / "solutions" / args.target / ("B" if lang == "yaml" else "P") / f"{args.test}.{lang}"
+    rprompt = review_prompt((sandbox / "TASK.md").read_text(), art.read_text(),
+                            "BrainSurgery plan" if lang == "yaml" else "Python script")
+    rstart = now()
+    # Tools are disabled; max_turns 2 lets a model that nevertheless emits a tool call finish its answer.
+    revents, rrc, rwall, _ = run_claude(rprompt, cwd=sandbox, model=args.model, effort=args.effort, max_turns=2,
+                                        timeout=300, env=env, extra=["--tools", "", "--dangerously-skip-permissions"])
+    rsum = summarise(revents)
+    verdict_text = rsum["final_text"]
+    verdict = parse_verdict(verdict_text)
+    says_defective = verdict == "no"
+    answers = json.loads((HERE / "review" / args.target / "answers.json").read_text())
+    review = {
+        "phase": "review", "artifact_kind": kind, "artifact": str(art.relative_to(HERE)),
+        "started_at": rstart, "finished_at": now(), "wall_clock_s": round(rwall, 1),
+        "tokens_in": rsum["tokens_in"], "tokens_out": rsum["tokens_out"], "cost_usd": rsum["cost_usd"],
+        "verdict": verdict, "verdict_text": verdict_text, "auto_says_defective": says_defective,
+        "detected": None, "expected_defect": answers[args.test] if kind == "defective" else None,
+        "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a "
+                "correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+    }
+    (sandbox / "review.json").write_text(json.dumps(review, indent=2) + "\n")
+    print(f"[run] review ({kind}): verdict={verdict}", flush=True)
 
 
 if __name__ == "__main__":

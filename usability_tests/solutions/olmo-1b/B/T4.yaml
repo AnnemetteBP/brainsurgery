@@ -19,6 +19,9 @@ transforms:
   # base is float32 already
   - subtract_: { from: 'base::model\.layers\.(\d+)\.(mlp\.gate_proj\.weight|mlp\.up_proj\.weight|mlp\.down_proj\.weight)', to: 'base::model.layers.\1.\2.tv2' }
   - scale_: { target: 'base::model\.layers\.\d+\.(mlp\.gate_proj\.weight|mlp\.up_proj\.weight|mlp\.down_proj\.weight)\.tv2', by: 0.4 }
+  # Required check: exactly 48 tensors are merged (both task-vector sets are complete).
+  - assert: { count: { of: 'base::model\.layers\.\d+\.(mlp\.gate_proj\.weight|mlp\.up_proj\.weight|mlp\.down_proj\.weight)\.tv1', is: 48 } }
+  - assert: { count: { of: 'base::model\.layers\.\d+\.(mlp\.gate_proj\.weight|mlp\.up_proj\.weight|mlp\.down_proj\.weight)\.tv2', is: 48 } }
   - add_: { from: 'base::model\.layers\.(\d+)\.(mlp\.gate_proj\.weight|mlp\.up_proj\.weight|mlp\.down_proj\.weight)\.tv1', to: 'base::model.layers.\1.\2' }
   - add_: { from: 'base::model\.layers\.(\d+)\.(mlp\.gate_proj\.weight|mlp\.up_proj\.weight|mlp\.down_proj\.weight)\.tv2', to: 'base::model.layers.\1.\2' }
   - delete: { target: 'base::model\.layers\.\d+\.(mlp\.gate_proj\.weight|mlp\.up_proj\.weight|mlp\.down_proj\.weight)\.tv[12]' }

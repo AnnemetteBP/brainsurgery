@@ -542,12 +542,17 @@ ${buffer_lines}
   - cast_: { target: '.*', to: float32 }
   - assert: { count: { of: '${matrix_glob}', is: ${n_matrices} } }
   - cast_: { target: '${matrix_glob}', to: bfloat16 }
+  # Required checks. "exactly ${n_matrices} tensors are bfloat16": the ${n_matrices} matrices
+  # are bfloat16 and every other tensor is float32, so no other tensor can be bfloat16.
+  - assert: { dtype: { of: '${matrix_glob}', is: bfloat16 } }
+  - assert: { dtype: { of: '(?!${matrix_glob_nocap}$$).+', is: float32 } }
   - assert: { dtype: { of: ${probe_matrix}, is: bfloat16 } }
   - assert: { dtype: { of: ${probe_keep}, is: float32 } }
   - assert: { count: { of: '.*', is: ${t3_total} } }
 output:
   path: out/T3
   format: safetensors
+  # BrainSurgery shard units are binary: ${shard_bs} = ${shard_text} of tensor data per shard.
   shard: ${shard_bs}
 """
 
@@ -590,10 +595,11 @@ def gen_t3(name: str, t: dict, proj: list[tuple[str, str]]) -> tuple[str, str, s
         layer_re=lre, matrix_alt=matrix_alt, buffer_alt=buffer_alt, n_matrices=n_matrices,
         probe_matrix=probe_matrix, probe_keep=probe_keep, t3_total=t3_total,
     )
+    lre_nocap = lre.replace("(\\d+)", "\\d+")
     yaml = render(
         T3_YAML, display=t["display"], shard_text=shard_text, base_ref=base_ref(t), buffer_lines=buffer_lines,
-        matrix_glob=f"{lre}({matrix_alt})", n_matrices=n_matrices, probe_matrix=probe_matrix,
-        probe_keep=probe_keep, t3_total=t3_total, shard_bs=shard_bs,
+        matrix_glob=f"{lre}({matrix_alt})", matrix_glob_nocap=f"{lre_nocap}(?:{matrix_alt})",
+        n_matrices=n_matrices, probe_matrix=probe_matrix, probe_keep=probe_keep, t3_total=t3_total, shard_bs=shard_bs,
     )
     return task, py, yaml
 
@@ -722,6 +728,9 @@ ${cast_tv1}
 ${cast_tv2}
   - subtract_: { from: 'base::${mlp_glob}', to: 'base::${mlp_to}.tv2' }
   - scale_: { target: 'base::${mlp_glob_nocap}\\.tv2', by: 0.4 }
+  # Required check: exactly ${n_mlp} tensors are merged (both task-vector sets are complete).
+  - assert: { count: { of: 'base::${mlp_glob_nocap}\\.tv1', is: ${n_mlp} } }
+  - assert: { count: { of: 'base::${mlp_glob_nocap}\\.tv2', is: ${n_mlp} } }
 ${apply}
   - delete: { target: 'base::${mlp_glob_nocap}\\.tv[12]' }
 ${downcast}
@@ -771,6 +780,7 @@ def gen_t4(name: str, t: dict, bug: bool = False) -> tuple[str, str, str]:
         T4_YAML, display=t["display"], base_ref=base_ref(t), total=t["total_tensors"], layer_re_nocap=lre_nocap,
         mlp_alt=mlp_alt, upcast=upcast, mlp_glob=mlp_glob, mlp_to=mlp_to, cast_tv1=cast_tv1,
         mlp_glob_nocap=mlp_glob_nocap, cast_tv2=cast_tv2, apply=apply_tv1 + "\n" + apply_tv2, downcast=downcast,
+        n_mlp=n_mlp,
     )
     if bug:
         # defect: tv1 is applied before tv2 is computed, so tv2 is taken against the modified base
@@ -909,6 +919,8 @@ transforms:
       to: 'model::${layer_to}.delta${t_suffix}'
 ${permute}
 ${scale_line}
+  # Required check: exactly ${n_pairs} adapter pairs were found (above) and merged (one delta each).
+  - assert: { count: { of: 'model::${layer_re_nocap}(${module_alt})\\.delta', is: ${n_pairs} } }
 ${upcast}
   - add_: { from: 'model::${layer_re}(${module_alt})\\.delta', to: 'model::${layer_to}.weight' }
 ${downcast}
@@ -919,6 +931,7 @@ ${downcast}
 output:
   path: out/T5
   format: safetensors
+  # BrainSurgery shard units are binary: ${shard_bs} = ${shard_text} of tensor data per shard.
   shard: ${shard_bs}
 """
 
