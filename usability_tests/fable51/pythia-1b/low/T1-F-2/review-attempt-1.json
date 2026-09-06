@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T09:06:40+00:00",
+  "finished_at": "2026-09-06T09:06:48+00:00",
+  "wall_clock_s": 8.7,
+  "tokens_in": 2,
+  "tokens_out": 472,
+  "cost_usd": 0.23023575000000002,
+  "verdict_text": "YES\n\nThe script drops all tensors of blocks 2, 6, 10, 14, maps the surviving indices in original order to 0..11 via an injective mapping (no collision possible since it writes into a fresh dict), passes the four non-block tensors through unchanged, and asserts before writing that the surviving layer index set is exactly {0..11} (which rules out blocks 12\u201315 and guarantees 12 blocks) and that the total is 184 tensors. Output goes to `out/T1/model.safetensors` with values, shapes and dtypes untouched.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

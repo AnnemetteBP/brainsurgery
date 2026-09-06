@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T06:25:24+00:00",
+  "finished_at": "2026-09-06T06:25:56+00:00",
+  "wall_clock_s": 32.2,
+  "tokens_in": 2,
+  "tokens_out": 2760,
+  "cost_usd": 0.0767768,
+  "verdict_text": "NO\n\nThe plan is missing an explicit check for \"exactly 64 tensors were merged,\" which the spec's Required Checks section mandates the solution must fail loudly on. The plan only asserts the ft1/ft2 tensor counts (244) and the final base tensor count (244); no assertion counts how many MLP tensors matched the merge pattern (e.g., a `count` assert on `base::...tv1` or the MLP-tensor regex equal to 64) before or after the merge. This violates the \"Required checks\" clause listing \"exactly 64 tensors were merged\" as something that must fail loudly if not held. The rest of the plan (shared-tensor verification via the two `equal` asserts, ordering of tv1/tv2 against the unmodified base, float32 computation, cast back to float16, final 244-tensor output) otherwise correctly implements the specification.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

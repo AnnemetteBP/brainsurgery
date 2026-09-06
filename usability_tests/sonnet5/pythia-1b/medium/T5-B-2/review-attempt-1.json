@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T06:22:46+00:00",
+  "finished_at": "2026-09-06T06:23:20+00:00",
+  "wall_clock_s": 33.9,
+  "tokens_in": 2,
+  "tokens_out": 3030,
+  "cost_usd": 0.0748828,
+  "verdict_text": "NO\n\nThe plan never deletes the original adapter tensors `lora::...lora_A.weight` and `lora::...lora_B.weight` (only the intermediate `delta` tensors are deleted). Since both `model` and `lora` are declared as inputs and the output section names no specific provider, the untouched `lora` namespace tensors remain pending and would be included in the sharded output alongside the 244 base tensors. This violates Required Result clause 2 (\"No adapter tensor and no intermediate tensor appears in the output\") and clause 4's expected total of exactly 244 tensors. The \"Required checks\" assertions only scope their `not exists`/`count` patterns to `model::.*`, so they never inspect the `lora::` namespace and would pass even though adapter tensors leak into the final checkpoint \u2014 the checks fail to actually enforce the specification's no-adapter-tensor requirement.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,26 @@
+# Independent verification of out/T4/model.safetensors: recomputes the merge by a
+# different route (0.2*base + 0.4*ft1 + 0.4*ft2, float32) and compares. No output.
+inputs:
+  - out::out/T4/model.safetensors
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+transforms:
+  - assert:
+      all:
+        - count: { of: 'out::.*', is: 244 }
+        - count: { of: 'out::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 }
+        - dtype: { of: 'out::.*\.mlp\..+', is: float16 }
+        - equal: { left: 'out::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'base::\g<0>' }
+        - not: { equal: { left: 'out::gpt_neox\.layers\.0\.mlp\.dense_h_to_4h\.weight', right: 'base::\g<0>' } }
+  - cast: { from: 'base::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'out::chk.\1', dtype: float32 }
+  - scale_: { target: 'out::chk\..+', by: 0.2 }
+  - cast: { from: 'ft1::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'out::a1.\1', dtype: float32 }
+  - scale_: { target: 'out::a1\..+', by: 0.4 }
+  - add_: { from: 'out::a1\.(gpt_neox\..+)', to: 'out::chk.\1' }
+  - cast: { from: 'ft2::(gpt_neox\.layers\.\d+\.mlp\..+)', to: 'out::a2.\1', dtype: float32 }
+  - scale_: { target: 'out::a2\..+', by: 0.4 }
+  - add_: { from: 'out::a2\.(gpt_neox\..+)', to: 'out::chk.\1' }
+  - cast_: { target: 'out::chk\..+', to: float16 }
+  - assert: { count: { of: 'out::chk\..+', is: 64 } }
+  - assert: { equal: { left: 'out::chk\.(gpt_neox\..+)', right: 'out::\1', eps: 0.002 } }

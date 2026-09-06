@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "artifact_sha256": "290fb5d27c5146e7ca4ba58700f2848f1be69af03d5dfc0f099fe8daed8118df",
+  "started_at": "2026-09-06T18:21:35+00:00",
+  "finished_at": "2026-09-06T18:21:52+00:00",
+  "wall_clock_s": 16.6,
+  "tokens_in": 2,
+  "tokens_out": 1096,
+  "cost_usd": 0.1351925,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script loads the sharded input, casts exactly the 112 layer projection matrices (matched by an anchored `fullmatch` regex that cannot reach `model.embed_tokens.weight` or `lm_head.weight`) to bfloat16 via round-to-nearest-even, leaves every other float32 tensor bit-identical, deletes nothing, preserves names, asserts all four required conditions before writing, and greedily packs into shards whose tensor data never exceeds 268,435,456 bytes \u2014 an oversized tensor is flushed into a shard of its own since any following tensor forces a new shard \u2014 emitting `model.safetensors.index.json` with a complete `weight_map`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

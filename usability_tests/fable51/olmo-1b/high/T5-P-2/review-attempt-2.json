@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T16:32:38+00:00",
+  "finished_at": "2026-09-06T16:32:50+00:00",
+  "wall_clock_s": 12.3,
+  "tokens_in": 2,
+  "tokens_out": 768,
+  "cost_usd": 0.23973775,
+  "verdict": "no",
+  "verdict_text": "NO. The script delegates checkpoint loading and the entire sharded export to `load_checkpoint` and `save_sharded_safetensors` from an external `_ckpt` module that is not part of the artifact, so nothing in the artifact establishes that the output meets clause 4 of \"Required result\": shard files with tensor data at most 536,870,912 bytes each not counting headers, oversized tensors like `model.embed_tokens.weight` stored alone in their own shard, and a `model.safetensors.index.json` whose `weight_map` covers every tensor. Whether the 82 unchanged tensors are written bit-exact and in float32 also depends on that unseen loader and saver, since `load_checkpoint` could alter dtypes or layouts. The merge arithmetic itself (`B @ A`, scale 2, no transpose for `fan_in_fan_out = false`) and the four required checks are implemented correctly, but a self-contained standalone script was required and the sharding behaviour is unverifiable from what is shown.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

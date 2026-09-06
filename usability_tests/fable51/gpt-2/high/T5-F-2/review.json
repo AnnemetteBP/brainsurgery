@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:28:46+00:00",
+  "finished_at": "2026-09-06T16:29:01+00:00",
+  "wall_clock_s": 15.0,
+  "tokens_in": 2,
+  "tokens_out": 924,
+  "cost_usd": 0.24607374999999998,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe merge is correct: `scale = lora_alpha / r = 2`, `delta = B @ A` is `[2304, 768]`, it is transposed because `fan_in_fan_out` is true, and the sum is computed in float32 and cast back to the original float32 dtype, keeping name and shape `[768, 2304]`. No adapter or intermediate tensor is written into the state dict, so the other 148 tensors stay untouched and bit-exact. All four required checks are enforced with hard asserts before the write, including the 12-pair count, the `lora_` name scan, the `h.0.attn.c_attn.weight` shape, and the 160-tensor total. Sharding and the index file are delegated to `save_sharded_safetensors` with the 104,857,600-byte limit, which is the only part not visible in the script itself.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

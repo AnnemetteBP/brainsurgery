@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T16:20:45+00:00",
+  "finished_at": "2026-09-06T16:21:24+00:00",
+  "wall_clock_s": 38.5,
+  "tokens_in": 2,
+  "tokens_out": 2765,
+  "cost_usd": 0.17495650000000001,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan casts exactly the 112 projection matrices (16 layers \u00d7 7 names) to bfloat16 and leaves everything else untouched at float32, deletes nothing, renames nothing, and writes `out/T3` as sharded safetensors with a 256 MiB shard limit, which is what clauses 1\u20135 require. All four required checks are present before the write: the two complementary `dtype` asserts (all 112 matrices bfloat16, and every non-matching tensor float32, via the anchored negative lookahead) together enforce \"exactly 112 tensors are bfloat16\" given the `count \u2026 is: 114` assert, plus the explicit `q_proj` bfloat16 and `embed_tokens` float32 asserts. The leading `cast_ .* to float32` is a no-op on an all-float32 input, and the `count` assert on the projection pattern is redundant but harmless.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "3b3c623b5d02a5e2d373b5578feacdf78c13a7a575f3759de43c39aa564e7c8f"
+}

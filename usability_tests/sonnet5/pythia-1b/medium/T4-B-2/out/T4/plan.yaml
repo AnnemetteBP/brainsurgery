@@ -1,0 +1,55 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+# Task-vector merge: out[X] = base[X] + 0.4*(ft1[X]-base[X]) + 0.4*(ft2[X]-base[X])
+# for the 64 MLP tensors, computed in float32 and cast back to float16; every
+# other tensor is taken from base unchanged. Scratch work happens on a separate
+# "work" alias so the output (inferred from the single alias written in-place,
+# "base") ends up with exactly the original 244 tensor names.
+
+transforms:
+  - prefixes: { mode: add, alias: work }
+
+  # Step 1: precondition checks - abort loudly if they don't hold.
+  - assert: { count: { of: 'base::.*', is: 244 } }
+  - assert: { count: { of: 'ft1::.*', is: 244 } }
+  - assert: { count: { of: 'ft2::.*', is: 244 } }
+  - assert: { count: { of: 'base::gpt_neox\.layers\.(\d+)\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', is: 64 } }
+  - assert: { count: { of: 'ft1::gpt_neox\.layers\.(\d+)\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', is: 64 } }
+  - assert: { count: { of: 'ft2::gpt_neox\.layers\.(\d+)\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', is: 64 } }
+  - assert: { equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' } }
+  - assert: { equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+', right: 'ft2::\g<0>' } }
+
+  # Step 2: cast the 64 MLP tensors of base/ft1/ft2 to float32 scratch copies.
+  - cast: { from: 'base::gpt_neox\.layers\.(\d+)\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', to: 'work::base32.\1.\2.\3', dtype: float32 }
+  - cast: { from: 'ft1::gpt_neox\.layers\.(\d+)\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', to: 'work::ft1_32.\1.\2.\3', dtype: float32 }
+  - cast: { from: 'ft2::gpt_neox\.layers\.(\d+)\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', to: 'work::ft2_32.\1.\2.\3', dtype: float32 }
+
+  # Placeholders (arithmetic ops write into existing destinations).
+  - copy: { from: 'work::base32\.(\d+)\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', to: 'work::merged.\1.\2.\3' }
+  - copy: { from: 'work::base32\.(\d+)\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', to: 'work::diff1.\1.\2.\3' }
+  - copy: { from: 'work::base32\.(\d+)\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', to: 'work::diff2.\1.\2.\3' }
+
+  # Task vectors, each against the unmodified base.
+  - subtract: { from_a: 'work::ft1_32\.(\d+)\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', from_b: 'work::base32.\1.\2.\3', to: 'work::diff1.\1.\2.\3' }
+  - subtract: { from_a: 'work::ft2_32\.(\d+)\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', from_b: 'work::base32.\1.\2.\3', to: 'work::diff2.\1.\2.\3' }
+
+  # Scale by lambda = 0.4.
+  - scale_: { target: 'work::diff1\.(\d+)\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', by: 0.4 }
+  - scale_: { target: 'work::diff2\.(\d+)\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', by: 0.4 }
+
+  # merged = base32 + 0.4*(ft1-base) + 0.4*(ft2-base).
+  - add: { from_a: 'work::merged\.(\d+)\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', from_b: 'work::diff1.\1.\2.\3', to: 'work::merged.\1.\2.\3' }
+  - add: { from_a: 'work::merged\.(\d+)\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', from_b: 'work::diff2.\1.\2.\3', to: 'work::merged.\1.\2.\3' }
+
+  # Cast back to float16 and write into base in place (same tensor names).
+  - cast: { from: 'work::merged\.(\d+)\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', to: 'work::merged16.\1.\2.\3', dtype: float16 }
+  - assign: { from: 'work::merged16\.(\d+)\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)', to: 'base::gpt_neox.layers.\1.mlp.\2.\3' }
+
+  # Required checks: exactly 64 tensors were merged, output has exactly 244.
+  - assert: { count: { of: 'work::merged16\..*', is: 64 } }
+  - assert: { count: { of: 'base::.*', is: 244 } }
+
+  - save: { path: out/T4/model.safetensors, alias: base, format: safetensors }

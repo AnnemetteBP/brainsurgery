@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T16:05:12+00:00",
+  "finished_at": "2026-09-06T16:05:16+00:00",
+  "wall_clock_s": 3.6,
+  "tokens_in": 2,
+  "tokens_out": 138,
+  "cost_usd": 0.0416548,
+  "verdict": "no",
+  "verdict_text": "NO: The verification uses `assert`, which is silently stripped when Python runs with `-O`/`PYTHONOPTIMIZE`, so the script does not reliably \"fail loudly\" as required by the \"Required checks\" section \u2014 it should raise explicit exceptions instead of relying on `assert` statements. This affects all three required checks (shared-tensor verification, 48-merged-tensor count, 114-tensor output count).",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

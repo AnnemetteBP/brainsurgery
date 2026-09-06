@@ -19,6 +19,9 @@ transforms:
   # base is float32 already
   - subtract_: { from: 'base::h\.(\d+)\.(mlp\.c_fc\.weight|mlp\.c_fc\.bias|mlp\.c_proj\.weight|mlp\.c_proj\.bias)', to: 'base::h.\1.\2.tv2' }
   - scale_: { target: 'base::h\.\d+\.(mlp\.c_fc\.weight|mlp\.c_fc\.bias|mlp\.c_proj\.weight|mlp\.c_proj\.bias)\.tv2', by: 0.4 }
+  # Required check: exactly 48 tensors are merged (both task-vector sets are complete).
+  - assert: { count: { of: 'base::h\.\d+\.(mlp\.c_fc\.weight|mlp\.c_fc\.bias|mlp\.c_proj\.weight|mlp\.c_proj\.bias)\.tv1', is: 48 } }
+  - assert: { count: { of: 'base::h\.\d+\.(mlp\.c_fc\.weight|mlp\.c_fc\.bias|mlp\.c_proj\.weight|mlp\.c_proj\.bias)\.tv2', is: 48 } }
   - add_: { from: 'base::h\.(\d+)\.(mlp\.c_fc\.weight|mlp\.c_fc\.bias|mlp\.c_proj\.weight|mlp\.c_proj\.bias)\.tv1', to: 'base::h.\1.\2' }
   - add_: { from: 'base::h\.(\d+)\.(mlp\.c_fc\.weight|mlp\.c_fc\.bias|mlp\.c_proj\.weight|mlp\.c_proj\.bias)\.tv2', to: 'base::h.\1.\2' }
   - delete: { target: 'base::h\.\d+\.(mlp\.c_fc\.weight|mlp\.c_fc\.bias|mlp\.c_proj\.weight|mlp\.c_proj\.bias)\.tv[12]' }

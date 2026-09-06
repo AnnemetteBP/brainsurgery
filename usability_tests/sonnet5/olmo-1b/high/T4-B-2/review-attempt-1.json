@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-06T06:52:46+00:00",
+  "finished_at": "2026-09-06T06:53:43+00:00",
+  "wall_clock_s": 57.3,
+  "tokens_in": 2,
+  "tokens_out": 5064,
+  "cost_usd": 0.0951678,
+  "verdict_text": "NO\n\nThe plan never asserts that exactly 48 tensors were merged: there is no `count` assert (or equivalent) checking that the MLP-tensor patterns match 48 tensors before or after the merge. The \"Required checks\" section explicitly lists \"exactly 48 tensors were merged\" as one of three checks that \"must fail loudly if [it does] not hold,\" alongside the shared-tensor verification and the final 114-tensor count \u2014 the artifact only implements the latter two (via the `assert: { count: ... is: 114 }` steps and the `assert: { equal: ... }` steps). Everything else \u2014 the arithmetic (tv1/tv2 computed against the unmodified base, then both added), the lambda scaling, the untouched-tensor preservation, and the final 114-tensor output \u2014 matches the spec. But the absence of a 48-count guard is a concrete gap against the \"Required checks\" clause.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

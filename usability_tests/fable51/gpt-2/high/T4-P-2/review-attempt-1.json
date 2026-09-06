@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T11:22:05+00:00",
+  "finished_at": "2026-09-06T11:22:21+00:00",
+  "wall_clock_s": 16.1,
+  "tokens_in": 2,
+  "tokens_out": 1108,
+  "cost_usd": 0.24482575,
+  "verdict_text": "YES\n\nThe script matches the specification: it first checks that all three checkpoints share the same key set and that every non-MLP tensor is bit-identical across base, ft1 and ft2 (via `torch.equal`, which also enforces shape equality), aborting via assertion before any merge. The 48 MLP tensors are selected by a full-match regex on exactly the four per-layer names, the merge formula is computed in float32 against the untouched `base` dict (the shallow copy `out` is what gets reassigned, so each task vector is taken against the unmodified base), and the result is cast back to the base dtype. All other tensors are carried over from base unchanged, the script asserts exactly 48 merged and 160 output tensors, and it writes a single `model.safetensors` under `out/T4`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

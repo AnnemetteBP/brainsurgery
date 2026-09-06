@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T16:52:07+00:00",
+  "finished_at": "2026-09-06T16:52:14+00:00",
+  "wall_clock_s": 7.0,
+  "tokens_in": 2,
+  "tokens_out": 450,
+  "cost_usd": 0.0479578,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script correctly derives the keep-index for each head-bearing tensor (query_key_value fused weight/bias split on axis 0 into 768-row blocks, dense.weight split on axis 1 into 256-col blocks), drops head 5, preserves order, leaves all other tensors untouched, asserts the four required shape/count checks before writing, and outputs a single `out/T2/model.safetensors` with 244 tensors matching the spec exactly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "19811be17039bc4fdfc951cd8a9d0a6007411fc2e97a4a7c5b907b17b5612d65"
+}

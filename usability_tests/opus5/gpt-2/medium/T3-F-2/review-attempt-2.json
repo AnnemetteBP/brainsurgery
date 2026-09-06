@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T16:15:50+00:00",
+  "finished_at": "2026-09-06T16:16:01+00:00",
+  "wall_clock_s": 11.2,
+  "tokens_in": 2,
+  "tokens_out": 600,
+  "cost_usd": 0.11202649999999999,
+  "verdict": "yes",
+  "verdict_text": "YES. The script keys casting off an exact full-match pattern for the four projection matrices per layer (so embeddings, norms, biases and `wpe.weight` are untouched apart from a no-op `.float()` on already-float32 input), skips exactly the 12 `h.<i>.attn.bias` buffers, preserves names, asserts all four required checks before writing, and delegates the 64 MiB sharding plus index to `save_sharded_safetensors`. The unescaped `.` in the regexes is harmless here since no other key in the checkpoint would match those patterns, and `tensor.float().to(torch.bfloat16)` is bit-identical to `tensor.to(torch.bfloat16)` for float32 input.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

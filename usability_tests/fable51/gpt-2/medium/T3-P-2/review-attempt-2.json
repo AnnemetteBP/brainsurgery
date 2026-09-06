@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T16:30:34+00:00",
+  "finished_at": "2026-09-06T16:30:46+00:00",
+  "wall_clock_s": 11.6,
+  "tokens_in": 2,
+  "tokens_out": 720,
+  "cost_usd": 0.22332575,
+  "verdict": "no",
+  "verdict_text": "NO. The artifact delegates the entire clause-5 requirement (shard files, the 64 MiB per-shard data limit, the standalone shard for `wte.weight`, and a `model.safetensors.index.json` with a complete `weight_map`) to `save_sharded_safetensors` from an external `_ckpt` module that is not part of the artifact, so nothing in the artifact shows that the sharded layout is produced correctly. Loading likewise goes through an unshown `load_checkpoint`, so the artifact cannot be confirmed to read `inputs/base/model.safetensors` as required. The condition rules also require a standalone script, which this is not. The casting, buffer deletion, name preservation and the four required checks (clauses 1 through 4 and \"Required checks\") are implemented correctly.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

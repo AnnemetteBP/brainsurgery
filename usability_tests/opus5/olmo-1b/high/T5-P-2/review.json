@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T16:54:28+00:00",
+  "finished_at": "2026-09-06T16:55:43+00:00",
+  "wall_clock_s": 74.8,
+  "tokens_in": 2,
+  "tokens_out": 6082,
+  "cost_usd": 0.2615385,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe adapter key construction (`base_model.model.model.layers.<i>.<module>.lora_{A,B}.weight`) matches the input naming, `scale = lora_alpha / r = 2` is read from the config, and with `fan_in_fan_out = false` the transpose branch is skipped, so `B @ A` is added in the `[out, in]` layout in float32, preserving name, shape and dtype; only `sd` (114 base tensors, no adapter or intermediate keys) is written. The four required checks are asserted before any write, and a missing adapter pair would raise a `KeyError` rather than silently merge fewer. The sharding is the standard greedy pack that flushes whenever adding the next tensor would exceed 536,870,912 bytes, so no shard's tensor data exceeds 512 MiB and any tensor larger than the limit lands alone, and the emitted `model.safetensors.index.json` carries a `weight_map` entry for every tensor plus `total_size`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "1403be5a301448a3be36cef9201cdc2800acea2b4cfbb5c8de76cd3a94e33689"
+}

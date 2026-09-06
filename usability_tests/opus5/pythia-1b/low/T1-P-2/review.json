@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T16:56:15+00:00",
+  "finished_at": "2026-09-06T16:56:22+00:00",
+  "wall_clock_s": 6.8,
+  "tokens_in": 2,
+  "tokens_out": 316,
+  "cost_usd": 0.1126725,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops blocks 2, 6, 10, 14, maps the survivors in order to contiguous indices 0..11 via a fresh output dict (so no collisions), leaves the four non-block tensors untouched, and asserts both the exact layer index set (covering \"no blocks 12\u201315\" and \"exactly 12 blocks\") and the 184-tensor count before any write, so a failure exits non-zero with no output.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "445483f5b51837497d7a08eb024b2a58686278532f4e520bfcee7541bc7697c1"
+}

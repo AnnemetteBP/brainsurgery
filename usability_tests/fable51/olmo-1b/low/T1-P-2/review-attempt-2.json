@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T16:32:51+00:00",
+  "finished_at": "2026-09-06T16:32:59+00:00",
+  "wall_clock_s": 7.7,
+  "tokens_in": 2,
+  "tokens_out": 395,
+  "cost_usd": 0.21088975,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops blocks 2, 6, 10, 14, renumbers the survivors in original order into a fresh dict (so no overwrite collisions), leaves the two non-block tensors untouched, asserts the surviving layer indices are exactly 0..11 (which also rules out any block 12..15) and that the total is 86 tensors, and only then writes `out/T1/model.safetensors`. Assertion failures exit non-zero before any output is written, satisfying the required-checks clause.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

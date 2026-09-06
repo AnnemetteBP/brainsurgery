@@ -1,0 +1,34 @@
+inputs:
+  - model::inputs/base/model.safetensors
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors
+
+transforms:
+  # Preflight: sanity-check the input shape.
+  - assert: { count: { of: 'h\.\d+\.attn\.c_attn\.weight', is: 12 } }
+  - assert: { count: { of: '.*', is: 160 } }
+
+  # Remove every tensor of blocks 2, 5, 8.
+  - delete: { target: 'h\.2\..*' }
+  - delete: { target: 'h\.5\..*' }
+  - delete: { target: 'h\.8\..*' }
+
+  # Renumber surviving blocks in original order so indices run 0..8 without
+  # gaps. Processing old indices in ascending order guarantees each
+  # destination index is already vacant (freed by deletion or by the
+  # previous move) before it is written, so no move ever collides with a
+  # surviving block.
+  - move: { from: ['h', '3', '*rest'], to: ['h', '2', '*rest'] }
+  - move: { from: ['h', '4', '*rest'], to: ['h', '3', '*rest'] }
+  - move: { from: ['h', '6', '*rest'], to: ['h', '4', '*rest'] }
+  - move: { from: ['h', '7', '*rest'], to: ['h', '5', '*rest'] }
+  - move: { from: ['h', '9', '*rest'], to: ['h', '6', '*rest'] }
+  - move: { from: ['h', '10', '*rest'], to: ['h', '7', '*rest'] }
+  - move: { from: ['h', '11', '*rest'], to: ['h', '8', '*rest'] }
+
+  # Required checks.
+  - assert: { not: { exists: 'h\.(9|10|11)\..*' } }
+  - assert: { count: { of: 'h\.\d+\.attn\.c_attn\.weight', is: 9 } }
+  - assert: { count: { of: '.*', is: 121 } }

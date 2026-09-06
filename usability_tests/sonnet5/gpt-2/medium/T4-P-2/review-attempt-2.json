@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T16:01:46+00:00",
+  "finished_at": "2026-09-06T16:01:58+00:00",
+  "wall_clock_s": 12.0,
+  "tokens_in": 2,
+  "tokens_out": 861,
+  "cost_usd": 0.0482358,
+  "verdict": "yes",
+  "verdict_text": "YES. The script verifies key-set equality and identical non-MLP tensors across all three checkpoints before merging (satisfying step 1), computes `out[X] = base + \u03bb(ft1-base) + \u03bb(ft2-base)` in float32 for exactly the 48 MLP tensors named per the pattern, copies all other tensors from base unchanged, and asserts both `merged == 48` and `len(out) == 160` before saving to `out/T4/model.safetensors`. All three required checks are present as loud assertions, and the arithmetic correctly references the unmodified base for both task vectors rather than a partially-merged checkpoint.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

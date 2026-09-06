@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T06:18:11+00:00",
+  "finished_at": "2026-09-06T06:18:18+00:00",
+  "wall_clock_s": 6.8,
+  "tokens_in": 2,
+  "tokens_out": 180,
+  "cost_usd": 0.043241800000000004,
+  "verdict_text": "NO\n\nThe script's assertions use plain `assert`, which are stripped when Python runs with `-O`/`PYTHONOPTIMIZE`, so the \"fail loudly\" requirement in Required checks (shared-tensor verification, exactly 64 merged, exactly 244 output tensors) is not robustly enforced \u2014 it depends on the invocation flags rather than the script itself. Everything else (merge formula, float32 compute then cast back, order-independent lambda application against the unmodified base, output path/tensor count logic) matches the spec correctly.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T09:00:13+00:00",
+  "finished_at": "2026-09-06T09:00:33+00:00",
+  "wall_clock_s": 20.1,
+  "tokens_in": 2,
+  "tokens_out": 1229,
+  "cost_usd": 0.26613275,
+  "verdict_text": "YES\n\nThe plan computes B @ A per layer via the backreferenced matmul, transposes with permute order [1, 0], scales by alpha/r = 2, adds in place into the Conv1D base weight, and deletes both intermediates, so only the 160 base names remain in the model namespace. All four required checks are present as asserts and run before the output stage. Two soft points, neither a spec violation on its face: the merged-count check only counts lora_A tensors rather than verifying the add happened, and the shard budget is written as `100MB` while the spec says 100 MiB, which is still within the limit if the tool reads MB as 10^6 bytes.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,81 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # --- Step 1: precondition checks (fail loudly if they don't hold) ---
+
+  # Same tensor count on all three checkpoints.
+  - assert: { count: { of: 'base::.*', is: 244 } }
+  - assert: { count: { of: 'ft1::.*', is: 244 } }
+  - assert: { count: { of: 'ft2::.*', is: 244 } }
+
+  # Exactly the 64 expected MLP tensors exist under that name pattern on all three.
+  - assert: { count: { of: 'base::gpt_neox\.layers\.\d+\.mlp\..*', is: 64 } }
+  - assert: { count: { of: 'ft1::gpt_neox\.layers\.\d+\.mlp\..*', is: 64 } }
+  - assert: { count: { of: 'ft2::gpt_neox\.layers\.\d+\.mlp\..*', is: 64 } }
+
+  # Every tensor outside the MLP tensors is bit-identical across all three
+  # checkpoints (same names required for `right` to resolve at all).
+  - assert:
+      equal:
+        left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+'
+        right: 'ft1::\g<0>'
+  - assert:
+      equal:
+        left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.).+'
+        right: 'ft2::\g<0>'
+
+  # --- Step 2: task-vector merge of the 64 MLP tensors, in float32 ---
+
+  # Workspace copies of the MLP tensors cast up to float32, kept on the
+  # `base` alias (with `_scratch_*` names) so the output alias stays unambiguous.
+  - cast: { from: 'ft1::gpt_neox\.layers\.\d+\.mlp\..*', to: 'base::_scratch_wf1.\g<0>', dtype: float32 }
+  - cast: { from: 'ft2::gpt_neox\.layers\.\d+\.mlp\..*', to: 'base::_scratch_wf2.\g<0>', dtype: float32 }
+  - cast: { from: 'base::gpt_neox\.layers\.\d+\.mlp\..*', to: 'base::_scratch_wbase.\g<0>', dtype: float32 }
+
+  # Task vectors against the unmodified (float32) base. `subtract`/`add`
+  # require an existing destination, so clone into the destination first and
+  # then use the in-place variant.
+  - copy: { from: 'base::_scratch_wf1\.(gpt_neox\.layers\.\d+\.mlp\..*)', to: 'base::_scratch_d1.\1' }
+  - subtract_:
+      from: 'base::_scratch_wbase\.(gpt_neox\.layers\.\d+\.mlp\..*)'
+      to: 'base::_scratch_d1.\1'
+  - copy: { from: 'base::_scratch_wf2\.(gpt_neox\.layers\.\d+\.mlp\..*)', to: 'base::_scratch_d2.\1' }
+  - subtract_:
+      from: 'base::_scratch_wbase\.(gpt_neox\.layers\.\d+\.mlp\..*)'
+      to: 'base::_scratch_d2.\1'
+
+  # Scale each task vector by lambda = 0.4.
+  - scale_: { target: 'base::_scratch_d1\.gpt_neox\.layers\.\d+\.mlp\..*', by: 0.4 }
+  - scale_: { target: 'base::_scratch_d2\.gpt_neox\.layers\.\d+\.mlp\..*', by: 0.4 }
+
+  # merged = base + 0.4*(ft1-base) + 0.4*(ft2-base), still float32.
+  - copy: { from: 'base::_scratch_wbase\.(gpt_neox\.layers\.\d+\.mlp\..*)', to: 'base::_scratch_merged.\1' }
+  - add_:
+      from: 'base::_scratch_d1\.(gpt_neox\.layers\.\d+\.mlp\..*)'
+      to: 'base::_scratch_merged.\1'
+  - add_:
+      from: 'base::_scratch_d2\.(gpt_neox\.layers\.\d+\.mlp\..*)'
+      to: 'base::_scratch_merged.\1'
+
+  # Cast back to float16 (the base dtype) and write into the original slots.
+  - cast:
+      from: 'base::_scratch_merged\.(gpt_neox\.layers\.\d+\.mlp\..*)'
+      to: 'base::_scratch_mergedf16.\1'
+      dtype: float16
+  - assign:
+      from: 'base::_scratch_mergedf16\.(gpt_neox\.layers\.\d+\.mlp\..*)'
+      to: 'base::\1'
+
+  # Drop the workspace tensors; tensor names never changed for the 244 real ones.
+  - delete: { target: 'base::_scratch_.*' }
+
+  # --- Step 3: post-conditions ---
+  - assert: { count: { of: 'base::gpt_neox\.layers\.\d+\.mlp\..*', is: 64 } }
+  - assert: { count: { of: 'base::.*', is: 244 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

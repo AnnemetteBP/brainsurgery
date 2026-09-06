@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T16:02:33+00:00",
+  "finished_at": "2026-09-06T16:02:56+00:00",
+  "wall_clock_s": 22.2,
+  "tokens_in": 2,
+  "tokens_out": 2137,
+  "cost_usd": 0.0621718,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script's DROP={2,6,10,14} and its `kept`/`renumber` construction reproduce exactly the mapping specified (old 3\u21922, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211, with 0,1 fixed), non-block tensors pass through unchanged, and it asserts new layer indices equal `range(12)` and total tensor count equals 86 before writing output, satisfying all required checks and failing before any output is written if violated.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

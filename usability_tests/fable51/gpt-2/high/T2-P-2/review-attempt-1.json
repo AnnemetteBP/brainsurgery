@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T11:17:07+00:00",
+  "finished_at": "2026-09-06T11:17:23+00:00",
+  "wall_clock_s": 16.4,
+  "tokens_in": 2,
+  "tokens_out": 932,
+  "cost_usd": 0.24372075,
+  "verdict_text": "YES\n\nThe slicing logic matches the spec exactly: for the fused `c_attn` tensors it keeps head blocks 0..4 and 6..11 within each of the three 768-wide segments along the column (weight) or only (bias) axis, giving the required index ranges in order, and for `c_proj.weight` it drops rows 320..383 along axis 0, yielding `[704, 768]`. All four required checks are asserted before `save_file`, and the default output path is `out/T2/model.safetensors` with all other tensors and names left untouched. The one thing not verifiable from reading is the imported helper `_ckpt.load_checkpoint`, which the script relies on to return all 160 tensors with their original dtypes; if it does, the artifact is correct.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:18:16+00:00",
+  "finished_at": "2026-09-06T16:18:25+00:00",
+  "wall_clock_s": 9.3,
+  "tokens_in": 2,
+  "tokens_out": 616,
+  "cost_usd": 0.11227649999999999,
+  "verdict": "no",
+  "verdict_text": "NO. The merge is computed sequentially rather than as two independent task vectors against the unmodified base: `tmp = b + 0.4*(f1 - b)` and then `out = tmp + 0.4*(f2 - tmp)`, so the second task vector is taken against the already-merged `tmp` instead of `base`. Expanding, this yields `0.36*b + 0.24*f1 + 0.4*f2` where required result 2 demands `base + 0.4*(ft1-base) + 0.4*(ft2-base)` = `0.2*b + 0.4*f1 + 0.4*f2`. This is exactly the ordering hazard the specification warns about (\"each task vector must be taken against the unmodified base, not against a base that the first merge already changed\"), and it is far outside the 1e-5 relative Frobenius tolerance for the 48 merged tensors. The verification, merged-count, and 114-tensor checks are otherwise implemented correctly.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

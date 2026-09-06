@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T08:01:39+00:00",
+  "finished_at": "2026-09-06T08:01:48+00:00",
+  "wall_clock_s": 8.9,
+  "tokens_in": 2,
+  "tokens_out": 457,
+  "cost_usd": 0.11705349999999999,
+  "verdict_text": "YES\n\nThe script loads the base and adapter, reads `scale = lora_alpha / r = 2` and `fan_in_fan_out` from the config, computes `B @ A` (no transpose, correctly, since `fan_in_fan_out` is false), accumulates in float32 via `sd[key].float() + scale * delta` and casts back to the base dtype, writing in place under the original key so no adapter or intermediate tensor enters the state dict. All four required checks are asserted before the write, and the output is saved sharded at the 536,870,912-byte limit to `out/T5`. The only part not visible here is the `save_sharded_safetensors` helper in `_ckpt`, which the shard/index requirements depend on; nothing in the artifact itself deviates from the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

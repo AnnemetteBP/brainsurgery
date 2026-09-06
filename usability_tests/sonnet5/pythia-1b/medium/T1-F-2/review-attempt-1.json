@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T06:11:44+00:00",
+  "finished_at": "2026-09-06T06:12:09+00:00",
+  "wall_clock_s": 25.0,
+  "tokens_in": 2,
+  "tokens_out": 2232,
+  "cost_usd": 0.0661538,
+  "verdict_text": "YES\n\nThe artifact's `DROP` set, `kept` list, and `renumber` mapping (`0\u21920, 1\u21921, 3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211`) exactly match the required renumbering scheme. Non-layer tensors are copied unchanged, layer tensors are renamed only in their index while `match.group(2)` (the rest of the name) is preserved, and all values/dtypes pass through untouched via straight tensor copy. The script asserts `layers == set(range(12))` (equivalent to enforcing no blocks 12\u201315 remain and exactly 12 blocks present) and `len(out) == 184` before writing, both `assert`s executing prior to `mkdir`/`save_file`, so failure raises an uncaught `AssertionError` (non-zero exit) with no output written \u2014 satisfying the required-checks and fail-loudly clauses.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

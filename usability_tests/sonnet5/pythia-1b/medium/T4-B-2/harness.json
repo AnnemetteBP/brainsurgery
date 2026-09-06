@@ -1,0 +1,49 @@
+{
+  "phase": "solve",
+  "driver": "run_claude.py",
+  "model_id": "claude-sonnet-5",
+  "agent": "sonnet5",
+  "target": "pythia-1b",
+  "effort": "medium",
+  "test": "T4",
+  "condition": "B",
+  "repeat": 2,
+  "started_at": "2026-09-06T06:18:24+00:00",
+  "finished_at": "2026-09-06T06:25:21+00:00",
+  "wall_clock_s": 416.8,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "max_turns": 40,
+  "timeout_s": 1800,
+  "turns": 29,
+  "tool_calls": 28,
+  "tokens_in": 58,
+  "tokens_out": 32759,
+  "cache_read_tokens": 1913583,
+  "cache_write_tokens": 79524,
+  "tokens_in_total": 1993165,
+  "cost_usd": 1.0308886,
+  "duration_api_ms": 349638,
+  "session_id": "c5da324f-9a61-45af-b856-27bc005d71a2",
+  "result_subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "executions": 6,
+  "failed_executions": [
+    {
+      "n": 1,
+      "command": ".venv/bin/brainsurgery /tmp/bstest/plan.yaml",
+      "message": "PlanLoaderError: transform #0: unknown model alias: 'work'",
+      "error_class": ""
+    },
+    {
+      "n": 2,
+      "command": "cd /tmp/bstest && cat > plan.yaml <<'EOF'\ntransforms:\n  - prefixes: { mode: add, alias: work }\n  - zeroes: { target: work::a.1, shape: [2] }\n  - zeroes: { target: work::a.2, shape: [2] }\n  - zeroes: { target: work::b.1, shape: [2] }\n  - zeroes: { target: work::b.2, shape: [2] }\n  - fill_: { target: ",
+      "message": "position 4",
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 3,
+  "final_text": "Task T4 is done:\n\n- **Plan**: `out/T4/plan.yaml` \u2014 loads `base`/`ft1`/`ft2` as separate aliases, asserts the 244/64 tensor-count invariants and bit-exact equality of every non-MLP tensor between base and each fine-tune (aborts loudly otherwise), then computes each task vector against the unmodified base in float32 on a scratch `work` alias, scales by \u03bb=0.4, sums, casts back to float16, and writes the result into `base` in place via `assign`. A final `save` step (explicit alias) writes `out/T4/model.safetensors`, sidestepping the \"ambiguous output alias\" issue since scratch work never touches `base` directly until the final `assign`.\n- **Verified independently** (not just via the plan's own asserts): output has exactly 244 tensors, the 180 non-MLP tensors are bit-exact identical to base, and all 64 merged MLP tensors match the reference formula exactly (relative error 0.0, well inside the 1e-3 tolerance).\n- **Report**: `out/T4/REPORT.md` filled in with the one execution (succeeded first try) and the key pitfalls discovered while probing `add`/`subtract` semantics on a throwaway synthetic checkpoint beforehand."
+}

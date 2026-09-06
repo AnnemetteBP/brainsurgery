@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T16:30:04+00:00",
+  "finished_at": "2026-09-06T16:30:12+00:00",
+  "wall_clock_s": 8.0,
+  "tokens_in": 2,
+  "tokens_out": 417,
+  "cost_usd": 0.21238074999999998,
+  "verdict": "yes",
+  "verdict_text": "YES. The script removes blocks 2, 5, 8, renumbers the survivors in original order into a fresh dict (no collisions possible), passes non-block tensors through unchanged, and asserts before writing that the layer index set is exactly {0..8} (which rules out blocks 9\u201311 and guarantees exactly 9 blocks) and that the tensor count is 121, so it satisfies the required result and the required checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T07:15:04+00:00",
+  "finished_at": "2026-09-06T07:15:12+00:00",
+  "wall_clock_s": 8.6,
+  "tokens_in": 2,
+  "tokens_out": 525,
+  "cost_usd": 0.1121215,
+  "verdict_text": "NO\n\nTwo problems. (1) Clause 5: the output requests `shard: 64MB`, but the specification requires shards of at most 64 MiB = 67,108,864 bytes; a decimal `64MB` (64,000,000 bytes) is a different threshold and will produce a different shard boundary layout than the hidden reference, which grades sharding rules. (2) Required checks: the plan never asserts that exactly 48 tensors are bfloat16 \u2014 it asserts that 48 tensor *names* match the projection pattern, and does so *before* the cast, so it would pass even if the cast produced the wrong dtype or count. The other three required checks (`h.0.attn.c_attn.weight` bfloat16, `wte.weight` float32, 148 tensors total) are present and correctly placed after the cast, and the delete/name/precision logic itself targets the right tensors.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

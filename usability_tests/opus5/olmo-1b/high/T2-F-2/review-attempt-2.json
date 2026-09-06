@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T16:17:21+00:00",
+  "finished_at": "2026-09-06T16:17:35+00:00",
+  "wall_clock_s": 14.2,
+  "tokens_in": 2,
+  "tokens_out": 1036,
+  "cost_usd": 0.1297705,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script produces exactly what the specification requires. `keep_index(1, 2048, 128)` yields `arange(0,640)` concatenated with `arange(768,2048)`, matching the \"keep rows/columns `0..639`, `768..2047`, in that order\" requirement; it is applied along dim 0 for q/k/v and dim 1 for o_proj, for all 16 layers, leaving every other tensor untouched. The five required checks are asserted before `save_file`, and the output is the single file `out/T2/model.safetensors`; `index_select` preserves the float32 dtype and `.contiguous()` makes the slices safetensors-writable.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

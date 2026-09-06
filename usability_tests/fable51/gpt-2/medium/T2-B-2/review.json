@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T16:30:13+00:00",
+  "finished_at": "2026-09-06T16:30:25+00:00",
+  "wall_clock_s": 11.7,
+  "tokens_in": 2,
+  "tokens_out": 665,
+  "cost_usd": 0.34345375,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan slices exactly the required column ranges (0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303) for `c_attn.weight` and `c_attn.bias`, and rows 0..319 and 384..767 for `c_proj.weight`, for all 12 layers, then reassembles them with concat in the specified order along the correct axis (dim 1 for the weight columns, dim 0 for the bias and for the output-projection rows). The originals are deleted and rebuilt under their original names, temporaries are removed, no other tensor is touched, and the output path is `out/T2/model.safetensors`. The four required checks are present as `assert` transforms before writing: the three shapes on layer 0 and a tensor count of 160.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "2a90440e95bfda5b4824e5a3b755f3e68e122c210829f0e9be6c5734946874bd"
+}

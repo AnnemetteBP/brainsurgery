@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T16:07:52+00:00",
+  "finished_at": "2026-09-06T16:08:12+00:00",
+  "wall_clock_s": 19.7,
+  "tokens_in": 2,
+  "tokens_out": 1551,
+  "cost_usd": 0.058734800000000004,
+  "verdict": "no",
+  "verdict_text": "NO. The script is not self-contained: it delegates the actual checkpoint I/O and shard-packing logic (including the 268,435,456-byte shard cap and the single-large-tensor-per-shard rule) to an unshown external module `_ckpt.py`, violating the requirement to write a standalone one-off script using PyTorch and `safetensors` directly. Because `save_sharded_safetensors` and `load_checkpoint` are not part of the artifact, the specification's core sharding correctness (Required result item 5) cannot be verified from what was provided. The dtype-casting, buffer-deletion, and required-check logic in the visible code otherwise looks correct, but the missing implementation of the safetensors-writing/sharding logic is a material gap against the \"standalone script\" instruction.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

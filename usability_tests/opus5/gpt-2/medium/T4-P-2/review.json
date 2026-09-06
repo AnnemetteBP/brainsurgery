@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T16:53:53+00:00",
+  "finished_at": "2026-09-06T16:54:06+00:00",
+  "wall_clock_s": 13.0,
+  "tokens_in": 2,
+  "tokens_out": 843,
+  "cost_usd": 0.11813549999999999,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script verifies the three checkpoints share a key set and that every non-MLP tensor is bit-identical across all three before touching anything (step 1), computes each of the 48 MLP tensors as `base + 0.4*(ft1-base) + 0.4*(ft2-base)` in float32 always against the unmodified `base` dict (step 2), carries every other tensor over from `base` untouched with unchanged names (step 3), and asserts `merged == 48` and `len(out) == 160` before writing the single file to `out/T4/model.safetensors` (step 4 and the required checks). The `.to(base[name].dtype)` cast is a no-op given float32 inputs, the `fullmatch` regex selects exactly the 48 documented MLP names, and the optional `argv[1]` override defaults to the required `out/T4`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "bf1aaff64bce9adc7af3eb4f382f30b5f5cb81a9425f65767ce23de6c1f8a7b6"
+}

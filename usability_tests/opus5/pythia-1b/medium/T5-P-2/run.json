@@ -1,0 +1,13 @@
+{
+  "run_id": "T5-P-2",
+  "agent": "opus5",
+  "target": "pythia-1b",
+  "effort": "medium",
+  "test": "T5",
+  "condition": "P",
+  "repeat": 2,
+  "created_at": "2026-09-06T07:58:41+00:00",
+  "repo_commit": "8047059ca1ff670730e185aea613d691c827fb46",
+  "venv": true,
+  "env_freeze_lines": 31
+}

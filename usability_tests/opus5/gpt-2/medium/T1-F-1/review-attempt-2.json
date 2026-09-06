@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T1-defective.py",
+  "started_at": "2026-09-06T16:15:17+00:00",
+  "finished_at": "2026-09-06T16:15:25+00:00",
+  "wall_clock_s": 7.8,
+  "tokens_in": 2,
+  "tokens_out": 429,
+  "cost_usd": 0.1088665,
+  "verdict": "no",
+  "verdict_text": "NO. The script sets `DROP = {2, 5, 9}`, dropping block 9 instead of block 8, which violates Required result clause 1 (\"Remove every tensor of blocks 2, 5, 8\"). This also makes the renumbering wrong relative to clause 2: old 8 becomes 6, old 10 becomes 7, old 11 becomes 8, whereas the spec requires old 9\u21926, old 10\u21927, old 11\u21928. The output still has 121 tensors with contiguous indices 0..8, so the script's own assertions pass and it writes a file that will load and run but hold the wrong weights \u2014 precisely the silent-corruption failure the task warns about. Grading against the hidden reference will fail on values for the blocks from index 6 onward.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T07:45:25+00:00",
+  "finished_at": "2026-09-06T07:45:33+00:00",
+  "wall_clock_s": 8.8,
+  "tokens_in": 2,
+  "tokens_out": 335,
+  "cost_usd": 0.1138695,
+  "verdict_text": "YES\n\nThe script drops head 5 (rows/cols 640..767) from q/k/v along dim 0 and from o_proj along dim 1, preserving the order of the kept blocks (`0..639` then `768..2047`), leaves all other tensors untouched, asserts the four required shapes and the 114-tensor count before writing, and saves a single `model.safetensors` under the output directory.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

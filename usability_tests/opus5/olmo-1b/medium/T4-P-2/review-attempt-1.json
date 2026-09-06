@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T07:47:45+00:00",
+  "finished_at": "2026-09-06T07:48:04+00:00",
+  "wall_clock_s": 19.4,
+  "tokens_in": 2,
+  "tokens_out": 1397,
+  "cost_usd": 0.1323055,
+  "verdict_text": "YES\n\nThe script loads all three checkpoints first, verifies identical key sets and bit-exact equality of every non-MLP tensor against the base before any writing, then computes each merged tensor from the unmodified `base` tensor (no in-place mutation, since `out = dict(base)` only rebinds new tensors), matching the required formula with `lambda = 0.4` in float32. The regex `fullmatch` selects exactly the three MLP weights per layer, and the `merged == 48` and `len(out) == 114` assertions plus the equality assertions provide the three required loud failures. The single output file lands at `out/T4/model.safetensors` by default, and all other tensors are carried over from the base untouched.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

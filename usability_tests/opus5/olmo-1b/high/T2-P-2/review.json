@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T16:54:08+00:00",
+  "finished_at": "2026-09-06T16:54:20+00:00",
+  "wall_clock_s": 11.5,
+  "tokens_in": 2,
+  "tokens_out": 745,
+  "cost_usd": 0.12311050000000001,
+  "verdict": "yes",
+  "verdict_text": "YES. The keep-index construction (16 blocks of 128 within a single 2048-wide segment, skipping block 5) yields exactly rows/columns `0..639` then `768..2047` in order; it is applied along dim 0 for q/k/v and dim 1 for o_proj across all 16 layers, leaving every other tensor untouched. The four shape assertions and the 114-tensor count are checked before writing, and the result is saved as a single `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "ac8af64e711652c405ff809a29f0354d71b5d7443fe49c8dc6ee86e8572e3109"
+}

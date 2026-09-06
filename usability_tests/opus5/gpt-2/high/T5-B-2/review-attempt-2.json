@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T12:08:54+00:00",
+  "finished_at": "2026-09-06T12:10:15+00:00",
+  "wall_clock_s": 81.7,
+  "tokens_in": 2,
+  "tokens_out": 6176,
+  "cost_usd": 0.26586750000000003,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan computes `delta_t = B @ A` ([2304, 768]), transposes it via `permute [1, 0]` to [768, 2304], scales by `alpha/r = 2`, adds it in place to `h.<i>.attn.c_attn.weight`, then deletes both intermediates \u2014 exactly `weight += 2 * (B @ A).T` in float32, leaving names, shapes and dtypes intact. All four required checks are present as `assert` transforms (12 `lora_A` pairs and 12 merged deltas, no `lora_` name surviving, the [768, 2304] shape, and 160 tensors), and the output is a sharded safetensors directory at `out/T5` with a 100 MiB shard budget, which puts `wte.weight` alone in its own shard.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T3.yaml",
+  "started_at": "2026-09-06T16:09:51+00:00",
+  "finished_at": "2026-09-06T16:09:56+00:00",
+  "wall_clock_s": 5.5,
+  "tokens_in": 2,
+  "tokens_out": 234,
+  "cost_usd": 0.0476378,
+  "verdict": "no",
+  "verdict_text": "NO. Requirement 5 requires the single tensor `gpt_neox.embed_in.weight` and `embed_out.weight` (206 MB each) to be stored alone in their own shard, but the plan only sets `shard: 256MB` with no mechanism ensuring these large tensors get isolated shards rather than being packed with other tensors up to the 256 MiB limit. This violates the \"single tensor larger than that... is stored alone in its own shard\" clause of Required result item 5, since generic bin-packing to a byte limit does not guarantee isolation of these specific tensors (and packing them with other tensors, even if it fits under 256 MiB combined, would violate the explicit sharding rule that they must be alone).",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "af840edb9d2637da189c2ad2f3a8dc65836479683a53af06822ea3ecec6a5c55"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T3.yaml",
+  "started_at": "2026-09-06T16:07:43+00:00",
+  "finished_at": "2026-09-06T16:08:56+00:00",
+  "wall_clock_s": 73.1,
+  "tokens_in": 2,
+  "tokens_out": 6819,
+  "cost_usd": 0.1134878,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan deletes exactly the 48 named buffers before any casting, upcasts all remaining 196 tensors to float32, then re-casts only the 64 named projection matrices to bfloat16 (upcast-then-cast, as the spec explicitly permits), and asserts the required count (64), per-tensor dtype checks, the negated-target float32 check for everything else, and the final 196-tensor count \u2014 all before writing output, satisfying \"fail loudly ... before writing.\" Output uses `format: safetensors` with `shard: 256MB`, correctly matching the 268,435,456-byte cap (and even if the unit were interpreted as decimal MB, that would only produce smaller/more conservative shards, never exceeding the \"at most 256 MiB\" bound), and tensor names are never altered. Everything in the plan maps cleanly onto Required result items 1\u20135 and all four Required checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "af840edb9d2637da189c2ad2f3a8dc65836479683a53af06822ea3ecec6a5c55"
+}

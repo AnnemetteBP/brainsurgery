@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T10:57:12+00:00",
+  "finished_at": "2026-09-06T10:57:26+00:00",
+  "wall_clock_s": 13.8,
+  "tokens_in": 2,
+  "tokens_out": 844,
+  "cost_usd": 0.24310275,
+  "verdict_text": "NO\n\nThe merge itself is correct: `B @ A`, transposed because `fan_in_fan_out` is true, scaled by alpha/r = 2, added in float32, and the four required checks run before writing. But the artifact does not implement clause 4 of \"Required result\" (sharded output, 100 MiB per-shard cap, `wte.weight` alone in its own shard, and a `model.safetensors.index.json` with a complete `weight_map`). All of that, plus the checkpoint loading, is delegated to `load_checkpoint` and `save_sharded_safetensors` from an external `_ckpt` module that is not part of the artifact, so none of the sharding rules can be verified from what was submitted. This also breaks the condition's requirement that the solution be a standalone script; as shown, the artifact cannot be judged to produce the required sharded checkpoint.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

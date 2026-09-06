@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T16:13:59+00:00",
+  "finished_at": "2026-09-06T16:14:05+00:00",
+  "wall_clock_s": 6.5,
+  "tokens_in": 2,
+  "tokens_out": 359,
+  "cost_usd": 0.10737649999999999,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script drops blocks 2, 5, 8, renumbers the surviving blocks in original order (0\u21920, 1\u21921, 3\u21922, \u2026 11\u21928) via a fresh output dict so no collisions are possible, leaves the 4 non-block tensors untouched, asserts the surviving block indices are exactly 0..8 (which covers both the \"no blocks 9\u201311\" and \"exactly 9 blocks\" checks) and that the tensor count is 121, and only then writes `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "artifact_sha256": "52d337326395ce9beac3adc73e35e8c7c2d2892cc99e856b24330c90669f0535",
+  "started_at": "2026-09-06T18:20:05+00:00",
+  "finished_at": "2026-09-06T18:20:20+00:00",
+  "wall_clock_s": 14.9,
+  "tokens_in": 2,
+  "tokens_out": 943,
+  "cost_usd": 0.13243950000000002,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe merge is correct: `delta = (B @ A).T` gives `[768, 2304]`, scaled by `lora_alpha / r = 2` under the config's `fan_in_fan_out = true`, added in float32 and stored back as float32 under the same name. No adapter or intermediate keys are introduced, all other base tensors are passed through untouched, and the four required checks are asserted before any file is written. The sharding packs tensors greedily to at most 104,857,600 bytes of tensor data, and `wte.weight` necessarily lands alone in its own shard (any pending shard is flushed on arrival because its size alone exceeds the limit, and the following tensor forces another flush), with a `model.safetensors.index.json` whose `weight_map` covers all 160 names.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

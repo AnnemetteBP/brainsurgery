@@ -11,14 +11,19 @@ transforms:
       to: 'model::h.\1.\2.delta_t'
   - permute: { from: 'model::h\.(\d+)\.(attn\.c_attn)\.delta_t', to: 'model::h.\1.\2.delta', order: [1, 0] }
   - scale_: { target: 'model::h\.\d+\.(attn\.c_attn)\.delta', by: 2 }
+  # Required check: exactly 12 adapter pairs were found (above) and merged (one delta each).
+  - assert: { count: { of: 'model::h\.\d+\.(attn\.c_attn)\.delta', is: 12 } }
   # base is float32 already
   - add_: { from: 'model::h\.(\d+)\.(attn\.c_attn)\.delta', to: 'model::h.\1.\2.weight' }
   # base is float32 already
   - delete: { target: 'model::h\.\d+\.(attn\.c_attn)\.delta(_t)?' }
+  # Only the `model` alias is written; drop the adapter namespace anyway so no adapter tensor can reach the output.
+  - delete: { target: 'lora::.*' }
   - assert: { not: { exists: 'model::.*lora_.*' } }
   - assert: { shape: { of: model::h.0.attn.c_attn.weight, is: [768, 2304] } }
   - assert: { count: { of: 'model::.*', is: 160 } }
 output:
   path: out/T5
   format: safetensors
+  # BrainSurgery shard units are binary: 100MB = 100 MiB (104,857,600 bytes) of tensor data per shard.
   shard: 100MB

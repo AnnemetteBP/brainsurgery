@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T07:43:08+00:00",
+  "finished_at": "2026-09-06T07:43:47+00:00",
+  "wall_clock_s": 39.3,
+  "tokens_in": 2,
+  "tokens_out": 2848,
+  "cost_usd": 0.1761885,
+  "verdict_text": "NO\n\nThe plan sets `shard: 100MB`, but the specification requires a shard budget of 100 MiB (104,857,600 bytes); with the conventional decimal reading, `100MB` is 100,000,000 bytes, a stricter limit that changes where shard boundaries fall for GPT-2's ~28 MB-per-layer tensors and so produces a different shard layout than the hidden reference, violating the \"Required result\" clause 4 and the graded sharding rules. The merge math itself is right: `lora_B @ lora_A` gives `[2304, 768]`, `permute [1, 0]` transposes it to `[768, 2304]` per `fan_in_fan_out = true`, `scale_ by 2` applies alpha/r, and the intermediates are deleted. Two of the required checks are also weaker than specified: the \"no `lora_` in the output\" assert only scans the `model::` namespace, so it cannot detect adapter tensors carried through from the `lora::` input, and the count assert is likewise namespace-scoped rather than a check on the actual output key set.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

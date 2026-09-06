@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "artifact_sha256": "ac8af64e711652c405ff809a29f0354d71b5d7443fe49c8dc6ee86e8572e3109",
+  "started_at": "2026-09-06T18:14:53+00:00",
+  "finished_at": "2026-09-06T18:14:58+00:00",
+  "wall_clock_s": 5.1,
+  "tokens_in": 2,
+  "tokens_out": 146,
+  "cost_usd": 0.0455918,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script keeps rows 0..639 and 768..2047 for q/k/v (skipping the 128-row block for head 5 at offset 640..767) and the corresponding column block for o_proj, exactly matching the required slicing. It asserts the four required shapes and the 114-tensor count before writing, satisfying the \"Required checks\" clause, and writes a single `out/T2/model.safetensors` with all other tensors and names unchanged.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

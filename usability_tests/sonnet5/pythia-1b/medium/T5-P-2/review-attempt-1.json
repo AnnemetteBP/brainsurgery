@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T06:21:06+00:00",
+  "finished_at": "2026-09-06T06:21:37+00:00",
+  "wall_clock_s": 30.4,
+  "tokens_in": 2,
+  "tokens_out": 2578,
+  "cost_usd": 0.0691658,
+  "verdict_text": "YES\n\nThe script correctly identifies the 16 adapter pairs by layer/module, computes `delta = B @ A` in float32 (matching the `[out,in]` layout since `fan_in_fan_out=False` so no transpose is applied), scales by `lora_alpha/r=2`, adds it to the float32-cast base weight, and casts back to float16, then reassigns the tensor at its original key. It runs all four required checks (merged count, no `lora_` tensors, shape, total tensor count) before writing, and delegates sharding/writing to a shared `_ckpt` helper with the correct 512 MiB shard limit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

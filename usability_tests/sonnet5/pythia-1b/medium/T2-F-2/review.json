@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "artifact_sha256": "19811be17039bc4fdfc951cd8a9d0a6007411fc2e97a4a7c5b907b17b5612d65",
+  "started_at": "2026-09-06T18:17:54+00:00",
+  "finished_at": "2026-09-06T18:18:01+00:00",
+  "wall_clock_s": 7.3,
+  "tokens_in": 2,
+  "tokens_out": 424,
+  "cost_usd": 0.0481208,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly builds keep-indices for the fused QKV weight/bias (768-row per-head blocks, dropping head 5, keeping rows 0\u20133839 and 4608\u20136143) and for dense.weight (256-column per-head blocks on dim 1, keeping columns 0\u20131279 and 1536\u20132047), matching the spec exactly, leaves all other tensors untouched, asserts the four required shape/count checks before writing, and writes a single `out/T2/model.safetensors` with 244 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

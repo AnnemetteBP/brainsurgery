@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T11:04:07+00:00",
+  "finished_at": "2026-09-06T11:04:31+00:00",
+  "wall_clock_s": 23.9,
+  "tokens_in": 2,
+  "tokens_out": 1733,
+  "cost_usd": 0.28854474999999996,
+  "verdict_text": "NO\n\nThe plan does not implement the first required check as specified: \"exactly 112 tensors are bfloat16\" is asserted only as a count of tensor names matching the projection regex, taken before the cast, so it never inspects a dtype and would not fail if the bfloat16 cast did not take effect on all 112 tensors (\"Required checks\" clause, first bullet). The remaining three checks are implemented correctly by dtype and total count. Separately, the output uses `shard: 256MB`, while the spec requires a 256 MiB limit (268,435,456 bytes); one layer's seven bf16 projections total exactly 128 MiB, so two layers per shard fit exactly at 256 MiB, but if the tool reads `256MB` as 256,000,000 bytes the shards will split one layer per file and the layout will diverge from the reference (Required result 5, second bullet). The casts themselves and the key set are otherwise correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

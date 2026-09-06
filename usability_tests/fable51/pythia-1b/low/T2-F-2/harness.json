@@ -1,0 +1,43 @@
+{
+  "phase": "solve",
+  "driver": "run_claude.py",
+  "model_id": "claude-fable-5-1",
+  "agent": "fable51",
+  "target": "pythia-1b",
+  "effort": "low",
+  "test": "T2",
+  "condition": "F",
+  "repeat": 2,
+  "started_at": "2026-09-06T09:07:03+00:00",
+  "finished_at": "2026-09-06T09:08:01+00:00",
+  "wall_clock_s": 58.3,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "max_turns": 40,
+  "timeout_s": 1800,
+  "turns": 5,
+  "tool_calls": 4,
+  "tokens_in": 130,
+  "tokens_out": 3306,
+  "cache_read_tokens": 132285,
+  "cache_write_tokens": 19431,
+  "tokens_in_total": 151846,
+  "cost_usd": 0.5907632500000001,
+  "duration_api_ms": 42409,
+  "session_id": "7665a677-3850-4770-911b-3b94aa25268f",
+  "result_subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "executions": 2,
+  "failed_executions": [
+    {
+      "n": 1,
+      "command": "mkdir -p out/T2 && cat > out/T2/solution.py <<'EOF'\n\"\"\"T2: remove attention head 5 from every layer of Pythia-1B (safetensors -> safetensors).\"\"\"\nimport os\nimport torch\nfrom safetensors.torch import load_file, save_file\n\nSRC = \"inputs/base/model.safetensors\"\nDST = \"out/T2/model.safetensors\"\nN_LAYERS",
+      "message": "AssertionError",
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Done. The pruned checkpoint is at `out/T2/model.safetensors` with 244 tensors, produced by `out/T2/solution.py` using safetensors and torch only.\n\n- **Approach:** load the state dict, and for each of the 16 layers drop the 768-row block for head 5 from the fused qkv weight and bias and the 256-column block from the dense weight, using torch.cat so the results are contiguous. All required shape and count checks run as assertions before saving.\n- **Executions:** two. The first failed on an extra assertion of my own that every tensor is float16, which is false because the causal-mask buffer is uint8. I removed that check; the required checks were unaffected and nothing had been written.\n- **Verification:** an independent comparison against the input confirmed identical key set, bit-exact kept slices in the expected order, and unchanged values and dtypes for every other tensor.\n- **Report:** `out/T2/REPORT.md` records the self-report fields, the one failed execution, and the tools used."
+}

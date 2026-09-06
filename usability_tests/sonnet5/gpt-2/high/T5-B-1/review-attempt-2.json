@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/B/T5-defective.yaml",
+  "started_at": "2026-09-06T15:43:55+00:00",
+  "finished_at": "2026-09-06T15:43:59+00:00",
+  "wall_clock_s": 4.4,
+  "tokens_in": 2,
+  "tokens_out": 167,
+  "cost_usd": 0.0454838,
+  "verdict": "no",
+  "verdict_text": "NO. The plan omits the required scale factor `alpha/r = 2` (explicitly flagged by its own comment \"the defect: the alpha / r scale is missing\") before adding the transposed low-rank product to the base weight, violating Required Result clause 1 (`h.<i>.<module>.weight += scale * (B @ A).T`). This produces merged weights that are off by a factor of 2, which will fail the grading tolerance of 1e-5 relative Frobenius error on the 12 merged tensors.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The adapter scaling factor alpha / r is missing: the raw low-rank product is added.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

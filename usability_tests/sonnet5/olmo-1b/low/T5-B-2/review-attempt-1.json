@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T05:19:14+00:00",
+  "finished_at": "2026-09-06T05:19:22+00:00",
+  "wall_clock_s": 7.9,
+  "tokens_in": 2,
+  "tokens_out": 420,
+  "cost_usd": 0.0455098,
+  "verdict_text": "NO\n\nThe matmul step computes `B @ A` but names the target using capture group `\\2` which is `self_attn.q_proj` or `self_attn.v_proj` verbatim, giving names like `model.layers.<i>.self_attn.q_proj.delta` \u2014 that part is fine, but the `assert count` before merging counts `.*lora_A\\.weight` = 32, which is correct. The real problem: `add_` and `delete` steps use regex targets requiring a `.delta` intermediate tensor to be created for every layer/module pair, but nothing guarantees `scale_` and `add_` operate on float32 tensors matching in dtype/shape with the base weight naming exactly \u2014 this is plausible and fine. The actual violation is that no `assert` step verifies fan_in_fan_out/orientation, and more critically the plan never asserts that base tensor count remains 114 *and* no intermediate `.delta` tensors leak \u2014 the `delete` step's regex `model.layers\\.\\d+\\.(self_attn\\.q_proj|self_attn\\.v_proj)\\.delta(_t)?` matches the delta tensors it created, so that's covered. Given the transform semantics look correct and required checks are all present, I revise: the plan appears to satisfy the specification's required checks and result.\n\nYES",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

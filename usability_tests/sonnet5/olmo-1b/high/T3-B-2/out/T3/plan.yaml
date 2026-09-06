@@ -1,0 +1,44 @@
+inputs:
+  - model::inputs/base
+
+transforms:
+  # Sanity checks on the input before touching anything.
+  - assert: { count: { of: '.*', is: 114 } }
+  - assert:
+      count:
+        of: 'model\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|o_proj)|mlp\.(gate_proj|up_proj|down_proj))\.weight'
+        is: 112
+
+  # Cast exactly the 112 projection matrices to bfloat16, in place (names unchanged).
+  - cast_:
+      target: 'model\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|o_proj)|mlp\.(gate_proj|up_proj|down_proj))\.weight'
+      to: bfloat16
+
+  # Required checks: fail loudly if the result does not hold.
+  - assert: { count: { of: '.*', is: 114 } }
+  - assert:
+      count:
+        of: 'model\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|o_proj)|mlp\.(gate_proj|up_proj|down_proj))\.weight'
+        is: 112
+  - assert:
+      dtype:
+        of: 'model\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|o_proj)|mlp\.(gate_proj|up_proj|down_proj))\.weight'
+        is: bfloat16
+  - assert: { dtype: { of: model.layers.0.self_attn.q_proj.weight, is: bfloat16 } }
+
+  # Everything else (embed_tokens, lm_head; no norms/biases in this checkpoint)
+  # must remain float32 and unchanged in count.
+  - assert:
+      count:
+        of: '(?!model\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|o_proj)|mlp\.(gate_proj|up_proj|down_proj))\.weight$).+'
+        is: 2
+  - assert:
+      dtype:
+        of: '(?!model\.layers\.\d+\.(self_attn\.(q_proj|k_proj|v_proj|o_proj)|mlp\.(gate_proj|up_proj|down_proj))\.weight$).+'
+        is: float32
+  - assert: { dtype: { of: model.embed_tokens.weight, is: float32 } }
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 256MB

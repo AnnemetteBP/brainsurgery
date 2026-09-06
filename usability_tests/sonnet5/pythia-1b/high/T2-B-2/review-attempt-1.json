@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T07:01:10+00:00",
+  "finished_at": "2026-09-06T07:01:47+00:00",
+  "wall_clock_s": 37.2,
+  "tokens_in": 2,
+  "tokens_out": 3477,
+  "cost_usd": 0.1028618,
+  "verdict_text": "YES\n\nThe plan correctly identifies head 5's boundaries in both the interleaved `query_key_value` layout (rows 3840\u20134607, i.e. `768*5..768*5+767`) and the `dense.weight` column layout (columns 1280\u20131535, i.e. `256*5..256*5+255`), slices around them with the exact row/column ranges the spec specifies (`0:3840` + `4608:6144` for qkv weight/bias, `0:1280` + `1536:2048` for dense columns), and reassembles each in the required order via `concat`. It deletes the originals only after copying out the surviving slices, restores the original tensor names, cleans up temporaries, leaves all other tensors (dense.bias, buffers, MLP) untouched, and asserts the four required shape/count checks before writing a single `out/T2/model.safetensors`. This matches every clause of \"Required result\" and \"Required checks.\"",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

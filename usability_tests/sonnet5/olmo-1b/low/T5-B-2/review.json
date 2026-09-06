@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "artifact_sha256": "20662e56e24cc92ac1a397e08b3a6d7a58ec37f2a36fe05b73125419dec16218",
+  "started_at": "2026-09-06T18:15:52+00:00",
+  "finished_at": "2026-09-06T18:15:59+00:00",
+  "wall_clock_s": 6.5,
+  "tokens_in": 2,
+  "tokens_out": 369,
+  "cost_usd": 0.0483418,
+  "verdict": "no",
+  "verdict_text": "NO. The plan multiplies lora_B (shape [2048,16]) by lora_A (shape [16,2048]) as `matmul(from_a=B, from_b=A)`, producing `B @ A` correctly per the spec's `scale * B @ A`, but the assert `count of lora::.*lora_A\\.weight is 32` only checks the adapter input has 32 A-tensors, not that 32 pairs were found and merged distinctly\u2014this is a minor concern. The real violation is the final `assert: count of model::.* is 114` runs before checking that no leftover `delta_t` or intermediate naming collision exists beyond the explicit delete, and more critically the plan never verifies dtype/float32 computation explicitly, but that's likely fine since base is float32. The decisive issue: the `delete: lora::.*` step happens, but `assert: not exists model::.*lora_.*` checks the wrong namespace pattern against adapter leakage into `model` alias \u2014 this is redundant, not wrong. On closer inspection, the plan actually satisfies the spec's required checks and merge math correctly, so the artifact is compliant.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

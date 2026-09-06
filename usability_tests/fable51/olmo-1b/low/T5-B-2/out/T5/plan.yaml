@@ -1,0 +1,31 @@
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # exactly 32 adapter pairs present
+  - assert: { count: { of: 'lora::.*\.lora_A\.weight', is: 32 } }
+  - assert: { count: { of: 'lora::.*\.lora_B\.weight', is: 32 } }
+  # delta = B @ A  (shape [out, in], fan_in_fan_out = false)
+  - matmul:
+      from_a: 'lora::base_model\.model\.(model\.layers\.\d+\.self_attn\.(?:q|v)_proj)\.lora_B\.weight'
+      from_b: 'lora::base_model.model.\1.lora_A.weight'
+      to: 'base::\1.lora_delta'
+  - assert: { count: { of: 'base::.*\.lora_delta', is: 32 } }
+  # scale = lora_alpha / r = 32 / 16 = 2
+  - scale_: { target: 'base::.*\.lora_delta', by: 2.0 }
+  # W += scale * B @ A
+  - add_:
+      from: 'base::(model\.layers\.\d+\.self_attn\.(?:q|v)_proj)\.lora_delta'
+      to: 'base::\1.weight'
+  - delete: { target: 'base::.*\.lora_delta' }
+  # required checks
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert: { shape: { of: 'base::model.layers.0.self_attn.q_proj.weight', is: [2048, 2048] } }
+  - assert: { dtype: { of: 'base::model\.layers\.\d+\.self_attn\.(?:q|v)_proj\.weight', is: float32 } }
+  - assert: { count: { of: 'base::.*', is: 114 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

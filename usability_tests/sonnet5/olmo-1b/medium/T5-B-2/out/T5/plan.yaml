@@ -1,0 +1,81 @@
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # --- Preflight: adapter shape/count sanity ---
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_A\.weight'
+        is: 32
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_B\.weight'
+        is: 32
+  - assert:
+      shape:
+        of: 'lora::base_model.model.model.layers.0.self_attn.q_proj.lora_A.weight'
+        is: [16, 2048]
+  - assert:
+      shape:
+        of: 'lora::base_model.model.model.layers.0.self_attn.q_proj.lora_B.weight'
+        is: [2048, 16]
+  - assert:
+      shape:
+        of: 'base::model.layers.0.self_attn.q_proj.weight'
+        is: [2048, 2048]
+
+  # --- Compute delta_i,mod = lora_B @ lora_A for every layer/module pair ---
+  # (fan_in_fan_out = false: no transpose needed, B @ A already has the
+  # [out, in] layout of the base nn.Linear weight)
+  - matmul:
+      from_a: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.(q_proj|v_proj)\.lora_B\.weight'
+      from_b: 'lora::base_model.model.model.layers.\1.self_attn.\2.lora_A.weight'
+      to: 'base::model.layers.\1.self_attn.\2.delta.weight'
+
+  - assert:
+      count:
+        of: 'base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.delta\.weight'
+        is: 32
+  - assert:
+      shape:
+        of: 'base::model.layers.0.self_attn.q_proj.delta.weight'
+        is: [2048, 2048]
+
+  # --- scale = lora_alpha / r = 32 / 16 = 2 ---
+  - scale_:
+      target: 'base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.delta\.weight'
+      by: 2.0
+
+  # --- fold delta into the base weight in place, then discard the delta ---
+  - add_:
+      from: 'base::model\.layers\.(\d+)\.self_attn\.(q_proj|v_proj)\.delta\.weight'
+      to: 'base::model.layers.\1.self_attn.\2.weight'
+
+  - delete:
+      target: 'base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.delta\.weight'
+
+  # --- Required checks: no adapter/intermediate leftovers, shapes, totals ---
+  - assert:
+      not:
+        exists: 'base::.*lora_.*'
+  - assert:
+      not:
+        exists: 'base::.*\.delta\.weight'
+  - assert:
+      shape:
+        of: 'base::model.layers.0.self_attn.q_proj.weight'
+        is: [2048, 2048]
+  - assert:
+      dtype:
+        of: 'base::model.layers.0.self_attn.q_proj.weight'
+        is: float32
+  - assert:
+      count:
+        of: 'base::.+'
+        is: 114
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

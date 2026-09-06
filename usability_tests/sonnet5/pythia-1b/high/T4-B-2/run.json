@@ -1,0 +1,13 @@
+{
+  "run_id": "T4-B-2",
+  "agent": "sonnet5",
+  "target": "pythia-1b",
+  "effort": "high",
+  "test": "T4",
+  "condition": "B",
+  "repeat": 2,
+  "created_at": "2026-09-06T07:02:57+00:00",
+  "repo_commit": "34bae5e104afdd2419ac599a9556786c6d8473e4",
+  "venv": true,
+  "env_freeze_lines": 70
+}

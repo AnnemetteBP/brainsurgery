@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T11:48:05+00:00",
+  "finished_at": "2026-09-06T11:48:22+00:00",
+  "wall_clock_s": 17.6,
+  "tokens_in": 2,
+  "tokens_out": 1209,
+  "cost_usd": 0.27053075,
+  "verdict_text": "I'll check the plan's output semantics against the doc pack before judging, since the multi-namespace behavior decides the answer.\n\n\n<invoke name=\"Grep\">\n<invoke name=\"pattern\">namespace|weight_map|written|shard</invoke>\n<invoke name=\"path\">docpack/README.md</invoke>\n<invoke name=\"output_mode\">content</invoke>\n<invoke name=\"-i\">true</invoke>\n</invoke>\n<invoke name=\"Grep\">\n<invoke name=\"pattern\">shard|MB|bytes|index\\.json</invoke>\n<invoke name=\"path\">docpack/interfaces-reference.md</invoke>\n<invoke name=\"output_mode\">content</invoke>\n<invoke name=\"-i\">true</invoke>\n</invoke>",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

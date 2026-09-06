@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T1-defective.py",
+  "started_at": "2026-09-06T16:06:50+00:00",
+  "finished_at": "2026-09-06T16:07:02+00:00",
+  "wall_clock_s": 11.5,
+  "tokens_in": 2,
+  "tokens_out": 936,
+  "cost_usd": 0.052324800000000005,
+  "verdict": "no",
+  "verdict_text": "NO. The spec requires dropping blocks {2, 6, 10, **14**} (per the explicit renumbering mapping: old 13\u219210, old 15\u219211, meaning 14 is dropped and 15 survives). The artifact instead defines `DROP = {2, 6, 10, **15**}`, so it drops block 15 and keeps block 14, producing a different set of surviving blocks and a different renumbering than required by clause 2 of \"Required result.\" The script's own asserts (layer count = 12, total = 184) don't catch this because they only check counts/contiguity, not which original blocks survived, so it will pass its self-checks but fail the hidden bit-exact comparison in grading.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

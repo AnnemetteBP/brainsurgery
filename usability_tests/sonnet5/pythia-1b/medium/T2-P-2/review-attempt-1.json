@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T06:13:09+00:00",
+  "finished_at": "2026-09-06T06:13:22+00:00",
+  "wall_clock_s": 13.1,
+  "tokens_in": 2,
+  "tokens_out": 1108,
+  "cost_usd": 0.054176800000000004,
+  "verdict_text": "YES\n\nThe artifact's `keep_index` computation for both QKV specs (768-row blocks, dropping head 5) and dense.weight (256-column blocks, dropping head 5) produces exactly the row/column ranges required (`0..3839, 4608..6143` for QKV weight/bias; `0..1279, 1536..2047` for dense.weight), all other tensors are left untouched, and the required shape/count assertions match the spec exactly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "artifact_sha256": "97c9ec6048c2b6d15d287cbb28b36e82c31d7b3254598c605116286cd1cc8a42",
+  "started_at": "2026-09-06T18:13:36+00:00",
+  "finished_at": "2026-09-06T18:14:32+00:00",
+  "wall_clock_s": 55.6,
+  "tokens_in": 2,
+  "tokens_out": 5239,
+  "cost_usd": 0.09617779999999998,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan correctly implements the specification: it matmuls lora_B (from_a) by lora_A (from_b) to get B@A, permutes it (order [1,0]) to transpose into the Conv1D `[in,out]` layout, scales by 2 (=32/16), adds it in place into `h.<i>.attn.c_attn.weight`, deletes the intermediate `delta`/`delta_t` tensors and the entire `lora::` namespace, and asserts the exact required checks (12 adapter pairs found and merged, no `lora_` names in the output namespace, correct shape `[768,2304]`, and exactly 160 total tensors) before writing a 100 MiB-sharded safetensors output.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

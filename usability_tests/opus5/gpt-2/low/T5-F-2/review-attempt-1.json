@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T07:16:29+00:00",
+  "finished_at": "2026-09-06T07:16:35+00:00",
+  "wall_clock_s": 6.2,
+  "tokens_in": 2,
+  "tokens_out": 325,
+  "cost_usd": 0.11208850000000001,
+  "verdict_text": "YES\n\nAdapter names map correctly to `h.<i>.attn.c_attn.weight`, `scale = lora_alpha / r = 2` is read from the config, `(B @ A).T` is applied only when `fan_in_fan_out` is set, arithmetic is in float32 and cast back to the original (float32) dtype, and all four required checks are asserted before writing. Sharded export is delegated to `save_sharded_safetensors` with the 104,857,600-byte limit; assuming that helper writes shards plus a `weight_map` index as its name implies, the artifact meets the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

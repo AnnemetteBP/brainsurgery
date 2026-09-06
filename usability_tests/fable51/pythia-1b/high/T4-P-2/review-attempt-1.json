@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T11:42:04+00:00",
+  "finished_at": "2026-09-06T11:42:24+00:00",
+  "wall_clock_s": 19.8,
+  "tokens_in": 2,
+  "tokens_out": 1404,
+  "cost_usd": 0.26365974999999997,
+  "verdict_text": "YES\n\nThe script matches the specification. It verifies identical key sets and bit-exact equality of all non-MLP tensors across base, ft1 and ft2 before any merge, aborting via assertions. It computes each of the 64 MLP tensors in float32 against the unmodified base with lambda 0.4 for both task vectors, casts back to the base dtype, and leaves every other tensor as the base object. It asserts exactly 64 merged and 244 output tensors and writes a single file at `out/T4/model.safetensors`. The only unverifiable point from reading alone is the imported `_ckpt.load_checkpoint` helper, which is assumed to be a plain safetensors loader returning a name-to-tensor dict.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

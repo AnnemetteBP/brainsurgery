@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T07:57:32+00:00",
+  "finished_at": "2026-09-06T07:57:49+00:00",
+  "wall_clock_s": 17.2,
+  "tokens_in": 2,
+  "tokens_out": 1132,
+  "cost_usd": 0.18838749999999999,
+  "verdict_text": "YES\n\nThe plan slices at the correct boundaries: head 5 occupies rows 3840\u20134607 of the fused `query_key_value` tensors (768 rows/head \u00d7 5) and columns 1280\u20131535 of `attention.dense.weight` (256 columns/head \u00d7 5), so the kept ranges `[0:3840]`+`[4608:6144]` and `[:, 0:1280]`+`[:, 1536:2048]` match required-result clauses 1\u20133, concatenated in the specified order along dim 0 and dim 1 respectively. Originals are deleted only after the temporaries are copied, the rebuilt tensors keep the original names, temporaries are removed before output, and the four required checks (three shapes plus the 244-tensor count) are present as `assert` transforms ahead of the single-file output at `out/T2/model.safetensors`. All non-head-bearing tensors, including `attention.dense.bias`, the attention buffers and the MLP weights, are never touched, satisfying clause 4.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

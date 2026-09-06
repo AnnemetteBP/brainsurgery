@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T11:30:22+00:00",
+  "finished_at": "2026-09-06T11:30:51+00:00",
+  "wall_clock_s": 28.7,
+  "tokens_in": 2,
+  "tokens_out": 2129,
+  "cost_usd": 0.30542575,
+  "verdict_text": "YES\n\nThe visible logic satisfies every clause. The projection regex with fullmatch selects exactly the 7 matrices per layer for 16 layers, cast via `.to(torch.bfloat16)` for round-to-nearest-even. The buffer regex contains `(?!)`, which can never match, so nothing is deleted. All other tensors pass through as float32 with unchanged values and unchanged names. The four required checks are asserted before writing, and the output goes to `out/T3` with a 268,435,456-byte shard limit.\n\nOne caveat: shard packing, the oversize-tensor-alone rule, and the index file are delegated to `save_sharded_safetensors` in the unshown `_ckpt` helper, so those parts cannot be confirmed from this artifact alone. The helper also makes the script not strictly standalone under the Condition P rules, though that is a condition constraint rather than a T3 spec clause.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

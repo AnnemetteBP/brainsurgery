@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T16:37:08+00:00",
+  "finished_at": "2026-09-06T16:37:27+00:00",
+  "wall_clock_s": 18.6,
+  "tokens_in": 2,
+  "tokens_out": 1239,
+  "cost_usd": 0.29390875,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan performs the shared-tensor verification first (244-name counts on both fine-tunes plus bit-exact equality of every non-MLP base tensor against ft1 and ft2 via the negative-lookahead pattern, which together pin down identical name sets), then computes both task vectors against the still-unmodified base in float32 (tv1 and tv2 are formed and scaled by 0.4 before either is added), asserts 64 tensors in each task-vector set, adds both to the base MLP tensors, deletes the temporaries, casts the 64 merged tensors back to float16, and asserts 244 output tensors. The 180 other tensors are left untouched and names are unchanged, matching every clause of the required result and required checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "4520528c09be2960410630ec87aaa38043195552a4272c3a46c22c858737d752"
+}

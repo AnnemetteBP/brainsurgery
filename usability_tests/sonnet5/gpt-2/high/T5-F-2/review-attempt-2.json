@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T15:44:29+00:00",
+  "finished_at": "2026-09-06T15:44:42+00:00",
+  "wall_clock_s": 13.6,
+  "tokens_in": 2,
+  "tokens_out": 1088,
+  "cost_usd": 0.0538078,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly identifies the 12 adapter pairs, computes `scale * (B @ A).T` in float32 with `scale = lora_alpha/r`, adds it into the Conv1D-layout base weight, casts back to the original dtype, and never re-adds adapter tensors. All four required checks are asserted before the sharded write, and the merge loop/count/shape/key-count logic match the spec exactly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

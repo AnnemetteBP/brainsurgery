@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T16:50:27+00:00",
+  "finished_at": "2026-09-06T16:50:34+00:00",
+  "wall_clock_s": 7.2,
+  "tokens_in": 2,
+  "tokens_out": 369,
+  "cost_usd": 0.0443498,
+  "verdict": "no",
+  "verdict_text": "NO. The script exits without checking sys.argv length correctly for the default path requirement \u2014 actually the real issue is the script uses bare `assert` statements for all required checks, which are stripped when Python is run with `-O`, meaning the checks are not guaranteed to \"fail loudly\" robustly; more concretely, it does not write `out/T4/REPORT.md` and instead writes output to a path taken from `sys.argv[1]` (defaulting to `out/T4`), which is fine only if invoked without extra shell args, but this is a fragile, non-literal deviation from \"Write your script to `out/<task>/solution.py` and run it with `python out/<task>/solution.py`\" \u2014 i.e., the script requires a specific invocation without arguments to satisfy the mandated output path, and the harness rule says every execution counts as an attempt with fixed invocation, so parameterizing the output directory via argv is an unnecessary deviation from the required fixed output location in TASK.md step 4. This violates the \"Output: a single file `out/T4/model.safetensors`\" requirement's implicit fixed-path contract used by the grading/invocation protocol.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "39971c56f8f1ba950debcebf4fb42e1685eb2910891739a543fbb747ba8a390c"
+}

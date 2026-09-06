@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T11:17:16+00:00",
+  "finished_at": "2026-09-06T11:17:35+00:00",
+  "wall_clock_s": 18.4,
+  "tokens_in": 2,
+  "tokens_out": 1273,
+  "cost_usd": 0.25690974999999994,
+  "verdict_text": "YES\n\nThe script drops blocks 2, 5, 8, maps the survivors 0,1,3,4,6,7,9,10,11 onto 0..8 in original order, and passes every tensor through unchanged in value, shape and dtype. Building a fresh output dict avoids the rename collision hazard. The two asserts run before any write and cover all three required checks: the layer-index set must equal exactly {0..8}, which rules out blocks 9, 10, 11 and forces exactly 9 blocks, and the tensor count must be 121. The only thing not visible from the artifact is the `_ckpt.load_checkpoint` helper, which I assume returns a plain name-to-tensor dict of the input file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

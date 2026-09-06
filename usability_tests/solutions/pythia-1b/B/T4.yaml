@@ -19,6 +19,9 @@ transforms:
   - cast_: { target: 'base::gpt_neox\.layers\.\d+\.(mlp\.dense_h_to_4h\.weight|mlp\.dense_h_to_4h\.bias|mlp\.dense_4h_to_h\.weight|mlp\.dense_4h_to_h\.bias)\.tv2', to: float32 }
   - subtract_: { from: 'base::gpt_neox\.layers\.(\d+)\.(mlp\.dense_h_to_4h\.weight|mlp\.dense_h_to_4h\.bias|mlp\.dense_4h_to_h\.weight|mlp\.dense_4h_to_h\.bias)', to: 'base::gpt_neox.layers.\1.\2.tv2' }
   - scale_: { target: 'base::gpt_neox\.layers\.\d+\.(mlp\.dense_h_to_4h\.weight|mlp\.dense_h_to_4h\.bias|mlp\.dense_4h_to_h\.weight|mlp\.dense_4h_to_h\.bias)\.tv2', by: 0.4 }
+  # Required check: exactly 64 tensors are merged (both task-vector sets are complete).
+  - assert: { count: { of: 'base::gpt_neox\.layers\.\d+\.(mlp\.dense_h_to_4h\.weight|mlp\.dense_h_to_4h\.bias|mlp\.dense_4h_to_h\.weight|mlp\.dense_4h_to_h\.bias)\.tv1', is: 64 } }
+  - assert: { count: { of: 'base::gpt_neox\.layers\.\d+\.(mlp\.dense_h_to_4h\.weight|mlp\.dense_h_to_4h\.bias|mlp\.dense_4h_to_h\.weight|mlp\.dense_4h_to_h\.bias)\.tv2', is: 64 } }
   - add_: { from: 'base::gpt_neox\.layers\.(\d+)\.(mlp\.dense_h_to_4h\.weight|mlp\.dense_h_to_4h\.bias|mlp\.dense_4h_to_h\.weight|mlp\.dense_4h_to_h\.bias)\.tv1', to: 'base::gpt_neox.layers.\1.\2' }
   - add_: { from: 'base::gpt_neox\.layers\.(\d+)\.(mlp\.dense_h_to_4h\.weight|mlp\.dense_h_to_4h\.bias|mlp\.dense_4h_to_h\.weight|mlp\.dense_4h_to_h\.bias)\.tv2', to: 'base::gpt_neox.layers.\1.\2' }
   - delete: { target: 'base::gpt_neox\.layers\.\d+\.(mlp\.dense_h_to_4h\.weight|mlp\.dense_h_to_4h\.bias|mlp\.dense_4h_to_h\.weight|mlp\.dense_4h_to_h\.bias)\.tv[12]' }

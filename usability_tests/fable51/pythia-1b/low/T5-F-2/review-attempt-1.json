@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T09:12:09+00:00",
+  "finished_at": "2026-09-06T09:12:23+00:00",
+  "wall_clock_s": 14.9,
+  "tokens_in": 2,
+  "tokens_out": 579,
+  "cost_usd": 0.23589775000000002,
+  "verdict_text": "YES\n\nThe script maps each adapter pair to `gpt_neox.layers.<i>.attention.query_key_value.weight`, computes `B @ A` in float32, scales by `lora_alpha / r` (2), honors `fan_in_fan_out` (false, so no transpose), adds to the base weight in float32 and casts back to float16. Adapter tensors are never inserted into the state dict, and the four required checks (16 merged pairs, no `lora_` names, layer-0 shape `[6144, 2048]`, exactly 244 tensors) are asserted before the sharded write with the 536,870,912-byte limit. Correctness of the index file and per-shard byte accounting depends on the imported `save_sharded_safetensors` helper, which is not shown, but nothing in the visible script violates the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

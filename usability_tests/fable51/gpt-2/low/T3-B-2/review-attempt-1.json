@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T08:57:06+00:00",
+  "finished_at": "2026-09-06T08:57:25+00:00",
+  "wall_clock_s": 18.4,
+  "tokens_in": 2,
+  "tokens_out": 1244,
+  "cost_usd": 0.25525074999999997,
+  "verdict_text": "I'll check how BrainSurgery interprets `shard: 64MB` and whether the count assert supports dtype filtering, then give the verdict.\n\n\n<invoke name=\"Grep\">\n<invoke name=\"pattern\">shard|MiB|MB</invoke>\n<invoke name=\"path\">docpack</invoke>\n<invoke name=\"output_mode\">content</invoke>\n<invoke name=\"-i\">true</invoke>\n<invoke name=\"head_limit\">40</invoke>\n</invoke>\n<invoke name=\"Grep\">\n<invoke name=\"pattern\">count</invoke>\n<invoke name=\"path\">docpack/help.txt</invoke>\n<invoke name=\"output_mode\">content</invoke>\n<invoke name=\"-C\">6</invoke>\n<invoke name=\"head_limit\">60</invoke>\n</invoke>\nClaudeDone",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

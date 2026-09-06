@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:49:32+00:00",
+  "finished_at": "2026-09-06T16:50:02+00:00",
+  "wall_clock_s": 29.8,
+  "tokens_in": 2,
+  "tokens_out": 2657,
+  "cost_usd": 0.0712288,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script casts exactly the 7 named projection tensors per layer to bfloat16 via a precise regex, leaves all other 114-112=2 tensors (embed_tokens, lm_head) as float32 unchanged, preserves all tensor names, asserts the four required checks before writing, and shards by cumulative byte size with any tensor exceeding 256 MiB (the two 412 MB tensors) correctly isolated alone in its own shard while producing a complete `weight_map` index.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "290fb5d27c5146e7ca4ba58700f2848f1be69af03d5dfc0f099fe8daed8118df"
+}

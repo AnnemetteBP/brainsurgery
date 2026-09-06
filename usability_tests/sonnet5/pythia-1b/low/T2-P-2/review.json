@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T16:51:49+00:00",
+  "finished_at": "2026-09-06T16:51:52+00:00",
+  "wall_clock_s": 3.4,
+  "tokens_in": 2,
+  "tokens_out": 88,
+  "cost_usd": 0.0443298,
+  "verdict": "yes",
+  "verdict_text": "YES the artifact correctly removes head 5's 768-row block from query_key_value weight/bias, removes head 5's 256-column block from dense.weight, keeps all other tensors unchanged, and produces exactly 244 tensors matching all required shapes and checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "19811be17039bc4fdfc951cd8a9d0a6007411fc2e97a4a7c5b907b17b5612d65"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:05:59+00:00",
+  "finished_at": "2026-09-06T16:06:12+00:00",
+  "wall_clock_s": 13.0,
+  "tokens_in": 2,
+  "tokens_out": 1027,
+  "cost_usd": 0.052385799999999996,
+  "verdict": "yes",
+  "verdict_text": "YES. The script casts exactly the 112 named projection matrices to bfloat16 via `tensor.float().to(torch.bfloat16)` (equivalent to `.to(torch.bfloat16)` since inputs are already float32) and forces every other tensor to float32, satisfying requirements 1\u20132. The `buffer_re` pattern is a no-op (empty negative lookahead never matches) but that's harmless since there are no buffers to drop, satisfying requirement 3. All four required assertions run before `save_sharded_safetensors` is called, satisfying the \"fail loudly before writing\" clause, and names are preserved unchanged.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

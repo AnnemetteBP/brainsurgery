@@ -1,0 +1,77 @@
+# T3: mixed-precision export with sharding (Pythia-1B)
+#
+#   - the 64 projection matrices  -> bfloat16
+#   - everything else             -> float32
+#   - the 48 non-parameter buffers are dropped
+#   - written as a sharded safetensors checkpoint (<= 256 MiB of tensor data per shard)
+
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # ---------------------------------------------------------------- sanity ---
+  # The input is what the task describes: 244 tensors, 64 projection matrices.
+  - assert:
+      all:
+        - count: { of: '.*', is: 244 }
+        - count:
+            of: 'gpt_neox\.layers\.\d+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight'
+            is: 64
+        - count:
+            of: 'gpt_neox\.layers\.\d+\.attention\.(?:bias|masked_bias|rotary_emb\.inv_freq)'
+            is: 48
+
+  # ------------------------------------------------- 3. drop the buffers -----
+  # Anchored on `attention.` so that no parameter (…attention.dense.bias,
+  # …attention.query_key_value.bias, the layer-norm biases) can be caught.
+  - delete:
+      target: 'gpt_neox\.layers\.\d+\.attention\.(?:bias|masked_bias|rotary_emb\.inv_freq)'
+
+  - assert:
+      all:
+        - count: { of: '.*', is: 196 }
+        - not:
+            exists: 'gpt_neox\.layers\.\d+\.attention\.(?:bias|masked_bias|rotary_emb\.inv_freq)'
+        # the parameters that live next to the deleted buffers survived
+        - count: { of: 'gpt_neox\.layers\.\d+\.attention\.(?:query_key_value|dense)\.bias', is: 32 }
+
+  # ------------------------- 2. everything float32, then 1. the projections ---
+  # float16 is exact in float32, so this pass changes no value.  The projections
+  # are then cast down; float16 -> float32 -> bfloat16 is round-to-nearest-even
+  # and identical to a direct float16 -> bfloat16 cast.
+  - cast_: { target: '.*', to: float32 }
+  - cast_:
+      target: 'gpt_neox\.layers\.\d+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight'
+      to: bfloat16
+
+  # ------------------------------------------------------ required checks ----
+  - assert:
+      all:
+        # exactly 64 tensors are bfloat16: 64 tensors match the projection
+        # pattern and are bfloat16, and every tensor that does not match it is
+        # float32.
+        - count:
+            of: 'gpt_neox\.layers\.\d+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight'
+            is: 64
+        - dtype:
+            of: 'gpt_neox\.layers\.\d+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight'
+            is: bfloat16
+        - count:
+            of: '(?!gpt_neox\.layers\.\d+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight$).*'
+            is: 132
+        - dtype:
+            of: '(?!gpt_neox\.layers\.\d+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight$).*'
+            is: float32
+        # the two named spot checks
+        - dtype: { of: 'gpt_neox\.layers\.0\.attention\.query_key_value\.weight', is: bfloat16 }
+        - dtype: { of: 'gpt_neox\.embed_in\.weight', is: float32 }
+        # 4. names unchanged / 5. tensor count
+        - count: { of: '.*', is: 196 }
+        - shape: { of: 'gpt_neox\.layers\.0\.attention\.query_key_value\.weight', is: [6144, 2048] }
+        - shape: { of: 'gpt_neox\.embed_in\.weight', is: [50304, 2048] }
+        - exists: 'embed_out\.weight'
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 256MB          # binary units: 256 * 1024 * 1024 = 268,435,456 bytes

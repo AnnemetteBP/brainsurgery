@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T15:43:11+00:00",
+  "finished_at": "2026-09-06T15:43:33+00:00",
+  "wall_clock_s": 22.1,
+  "tokens_in": 2,
+  "tokens_out": 1883,
+  "cost_usd": 0.0605668,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly identifies head-bearing tensors (c_attn.weight/bias on their respective axes, c_proj.weight on axis 0), builds keep-indices that skip head 5's 64-wide block within each of the 3 segments (q/k/v) for c_attn and within the single segment for c_proj, producing exactly the column/row ranges specified (0-319, 384-767, 768-1087, 1152-1535, 1536-1855, 1920-2303 for c_attn; 0-319, 384-767 for c_proj). All non-attention and non-per-head tensors (c_proj.bias, attn.bias, etc.) are left untouched, tensor names are unchanged, the required shape/count assertions match the spec's Required checks, and the output is written to out/T2/model.safetensors with 160 keys preserved.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

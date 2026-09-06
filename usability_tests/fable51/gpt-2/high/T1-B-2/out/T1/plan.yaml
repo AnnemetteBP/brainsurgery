@@ -1,0 +1,55 @@
+# T1: depth pruning GPT-2 (124M) 12 -> 9 layers, removing blocks 2, 5, 8 and
+# renumbering the survivors contiguously.
+#
+# Collision safety: every move goes from a higher index to a lower index, and
+# the moves are applied in ascending source order, so each destination index
+# is already vacant (deleted, or moved away by the previous step) when it is
+# written. `move` refuses to overwrite an existing destination, so a wrong
+# order would fail loudly rather than silently clobber a block.
+
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # ---- preconditions on the input -----------------------------------------
+  - assert: { count: { of: '.*', is: 160 } }
+  - assert: { count: { of: 'h\.\d+\.attn\.c_attn\.weight', is: 12 } }
+  - assert: { count: { of: 'h\.(2|5|8)\..*', is: 39 } }
+
+  # ---- 1. remove blocks 2, 5, 8 -------------------------------------------
+  - delete: { target: 'h\.(2|5|8)\..*' }
+  - assert: { count: { of: '.*', is: 121 } }
+  - assert: { not: { exists: 'h\.(2|5|8)\..*' } }
+
+  # ---- 2. renumber survivors (ascending order, each target already vacant) --
+  - move: { from: 'h\.3\.(.*)',  to: 'h.2.\1' }
+  - move: { from: 'h\.4\.(.*)',  to: 'h.3.\1' }
+  - move: { from: 'h\.6\.(.*)',  to: 'h.4.\1' }
+  - move: { from: 'h\.7\.(.*)',  to: 'h.5.\1' }
+  - move: { from: 'h\.9\.(.*)',  to: 'h.6.\1' }
+  - move: { from: 'h\.10\.(.*)', to: 'h.7.\1' }
+  - move: { from: 'h\.11\.(.*)', to: 'h.8.\1' }
+
+  # ---- required checks -----------------------------------------------------
+  # no tensor of blocks 9, 10, 11 remains
+  - assert: { not: { exists: 'h\.(9|10|11)\..*' } }
+  # exactly 9 blocks remain
+  - assert: { count: { of: 'h\.\d+\.attn\.c_attn\.weight', is: 9 } }
+  - assert: { count: { of: 'h\.[0-8]\.attn\.c_attn\.weight', is: 9 } }
+  # the output has exactly 121 tensors
+  - assert: { count: { of: '.*', is: 121 } }
+
+  # ---- extra sanity: every surviving block is complete, non-block tensors kept
+  - assert: { count: { of: 'h\.[0-8]\..*', is: 117 } }
+  - assert:
+      all:
+        - { exists: wte.weight }
+        - { exists: wpe.weight }
+        - { exists: ln_f.weight }
+        - { exists: ln_f.bias }
+        - { shape: { of: 'h\.8\.attn\.c_attn\.weight', is: [768, 2304] } }
+        - { shape: { of: 'h\.8\.attn\.bias', is: [1, 1, 1024, 1024] } }
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors

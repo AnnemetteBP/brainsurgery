@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T1.yaml",
+  "started_at": "2026-09-06T08:08:00+00:00",
+  "finished_at": "2026-09-06T08:08:40+00:00",
+  "wall_clock_s": 39.8,
+  "tokens_in": 2,
+  "tokens_out": 3058,
+  "cost_usd": 0.1773955,
+  "verdict_text": "YES\n\nThe mapping matches the spec exactly (3\u21922, 4\u21923, 6\u21924, 7\u21925, 9\u21926, 10\u21927, 11\u21928), and the moves are ordered lowest-destination-first after deleting blocks 2, 5, 8, so every destination index is already vacant when it is written \u2014 no block overwrites a survivor. The pre-delete `count ... is: 39` (3 blocks \u00d7 13 tensors), the `not exists` on `h.(9|10|11).`, the 9-way `c_attn.weight` count, and the total `.*` count of 121 (160 \u2212 39) implement all three required checks and run before the output is written. Non-block tensors (`wte`, `wpe`, `ln_f.*`) are never targeted, and only name prefixes change, so values, shapes and dtypes are preserved; the output path is the required single `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

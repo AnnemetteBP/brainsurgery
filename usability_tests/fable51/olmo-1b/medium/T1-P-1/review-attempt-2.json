@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T1-defective.py",
+  "started_at": "2026-09-06T16:33:49+00:00",
+  "finished_at": "2026-09-06T16:33:55+00:00",
+  "wall_clock_s": 5.7,
+  "tokens_in": 2,
+  "tokens_out": 206,
+  "cost_usd": 0.20147974999999999,
+  "verdict": "no",
+  "verdict_text": "NO. The script drops blocks {2, 6, 10, 15} instead of the required {2, 6, 10, 14}, violating \"Required result\" clause 1. Consequently old block 14 survives (renumbered to 11) while old block 15 is deleted, contradicting clause 2 which says old 15 becomes 11. The result has the right tensor count and contiguous indices, so the script's assertions pass, but the key/value mapping is wrong and the grader's bit-exact comparison against the reference would fail. The script also omits the literal required check that no tensor of blocks 12..15 remains, though its contiguity assertion covers that.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

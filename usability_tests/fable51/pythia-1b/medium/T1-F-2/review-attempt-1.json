@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T11:07:52+00:00",
+  "finished_at": "2026-09-06T11:08:04+00:00",
+  "wall_clock_s": 12.4,
+  "tokens_in": 2,
+  "tokens_out": 603,
+  "cost_usd": 0.23696575,
+  "verdict_text": "YES\n\nThe script builds a fresh output dict, so renumbering cannot collide. Blocks 2, 6, 10, 14 are skipped, survivors are mapped in original order to 0..11, non-block tensors pass through untouched, and values, shapes and dtypes are never modified. The two asserts run before any write and cover the required checks: the layer-index set equal to 0..11 rules out blocks 12 to 15 and proves exactly 12 blocks, and the 184-tensor count confirms the total. A failed assert exits non-zero with no output written, as the spec requires.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

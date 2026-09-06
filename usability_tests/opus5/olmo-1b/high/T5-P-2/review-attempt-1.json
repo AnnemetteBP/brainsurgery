@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T08:32:41+00:00",
+  "finished_at": "2026-09-06T08:33:02+00:00",
+  "wall_clock_s": 21.2,
+  "tokens_in": 2,
+  "tokens_out": 1640,
+  "cost_usd": 0.1460125,
+  "verdict_text": "I'll read the sandbox to see the helper module the script depends on.\n\n\n[{\"name\": \"Bash\", \"input\": {\"command\": \"ls -la /home/rootkidd/Projects/brainsurgery/usability_tests/opus5/olmo-1b/high/T5-P-2 && echo '---' && ls -R /home/rootkidd/Projects/brainsurgery/usability_tests/opus5/olmo-1b/high/T5-P-2/out 2>/dev/null | head -50\", \"description\": \"List sandbox contents\"}}]\n\n\n[{\"name\": \"Bash\", \"input\": {\"command\": \"cd /home/rootkidd/Projects/brainsurgery/usability_tests/opus5/olmo-1b/high/T5-P-2 && ls -a; echo '--- find'; find . -maxdepth 3 -name '*.py' -o -maxdepth 3 -name '*.md' | head -40\", \"description\": \"list dir\"}}]\n\nTotal 76\ndrwxr-xr-x. 1 rootkidd rootkidd   248  6 sep 15.35 .\ndrwxr-xr-x. 1 rootkidd rootkidd   378  6 sep 15.35 ..\n-rw-r--r--. 1 rootkidd rootkidd  1587  6 sep 15.35 AGENTS.md\n-rw-r--r--. 1 rootkidd rootkidd  1587  6 sep 15.35 CLAUDE.md\ndrwxr-xr-x. 1 rootkidd rootkidd    24  6 sep 15.35 inputs\n-rw-r--r--. 1 rootkidd rootkidd    82  6 sep 15.35 record-template.md\n-rw-r--r--. 1 rootkidd rootkidd 51884  6 sep 15.35 requirements-P.txt\n-rw-r--r--. 1 rootkidd rootkidd  1587  6 sep 15.35 CLAUDE.md\ndrwxr-xr-x. 1 rootkidd rootkidd    24  6 sep 15.35 inputs\n-rw-r--r--. 1 rootkidd rootkidd  1587  6 sep 15.35 AGENTS.md\n-rw-r--r--. 1 rootkidd rootkidd    82  6 sep 15.35 record-template.md\n-rw-r--r--. 1 rootkidd rootkidd 51884  6 sep 15.35 requirements-P.txt",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

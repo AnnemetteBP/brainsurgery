@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T05:29:28+00:00",
+  "finished_at": "2026-09-06T05:29:45+00:00",
+  "wall_clock_s": 16.9,
+  "tokens_in": 2,
+  "tokens_out": 1287,
+  "cost_usd": 0.060056,
+  "verdict_text": "YES\n\nThe script's DROP={2,5,8} set and renumber mapping computed via `enumerate(kept)` produce exactly old\u2192new: 0\u21920,1\u21921,3\u21922,4\u21923,6\u21924,7\u21925,9\u21926,10\u21927,11\u21928, matching the specification's required mapping. It preserves the non-`h.<i>.` tensors unchanged, only rewrites the block index in the name, asserts the surviving block set equals `range(9)` (which entails no blocks 9/10/11 remain and exactly 9 blocks survive) and asserts exactly 121 output tensors, all before writing the file \u2014 satisfying the required checks and result.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T12:01:15+00:00",
+  "finished_at": "2026-09-06T12:01:35+00:00",
+  "wall_clock_s": 20.4,
+  "tokens_in": 2,
+  "tokens_out": 1347,
+  "cost_usd": 0.08018025000000001,
+  "verdict": "none",
+  "verdict_text": "**YES**\n\nThe plan matches every clause of the specification.\n\n- **Slices and order:** columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304 for `c_attn.weight` and the same ranges for the bias, then rows 0:320 and 384:768 for `c_proj.weight`. Each set is concatenated in the listed order along the correct axis (dim 1 for the weight, dim 0 for the bias and the output projection).\n- **Coverage:** the regex copies and the enumerated concats cover layers 0 through 11, and every rebuilt tensor keeps its original name.\n- **Key set:** the originals are removed before the concats recreate them, and all temporaries are deleted afterward, so no extra tensors survive. Untouched tensors such as `c_proj.bias` and the mask buffer pass through unchanged.\n- **Checks before writing:** all four required checks are `assert` transforms placed before `output`, so any violation stops the run before the file is written.\n\nOne reading-only caveat that does not change the verdict: the plan relies on the `count` assert operator and on the `name::[slice]` reference syntax. If either were unsupported, the run would fail loudly rather than produce an incorrect checkpoint.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

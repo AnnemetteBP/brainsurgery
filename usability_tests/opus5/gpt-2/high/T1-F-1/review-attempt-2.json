@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T1-defective.py",
+  "started_at": "2026-09-06T16:11:38+00:00",
+  "finished_at": "2026-09-06T16:11:46+00:00",
+  "wall_clock_s": 8.0,
+  "tokens_in": 2,
+  "tokens_out": 459,
+  "cost_usd": 0.1101265,
+  "verdict": "no",
+  "verdict_text": "NO. The artifact drops blocks 2, 5, **9** (`DROP = {2, 5, 9}`) instead of blocks 2, 5, 8, violating Required result clause 1. As a consequence the renumbering is also wrong under clause 2: it maps old 6\u21924, 7\u21925, 8\u21926, 10\u21927, 11\u21928, whereas the specification requires old 8 to be deleted and old 9\u21926, 10\u21927, 11\u21928. The output therefore keeps block 8's tensors under index 6 and omits block 9's entirely, so the key/value mapping will fail the bit-exact comparison in grading. The count and contiguity assertions still pass (121 tensors, indices 0..8), so the error is silent \u2014 exactly the failure mode the task warns about.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

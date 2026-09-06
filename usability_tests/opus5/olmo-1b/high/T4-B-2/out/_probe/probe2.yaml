@@ -1,0 +1,30 @@
+inputs:
+  - base::inputs/lora/adapter_model.safetensors
+  - ft1::inputs/lora/adapter_model.safetensors
+  - ft2::inputs/lora/adapter_model.safetensors
+
+output:
+  path: out/_probe/model2.safetensors
+  format: safetensors
+
+transforms:
+  # synthesize ft1 = 3*base, ft2 = 5*base inside the base alias
+  - copy: { from: 'ft1::(.+)', to: 'base::f1.\1' }
+  - scale_: { target: 'base::f1\..*', by: 3.0 }
+  - copy: { from: 'ft2::(.+)', to: 'base::f2.\1' }
+  - scale_: { target: 'base::f2\..*', by: 5.0 }
+
+  # task vectors, both taken against the untouched base
+  - copy: { from: 'base::f1\.(.+)', to: 'base::tv1.\1' }
+  - subtract_: { from: 'base::(base_model\..+)', to: 'base::tv1.\1' }
+  - copy: { from: 'base::f2\.(.+)', to: 'base::tv2.\1' }
+  - subtract_: { from: 'base::(base_model\..+)', to: 'base::tv2.\1' }
+  - scale_: { target: 'base::tv1\..*', by: 0.4 }
+  - scale_: { target: 'base::tv2\..*', by: 0.4 }
+  - add_: { from: 'base::tv1\.(.+)', to: 'base::\1' }
+  - add_: { from: 'base::tv2\.(.+)', to: 'base::\1' }
+  - delete: { target: 'base::tv1\..*' }
+  - delete: { target: 'base::tv2\..*' }
+  - delete: { target: 'base::f1\..*' }
+  - delete: { target: 'base::f2\..*' }
+  - assert: { count: { of: 'base::.*', is: 64 } }

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T05:03:47+00:00",
+  "finished_at": "2026-09-06T05:03:54+00:00",
+  "wall_clock_s": 6.7,
+  "tokens_in": 2,
+  "tokens_out": 348,
+  "cost_usd": 0.038920800000000005,
+  "verdict_text": "NO\n\nThe script does `tensor.float().to(torch.bfloat16)` for the 48 projection matrices, casting float32 \u2192 float32 \u2192 bfloat16, which is a no-op deviation and not the actual issue \u2014 but for the non-matrix tensors it does `tensor.float()` on values that may already be float32, which is fine. The real bug: it does not upcast anything from a different precision (fine, input is all float32), but there is a genuine mismatch \u2014 the script relies on `_ckpt.save_sharded_safetensors` to implement the 64 MiB shard-splitting and single-tensor-alone rule, whose implementation isn't shown, so compliance with spec clause 5 (sharding rules, wte.weight alone in its own shard) cannot be verified from this artifact alone and may not be guaranteed. Also, casting via `.float().to(bfloat16)` instead of directly `.to(bfloat16)` is numerically equivalent here since source is already float32, so that's not a real violation \u2014 the outstanding concern is solely the unverified sharding logic in the external helper.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

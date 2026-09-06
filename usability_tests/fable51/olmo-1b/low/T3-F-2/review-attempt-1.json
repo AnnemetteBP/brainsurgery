@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T09:01:57+00:00",
+  "finished_at": "2026-09-06T09:02:09+00:00",
+  "wall_clock_s": 12.7,
+  "tokens_in": 2,
+  "tokens_out": 751,
+  "cost_usd": 0.23818074999999997,
+  "verdict_text": "YES\n\nThe script casts exactly the seven per-layer projection weights (anchored with fullmatch, so embeddings and lm_head are untouched) to bfloat16 via round-to-nearest, leaves every other tensor float32 with unchanged values, deletes nothing (the buffer regex can never match), keeps names, and enforces all four required checks with asserts before writing. The one thing not verifiable from the text is clause 5's sharding layout, which is delegated to `save_sharded_safetensors` in the unshown `_ckpt` helper with the correct 268,435,456-byte limit; whether oversized tensors land alone in their own shard and the index `weight_map` is complete depends on that helper.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

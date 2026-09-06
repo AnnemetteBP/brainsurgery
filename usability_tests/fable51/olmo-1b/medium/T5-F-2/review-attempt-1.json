@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T11:06:27+00:00",
+  "finished_at": "2026-09-06T11:06:42+00:00",
+  "wall_clock_s": 15.2,
+  "tokens_in": 2,
+  "tokens_out": 916,
+  "cost_usd": 0.25276675000000004,
+  "verdict_text": "YES\n\nThe merge logic matches the specification: for all 16 layers and both target modules it reads the adapter's `lora_A` and `lora_B`, forms `B @ A` in float32, scales by `lora_alpha / r` (2), honors `fan_in_fan_out` (false, so no transpose), adds in place under the original base name, and preserves dtype and shape. No adapter or delta tensor is inserted into the state dict, so only the 114 base names remain. All four required checks are enforced before writing, and the output is written sharded with the 536,870,912-byte limit.\n\nThe one thing not verifiable from the artifact alone is the sharding behavior, which is delegated to `save_sharded_safetensors` in the unshown `_ckpt` helper. The script is correct provided that helper packs tensors up to the byte limit, isolates oversized tensors in their own shard, and writes `model.safetensors.index.json` with a complete `weight_map`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

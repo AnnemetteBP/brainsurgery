@@ -1,0 +1,51 @@
+# T1: depth pruning of OLMo-1B-0724-hf from 16 to 12 layers.
+# Remove blocks 2, 6, 10, 14 and renumber the survivors contiguously.
+inputs:
+  - model::inputs/base
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors
+
+transforms:
+  # Preflight: 16 blocks, 114 tensors, 7 tensors per block to be removed.
+  - assert: { count: { of: 'model\.layers\.\d+\.self_attn\.q_proj\.weight', is: 16 } }
+  - assert: { count: { of: '.*', is: 114 } }
+  - assert: { count: { of: 'model\.layers\.(2|6|10|14)\..+', is: 28 } }
+
+  # 1. Remove every tensor of blocks 2, 6, 10, 14 (exact index match, dots escaped).
+  - delete: { target: 'model\.layers\.(2|6|10|14)\..+' }
+  - assert: { not: { exists: 'model\.layers\.(2|6|10|14)\..+' } }
+  - assert: { count: { of: '.*', is: 86 } }
+
+  # 2. Renumber survivors in ascending old-index order so each destination
+  #    index is already vacant when its block arrives (no collisions).
+  - move: { from: 'model\.layers\.3\.(.+)',  to: 'model.layers.2.\1' }
+  - move: { from: 'model\.layers\.4\.(.+)',  to: 'model.layers.3.\1' }
+  - move: { from: 'model\.layers\.5\.(.+)',  to: 'model.layers.4.\1' }
+  - move: { from: 'model\.layers\.7\.(.+)',  to: 'model.layers.5.\1' }
+  - move: { from: 'model\.layers\.8\.(.+)',  to: 'model.layers.6.\1' }
+  - move: { from: 'model\.layers\.9\.(.+)',  to: 'model.layers.7.\1' }
+  - move: { from: 'model\.layers\.11\.(.+)', to: 'model.layers.8.\1' }
+  - move: { from: 'model\.layers\.12\.(.+)', to: 'model.layers.9.\1' }
+  - move: { from: 'model\.layers\.13\.(.+)', to: 'model.layers.10.\1' }
+  - move: { from: 'model\.layers\.15\.(.+)', to: 'model.layers.11.\1' }
+
+  # Required checks.
+  # (a) no tensor of blocks 12..15 remains
+  - assert: { not: { exists: 'model\.layers\.(12|13|14|15)\..+' } }
+  # (b) exactly 12 blocks remain
+  - assert: { count: { of: 'model\.layers\.\d+\.self_attn\.q_proj\.weight', is: 12 } }
+  # (c) exactly 86 tensors in the output
+  - assert: { count: { of: '.*', is: 86 } }
+
+  # Extra structural checks: every block 0..11 has all 7 tensors, nothing else exists.
+  - assert: { count: { of: 'model\.layers\.([0-9]|1[01])\.self_attn\.(q|k|v|o)_proj\.weight', is: 48 } }
+  - assert: { count: { of: 'model\.layers\.([0-9]|1[01])\.mlp\.(gate|up|down)_proj\.weight', is: 36 } }
+  - assert: { count: { of: 'model\.layers\..+', is: 84 } }
+  - assert: { exists: 'model\.embed_tokens\.weight' }
+  - assert: { exists: 'lm_head\.weight' }
+  - assert: { shape: { of: 'model\.embed_tokens\.weight', is: [50304, 2048] } }
+  - assert: { shape: { of: 'lm_head\.weight', is: [50304, 2048] } }
+  - assert: { shape: { of: 'model\.layers\.11\.mlp\.down_proj\.weight', is: [2048, 8192] } }
+  - assert: { dtype: { of: 'model\.layers\.11\.mlp\.down_proj\.weight', is: float32 } }

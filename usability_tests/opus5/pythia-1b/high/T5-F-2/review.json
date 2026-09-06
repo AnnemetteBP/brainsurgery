@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "artifact_sha256": "58c8f3b6928ed87177fb23f201e2133a96666f8e34cf6bf02687953191f81bd4",
+  "started_at": "2026-09-06T18:22:30+00:00",
+  "finished_at": "2026-09-06T18:22:55+00:00",
+  "wall_clock_s": 25.0,
+  "tokens_in": 2,
+  "tokens_out": 1815,
+  "cost_usd": 0.1559045,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script computes `delta = B @ A` in float32, applies no transpose (`fan_in_fan_out = false`), adds `2.0 * delta` to the float32-upcast base weight and casts back to float16, for all 16 layers of `attention.query_key_value`; adapter tensors are never inserted into the state dict, so the key set stays at the base's 244 names and every other tensor is written back bit-exact. All four required checks are asserted before writing, and the greedy packer flushes before a tensor would push a shard past 536,870,912 bytes of tensor data (placing any single oversized tensor alone), emitting `model-XXXXX-of-YYYYY.safetensors` shards plus a `model.safetensors.index.json` whose `weight_map` covers every tensor.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

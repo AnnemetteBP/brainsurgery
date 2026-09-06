@@ -1,0 +1,24 @@
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  - assert: { count: { of: 'h\.\d+\.attn\.c_attn\.weight', is: 12 } }
+  - delete: { target: 'h\.(2|5|8)\..*' }
+  # Renumber ascending: destination index < source index, so no collisions.
+  - move: { from: 'h\.3\.(.*)', to: 'h.2.\1' }
+  - move: { from: 'h\.4\.(.*)', to: 'h.3.\1' }
+  - move: { from: 'h\.6\.(.*)', to: 'h.4.\1' }
+  - move: { from: 'h\.7\.(.*)', to: 'h.5.\1' }
+  - move: { from: 'h\.9\.(.*)', to: 'h.6.\1' }
+  - move: { from: 'h\.10\.(.*)', to: 'h.7.\1' }
+  - move: { from: 'h\.11\.(.*)', to: 'h.8.\1' }
+  # Required checks
+  # No block 9/10/11 tensor remains: every one of the 121 tensors matches the negative lookahead.
+  - assert: { count: { of: '(?!h\.(9|10|11)\.).*', is: 121 } }
+  - assert: { count: { of: 'h\.\d+\.attn\.c_attn\.weight', is: 9 } }
+  - assert: { count: { of: 'h\.[0-8]\..*', is: 117 } }
+  - assert: { count: { of: '.*', is: 121 } }
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T2-defective.py",
+  "started_at": "2026-09-06T16:00:08+00:00",
+  "finished_at": "2026-09-06T16:00:12+00:00",
+  "wall_clock_s": 3.8,
+  "tokens_in": 2,
+  "tokens_out": 98,
+  "cost_usd": 0.0403278,
+  "verdict": "no",
+  "verdict_text": "NO: The artifact drops head 6 (`DROP_HEAD = 6`) instead of head 5, violating the \"Required result\" clause \"remove head 5\" \u2014 this produces different column/row ranges retained than specified (e.g. it would keep 320..383 and drop 384..447, not the reverse).",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The removed head is off by one (head N+1 instead of head N). All shapes are still correct, so the artifact's own shape checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

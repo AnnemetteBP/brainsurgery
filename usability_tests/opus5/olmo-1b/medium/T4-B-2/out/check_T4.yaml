@@ -1,0 +1,35 @@
+# Read-only verification of out/T4/model.safetensors (no `output:` -> writes nothing).
+# Recomputes the merge in a different, algebraically equivalent order
+#   0.2*base + 0.4*ft1 + 0.4*ft2
+# and compares it with the produced checkpoint; also checks that the 66
+# non-MLP tensors are bit-identical to the base.
+inputs:
+  - out::out/T4/model.safetensors
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  - assert:
+      all:
+        - count: { of: 'out::.+', is: 114 }
+        - count: { of: 'out::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', is: 48 }
+        - dtype: { of: 'out::.+', is: float32 }
+  # 66 unchanged tensors, bit-exact
+  - assert:
+      equal: { left: 'out::(?!model\.layers\.\d+\.mlp\.).+', right: 'base::\g<0>' }
+  # independent recomputation
+  - scale: { from: 'base::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', to: 'out::chk.\g<0>', by: 0.2 }
+  - scale: { from: 'ft1::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', to: 'out::a1.\g<0>', by: 0.4 }
+  - scale: { from: 'ft2::model\.layers\.\d+\.mlp\.(gate|up|down)_proj\.weight', to: 'out::a2.\g<0>', by: 0.4 }
+  - add_: { from: 'out::a1\.(model\.layers\.\d+\.mlp\.(?:gate|up|down)_proj\.weight)', to: 'out::chk.\1' }
+  - add_: { from: 'out::a2\.(model\.layers\.\d+\.mlp\.(?:gate|up|down)_proj\.weight)', to: 'out::chk.\1' }
+  - assert:
+      equal:
+        left: 'out::chk\.(model\.layers\.\d+\.mlp\.(?:gate|up|down)_proj\.weight)'
+        right: 'out::\1'
+        eps: 1.0e-5
+  # sanity: the merged MLP tensors are NOT equal to the base ones
+  - assert:
+      not:
+        equal: { left: 'out::model\.layers\.0\.mlp\.gate_proj\.weight', right: 'base::\g<0>' }

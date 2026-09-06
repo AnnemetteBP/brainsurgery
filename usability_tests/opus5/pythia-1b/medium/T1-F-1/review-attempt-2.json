@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T1-defective.py",
+  "started_at": "2026-09-06T16:25:40+00:00",
+  "finished_at": "2026-09-06T16:25:49+00:00",
+  "wall_clock_s": 8.0,
+  "tokens_in": 2,
+  "tokens_out": 462,
+  "cost_usd": 0.11570749999999999,
+  "verdict": "no",
+  "verdict_text": "NO. The script sets `DROP = {2, 6, 10, 15}`, dropping block 15 instead of block 14, which violates Required result clause 1 (\"Remove every tensor of blocks 2, 6, 10, 14\"). As a consequence the renumbering is also wrong: it maps old 12\u21929, 13\u219210, 14\u219211 while dropping 15, whereas clause 2 requires old 13\u219210 and old 15\u219211 with 14 removed, so the last three surviving blocks carry the wrong weights. The tensor count (184) and the 12-contiguous-blocks assertions still pass, so the error is silent \u2014 exactly the failure mode the task warns about. (Minor: the required checks are implemented as bare `assert`s, which are stripped under `python -O`.)",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

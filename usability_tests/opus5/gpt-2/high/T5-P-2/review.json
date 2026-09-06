@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:53:06+00:00",
+  "finished_at": "2026-09-06T16:53:53+00:00",
+  "wall_clock_s": 46.2,
+  "tokens_in": 2,
+  "tokens_out": 3508,
+  "cost_usd": 0.19542949999999998,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe merge follows the specification exactly: `scale = lora_alpha / r = 2`, `delta = (B @ A).T` gives `[768, 2304]` matching the Conv1D `[in, out]` base layout under `fan_in_fan_out = true`, and the accumulation is done and stored in float32 under the original name. All four required checks are asserted before any file is written, and no adapter or intermediate tensor is ever inserted into the state dict, so the output key set is the base's 160 names.\n\nThe sharding is also correct: the greedy packer flushes before any tensor that would push a non-empty shard past 104,857,600 bytes of tensor data, which both keeps every ordinary shard within the limit and forces the oversized `wte.weight` (154 MB) into a shard of its own regardless of where it falls in the iteration order, and the emitted `model.safetensors.index.json` maps all 160 names to their shard file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "52d337326395ce9beac3adc73e35e8c7c2d2892cc99e856b24330c90669f0535"
+}

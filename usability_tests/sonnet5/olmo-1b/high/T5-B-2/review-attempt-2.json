@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T16:03:55+00:00",
+  "finished_at": "2026-09-06T16:05:45+00:00",
+  "wall_clock_s": 110.3,
+  "tokens_in": 2,
+  "tokens_out": 10496,
+  "cost_usd": 0.1494658,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan correctly computes delta = B @ A via `matmul` (B as from_a, A as from_b, giving `[2048,16]@[16,2048]=[2048,2048]`), scales by 2 (=32/16, matching `lora_alpha/r`), adds it into the base weight in place with no transpose (consistent with `fan_in_fan_out=false`), deletes the intermediate delta tensors, and asserts absence of `lora_` names, the expected shape, and the final count of 114 \u2014 satisfying all four \"Required checks\" and the merge formula in \"Required result\" item 1-3. The output section shards at 512MB, and since even a decimal (512,000,000-byte) or binary (536,870,912-byte) interpretation stays at or under the spec's 536,870,912-byte cap, the shard-size constraint in item 4 is respected either way, and the other base tensors are left untouched by construction.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

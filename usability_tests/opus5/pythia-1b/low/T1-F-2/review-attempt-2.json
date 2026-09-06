@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T16:24:25+00:00",
+  "finished_at": "2026-09-06T16:24:32+00:00",
+  "wall_clock_s": 7.3,
+  "tokens_in": 2,
+  "tokens_out": 339,
+  "cost_usd": 0.11261750000000001,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops blocks {2,6,10,14}, builds the renumbering from the ordered list of survivors (old 3\u21922, 7\u21925, 15\u219211, etc.), copies each surviving tensor unchanged under its new name, and passes through the 4 non-block tensors. Both required checks (surviving layer index set exactly `range(12)`, which rules out any block 12\u201315 and enforces exactly 12 blocks, plus the 184-tensor count) run before `save_file`, so a failure aborts with a non-zero exit and no output written.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

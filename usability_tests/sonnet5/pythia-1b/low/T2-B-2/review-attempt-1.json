@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T05:22:33+00:00",
+  "finished_at": "2026-09-06T05:22:37+00:00",
+  "wall_clock_s": 4.7,
+  "tokens_in": 2,
+  "tokens_out": 122,
+  "cost_usd": 0.0670998,
+  "verdict_text": "YES\n\nThe plan correctly slices rows [0:3840] and [4608:6144] for query_key_value.weight/bias, slices columns [0:1280] and [1536:2048] for dense.weight, concatenates them in the correct order per layer, deletes the temporary and original tensors, leaves all other tensors untouched, and includes all four required assert checks before writing the output.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

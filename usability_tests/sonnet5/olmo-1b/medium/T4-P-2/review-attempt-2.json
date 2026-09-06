@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T16:06:19+00:00",
+  "finished_at": "2026-09-06T16:06:30+00:00",
+  "wall_clock_s": 10.7,
+  "tokens_in": 2,
+  "tokens_out": 790,
+  "cost_usd": 0.047743799999999996,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 The script verifies name-set equality and bit-exact identity of all non-MLP tensors between base/ft1/ft2 before touching anything (step 1), computes the merge with the exact formula and lambda=0.4 in float32 for all 48 MLP tensors (step 2), leaves the other 66 tensors unchanged (step 3), and asserts merged==48 and len(out)==114 before writing a single `out/T4/model.safetensors` (step 4 and required checks). The assertions fail loudly (raise AssertionError) if any invariant is violated, satisfying the \"Required checks\" section.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

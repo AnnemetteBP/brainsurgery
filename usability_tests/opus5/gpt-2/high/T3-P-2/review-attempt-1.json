@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T08:11:14+00:00",
+  "finished_at": "2026-09-06T08:11:43+00:00",
+  "wall_clock_s": 28.7,
+  "tokens_in": 2,
+  "tokens_out": 2100,
+  "cost_usd": 0.1503655,
+  "verdict_text": "YES\n\nThe regexes use `fullmatch` with the alternation properly grouped, so `matrix_re` hits exactly the 48 projection matrices (12 layers \u00d7 4) and nothing like `wte.weight`, layer-norm weights, or `h.<i>.attn.c_attn.bias`; `buffer_re` removes exactly the 12 causal-mask buffers and not the projection biases. Names are preserved, non-matched tensors stay float32 with unchanged values (the input is already float32, so `.float()` is a no-op), 160 \u2212 12 = 148 tensors remain, and `.to(torch.bfloat16)` is the required round-to-nearest-even cast. All four required checks are asserted before the write, and the shard limit passed is 67,108,864 bytes with the default output directory `out/T3`. The one thing not visible from reading is `save_sharded_safetensors` in the local `_ckpt` module, which owns the shard-packing and index-file behaviour; the calling code supplies the correct arguments, but the actual layout and `weight_map` cannot be verified from this file alone.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

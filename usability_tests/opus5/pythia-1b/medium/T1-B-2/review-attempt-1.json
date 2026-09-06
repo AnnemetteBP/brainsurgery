@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-06T07:54:55+00:00",
+  "finished_at": "2026-09-06T07:55:17+00:00",
+  "wall_clock_s": 21.5,
+  "tokens_in": 2,
+  "tokens_out": 1497,
+  "cost_usd": 0.1473255,
+  "verdict_text": "YES\n\nThe plan deletes blocks 2, 6, 10, 14 (guarded by a count-60 assert = 4 \u00d7 15 tensors), then renumbers the survivors in ascending source order (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211), so every destination index is vacated before it is written and no block overwrites a survivor. The alternation `(2|6|10|14)` cannot spuriously match `layers.12.` etc. because the anchor `gpt_neox\\.layers\\.` is immediately followed by the index and a literal dot. The three required checks are present as asserts placed before the output: no residual blocks 12\u201315, exactly 12 `query_key_value.weight` tensors, and a total count of 184 (12 \u00d7 15 + 4 non-block tensors). Only name indices change; values, shapes and dtypes are untouched, and the output path matches `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

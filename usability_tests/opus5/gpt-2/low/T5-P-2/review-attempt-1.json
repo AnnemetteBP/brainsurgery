@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T07:16:07+00:00",
+  "finished_at": "2026-09-06T07:16:16+00:00",
+  "wall_clock_s": 8.8,
+  "tokens_in": 2,
+  "tokens_out": 457,
+  "cost_usd": 0.1143585,
+  "verdict_text": "YES\n\nThe merge is correct: `scale = 32/16 = 2`, `delta = (B @ A).T` under `fan_in_fan_out = true`, added in float32 and cast back to the base dtype (float32, so a no-op), names/shapes preserved. All four required checks are present and fail loudly before writing, and only base tensors reach the writer. The one thing not verifiable from this file is `save_sharded_safetensors`/`load_checkpoint` in `_ckpt`, which implements the 100 MiB shard split and `model.safetensors.index.json`; the call passes the correct limit and output directory.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

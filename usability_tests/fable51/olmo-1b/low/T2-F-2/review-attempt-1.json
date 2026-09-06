@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T09:00:39+00:00",
+  "finished_at": "2026-09-06T09:00:46+00:00",
+  "wall_clock_s": 6.1,
+  "tokens_in": 2,
+  "tokens_out": 247,
+  "cost_usd": 0.21817875,
+  "verdict_text": "YES\n\nThe script keeps indices 0..639 and 768..2047 (head 5 of 16 dropped, block width 128) along rows for q/k/v and columns for o_proj in every layer, leaves all other tensors and names untouched, asserts the five required checks before writing, and saves a single `model.safetensors` with all 114 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

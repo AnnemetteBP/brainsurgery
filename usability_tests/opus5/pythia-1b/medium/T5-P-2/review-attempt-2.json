@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:27:10+00:00",
+  "finished_at": "2026-09-06T16:27:27+00:00",
+  "wall_clock_s": 16.2,
+  "tokens_in": 2,
+  "tokens_out": 986,
+  "cost_usd": 0.12763950000000002,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe merge logic matches the specification: it maps `base_model.model.` + `gpt_neox.layers.<i>.attention.query_key_value` adapter names to the base names, reads `scale = lora_alpha / r = 2` and `fan_in_fan_out` from the config rather than hardcoding them, computes `B @ A` (float32, no transposition since `fan_in_fan_out` is false), adds it to the float32-upcast base weight and casts back to the original float16 dtype in place under the same key. No adapter or intermediate tensor enters `sd`, and all other base tensors are untouched. All four required checks (16 pairs merged, no `lora_` name, `[6144, 2048]` shape, 244 tensors) are asserted before the write.\n\nOne thing I could not verify from what was provided: clause 4's sharding behaviour lives entirely in `_ckpt.save_sharded_safetensors`, whose source is not part of the artifact shown here; the call site passes the correct 536,870,912-byte limit and output directory.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

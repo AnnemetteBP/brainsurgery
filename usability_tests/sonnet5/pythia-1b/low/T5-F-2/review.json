@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "artifact_sha256": "58c8f3b6928ed87177fb23f201e2133a96666f8e34cf6bf02687953191f81bd4",
+  "started_at": "2026-09-06T18:17:41+00:00",
+  "finished_at": "2026-09-06T18:17:56+00:00",
+  "wall_clock_s": 15.1,
+  "tokens_in": 2,
+  "tokens_out": 1103,
+  "cost_usd": 0.0573218,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script correctly maps adapter tensor names to base names, computes `B @ A` (no transpose, matching `fan_in_fan_out=false`), scales by `lora_alpha/r=2`, upcasts to float32 and casts back to float16, merges exactly 16 pairs, validates the required checks before writing, and shards under 512 MiB with a proper `weight_map` index containing all 244 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

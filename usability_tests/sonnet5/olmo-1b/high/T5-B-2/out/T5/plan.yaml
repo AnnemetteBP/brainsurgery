@@ -1,0 +1,64 @@
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB
+
+transforms:
+  # --- Preflight: base checkpoint shape ---
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  - assert:
+      shape:
+        of: base::model.layers.0.self_attn.q_proj.weight
+        is: [2048, 2048]
+
+  # --- Preflight: exactly 32 adapter pairs (16 layers x {q_proj,v_proj}) ---
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_A\.weight'
+        is: 32
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_B\.weight'
+        is: 32
+  - assert:
+      shape:
+        of: 'lora::base_model\.model\.model\.layers\.0\.self_attn\.q_proj\.lora_A\.weight'
+        is: [16, 2048]
+  - assert:
+      shape:
+        of: 'lora::base_model\.model\.model\.layers\.0\.self_attn\.q_proj\.lora_B\.weight'
+        is: [2048, 16]
+
+  # --- Merge: delta = B @ A, computed per layer/module, staged on the base alias ---
+  - matmul:
+      from_a: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.(q_proj|v_proj)\.lora_B\.weight'
+      from_b: 'lora::base_model.model.model.layers.\1.self_attn.\2.lora_A.weight'
+      to: 'base::merge_delta.\1.\2.weight'
+
+  - assert: { count: { of: 'base::merge_delta\.\d+\.(q_proj|v_proj)\.weight', is: 32 } }
+
+  # scale = lora_alpha / r = 32 / 16 = 2
+  - scale:
+      from: 'base::merge_delta\.(\d+)\.(q_proj|v_proj)\.weight'
+      to: 'base::merge_delta_scaled.\1.\2.weight'
+      by: 2.0
+
+  - add_:
+      from: 'base::merge_delta_scaled\.(\d+)\.(q_proj|v_proj)\.weight'
+      to: 'base::model.layers.\1.self_attn.\2.weight'
+
+  # --- Drop intermediates: only the 114 original base tensor names remain ---
+  - delete: { target: 'base::merge_delta\.\d+\.(q_proj|v_proj)\.weight' }
+  - delete: { target: 'base::merge_delta_scaled\.\d+\.(q_proj|v_proj)\.weight' }
+
+  # --- Required checks ---
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert:
+      shape:
+        of: base::model.layers.0.self_attn.q_proj.weight
+        is: [2048, 2048]
+  - assert: { count: { of: 'base::.*', is: 114 } }

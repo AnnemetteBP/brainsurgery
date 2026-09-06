@@ -1,0 +1,99 @@
+# T1: depth pruning with layer renumbering for OLMo-1B-0724-hf.
+#
+# Drop transformer blocks 2, 6, 10, 14 from the 16-layer checkpoint and renumber
+# the 12 survivors so the block indices run 0..11 without gaps:
+#
+#   old:  0  1  [2]  3  4  5  [6]  7  8  9  [10] 11 12 13 [14] 15
+#   new:  0  1   -   2  3  4   -   5  6  7   -    8  9  10  -   11
+#
+# Two aliases point at the same input directory:
+#   model : the working copy that is edited and written out
+#   base  : a pristine reference, only ever read by 'assert' (asserts do not
+#           count as writes, so the output alias still resolves to 'model')
+#
+# Collision hazard: renumbering must never move a block onto a slot that is
+# still occupied. Doing the moves in ascending order of the *old* index is safe
+# because every destination index is strictly smaller than its source index and
+# has already been freed - either by the delete step (2, 6, 10, 14) or by the
+# preceding move. Every move is additionally proven bit-exact against 'base'
+# at the end of the plan.
+
+inputs:
+  - model::inputs/base
+  - base::inputs/base
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors
+
+transforms:
+
+  # ---------------------------------------------------------------- preflight
+  - assert: { count: { of: 'model::.*', is: 114 } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.q_proj\.weight', is: 16 } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\..*', is: 112 } }
+  - assert: { exists: 'model::model\.embed_tokens\.weight' }
+  - assert: { exists: 'model::lm_head\.weight' }
+
+  # -------------------------------------------- 1. remove blocks 2, 6, 10, 14
+  # Full-match regex, so '...layers.2....' matches but '...layers.12....' cannot.
+  - delete: { target: 'model::model\.layers\.(2|6|10|14)\..*' }
+  - assert: { not: { exists: 'model::model\.layers\.(2|6|10|14)\..*' } }
+  - assert: { count: { of: 'model::.*', is: 86 } }
+
+  # ------------------------------------------------ 2. renumber the survivors
+  # Old 0 and old 1 already sit at their final indices and are left untouched.
+  - move: { from: 'model::model\.layers\.3\.(.*)',  to: 'model::model.layers.2.\1' }
+  - move: { from: 'model::model\.layers\.4\.(.*)',  to: 'model::model.layers.3.\1' }
+  - move: { from: 'model::model\.layers\.5\.(.*)',  to: 'model::model.layers.4.\1' }
+  - move: { from: 'model::model\.layers\.7\.(.*)',  to: 'model::model.layers.5.\1' }
+  - move: { from: 'model::model\.layers\.8\.(.*)',  to: 'model::model.layers.6.\1' }
+  - move: { from: 'model::model\.layers\.9\.(.*)',  to: 'model::model.layers.7.\1' }
+  - move: { from: 'model::model\.layers\.11\.(.*)', to: 'model::model.layers.8.\1' }
+  - move: { from: 'model::model\.layers\.12\.(.*)', to: 'model::model.layers.9.\1' }
+  - move: { from: 'model::model\.layers\.13\.(.*)', to: 'model::model.layers.10.\1' }
+  - move: { from: 'model::model\.layers\.15\.(.*)', to: 'model::model.layers.11.\1' }
+
+  # ------------------------------------- 3. required checks (fail loudly here)
+  # (a) no tensor of blocks 12, 13, 14, 15 remains
+  - assert: { not: { exists: 'model::model\.layers\.(12|13|14|15)\..*' } }
+  # (b) exactly 12 blocks remain
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.q_proj\.weight', is: 12 } }
+  # (c) the output has exactly 86 tensors
+  - assert: { count: { of: 'model::.*', is: 86 } }
+
+  # -------------------------------------------------- 4. structural soundness
+  # 12 blocks x 7 tensors = 84 block tensors, and every index 0..11 is present
+  # exactly once for each of the 7 roles (7 * 12 = 84 with no index outside 0..11).
+  - assert: { count: { of: 'model::model\.layers\.\d+\..*', is: 84 } }
+  - assert: { count: { of: 'model::model\.layers\.([0-9]|1[01])\..*', is: 84 } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.k_proj\.weight', is: 12 } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.v_proj\.weight', is: 12 } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.o_proj\.weight', is: 12 } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.mlp\.gate_proj\.weight', is: 12 } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.mlp\.up_proj\.weight', is: 12 } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.mlp\.down_proj\.weight', is: 12 } }
+
+  # ------------------------------------ 5. every survivor is bit-exact vs base
+  # This is the real anti-collision proof: each new block index must hold exactly
+  # the values of its intended old block, unchanged. 'equal' also compares shape
+  # and dtype, so shapes and dtypes are checked here too.
+  - assert: { equal: { left: 'model::model\.layers\.0\.(.*)',  right: 'base::model.layers.0.\1' } }
+  - assert: { equal: { left: 'model::model\.layers\.1\.(.*)',  right: 'base::model.layers.1.\1' } }
+  - assert: { equal: { left: 'model::model\.layers\.2\.(.*)',  right: 'base::model.layers.3.\1' } }
+  - assert: { equal: { left: 'model::model\.layers\.3\.(.*)',  right: 'base::model.layers.4.\1' } }
+  - assert: { equal: { left: 'model::model\.layers\.4\.(.*)',  right: 'base::model.layers.5.\1' } }
+  - assert: { equal: { left: 'model::model\.layers\.5\.(.*)',  right: 'base::model.layers.7.\1' } }
+  - assert: { equal: { left: 'model::model\.layers\.6\.(.*)',  right: 'base::model.layers.8.\1' } }
+  - assert: { equal: { left: 'model::model\.layers\.7\.(.*)',  right: 'base::model.layers.9.\1' } }
+  - assert: { equal: { left: 'model::model\.layers\.8\.(.*)',  right: 'base::model.layers.11.\1' } }
+  - assert: { equal: { left: 'model::model\.layers\.9\.(.*)',  right: 'base::model.layers.12.\1' } }
+  - assert: { equal: { left: 'model::model\.layers\.10\.(.*)', right: 'base::model.layers.13.\1' } }
+  - assert: { equal: { left: 'model::model\.layers\.11\.(.*)', right: 'base::model.layers.15.\1' } }
+
+  # ------------------------------------------ 6. non-block tensors untouched
+  - assert: { equal: { left: 'model::model\.embed_tokens\.weight', right: 'base::model.embed_tokens.weight' } }
+  - assert: { equal: { left: 'model::lm_head\.weight', right: 'base::lm_head.weight' } }
+  - assert: { shape: { of: 'model::model\.embed_tokens\.weight', is: [50304, 2048] } }
+  - assert: { shape: { of: 'model::lm_head\.weight', is: [50304, 2048] } }
+  - assert: { dtype: { of: 'model::.*', is: float32 } }

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T2.yaml",
+  "started_at": "2026-09-06T07:47:35+00:00",
+  "finished_at": "2026-09-06T07:47:49+00:00",
+  "wall_clock_s": 14.8,
+  "tokens_in": 2,
+  "tokens_out": 981,
+  "cost_usd": 0.19758749999999997,
+  "verdict_text": "YES\n\nThe plan slices each layer's q/k/v projections at rows `[0:640]` and `[768:2048]` (head 5 occupies rows 640\u2013767) and the o_proj at columns `[:, 0:640]` and `[:, 768:2048]`, deletes the originals, and reassembles them under the original names with `dim: 0` for q/k/v and `dim: 1` for o_proj, so both the slice boundaries and the piece order match the required result. Temporaries are removed before output, leaving the original 114 keys with unchanged names, and the untouched MLP and other tensors pass through the input unmodified with their dtypes preserved. The four shape asserts on layer 0 and the 114-tensor count assert are present and precede the write, satisfying the \"Required checks\" clause, and the output path is the single file `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

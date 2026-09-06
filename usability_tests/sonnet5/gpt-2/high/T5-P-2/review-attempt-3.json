@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T15:59:44+00:00",
+  "finished_at": "2026-09-06T16:00:08+00:00",
+  "wall_clock_s": 23.5,
+  "tokens_in": 2,
+  "tokens_out": 1994,
+  "cost_usd": 0.0624478,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly computes `delta = (B @ A)` per layer/module, transposes it per `fan_in_fan_out=true`, scales by `alpha/r = 2`, adds in float32, and preserves shape/dtype, exactly matching the spec's required transform. All four required checks (12 merges, no `lora_` names, `h.0.attn.c_attn.weight` shape, 160 total tensors) are asserted before writing, and it delegates sharded output to a shared `save_sharded_safetensors(sd, out_dir, MAX_SHARD)` helper with the correct 100 MiB threshold constant.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

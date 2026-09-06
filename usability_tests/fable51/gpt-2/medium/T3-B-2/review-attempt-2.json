@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T12:04:15+00:00",
+  "finished_at": "2026-09-06T12:04:27+00:00",
+  "wall_clock_s": 12.0,
+  "tokens_in": 2,
+  "tokens_out": 730,
+  "cost_usd": 0.24676775,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan deletes exactly the 12 `h.<i>.attn.bias` buffers, casts only the 48 projection matrices to bfloat16 (leaving every other tensor float32 with unchanged values, since the float32 cast is a no-op on float32 input), keeps tensor names unchanged, and writes a sharded safetensors checkpoint under `out/T3` with a 64 MiB shard limit. The required checks are all present as `assert` transforms before writing: the combined \"48 projections are bfloat16\" plus \"everything else is float32\" asserts are equivalent to \"exactly 48 tensors are bfloat16\", and the `h.0.attn.c_attn.weight`, `wte.weight` and 148-count checks are explicit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

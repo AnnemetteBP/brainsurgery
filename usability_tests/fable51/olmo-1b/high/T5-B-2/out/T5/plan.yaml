@@ -1,0 +1,87 @@
+# T5: merge a PEFT LoRA adapter (r=16, alpha=32 -> scale=2, fan_in_fan_out=false)
+# into OLMo-1B-0724-hf q_proj/v_proj weights and write a 512 MiB-sharded checkpoint.
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # --- preflight: adapter and base layout -----------------------------------
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  - assert: { count: { of: 'lora::.*', is: 64 } }
+  # exactly 32 adapter pairs (A and B factors) for q_proj/v_proj in layers 0..15
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_A\.weight'
+        is: 32
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_B\.weight'
+        is: 32
+  - assert:
+      shape:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_A\.weight'
+        is: [16, 2048]
+  - assert:
+      shape:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_B\.weight'
+        is: [2048, 16]
+  - assert: { dtype: { of: 'lora::.*', is: float32 } }
+  # every adapted base tensor exists with the nn.Linear [out, in] layout
+  - assert:
+      count:
+        of: 'base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight'
+        is: 32
+  - assert:
+      shape:
+        of: 'base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight'
+        is: [2048, 2048]
+  - assert:
+      dtype:
+        of: 'base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight'
+        is: float32
+
+  # --- merge: W += scale * (B @ A), scale = lora_alpha / r = 32 / 16 = 2 ------
+  # delta = B @ A  -> [2048, 16] @ [16, 2048] = [2048, 2048], float32 (no transpose,
+  # fan_in_fan_out = false). Intermediate lives on the base alias under a temporary name.
+  - matmul:
+      from_a: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.(q_proj|v_proj)\.lora_B\.weight'
+      from_b: 'lora::base_model.model.model.layers.\1.self_attn.\2.lora_A.weight'
+      to: 'base::merge_delta.layers.\1.self_attn.\2.weight'
+  # exactly 32 deltas were produced, one per adapter pair
+  - assert: { count: { of: 'base::merge_delta\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight', is: 32 } }
+  - assert:
+      shape:
+        of: 'base::merge_delta\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight'
+        is: [2048, 2048]
+  - assert:
+      dtype:
+        of: 'base::merge_delta\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight'
+        is: float32
+  - scale_:
+      target: 'base::merge_delta\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight'
+      by: 2.0
+  - add_:
+      from: 'base::merge_delta\.layers\.(\d+)\.self_attn\.(q_proj|v_proj)\.weight'
+      to: 'base::model.layers.\1.self_attn.\2.weight'
+  # drop the intermediate deltas
+  - delete: { target: 'base::merge_delta\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight' }
+
+  # --- required checks before writing ---------------------------------------
+  # no adapter tensor and no intermediate tensor in the output alias
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert: { not: { exists: 'base::merge_delta.*' } }
+  - assert: { not: { exists: 'base::base_model.*' } }
+  # merged weight keeps its name, shape and dtype
+  - assert: { shape: { of: 'base::model\.layers\.0\.self_attn\.q_proj\.weight', is: [2048, 2048] } }
+  - assert: { dtype: { of: 'base::model\.layers\.0\.self_attn\.q_proj\.weight', is: float32 } }
+  - assert:
+      shape:
+        of: 'base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight'
+        is: [2048, 2048]
+  # the output has exactly 114 tensors
+  - assert: { count: { of: 'base::.*', is: 114 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

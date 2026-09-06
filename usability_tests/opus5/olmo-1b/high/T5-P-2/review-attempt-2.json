@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T12:11:48+00:00",
+  "finished_at": "2026-09-06T12:12:20+00:00",
+  "wall_clock_s": 31.7,
+  "tokens_in": 2,
+  "tokens_out": 2273,
+  "cost_usd": 0.16667649999999998,
+  "verdict": "no",
+  "verdict_text": "NO.\n\nThe merge itself is correct: the adapter prefix mapping, `delta = B @ A` with no transpose under `fan_in_fan_out = false`, `scale = lora_alpha / r = 2`, float32 accumulation, and all four required checks are implemented as specified. The defect is that the entire output side is delegated to `load_checkpoint` and `save_sharded_safetensors` imported from a module `_ckpt` that is not part of the artifact, so nothing here implements or constrains requirement 4 \u2014 shard files, the `model.safetensors.index.json` `weight_map`, and the 512 MiB per-shard tensor-data cap with the two 412 MB embedding tensors placed so no shard exceeds it. As given, the script also cannot run in the stated condition-P environment, where only the packages of `requirements-P.txt` are installed and no such helper module exists, so it fails at import before any of its checks execute. To satisfy the specification the sharding and index-writing logic must be present in the submitted script itself (or the helper must be included as part of the artifact).",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T08:59:02+00:00",
+  "finished_at": "2026-09-06T08:59:20+00:00",
+  "wall_clock_s": 17.9,
+  "tokens_in": 2,
+  "tokens_out": 1156,
+  "cost_usd": 0.26676575,
+  "verdict_text": "NO\n\nThe plan does not implement the \"exactly 48 tensors were merged\" check from Required checks: there is no assertion on the count of MLP tensors matched in ft1, ft2, or of the tv1/tv2 temporaries, and the final `count ... is: 160` cannot detect a short merge because the temporaries are deleted before it runs, so base stays at 160 even if fewer than 48 tensors were copied and added. The step 1 name verification is also incomplete: it only asserts that ft1 and ft2 each have 160 tensors and that the 112 non-MLP base names exist and are equal in both fine-tunes, but never verifies that the 48 MLP names in ft1 and ft2 match the base's, so a fine-tune with a differently named MLP tensor would pass the checks and be silently merged partially. The arithmetic itself (both task vectors taken against the unmodified base, scaled by 0.4, then added) is ordered correctly and the output path is right.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

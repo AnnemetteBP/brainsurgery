@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T07:12:41+00:00",
+  "finished_at": "2026-09-06T07:12:48+00:00",
+  "wall_clock_s": 7.4,
+  "tokens_in": 2,
+  "tokens_out": 388,
+  "cost_usd": 0.11166150000000001,
+  "verdict_text": "YES\n\nThe keep-index construction drops the 64-wide block for head 5 within each of the three 768-wide q/k/v segments of `c_attn.weight` (dim 1) and `c_attn.bias` (dim 0), yielding exactly the column ranges 0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303 in order, and drops the same block from the single 768-row segment of `c_proj.weight` (dim 0), yielding rows 0..319, 384..767. All four required checks are asserted before `save_file`, no other tensors or names are touched, and the output is a single file at `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

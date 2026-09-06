@@ -1,0 +1,13 @@
+{
+  "run_id": "T4-B-2",
+  "agent": "sonnet5",
+  "target": "olmo-1b",
+  "effort": "medium",
+  "test": "T4",
+  "condition": "B",
+  "repeat": 2,
+  "created_at": "2026-09-06T06:08:04+00:00",
+  "repo_commit": "d876c84ad82bb5b4641f880d2e14ec879e60a161",
+  "venv": true,
+  "env_freeze_lines": 70
+}

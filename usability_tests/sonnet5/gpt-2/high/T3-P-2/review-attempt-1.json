@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T06:30:11+00:00",
+  "finished_at": "2026-09-06T06:30:50+00:00",
+  "wall_clock_s": 39.7,
+  "tokens_in": 2,
+  "tokens_out": 3895,
+  "cost_usd": 0.07945479999999999,
+  "verdict_text": "YES\n\nThe script correctly identifies exactly the 48 projection matrices via the anchored regex and casts them with `.float().to(torch.bfloat16)` (equivalent to `.to(bfloat16)` since inputs are already float32, satisfying round-to-nearest-even), leaves every other tensor as float32 via `tensor.float()`, drops exactly the 12 `h.<i>.attn.bias` buffers via `fullmatch`, and preserves all tensor names. It asserts all four required checks (48 bfloat16 tensors, `h.0.attn.c_attn.weight` bfloat16, `wte.weight` float32, 148 total tensors) before delegating to `save_sharded_safetensors` for the sharded output with the given 64 MiB limit, matching the spec's required result and required-checks sections.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

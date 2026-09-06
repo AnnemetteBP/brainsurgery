@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:15:41+00:00",
+  "finished_at": "2026-09-06T16:15:51+00:00",
+  "wall_clock_s": 10.1,
+  "tokens_in": 2,
+  "tokens_out": 632,
+  "cost_usd": 0.1148875,
+  "verdict": "yes",
+  "verdict_text": "YES. The keep index enumerates, per segment, all head blocks except head 5, producing exactly columns `0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303` for the fused `c_attn` weight (dim 1) and bias (dim 0), and rows `0..319, 384..767` for `c_proj.weight` (dim 0), in that order; all other tensors and all names are untouched, and the four required shape/count checks are asserted before writing the single 160-tensor file to `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

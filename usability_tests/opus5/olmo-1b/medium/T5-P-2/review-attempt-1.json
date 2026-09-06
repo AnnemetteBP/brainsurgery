@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T07:50:11+00:00",
+  "finished_at": "2026-09-06T07:50:22+00:00",
+  "wall_clock_s": 10.4,
+  "tokens_in": 2,
+  "tokens_out": 656,
+  "cost_usd": 0.12127249999999999,
+  "verdict_text": "YES\n\nThe name mapping (`base_model.model.` + `model.layers.<i>.<module>`), the scale read from the config (32/16 = 2), the untransposed `B @ A` under `fan_in_fan_out = false`, the float32 accumulation, and all four required checks are present and correct, and the output is written sharded to `out/T5` with a 536,870,912-byte limit. The only part I cannot verify from reading is the `_ckpt` helper's `save_sharded_safetensors` / `load_checkpoint`, whose source is not included in the artifact; the visible logic is consistent with the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

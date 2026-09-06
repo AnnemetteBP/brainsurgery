@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "artifact_sha256": "ac8af64e711652c405ff809a29f0354d71b5d7443fe49c8dc6ee86e8572e3109",
+  "started_at": "2026-09-06T18:15:35+00:00",
+  "finished_at": "2026-09-06T18:15:41+00:00",
+  "wall_clock_s": 6.3,
+  "tokens_in": 2,
+  "tokens_out": 103,
+  "cost_usd": 0.0451768,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the artifact correctly builds keep-index [0..639,768..2047] on the row axis for q/k/v and column axis for o_proj, applies it per layer, checks the required shapes and tensor count before writing, and leaves all other tensors untouched, matching the spec's Required result and Required checks clauses.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

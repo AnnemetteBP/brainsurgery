@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T16:29:09+00:00",
+  "finished_at": "2026-09-06T16:29:19+00:00",
+  "wall_clock_s": 9.5,
+  "tokens_in": 2,
+  "tokens_out": 544,
+  "cost_usd": 0.21691575,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops blocks 2, 5, 8, renumbers the survivors in original order via an index map that cannot collide, leaves the 4 non-block tensors and all tensor values untouched, and asserts before writing that the surviving block indices are exactly {0..8} (which also rules out any block 9, 10, 11) and that the output has exactly 121 tensors, exiting non-zero with no file written otherwise. Output goes to `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

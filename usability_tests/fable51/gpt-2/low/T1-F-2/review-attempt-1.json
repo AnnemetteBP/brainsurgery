@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T08:53:26+00:00",
+  "finished_at": "2026-09-06T08:53:39+00:00",
+  "wall_clock_s": 13.2,
+  "tokens_in": 2,
+  "tokens_out": 764,
+  "cost_usd": 0.23289975000000002,
+  "verdict_text": "YES\n\nThe script removes every `h.2.*`, `h.5.*`, `h.8.*` tensor, maps the survivors in original order to 0..8 (old 3\u21922, 4\u21923, 6\u21924, 7\u21925, 9\u21926, 10\u21927, 11\u21928), leaves the four non-block tensors untouched, and writes a single `out/T1/model.safetensors`. The required checks run before anything is written: the set of block indices must equal exactly {0..8} (which also rules out any remaining 9/10/11 tensor and forces exactly 9 blocks), and the tensor count must be 121. A failed `assert` exits non-zero with no output. The only caveat is that `assert` is stripped under `python -O`, and the behaviour of the external `_ckpt.load_checkpoint` helper cannot be verified from this file, but nothing in the script itself deviates from the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

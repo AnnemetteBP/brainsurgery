@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T11:22:23+00:00",
+  "finished_at": "2026-09-06T11:22:38+00:00",
+  "wall_clock_s": 14.8,
+  "tokens_in": 2,
+  "tokens_out": 941,
+  "cost_usd": 0.23861074999999998,
+  "verdict_text": "YES\n\nThe script verifies key-set equality across all three checkpoints and bit-exact equality of every non-MLP tensor before any merge, aborting via assert if either fails (step 1). Each MLP tensor is merged as `b + 0.4*(f1-b) + 0.4*(f2-b)` with all deltas taken against the untouched base `b` in float32, then cast back to the base dtype (step 2). Non-MLP tensors are copied from the base unchanged with names preserved (step 3), and the merged count is asserted to be 48 and the output to have 160 tensors before saving to `out/T4/model.safetensors` (step 4 and required checks).\n\nMinor caveats, not spec violations: the checks rely on `assert`, which would be stripped under `python -O`, and correctness depends on the unseen `_ckpt.load_checkpoint` helper returning a plain name-to-tensor dict without altering dtypes.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

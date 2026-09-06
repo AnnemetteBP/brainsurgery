@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:00:09+00:00",
+  "finished_at": "2026-09-06T16:00:18+00:00",
+  "wall_clock_s": 8.8,
+  "tokens_in": 2,
+  "tokens_out": 532,
+  "cost_usd": 0.0473528,
+  "verdict": "yes",
+  "verdict_text": "YES. The tensor keep-index logic correctly reproduces the required column/row splits (0..319,384..767 per 768-wide segment for c_attn.weight/bias, and 0..319,384..767 for c_proj.weight rows), preserves all other tensors and names, includes the required pre-write assertions, and writes exactly 160 tensors to `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

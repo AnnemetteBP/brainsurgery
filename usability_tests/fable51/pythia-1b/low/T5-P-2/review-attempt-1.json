@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T09:11:49+00:00",
+  "finished_at": "2026-09-06T09:12:03+00:00",
+  "wall_clock_s": 13.4,
+  "tokens_in": 2,
+  "tokens_out": 797,
+  "cost_usd": 0.24467775,
+  "verdict_text": "NO\n\nThe merge itself is correct (float32 `B @ A`, scale 2, cast back to float16, `fan_in_fan_out` honored) and the four required checks are present. But the entire sharded export required by clause 4 (\"shard files plus an index file `model.safetensors.index.json`... at most 512 MiB of tensor data per shard... single oversized tensors stored alone\") is delegated to `save_sharded_safetensors` from a local `_ckpt` module that is not part of the artifact, as is the input loading via `load_checkpoint`. From reading alone there is no way to confirm that the index file is written, that the 512 MiB limit is measured on tensor bytes excluding headers, that `embed_in.weight` and `embed_out.weight` land in their own shards, or that loading preserves float16 dtypes. The condition also requires a standalone script using only PyTorch and `safetensors`, which importing a private helper module violates.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

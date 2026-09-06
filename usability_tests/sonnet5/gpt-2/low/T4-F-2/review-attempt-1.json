@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T05:06:31+00:00",
+  "finished_at": "2026-09-06T05:06:40+00:00",
+  "wall_clock_s": 9.2,
+  "tokens_in": 2,
+  "tokens_out": 489,
+  "cost_usd": 0.040644799999999995,
+  "verdict_text": "NO\n\nThe mlp_re regex uses `fullmatch(name)` where `name` is the full tensor name like `h.0.mlp.c_fc.weight`, but the pattern only anchors on the `h.(\\d+).(mlp...)` portion without allowing for any prefix/suffix mismatch handling \u2014 actually checking closer, the pattern itself is fine for names exactly matching `h.<i>.mlp...`. The real problem is that the regex requires the tensor name to *equal* `h.<i>.mlp.c_fc.weight` etc. with no anchoring issues, so it correctly identifies the 48 MLP tensors. This is actually correct.\n\nRe-examining: the assumption verification (step 1) only compares tensors outside the MLP set for equality, and separately asserts the key sets match \u2014 both satisfy clause 1. The merge formula matches step 2 exactly, computed in float32 then cast back. Output count and merged count checks satisfy the \"Required checks\" section. All other tensors come from `base` unchanged via `dict(base)`, satisfying step 3. The output path is `out_dir/model.safetensors`, but the spec requires exactly `out/T4/model.safetensors` \u2014 the script takes an arbitrary directory argument defaulting to `out/T4`, which is compliant only if invoked without an argument; this is a latent risk but not itself a violation.\n\nCorrection \u2014 I need to give a definitive answer. On careful reading, the artifact fully satisfies the specification.\n\nYES",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

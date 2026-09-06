@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T16:26:18+00:00",
+  "finished_at": "2026-09-06T16:26:40+00:00",
+  "wall_clock_s": 22.0,
+  "tokens_in": 2,
+  "tokens_out": 1326,
+  "cost_usd": 0.1368585,
+  "verdict": "no",
+  "verdict_text": "NO.\n\nEverything the script itself does is correct \u2014 the two regexes match exactly the 64 projection matrices and the 48 buffers, `tensor.float().to(torch.bfloat16)` matches the required rounding, all other tensors are upcast to float32, names are untouched, 244 \u2212 48 = 196 tensors remain, and all four required checks run before the write.\n\nThe defect is clause 5: the entire sharded-output requirement \u2014 the 268,435,456-byte packing limit, the isolation of `gpt_neox.embed_in.weight` and `embed_out.weight` in their own shards, and the `model.safetensors.index.json` `weight_map` \u2014 is delegated to `save_sharded_safetensors` from an unshown `_ckpt` module, so nothing in the artifact implements or demonstrates it; the same applies to `load_checkpoint`. As presented, the artifact cannot be judged to satisfy clause 5, and `MAX_SHARD` is merely passed through rather than enforced anywhere visible.\n\nA secondary weakness: the \"fail loudly\" checks are bare `assert` statements, which vanish under `python -O`, so the guard is not unconditional.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

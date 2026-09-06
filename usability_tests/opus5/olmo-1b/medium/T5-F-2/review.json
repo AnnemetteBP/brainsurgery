@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "artifact_sha256": "1403be5a301448a3be36cef9201cdc2800acea2b4cfbb5c8de76cd3a94e33689",
+  "started_at": "2026-09-06T18:21:51+00:00",
+  "finished_at": "2026-09-06T18:22:04+00:00",
+  "wall_clock_s": 13.1,
+  "tokens_in": 2,
+  "tokens_out": 777,
+  "cost_usd": 0.13005350000000002,
+  "verdict": "yes",
+  "verdict_text": "YES",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

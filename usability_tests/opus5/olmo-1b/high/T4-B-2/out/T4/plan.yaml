@@ -1,0 +1,113 @@
+# T4: task-vector merge of two fine-tunes of OLMo-1B-0724-hf.
+#
+#   out[X] = base[X] + 0.4 * (ft1[X] - base[X]) + 0.4 * (ft2[X] - base[X])
+#
+# for the 48 MLP tensors X; every other tensor is the base tensor untouched.
+#
+# Ordering hazard: both task vectors are materialised (tv1, tv2) *before*
+# either of them is added back, so each one is taken against the unmodified
+# base, not against a base that the first merge already changed.
+#
+# All edits are made on the `base` alias (temporaries live there too and are
+# deleted again), so the output alias is unambiguous.
+
+inputs:
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors
+
+transforms:
+  # ------------------------------------------------------------------
+  # Step 1: verify the three checkpoints before touching anything.
+  # ------------------------------------------------------------------
+
+  # 1a. Each checkpoint has exactly 114 tensors, 48 of them MLP, 66 not.
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  - assert: { count: { of: 'ft1::.*', is: 114 } }
+  - assert: { count: { of: 'ft2::.*', is: 114 } }
+  - assert: { count: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft1::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft2::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'base::(?!model\.layers\.\d+\.mlp\.).+', is: 66 } }
+  - assert: { count: { of: 'ft1::(?!model\.layers\.\d+\.mlp\.).+', is: 66 } }
+  - assert: { count: { of: 'ft2::(?!model\.layers\.\d+\.mlp\.).+', is: 66 } }
+
+  # 1b. Same tensor *names* (and shapes and dtypes) in all three: every name of
+  #     `base` must resolve to an existing tensor of the same shape/dtype in
+  #     ft1 and ft2. The huge eps makes this a name/shape/dtype check only, the
+  #     values are compared below. With the 114 == 114 == 114 counts of 1a this
+  #     means the three name sets are identical.
+  - assert: { equal: { left: 'base::(.+)', right: 'ft1::\1', eps: 1.0e+30 } }
+  - assert: { equal: { left: 'base::(.+)', right: 'ft2::\1', eps: 1.0e+30 } }
+
+  # 1c. Every tensor outside the 48 MLP tensors is identical in all three
+  #     (exact equality, no eps). Aborts the run if a fine-tune touched
+  #     anything but its MLP tensors.
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' } }
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft2::\g<0>' } }
+  - assert: { equal: { left: 'ft1::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft2::\g<0>' } }
+
+  # 1d. The merge is computed in float32 on the documented MLP shapes.
+  - assert: { dtype: { of: 'base::model\.layers\.\d+\.mlp\..*', is: float32 } }
+  - assert: { dtype: { of: 'ft1::model\.layers\.\d+\.mlp\..*', is: float32 } }
+  - assert: { dtype: { of: 'ft2::model\.layers\.\d+\.mlp\..*', is: float32 } }
+  - assert: { shape: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj)\.weight', is: [8192, 2048] } }
+  - assert: { shape: { of: 'base::model\.layers\.\d+\.mlp\.down_proj\.weight', is: [2048, 8192] } }
+
+  # ------------------------------------------------------------------
+  # Step 2: task vectors, both taken against the *unmodified* base.
+  # ------------------------------------------------------------------
+
+  # tv1 = ft1 - base
+  - copy:
+      from: 'ft1::(model\.layers\.\d+\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::tv1.\1'
+  - subtract_:
+      from: 'base::(model\.layers\.\d+\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::tv1.\1'
+
+  # tv2 = ft2 - base   (base is still untouched here)
+  - copy:
+      from: 'ft2::(model\.layers\.\d+\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::tv2.\1'
+  - subtract_:
+      from: 'base::(model\.layers\.\d+\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::tv2.\1'
+
+  # lambda = 0.4
+  - scale_: { target: 'base::tv1\..*', by: 0.4 }
+  - scale_: { target: 'base::tv2\..*', by: 0.4 }
+
+  # Required check: exactly 48 tensors are about to be merged, from each side.
+  - assert: { count: { of: 'base::tv1\..*', is: 48 } }
+  - assert: { count: { of: 'base::tv2\..*', is: 48 } }
+
+  # base <- base + 0.4*(ft1-base) + 0.4*(ft2-base)
+  - add_: { from: 'base::tv1\.(.+)', to: 'base::\1' }
+  - add_: { from: 'base::tv2\.(.+)', to: 'base::\1' }
+
+  # ------------------------------------------------------------------
+  # Step 3: drop the temporaries and check the result.
+  # ------------------------------------------------------------------
+  - delete: { target: 'base::tv1\..*' }
+  - delete: { target: 'base::tv2\..*' }
+  - assert: { not: { exists: 'base::tv1\..*' } }
+  - assert: { not: { exists: 'base::tv2\..*' } }
+
+  # Required check: the output has exactly 114 tensors, unchanged names.
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  - assert: { count: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'base::(?!model\.layers\.\d+\.mlp\.).+', is: 66 } }
+
+  # The 66 non-MLP tensors are still bit-identical to the base ones (ft1 is
+  # bit-identical to the base there, as asserted in 1c, and is untouched).
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' } }
+
+  # Merged tensors keep their shape and dtype.
+  - assert: { dtype: { of: 'base::model\.layers\.\d+\.mlp\..*', is: float32 } }
+  - assert: { shape: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj)\.weight', is: [8192, 2048] } }
+  - assert: { shape: { of: 'base::model\.layers\.\d+\.mlp\.down_proj\.weight', is: [2048, 8192] } }

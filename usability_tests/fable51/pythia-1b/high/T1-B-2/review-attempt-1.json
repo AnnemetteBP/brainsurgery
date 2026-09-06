@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-06T11:40:15+00:00",
+  "finished_at": "2026-09-06T11:40:33+00:00",
+  "wall_clock_s": 18.4,
+  "tokens_in": 2,
+  "tokens_out": 1411,
+  "cost_usd": 0.28541974999999997,
+  "verdict_text": "I'll check the doc pack for the assert operators the plan relies on, then judge the plan.\n\n\n<invoke name=\"Grep\">\n<invoke name=\"pattern\">^\\s*(count|exists|not)\\b</invoke>\n<invoke name=\"path\">/home/rootkidd/Projects/brainsurgery/usability_tests/fable51/pythia-1b/high/T1-B-2/docpack/help.txt</invoke>\n<invoke name=\"output_mode\">content</invoke>\n<invoke name=\"-n\">true</invoke>\n</invoke>\n<invoke name=\"Grep\">\n<invoke name=\"pattern\">\\\\1</invoke>\n<invoke name=\"path\">/home/rootkidd/Projects/brainsurgery/usability_tests/fable51/pythia-1b/high/T1-B-2/docpack/help.txt</invoke>\n<invoke name=\"output_mode\">content</invoke>\n<invoke name=\"-n\">true</invoke>\n</invoke>",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

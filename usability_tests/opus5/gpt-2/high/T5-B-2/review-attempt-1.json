@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T08:20:17+00:00",
+  "finished_at": "2026-09-06T08:20:42+00:00",
+  "wall_clock_s": 24.4,
+  "tokens_in": 2,
+  "tokens_out": 1783,
+  "cost_usd": 0.1495335,
+  "verdict_text": "I'll read the doc pack in this sandbox to check the semantics the plan relies on (output namespace behaviour and shard-size parsing).\n\n*[Tool: Bash]*",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

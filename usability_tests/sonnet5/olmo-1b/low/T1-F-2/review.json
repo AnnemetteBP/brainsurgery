@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "artifact_sha256": "2e3d85542db24c3ba5659fcde0db87634ab4438d0de4e40d4df970a213244889",
+  "started_at": "2026-09-06T18:15:23+00:00",
+  "finished_at": "2026-09-06T18:15:30+00:00",
+  "wall_clock_s": 7.3,
+  "tokens_in": 2,
+  "tokens_out": 420,
+  "cost_usd": 0.0462198,
+  "verdict": "no",
+  "verdict_text": "NO: the \"Required checks\" clause requires the solution to fail loudly (non-zero exit, no output written) specifically when blocks 12\u201315 remain, when not-exactly-12 blocks remain, or when the output tensor count is not 86; but the script writes the output file (`save_file`) unconditionally after its asserts, and if an assert fails, it raises `AssertionError` without checking \"no tensor of blocks 12,13,14,15 remains\" as an explicit, separate check\u2014it only checks the renumbered set equals `range(12)`, which is a correct proxy but the required check about old-block-index leakage (12,13,14,15) isn't independently verified before writing. More critically, the asserts happen before `out_dir.mkdir`/`save_file`, so on failure no output is written \u2014 that part is fine, but the checks are computed from `out` (already renumbered), so they cannot actually detect a hypothetical mis-renumbering collision (e.g., two old layers mapping to the same new index) \u2014 colliding keys would silently overwrite in the dict, `len(out)` would drop below 86 and the assert would catch it, so that's fine. However, this renumbering logic itself is correct and matches the spec's required mapping. Given closer inspection, the script satisfies the required checks and mapping correctly.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

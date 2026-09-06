@@ -1,0 +1,50 @@
+inputs:
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # --- step 1: verify the three checkpoints ---------------------------------
+  # same number of tensors in all three
+  - assert: { count: { of: 'base::.+', is: 114 } }
+  - assert: { count: { of: 'ft1::.+', is: 114 } }
+  - assert: { count: { of: 'ft2::.+', is: 114 } }
+  # each has exactly the 48 MLP tensors
+  - assert: { count: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft1::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft2::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  # every tensor outside the 48 MLP tensors exists under the same name in the
+  # fine-tunes and is bit-identical to the base (66 tensors each)
+  - assert: { count: { of: 'base::(?!model\.layers\.\d+\.mlp\.).+', is: 66 } }
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>', eps: 0.0 } }
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft2::\g<0>', eps: 0.0 } }
+  # the MLP tensors exist under the same names in both fine-tunes
+  - assert: { count: { of: 'ft1::model\.layers\.\d+\.mlp\..+', is: 48 } }
+  - assert: { count: { of: 'ft2::model\.layers\.\d+\.mlp\..+', is: 48 } }
+
+  # --- step 2: task vector of ft1, taken against the untouched base ---------
+  - copy: { from: 'ft1::(model\.layers\.\d+\.mlp\..+)', to: 'base::tv1.\1' }
+  - assert: { count: { of: 'base::tv1\..+', is: 48 } }
+  - subtract_: { from: 'base::(model\.layers\.\d+\.mlp\..+)', to: 'base::tv1.\1' }
+  - scale_: { target: 'base::tv1\..+', by: 0.4 }
+
+  # --- step 2b: task vector of ft2, also against the untouched base ---------
+  - copy: { from: 'ft2::(model\.layers\.\d+\.mlp\..+)', to: 'base::tv2.\1' }
+  - assert: { count: { of: 'base::tv2\..+', is: 48 } }
+  - subtract_: { from: 'base::(model\.layers\.\d+\.mlp\..+)', to: 'base::tv2.\1' }
+  - scale_: { target: 'base::tv2\..+', by: 0.4 }
+
+  # --- step 2c: only now add both scaled task vectors to the base ----------
+  - add_: { from: 'base::tv1\.(model\.layers\.\d+\.mlp\..+)', to: 'base::\1' }
+  - add_: { from: 'base::tv2\.(model\.layers\.\d+\.mlp\..+)', to: 'base::\1' }
+
+  # --- cleanup and final checks -------------------------------------------
+  - delete: { target: 'base::tv1\..+' }
+  - delete: { target: 'base::tv2\..+' }
+  - assert: { count: { of: 'base::.+', is: 114 } }
+  - assert: { count: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { dtype: { of: 'base::.+', is: float32 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

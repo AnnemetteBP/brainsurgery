@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "artifact_sha256": "39971c56f8f1ba950debcebf4fb42e1685eb2910891739a543fbb747ba8a390c",
+  "started_at": "2026-09-06T18:20:30+00:00",
+  "finished_at": "2026-09-06T18:20:57+00:00",
+  "wall_clock_s": 26.6,
+  "tokens_in": 2,
+  "tokens_out": 1854,
+  "cost_usd": 0.1448495,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script performs the step-1 verification first (identical key sets across all three checkpoints, and `torch.equal` on every non-MLP tensor against both fine-tunes) and aborts via `AssertionError` if it fails; the regex `fullmatch` selects exactly the 48 `gate_proj`/`up_proj`/`down_proj` weights for layers 0..15; each task vector is taken against the unmodified `base` (the result is written to a separate `out` dict, never back into `base`), so the ordering hazard is avoided; arithmetic is done in float32 and cast back to the input dtype (also float32); all other tensors are copied unchanged from the base with unchanged names; and both the `merged == 48` and `len(out) == 114` checks are enforced before writing `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

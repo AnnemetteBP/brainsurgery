@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:00:12+00:00",
+  "finished_at": "2026-09-06T16:00:22+00:00",
+  "wall_clock_s": 10.5,
+  "tokens_in": 2,
+  "tokens_out": 613,
+  "cost_usd": 0.0477298,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly builds keep-index sets per segment (q/k/v of width 768, block 64) and per c_proj (single segment), dropping head 5 in each, producing shapes [768,2112], [2112], [704,768] with the exact same column/row order as required, applies to all 12 layers, leaves other tensors untouched, asserts the required checks, and writes exactly 160 tensors to the output file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

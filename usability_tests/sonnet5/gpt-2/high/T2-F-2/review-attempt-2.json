@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T15:42:59+00:00",
+  "finished_at": "2026-09-06T15:43:14+00:00",
+  "wall_clock_s": 15.5,
+  "tokens_in": 2,
+  "tokens_out": 1256,
+  "cost_usd": 0.0547118,
+  "verdict": "yes",
+  "verdict_text": "YES. The script's `keep_index` builds exactly the required column/row order (heads 0\u20134 then 6\u201311 within each 768-wide segment) for `c_attn.weight` (dim 1, 3 segments), `c_attn.bias` (dim 0, 3 segments), and `c_proj.weight` (dim 0, 1 segment), matching the specified ranges `0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303` and `0..319, 384..767`. It leaves `c_proj.bias`, `attn.bias`, and all non-attention tensors untouched, preserves tensor names, asserts all four required checks before writing, and writes a single `model.safetensors` with 160 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

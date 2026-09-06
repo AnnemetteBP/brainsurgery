@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T11:00:55+00:00",
+  "finished_at": "2026-09-06T11:01:05+00:00",
+  "wall_clock_s": 10.1,
+  "tokens_in": 2,
+  "tokens_out": 480,
+  "cost_usd": 0.23002875,
+  "verdict_text": "YES\n\nThe script builds the keep index for one 2048-wide segment of 16 blocks of 128, skipping head 5, which yields rows 0..639 and 768..2047 in order. It applies that on dim 0 for q, k, v and on dim 1 for o_proj across all 16 layers, leaves every other tensor untouched, keeps names and dtypes, asserts the five required shape and count checks before writing, and saves a single model.safetensors with 114 tensors to out/T2. The only unverified piece is the helper load_checkpoint from the sibling _ckpt module, which is assumed to read the sharded input into a name-to-tensor dict.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T09:01:35+00:00",
+  "finished_at": "2026-09-06T09:01:47+00:00",
+  "wall_clock_s": 12.6,
+  "tokens_in": 2,
+  "tokens_out": 636,
+  "cost_usd": 0.23016075,
+  "verdict_text": "YES\n\nThe dtype targeting, the four required assertions, and the key preservation all match the specification. The only part not visible is the sharding and index writing, which is delegated to `save_sharded_safetensors` from the local `_ckpt` helper with the 256 MiB limit passed in. Judged on the script alone, nothing violates a specification clause, provided that helper honours the shard size, stores oversize tensors alone, and writes `model.safetensors.index.json`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

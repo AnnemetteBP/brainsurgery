@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T11:46:09+00:00",
+  "finished_at": "2026-09-06T11:46:37+00:00",
+  "wall_clock_s": 27.6,
+  "tokens_in": 2,
+  "tokens_out": 1968,
+  "cost_usd": 0.32784975,
+  "verdict_text": "NO\n\nThe plan never asserts that exactly 64 tensors were merged, which the \"Required checks\" section makes mandatory. The closing `count` of 244 on `base` cannot serve that purpose: the base starts at 244, the temporary `.tv1`/`.tv2` tensors are deleted before the count, so 244 holds even if the MLP patterns matched 0 or 30 tensors in `ft1` or `ft2`. There is also no assert that `ft1`/`ft2` contain the 64 MLP names (the equality asserts cover only the 180 non-MLP tensors, and the `ft1::.*` counts do not pin the remaining 64 to the MLP set), so a fine-tune missing MLP tensors would silently merge fewer. The arithmetic itself is correct: both task vectors are taken against the base before either is added, computed in float32, scaled by 0.4, added, and cast back to float16, and non-MLP tensors pass through from base unchanged. The step-1 verification of non-MLP equality against both fine-tunes is present, assuming the `\\g<0>` whole-match backreference is accepted by the `equal` operator.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

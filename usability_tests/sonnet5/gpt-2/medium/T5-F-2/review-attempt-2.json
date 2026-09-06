@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:01:58+00:00",
+  "finished_at": "2026-09-06T16:02:06+00:00",
+  "wall_clock_s": 7.4,
+  "tokens_in": 2,
+  "tokens_out": 339,
+  "cost_usd": 0.0459468,
+  "verdict": "no",
+  "verdict_text": "NO. `assert sd[\"h.0.attn.c_attn.weight\"].shape == (768, 2304)` compares a torch.Size to a tuple, which is fine in Python, but the real issue is dtype handling: `load_checkpoint` may load tensors already as their native dtype and `.to(sd[key].dtype)` correctly preserves float32, so that's not the bug. The actual violation is that `merged` is asserted `== 12` and checks run only after the loop completes for all 12 layers regardless of whether adapter keys were actually missing\u2014if `adapter_model.safetensors` contained a different count, `load_file`/dict indexing with `f\"{prefix}.lora_A.weight\"` would KeyError before reaching the assert, so the \"fail loudly\" checks are effectively dead code that can never fire for the \"exactly 12 pairs\" condition since it's hardcoded by the loop range rather than derived from the actual adapter contents, violating the \"Required checks\" clause that the count of found/merged pairs be verified against the actual input.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

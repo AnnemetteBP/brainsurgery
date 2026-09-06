@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T08:55:24+00:00",
+  "finished_at": "2026-09-06T08:55:38+00:00",
+  "wall_clock_s": 13.7,
+  "tokens_in": 2,
+  "tokens_out": 593,
+  "cost_usd": 0.22249475,
+  "verdict_text": "YES\n\nThe script casts exactly the 48 projection matrices matched by an anchored full-match regex, drops only the 12 `h.<i>.attn.bias` buffers, leaves every other tensor float32 with unchanged values and unchanged names, asserts all four required checks before writing, and writes to `out/T3` with a 67,108,864-byte shard budget. Correctness of the sharded layout and the index file name depends on the imported `save_sharded_safetensors` helper in `_ckpt`, which is not shown, so that part cannot be verified from this artifact alone.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

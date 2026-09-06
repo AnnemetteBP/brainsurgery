@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "artifact_sha256": "2fd5493f92201b4bd4eeafbe2f09248e3e2ad15df2598636a1af3d3e677a1a02",
+  "started_at": "2026-09-06T18:14:30+00:00",
+  "finished_at": "2026-09-06T18:14:45+00:00",
+  "wall_clock_s": 14.6,
+  "tokens_in": 2,
+  "tokens_out": 956,
+  "cost_usd": 0.0531228,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script matches names exactly (48 projection matrices via regex, 12 `attn.bias` buffers dropped, no other biases touched), casts matrices to bfloat16 and upcasts/preserves everything else as float32 with unchanged values, enforces the four required assertions before writing, and shards tensors in original order with the correct oversized-tensor-alone rule and index file, yielding 148 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

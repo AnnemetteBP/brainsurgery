@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T16:48:10+00:00",
+  "finished_at": "2026-09-06T16:48:41+00:00",
+  "wall_clock_s": 31.9,
+  "tokens_in": 2,
+  "tokens_out": 3099,
+  "cost_usd": 0.07234080000000001,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script correctly drops tensors for blocks {2, 5, 8}, renumbers the surviving blocks via `kept = [i for i in range(12) if i not in DROP]` and `enumerate(kept)`, which reproduces exactly the spec's mapping (9\u21926, 10\u21927, 11\u21928, etc.), leaves the 4 non-block tensors untouched, and asserts `layers == set(range(9))` and `len(out) == 121` before writing output. These two asserts jointly guarantee the required checks: any stray block-9/10/11 tag, a missing block, or a renumbering collision would violate one of them and abort before `save_file` runs, satisfying \"fail loudly, no output written.\" Tensor count math (156 block tensors \u2212 39 for 3 dropped blocks + 4 non-block = 121) matches the spec's required output size.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "86c4df1bf481a3ef792ee9229bb90618bb7950a8c1fe8610059fe3411ee71f43"
+}

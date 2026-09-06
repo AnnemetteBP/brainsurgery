@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T15:43:45+00:00",
+  "finished_at": "2026-09-06T15:43:54+00:00",
+  "wall_clock_s": 9.0,
+  "tokens_in": 2,
+  "tokens_out": 598,
+  "cost_usd": 0.0464088,
+  "verdict": "yes",
+  "verdict_text": "YES. The script verifies key-set equality across all three checkpoints and bit-exact equality of every non-MLP tensor (satisfying step 1's precondition check), computes the merge with the exact required formula in float32 for the 48 MLP tensors, copies all other tensors unchanged from base, and asserts merged == 48 and len(out) == 160 before writing a single safetensors file \u2014 matching steps 2\u20134 and the required checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T08:23:34+00:00",
+  "finished_at": "2026-09-06T08:23:54+00:00",
+  "wall_clock_s": 19.6,
+  "tokens_in": 2,
+  "tokens_out": 1415,
+  "cost_usd": 0.1359995,
+  "verdict_text": "YES\n\nThe script drops blocks 2, 6, 10, 14, builds the renumbering from the surviving indices in original order (0\u21920, 1\u21921, 3\u21922, \u2026 15\u219211), copies the two non-block tensors untouched, and writes into a fresh dict so no rename can overwrite a survivor. The `fullmatch` on `model\\.layers\\.(\\d+)\\.(.+)` preserves the remainder of each name, and values/shapes/dtypes are passed through unchanged. Both assertions (index set exactly `0..11`, which also rules out any block 12\u201315, and 86 tensors) run before `save_file`, so a failure exits non-zero with no output written, and the file lands at `out/T1/model.safetensors`.\n\nOne caveat that does not violate a clause: the checks are `assert` statements, so they would be stripped if the script were ever run under `python -O`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

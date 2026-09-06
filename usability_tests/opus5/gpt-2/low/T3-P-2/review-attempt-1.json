@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T07:12:48+00:00",
+  "finished_at": "2026-09-06T07:13:04+00:00",
+  "wall_clock_s": 16.2,
+  "tokens_in": 2,
+  "tokens_out": 1046,
+  "cost_usd": 0.1239205,
+  "verdict_text": "YES\n\nThe visible logic matches the specification: `matrix_re.fullmatch` targets exactly the 48 projection matrices (`c_attn/c_proj/c_fc/c_proj` weights per layer) and nothing else, so embeddings, norms and biases are untouched; the 12 `h.<i>.attn.bias` buffers are skipped via `fullmatch` on the buffer pattern, which cannot collide with `mlp.c_fc` or the linear biases; names are unchanged; the cast is `.to(torch.bfloat16)` (round-to-nearest-even), and everything else stays float32 with unchanged values since the input is already float32. All four required checks are asserted before writing.\n\nOne caveat, not a violation I can confirm: clause 5 (64 MiB shard cap, `wte.weight` alone in its own shard, `model.safetensors.index.json` weight_map) is entirely delegated to `save_sharded_safetensors` in the unshown `_ckpt` module, so from reading this file alone the sharded layout cannot be verified.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

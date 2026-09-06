@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T16:57:31+00:00",
+  "finished_at": "2026-09-06T16:57:42+00:00",
+  "wall_clock_s": 10.6,
+  "tokens_in": 2,
+  "tokens_out": 599,
+  "cost_usd": 0.22356074999999997,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops every `h.2.`, `h.5.`, `h.8.` tensor, maps the surviving old indices 0,1,3,4,6,7,9,10,11 to 0..8 in order via `enumerate(kept)`, and leaves the rest of each name and all tensor data untouched, so no collisions are possible since it writes into a fresh dict. Non-block tensors pass through unchanged. Before writing, it asserts the surviving block index set is exactly {0..8} (which also rules out any remaining block 9, 10 or 11 and enforces exactly 9 blocks) and that the total tensor count is 121; an assertion failure exits non-zero before `save_file`, so no output is written. The output goes to `out/T1/model.safetensors` as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "86c4df1bf481a3ef792ee9229bb90618bb7950a8c1fe8610059fe3411ee71f43"
+}

@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:25:33+00:00",
+  "finished_at": "2026-09-06T16:25:46+00:00",
+  "wall_clock_s": 12.6,
+  "tokens_in": 2,
+  "tokens_out": 786,
+  "cost_usd": 0.1226195,
+  "verdict": "no",
+  "verdict_text": "NO \u2014 the merge arithmetic (scale = alpha/r = 2, `B @ A` untransposed since `fan_in_fan_out = false`, accumulated in float32 and cast back to float16) and the four required checks are all correct, but the artifact does not implement the output requirement itself: clause 4 (shard files, `model.safetensors.index.json` with a complete `weight_map`, and the 512 MiB per-shard limit with oversized tensors alone in their own shard) is entirely delegated to an unshown `_ckpt.save_sharded_safetensors`, as is checkpoint loading via `_ckpt.load_checkpoint`. Nothing in the submitted script writes an index, enforces the byte budget, or handles the two 206 MB embedding tensors, so conformance to clause 4 cannot be established from the artifact. It is also outside the stated form of the deliverable \u2014 a standalone script using only PyTorch and `safetensors` \u2014 since it depends on a local module that is not part of it.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

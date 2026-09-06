@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "artifact_sha256": "2fd5493f92201b4bd4eeafbe2f09248e3e2ad15df2598636a1af3d3e677a1a02",
+  "started_at": "2026-09-06T18:19:51+00:00",
+  "finished_at": "2026-09-06T18:20:07+00:00",
+  "wall_clock_s": 16.4,
+  "tokens_in": 2,
+  "tokens_out": 1093,
+  "cost_usd": 0.13143149999999998,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops exactly the 12 `h.<i>.attn.bias` buffers, casts exactly the 48 projection matrices with `.to(torch.bfloat16)`, keeps all remaining tensors float32 with unchanged values, preserves names, enforces all four required checks with asserts before writing, and writes a greedy in-order sharded layout where no shard's tensor data exceeds 67,108,864 bytes (the oversized `wte.weight` ends up alone in its own shard regardless of its position in the iteration order) plus an index whose `weight_map` covers all 148 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

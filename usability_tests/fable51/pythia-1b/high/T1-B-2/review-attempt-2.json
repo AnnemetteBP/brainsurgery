@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-06T12:06:30+00:00",
+  "finished_at": "2026-09-06T12:06:43+00:00",
+  "wall_clock_s": 12.8,
+  "tokens_in": 2,
+  "tokens_out": 763,
+  "cost_usd": 0.26552375,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan deletes all 60 tensors of blocks 2, 6, 10, 14, then shifts survivors in ascending order so every destination index is already free (2 after delete, 3 after moving 3\u21922, and so on), producing the exact mapping in clause 2 with names, values, shapes and dtypes otherwise untouched. Non-block tensors are never matched. The three required checks are implemented literally as asserts (no block 12\u201315 remains, exactly 12 `query_key_value.weight` tensors, exactly 184 tensors total) and the output path is `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

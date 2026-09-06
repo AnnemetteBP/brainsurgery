@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T2.yaml",
+  "started_at": "2026-09-06T16:17:10+00:00",
+  "finished_at": "2026-09-06T16:18:06+00:00",
+  "wall_clock_s": 55.8,
+  "tokens_in": 2,
+  "tokens_out": 4335,
+  "cost_usd": 0.2797435,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan slices head 5 at the right boundaries \u2014 rows `0:640` + `768:2048` concatenated on dim 0 for `q_proj`/`k_proj`/`v_proj` (giving `[1920, 2048]`), and columns `[:, 0:640]` + `[:, 768:2048]` concatenated on dim 1 for `o_proj` (giving `[2048, 1920]`) \u2014 for all 16 layers, in the order the spec requires. Originals are deleted only after the slices are copied out and are rebuilt under their original names, the scratch tensors are removed before the count check, and no other tensor (embeddings, lm_head, MLP matrices) is touched, so the key set and dtypes are preserved. All five required checks are present as `assert` transforms ahead of the write, and the output goes to `out/T2/model.safetensors` as a single file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "b3fee87112d71bf28392d370ca7e3463f930ad072f40861f04d7c2cd48655c86"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "artifact_sha256": "290fb5d27c5146e7ca4ba58700f2848f1be69af03d5dfc0f099fe8daed8118df",
+  "started_at": "2026-09-06T18:20:22+00:00",
+  "finished_at": "2026-09-06T18:20:52+00:00",
+  "wall_clock_s": 30.1,
+  "tokens_in": 2,
+  "tokens_out": 2165,
+  "cost_usd": 0.1618975,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script loads the sharded input, casts exactly the 112 projection matrices matched by an anchored `fullmatch` regex to bfloat16 via `.to(torch.bfloat16)` (round-to-nearest-even), leaves every other tensor as float32 with unchanged values, deletes nothing (`buffer_re` contains `(?!)`, which never matches, so the skip branch is dead but harmless), and preserves all names. All four required checks run as asserts before any file is written. The greedy packer flushes whenever adding a tensor would exceed 268,435,456 bytes of tensor data, so every shard stays within 256 MiB and each 412 MB embedding tensor ends up alone in its own shard, and the index file's `weight_map` covers all 114 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

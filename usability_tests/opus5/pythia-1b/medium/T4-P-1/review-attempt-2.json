@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:26:45+00:00",
+  "finished_at": "2026-09-06T16:26:54+00:00",
+  "wall_clock_s": 9.0,
+  "tokens_in": 2,
+  "tokens_out": 602,
+  "cost_usd": 0.1125215,
+  "verdict": "no",
+  "verdict_text": "NO. The merge applies the second task vector against the already-merged tensor rather than against the unmodified base: `tmp = b + \u03bb(f1-b)` then `out = tmp + \u03bb(f2-tmp)`, which expands to `0.36\u00b7b + 0.24\u00b7f1 + 0.40\u00b7f2` instead of the required `0.2\u00b7b + 0.4\u00b7f1 + 0.4\u00b7f2`. This violates Required result clause 2 (`out[X] = base[X] + lambda*(ft1[X]-base[X]) + lambda*(ft2[X]-base[X])`) and is precisely the ordering hazard the specification calls out; the resulting f1 coefficient is off by 0.16, far beyond the 1e-3 relative Frobenius tolerance. The verification, count and output-size checks are otherwise correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

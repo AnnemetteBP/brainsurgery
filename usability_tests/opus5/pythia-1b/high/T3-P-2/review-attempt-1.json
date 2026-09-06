@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T08:39:32+00:00",
+  "finished_at": "2026-09-06T08:40:06+00:00",
+  "wall_clock_s": 33.8,
+  "tokens_in": 2,
+  "tokens_out": 2713,
+  "cost_usd": 0.17312249999999998,
+  "verdict_text": "YES\n\nThe selection, casting, deletion, and check logic all match the specification: `matrix_re` full-matches exactly the four projection weights per layer for the bfloat16 cast, `buffer_re` full-matches exactly the three buffers per layer (and, being anchored, does not catch `attention.query_key_value.bias` or `attention.dense.bias`, which correctly stay as parameters and get upcast to float32), names are preserved, 244 \u2212 48 = 196 tensors remain, and all four required checks are asserted before `save_sharded_safetensors` is called with the 268,435,456-byte limit.\n\nOne caveat on the basis of judgment: clause 5 (shard layout, `model.safetensors.index.json` `weight_map`, and the rule that `gpt_neox.embed_in.weight` / `embed_out.weight` \u2014 412 MB each once in float32 \u2014 must each occupy a shard alone) is entirely delegated to `_ckpt.save_sharded_safetensors`, which is not part of the artifact shown, so that clause cannot be verified from this text.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

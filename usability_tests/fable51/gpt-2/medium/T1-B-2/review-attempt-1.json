@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T1.yaml",
+  "started_at": "2026-09-06T11:56:57+00:00",
+  "finished_at": "2026-09-06T11:57:09+00:00",
+  "wall_clock_s": 12.4,
+  "tokens_in": 2,
+  "tokens_out": 752,
+  "cost_usd": 0.23574475,
+  "verdict_text": "YES\n\nThe plan deletes exactly the 39 tensors of blocks 2, 5 and 8, then renumbers the survivors in ascending order (3\u21922, 4\u21923, 6\u21924, 7\u21925, 9\u21926, 10\u21927, 11\u21928), which is collision-free because each destination index is either freshly deleted or was vacated by the preceding move. Non-block tensors are untouched, all three required checks are expressed as assert transforms that fail before output is written, and the output path is out/T1/model.safetensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

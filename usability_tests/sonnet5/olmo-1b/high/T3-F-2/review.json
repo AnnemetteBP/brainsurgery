@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "artifact_sha256": "290fb5d27c5146e7ca4ba58700f2848f1be69af03d5dfc0f099fe8daed8118df",
+  "started_at": "2026-09-06T18:14:58+00:00",
+  "finished_at": "2026-09-06T18:16:03+00:00",
+  "wall_clock_s": 65.1,
+  "tokens_in": 2,
+  "tokens_out": 6020,
+  "cost_usd": 0.10530679999999999,
+  "verdict": "yes",
+  "verdict_text": "YES. The script casts exactly the 112 listed projection-matrix names to bfloat16 via `.to(torch.bfloat16)`, leaves all other tensors as unchanged float32 (embed_tokens and lm_head included), preserves all 114 names, and asserts the four required checks before writing. The `buffer_re` for buffer removal is effectively a no-op (the `(?!)` empty-lookahead can never match), but since the input checkpoint has no buffers and requirement 3 says nothing should be deleted, this has no observable effect and satisfies the spec for this input. The sharder packs tensors in original order under the 256 MiB (268,435,456-byte) cap and isolates any oversized tensor (embed_tokens/lm_head) into its own shard regardless of position, correctly writing a `weight_map` covering all 114 tensors, matching the required sharded layout.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

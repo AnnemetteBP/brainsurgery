@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T11:25:12+00:00",
+  "finished_at": "2026-09-06T11:25:34+00:00",
+  "wall_clock_s": 21.5,
+  "tokens_in": 2,
+  "tokens_out": 1612,
+  "cost_usd": 0.27489874999999997,
+  "verdict_text": "YES\n\nThe script drops blocks 2, 6, 10, 14, maps the survivors to 0..11 in exactly the order the specification lists, builds a fresh dict so no rename can collide, passes the two non-block tensors through untouched, and writes a single `out/T1/model.safetensors`. Both assertions run before any directory is created or file written, so a failure exits non-zero with no output. The check that the surviving index set equals 0..11 implies no block 12..15 remains and that exactly 12 blocks exist, and together with the 86-tensor count it matches the required checks.\n\nTwo things to be aware of, neither a spec violation:\n\n- The script imports `load_checkpoint` from a sibling `_ckpt` module, so correctness of shard loading depends on that helper, which is not shown.\n- The \"exactly 12 blocks\" check counts distinct indices rather than 12 `q_proj` tensors, but combined with the 86-tensor assert this is equivalent given 7 tensors per block.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

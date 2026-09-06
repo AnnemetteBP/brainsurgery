@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T16:55:37+00:00",
+  "finished_at": "2026-09-06T16:55:52+00:00",
+  "wall_clock_s": 14.3,
+  "tokens_in": 2,
+  "tokens_out": 1049,
+  "cost_usd": 0.1309925,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script drops blocks 2, 6, 10, 14, maps the survivors in original order to 0..11 (0\u21920, 1\u21921, 3\u21922, \u2026, 15\u219211) while preserving the rest of each name and the tensor objects themselves, leaves the four non-block tensors untouched, and builds a fresh dict so no rename can overwrite a survivor. Both assertions (layer index set exactly `{0..11}`, which also excludes any block 12\u201315, and total tensor count 184) run before `save_file`, so a failure exits non-zero with no output written to `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "445483f5b51837497d7a08eb024b2a58686278532f4e520bfcee7541bc7697c1"
+}

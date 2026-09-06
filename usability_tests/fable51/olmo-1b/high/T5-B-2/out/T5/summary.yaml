@@ -1,0 +1,102 @@
+transforms:
+- assert:
+    count:
+      of: base::.*
+      is: 114
+- assert:
+    count:
+      of: lora::.*
+      is: 64
+- assert:
+    count:
+      of: lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_A\.weight
+      is: 32
+- assert:
+    count:
+      of: lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_B\.weight
+      is: 32
+- assert:
+    shape:
+      of: lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_A\.weight
+      is:
+      - 16
+      - 2048
+- assert:
+    shape:
+      of: lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_B\.weight
+      is:
+      - 2048
+      - 16
+- assert:
+    dtype:
+      of: lora::.*
+      is: float32
+- assert:
+    count:
+      of: base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight
+      is: 32
+- assert:
+    shape:
+      of: base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight
+      is:
+      - 2048
+      - 2048
+- assert:
+    dtype:
+      of: base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight
+      is: float32
+- matmul:
+    from_a: lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.(q_proj|v_proj)\.lora_B\.weight
+    from_b: lora::base_model.model.model.layers.\1.self_attn.\2.lora_A.weight
+    to: base::merge_delta.layers.\1.self_attn.\2.weight
+- assert:
+    count:
+      of: base::merge_delta\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight
+      is: 32
+- assert:
+    shape:
+      of: base::merge_delta\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight
+      is:
+      - 2048
+      - 2048
+- assert:
+    dtype:
+      of: base::merge_delta\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight
+      is: float32
+- scale_:
+    target: base::merge_delta\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight
+    by: 2.0
+- add_:
+    from: base::merge_delta\.layers\.(\d+)\.self_attn\.(q_proj|v_proj)\.weight
+    to: base::model.layers.\1.self_attn.\2.weight
+- delete:
+    target: base::merge_delta\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight
+- assert:
+    not:
+      exists: base::.*lora_.*
+- assert:
+    not:
+      exists: base::merge_delta.*
+- assert:
+    not:
+      exists: base::base_model.*
+- assert:
+    shape:
+      of: base::model\.layers\.0\.self_attn\.q_proj\.weight
+      is:
+      - 2048
+      - 2048
+- assert:
+    dtype:
+      of: base::model\.layers\.0\.self_attn\.q_proj\.weight
+      is: float32
+- assert:
+    shape:
+      of: base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight
+      is:
+      - 2048
+      - 2048
+- assert:
+    count:
+      of: base::.*
+      is: 114

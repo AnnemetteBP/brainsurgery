@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T08:51:16+00:00",
+  "finished_at": "2026-09-06T08:52:35+00:00",
+  "wall_clock_s": 78.9,
+  "tokens_in": 4,
+  "tokens_out": 5976,
+  "cost_usd": 0.38105900000000004,
+  "verdict_text": "NO\n\nThe plan omits one of the three mandatory \"Required checks\": there is no assert that exactly 64 tensors were merged (no `count` with `is: 64` on the MLP pattern or on the `.tv1`/`.tv2` scratch tensors), so a regex that silently matched fewer or more MLP tensors would produce a wrong merge without failing the run \u2014 this violates the \"Required checks\" clause, second bullet. The step-1 verification is also incomplete relative to clause 1: it counts only `ft1` and `ft2` at 244 and never establishes the base's own tensor count/name set before touching anything (the `count is 244` on `base::` appears only at the end, after the merge), so name-set equality across all three checkpoints is only inferred indirectly from the pairwise `equal` asserts and from later transforms erroring on missing keys. The arithmetic itself is correct: both task vectors are formed as `0.4 * (ftN - base)` against the unmodified base before either is added, the accumulation is done in float32, and the MLP tensors are cast back to float16 with the scratch tensors deleted before output. The non-MLP identity check via the negative-lookahead regex against `ft1` and `ft2` correctly covers the 180 shared tensors.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

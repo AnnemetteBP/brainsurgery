@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T1.yaml",
+  "started_at": "2026-09-06T16:20:14+00:00",
+  "finished_at": "2026-09-06T16:20:34+00:00",
+  "wall_clock_s": 19.1,
+  "tokens_in": 2,
+  "tokens_out": 1370,
+  "cost_usd": 0.1361775,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan drops the 28 tensors of blocks 2, 6, 10, 14 with a single anchored pattern, then renumbers survivors in ascending destination order (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211), so every destination index is already vacated by a prior delete or move \u2014 no collisions and no accidental match of two-digit indices by the single-digit patterns. The three required checks are present as `assert` transforms before the output (no blocks 12\u201315, exactly 12 q_proj matches, exactly 86 tensors total), and the result goes to the single file `out/T1/model.safetensors` with values, shapes and dtypes untouched.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "ac8d878c4268e6d53726e6c963cc5e9aa04c9af2a392ccb8fb6c4f5d6719b099"
+}

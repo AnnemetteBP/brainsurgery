@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T5-defective.py",
+  "started_at": "2026-09-06T16:20:03+00:00",
+  "finished_at": "2026-09-06T16:20:09+00:00",
+  "wall_clock_s": 5.1,
+  "tokens_in": 2,
+  "tokens_out": 191,
+  "cost_usd": 0.10886950000000001,
+  "verdict": "no",
+  "verdict_text": "NO. The scale is hardcoded to `1.0` instead of `lora_alpha / r = 32 / 16 = 2` (the comment even labels it a defect), so every merged weight gets `B @ A` rather than `2 * B @ A`. This violates Required result clause 1 and would fail grading's 1e-5 relative Frobenius tolerance on the 32 merged tensors. Everything else \u2014 name mapping, no transposition given `fan_in_fan_out = false`, float32 arithmetic, the four required checks, and 512 MiB sharded output \u2014 matches the specification.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The adapter scaling factor alpha / r is missing: the raw low-rank product is added.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

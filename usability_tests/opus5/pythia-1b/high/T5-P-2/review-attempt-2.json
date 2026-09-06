@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:24:16+00:00",
+  "finished_at": "2026-09-06T16:24:50+00:00",
+  "wall_clock_s": 33.8,
+  "tokens_in": 2,
+  "tokens_out": 2515,
+  "cost_usd": 0.1658445,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the merge is correct as specified: the adapter names are mapped to `gpt_neox.layers.<i>.attention.query_key_value.weight`, `scale` is read from the config as `lora_alpha / r = 2`, `delta = B @ A` gives `[6144, 2048]` and is added untransposed because `fan_in_fan_out` is false, the sum is accumulated in float32 and cast back to the base float16 dtype, and no adapter or intermediate key is ever inserted into the state dict. All four required checks are present as loud assertions before the write, and the shard budget constant is exactly 536,870,912 bytes.\n\nOne caveat I cannot resolve from what is in front of me: the loading and the sharded write are delegated to a local `_ckpt` module that is not part of the artifact shown, so the index file, the `weight_map` coverage, and the \"oversized tensor alone in its own shard\" behaviour rest on code I was not given.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

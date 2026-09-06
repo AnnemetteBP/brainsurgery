@@ -1,0 +1,39 @@
+inputs:
+  - model::inputs/base
+
+transforms:
+  # Sanity: the input has 114 tensors and the 112 projection matrices exist.
+  - assert: { count: { of: 'model::.*', is: 114 } }
+  - assert:
+      count:
+        of: 'model::model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight'
+        is: 112
+
+  # Cast exactly the projection matrices to bfloat16, in place (names unchanged).
+  - cast_:
+      target: 'model::model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight'
+      to: bfloat16
+
+  # Required checks.
+  - assert: { count: { of: 'model::.*', is: 114 } }
+  - assert:
+      dtype:
+        of: 'model::model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight'
+        is: bfloat16
+  - assert: { dtype: { of: 'model::model.layers.0.self_attn.q_proj.weight', is: bfloat16 } }
+  - assert: { dtype: { of: 'model::model.embed_tokens.weight', is: float32 } }
+  - assert: { dtype: { of: 'model::lm_head.weight', is: float32 } }
+  # Nothing outside the projection matrices was touched: all 2 remaining tensors are float32.
+  - assert:
+      count:
+        of: 'model::(?!model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight$).*'
+        is: 2
+  - assert:
+      dtype:
+        of: 'model::(?!model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)\.weight$).*'
+        is: float32
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 256MB

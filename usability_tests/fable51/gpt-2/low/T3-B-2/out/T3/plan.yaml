@@ -1,0 +1,26 @@
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # Drop the 12 non-parameter causal-mask buffers.
+  - delete: { target: 'h\.\d+\.attn\.bias' }
+  - assert: { not: { exists: 'h\.\d+\.attn\.bias' } }
+
+  # Cast exactly the 48 projection matrices to bfloat16.
+  - assert: { count: { of: 'h\.\d+\.(attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight', is: 48 } }
+  - cast_: { target: 'h\.\d+\.(attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight', to: bfloat16 }
+
+  # Required checks.
+  - assert: { count: { of: 'h\.\d+\.(attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight', is: 48 } }
+  - assert: { dtype: { of: 'h\.\d+\.(attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight', is: bfloat16 } }
+  - assert: { dtype: { of: 'h.0.attn.c_attn.weight', is: bfloat16 } }
+  - assert: { dtype: { of: 'wte.weight', is: float32 } }
+  # Everything else is float32 (so no other tensor is bfloat16: exactly 48 are).
+  - assert: { count: { of: '(?!h\.\d+\.(attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight$).+', is: 100 } }
+  - assert: { dtype: { of: '(?!h\.\d+\.(attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight$).+', is: float32 } }
+  - assert: { count: { of: '.+', is: 148 } }
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 64MB

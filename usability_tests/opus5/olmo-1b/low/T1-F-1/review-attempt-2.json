@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T1-defective.py",
+  "started_at": "2026-09-06T16:19:10+00:00",
+  "finished_at": "2026-09-06T16:19:14+00:00",
+  "wall_clock_s": 4.6,
+  "tokens_in": 2,
+  "tokens_out": 183,
+  "cost_usd": 0.10351550000000001,
+  "verdict": "no",
+  "verdict_text": "NO. The script drops blocks 2, 6, 10, **15** instead of 2, 6, 10, **14**, violating Required result clause 1 (and consequently the renumbering map in clause 2: old 14 would become 11 rather than being removed, and old 15 is discarded). Its checks also do not cover the required check \"no tensor of blocks 12, 13, 14, 15 remains\" \u2014 the assertion only verifies that the surviving indices are 0..11 after renumbering, which holds for any wrong choice of dropped blocks, so the error passes silently.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

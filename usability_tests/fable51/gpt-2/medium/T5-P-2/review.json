@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:58:04+00:00",
+  "finished_at": "2026-09-06T16:58:16+00:00",
+  "wall_clock_s": 11.8,
+  "tokens_in": 2,
+  "tokens_out": 699,
+  "cost_usd": 0.24543875,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script loads the base and adapter, computes `B @ A`, transposes it because `fan_in_fan_out` is true, scales by `lora_alpha / r = 2`, and adds it in float32 to each `h.<i>.attn.c_attn.weight` while preserving name, shape `[768, 2304]` and dtype. Adapter tensors are never inserted into the output dict, so no `lora_` or intermediate names appear. All four required checks are asserted before writing. The shard writer packs greedily to at most 104,857,600 bytes of tensor data, places an oversized tensor such as `wte.weight` alone in its own shard, and writes `model.safetensors.index.json` with a `weight_map` covering all 160 tensors under `out/T5/`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "52d337326395ce9beac3adc73e35e8c7c2d2892cc99e856b24330c90669f0535"
+}

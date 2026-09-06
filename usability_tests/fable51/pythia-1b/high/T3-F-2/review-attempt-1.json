@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T11:41:20+00:00",
+  "finished_at": "2026-09-06T11:41:38+00:00",
+  "wall_clock_s": 18.0,
+  "tokens_in": 2,
+  "tokens_out": 1268,
+  "cost_usd": 0.27145675,
+  "verdict_text": "YES\n\nThe script matches the spec on everything visible: the two anchored regexes with `fullmatch` select exactly the 64 projection matrices and the 48 buffers, the buffers are dropped, the matrices go to bfloat16 via a float32 upcast, every remaining tensor is upcast to float32, names are untouched, and all four required checks are asserted before any write. The only part not verifiable from this text is the sharding itself, which is delegated to `save_sharded_safetensors` in the unshown `_ckpt` helper; whether it enforces the 256 MiB tensor-data limit, stores oversize embeddings alone, and writes `model.safetensors.index.json` with a full `weight_map` depends on that helper.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

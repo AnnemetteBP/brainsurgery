@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T08:49:07+00:00",
+  "finished_at": "2026-09-06T08:49:32+00:00",
+  "wall_clock_s": 25.1,
+  "tokens_in": 2,
+  "tokens_out": 1844,
+  "cost_usd": 0.1517485,
+  "verdict_text": "YES\n\nThe script maps adapter names (`base_model.model.` + base name) to base names correctly, uses `scale = lora_alpha / r = 2` read from the config, computes `delta = B @ A` as `[6144, 2048]` and skips the transpose because `fan_in_fan_out` is false, accumulates in float32 (`sd[key].float() + scale * delta`, with the float32 adapter factors) and casts back to the original float16 dtype \u2014 the RHS is fully evaluated before rebinding, so `sd[key].dtype` is still float16. No adapter or intermediate key is ever inserted into `sd`, so the output key set stays the 244 base names. All four required checks (16 merges, no `lora_` name, `[6144, 2048]` shape, 244 tensors) are asserted before `save_sharded_safetensors` is called, with the shard budget set to 536,870,912 bytes.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

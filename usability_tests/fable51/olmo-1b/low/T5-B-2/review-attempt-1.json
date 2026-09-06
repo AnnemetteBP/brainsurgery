@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T09:07:27+00:00",
+  "finished_at": "2026-09-06T09:07:51+00:00",
+  "wall_clock_s": 23.5,
+  "tokens_in": 2,
+  "tokens_out": 1592,
+  "cost_usd": 0.28827575000000005,
+  "verdict_text": "YES\n\nThe plan matches the specification on every clause I can verify from reading:\n\n- **Merge math.** `matmul` computes `B @ A` per layer and module into a `.delta` tensor, `scale_` multiplies by alpha over r equal to 2, and `add_` folds it into `model.layers.<i>.<module>.weight` in place, preserving name, shape and float32 dtype. No transpose, consistent with `fan_in_fan_out = false`.\n- **No leftovers.** The `delete` removes every `.delta` intermediate, and adapter tensors live only in the `lora::` namespace, which is not the output model.\n- **Required checks.** All four are present as asserts: 32 adapter pairs counted before merging, no `lora_` name in the model namespace, the layer 0 q_proj shape, and the 114 tensor total.\n- **Sharded output.** Safetensors format with a 512 MB shard limit into `out/T5`, which yields an index file and forces the two 412 MB embedding tensors into their own shards.\n\nOne residual assumption: `shard: 512MB` is read by the tool as 536,870,912 bytes rather than 512,000,000. Either value satisfies the \"at most 512 MiB\" bound, so it would only matter if the grader's reference packing depends on the exact threshold.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

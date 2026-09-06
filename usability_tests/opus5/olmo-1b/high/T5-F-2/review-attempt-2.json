@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T16:18:43+00:00",
+  "finished_at": "2026-09-06T16:18:56+00:00",
+  "wall_clock_s": 13.6,
+  "tokens_in": 2,
+  "tokens_out": 973,
+  "cost_usd": 0.1284385,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script implements the specification correctly: it derives `scale = lora_alpha / r = 2` and `transpose` from `adapter_config.json` rather than hardcoding them, computes `delta = B @ A` (`[2048,16] @ [16,2048]` \u2192 `[2048,2048]`) with no transposition since `fan_in_fan_out` is false, adds `scale * delta` in float32 and casts back to the base dtype, writes the result under the original name so no adapter or intermediate tensor enters the output dict, leaves the other 82 tensors untouched, and enforces all four required checks (32 merges, no `lora_` names, `[2048, 2048]` shape, 114 tensors) with assertions before `save_sharded_safetensors` writes the shards and index at the 536,870,912-byte limit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

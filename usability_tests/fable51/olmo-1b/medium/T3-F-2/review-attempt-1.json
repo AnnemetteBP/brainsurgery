@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T11:02:21+00:00",
+  "finished_at": "2026-09-06T11:02:43+00:00",
+  "wall_clock_s": 22.3,
+  "tokens_in": 2,
+  "tokens_out": 1077,
+  "cost_usd": 0.25474575,
+  "verdict_text": "YES\n\nThe visible logic satisfies every clause: the regex fullmatches exactly the seven projection weights per layer, the cast uses `tensor.to(torch.bfloat16)` on float32 data, every other tensor stays float32 with unchanged values, names are untouched, the buffer regex can never match so nothing is deleted, and all four required checks run as hard assertions before the write. The only part not verifiable from the text is the sharding itself, which is delegated to `save_sharded_safetensors` in the unshown `_ckpt` module with the correct 268,435,456-byte limit. Conformance on shard packing, oversize tensors stored alone, and the index file name rests on that helper.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

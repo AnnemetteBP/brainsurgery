@@ -1,0 +1,65 @@
+# T4: task-vector merge of two fine-tunes into the base (lambda = 0.4)
+#
+#   out[X] = base[X] + 0.4*(ft1[X] - base[X]) + 0.4*(ft2[X] - base[X])
+#          = 0.2*base[X] + 0.4*ft1[X] + 0.4*ft2[X]
+#
+# Both task vectors are taken against the *unmodified* base: the scaled copies
+# of ft1 and ft2 are materialised first, and the base MLP tensors are only
+# touched afterwards.
+
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # ---------------------------------------------------------------- step 1 --
+  # Same tensor names in all three checkpoints: 160 each, 48 of them MLP,
+  # and every one of the 112 non-MLP tensors bit-identical across the three.
+  - assert:
+      all:
+        - count: { of: 'base::.+', is: 160 }
+        - count: { of: 'ft1::.+', is: 160 }
+        - count: { of: 'ft2::.+', is: 160 }
+        - count: { of: 'base::h\.\d+\.mlp\.c_(fc|proj)\.(weight|bias)', is: 48 }
+        - count: { of: 'ft1::h\.\d+\.mlp\.c_(fc|proj)\.(weight|bias)', is: 48 }
+        - count: { of: 'ft2::h\.\d+\.mlp\.c_(fc|proj)\.(weight|bias)', is: 48 }
+        # every non-MLP tensor of the base exists in ft1/ft2 with equal
+        # shape, dtype and values (equal() fails if the name is missing)
+        - equal: { left: 'base::(?!h\.\d+\.mlp\.).+', right: 'ft1::\g<0>' }
+        - equal: { left: 'base::(?!h\.\d+\.mlp\.).+', right: 'ft2::\g<0>' }
+        # 112 non-MLP + 48 MLP = 160 on each side, so the name sets agree
+        - count: { of: 'base::(?!h\.\d+\.mlp\.).+', is: 112 }
+
+  # ---------------------------------------------------------------- step 2 --
+  # lambda * ft1 and lambda * ft2, parked under scratch names on the base
+  # alias (all writes must go to a single alias for the output inference).
+  - scale: { from: 'ft1::(h\.\d+\.mlp\..+)', to: 'base::tv1__\1', by: 0.4 }
+  - scale: { from: 'ft2::(h\.\d+\.mlp\..+)', to: 'base::tv2__\1', by: 0.4 }
+
+  - assert:
+      all:
+        - count: { of: 'base::tv1__.+', is: 48 }
+        - count: { of: 'base::tv2__.+', is: 48 }
+
+  # base <- (1 - 2*lambda) * base, then add the two scaled fine-tunes
+  - scale_: { target: 'base::h\.\d+\.mlp\..+', by: 0.2 }
+  - add_: { from: 'base::tv1__(h\.\d+\.mlp\..+)', to: 'base::\1' }
+  - add_: { from: 'base::tv2__(h\.\d+\.mlp\..+)', to: 'base::\1' }
+
+  - delete: { target: 'base::tv[12]__.+' }
+
+  # ---------------------------------------------------------------- step 3 --
+  # 48 MLP tensors merged (and now differing from every input), 112 untouched,
+  # 160 in total.
+  - assert:
+      all:
+        - count: { of: 'base::.+', is: 160 }
+        - count: { of: 'base::h\.\d+\.mlp\.c_(fc|proj)\.(weight|bias)', is: 48 }
+        - count: { of: 'base::(?!h\.\d+\.mlp\.).+', is: 112 }
+        - equal: { left: 'base::(?!h\.\d+\.mlp\.).+', right: 'ft1::\g<0>' }
+        - dtype: { of: 'base::.+', is: float32 }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

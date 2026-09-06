@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T05:05:51+00:00",
+  "finished_at": "2026-09-06T05:06:00+00:00",
+  "wall_clock_s": 8.6,
+  "tokens_in": 2,
+  "tokens_out": 511,
+  "cost_usd": 0.0403928,
+  "verdict_text": "NO\n\nThe script writes output to `out_dir / \"model.safetensors\"` where `out_dir` defaults to `\"out/T4\"` only when no CLI argument is given, but it takes `sys.argv[1]` as an override \u2014 the spec requires no such argument-driven path and the required, fixed output location is `out/T4/model.safetensors`; relying on a mutable default is fragile but not itself wrong if invoked with no args. More importantly, the script never checks that ft1 and ft2 have the same shapes/dtypes as base beyond `set(base) == set(ft1) == set(ft2)` (which only checks key sets, not shapes/dtypes), so a shape/dtype mismatch in a non-MLP tensor would not be caught before `torch.equal` (which would raise an unhandled RuntimeError rather than a controlled abort) \u2014 this is a fragile, not \"fail loudly\" per spec's intent, though arguably acceptable. The real violation: the script does not verify that `base`, `ft1`, `ft2` have identical shapes for MLP tensors either, but that's less critical since it's overwritten. The clearest actual defect: `assert torch.equal(...)` calls will raise `AssertionError` only if types match; if shapes differ, `torch.equal` will raise a `RuntimeError`, not a clean assertion failure, technically still \"failing loudly\" so this is acceptable. Given closer inspection, the arithmetic, merge order, tensor count checks, and output structure all correctly satisfy the spec \u2014 I retract the NO and confirm correctness.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

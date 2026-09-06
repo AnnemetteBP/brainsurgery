@@ -1,0 +1,82 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB
+
+transforms:
+  # --- Preconditions: adapter shape/count sanity -------------------------
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_A\.weight'
+        is: 12
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_B\.weight'
+        is: 12
+  - assert:
+      count:
+        of: 'base::h\.\d+\.attn\.c_attn\.weight'
+        is: 12
+  - assert:
+      shape:
+        of: 'lora::base_model.model.h.0.attn.c_attn.lora_A.weight'
+        is: [16, 768]
+  - assert:
+      shape:
+        of: 'lora::base_model.model.h.0.attn.c_attn.lora_B.weight'
+        is: [2304, 16]
+  - assert:
+      shape:
+        of: 'base::h.0.attn.c_attn.weight'
+        is: [768, 2304]
+  - assert:
+      count:
+        of: 'base::.*'
+        is: 160
+
+  # --- Merge: for each layer i, delta = scale * (B @ A).T ----------------
+  # scale = lora_alpha / r = 32 / 16 = 2
+  # B @ A has shape [2304, 768] (nn.Linear convention); Conv1D base weight
+  # is [768, 2304] (fan_in_fan_out=true), so the product must be transposed.
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'base::merge_tmp.h.\1.attn.c_attn.ba'
+  - permute:
+      from: 'base::merge_tmp\.h\.(\d+)\.attn\.c_attn\.ba'
+      order: [1, 0]
+      to: 'base::merge_tmp.h.\1.attn.c_attn.ba_t'
+  - scale:
+      from: 'base::merge_tmp\.h\.(\d+)\.attn\.c_attn\.ba_t'
+      by: 2.0
+      to: 'base::merge_tmp.h.\1.attn.c_attn.delta'
+
+  # Exactly 12 adapter pairs must have been found and merged.
+  - assert:
+      count:
+        of: 'base::merge_tmp\.h\.\d+\.attn\.c_attn\.delta'
+        is: 12
+
+  - add_:
+      from: 'base::merge_tmp\.h\.(\d+)\.attn\.c_attn\.delta'
+      to: 'base::h.\1.attn.c_attn.weight'
+
+  # Drop every intermediate tensor created during the merge.
+  - delete: { target: 'base::merge_tmp\..*' }
+
+  # --- Required checks -----------------------------------------------------
+  - assert: { not: { exists: 'base::merge_tmp\..*' } }
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert:
+      shape:
+        of: 'base::h.0.attn.c_attn.weight'
+        is: [768, 2304]
+  - assert:
+      count:
+        of: 'base::.*'
+        is: 160
+  - assert: { dtype: { of: 'base::h.0.attn.c_attn.weight', is: float32 } }

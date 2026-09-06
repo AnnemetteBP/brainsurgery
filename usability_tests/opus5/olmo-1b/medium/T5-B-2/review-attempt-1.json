@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T07:53:47+00:00",
+  "finished_at": "2026-09-06T07:55:06+00:00",
+  "wall_clock_s": 79.7,
+  "tokens_in": 2,
+  "tokens_out": 5668,
+  "cost_usd": 0.24859650000000003,
+  "verdict_text": "NO\n\nThe plan never removes the adapter tensors from the working state: `lora::` is loaded as a second input and only the `model::` `delta` intermediates are deleted, so the 64 `lora_A`/`lora_B` tensors are still live when `save_output` runs, which violates required-result clause 2 (\"No adapter tensor ... appears in the output\") and clause 4's \"114 tensors, the same names as the base\". The two guards that should have caught this are scoped to the wrong namespace and are therefore vacuous: `not: { exists: 'model::.*lora_.*' }` can never fail because nothing named `lora_` is ever created under `model::`, and `count: { of: 'model::.*', is: 114 }` counts only the base namespace, ignoring anything contributed by `lora::`. That fails the \"Required checks\" clause, which asks for checks that \"fail loudly\" on exactly these conditions. Secondarily, the output declares `shard: 512MB` while the spec's bound is 512 MiB (536,870,912 bytes); this is conservative rather than over-limit if `MB` is parsed as 10^6, but it does not state the limit the spec gives. The merge arithmetic itself is right: `B @ A` with no transpose (`fan_in_fan_out = false`), scaled by `alpha/r = 2`, added in float32.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

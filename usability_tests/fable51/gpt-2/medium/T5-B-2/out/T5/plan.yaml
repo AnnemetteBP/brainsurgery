@@ -1,0 +1,61 @@
+# T5: merge a PEFT LoRA adapter (fan_in_fan_out=true) into GPT-2 Conv1D weights.
+# W[in,out] += (alpha/r) * (B @ A).T,  A:[r,in], B:[out,r]
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Exactly 12 adapter pairs present (A and B factors for h.0..11 attn.c_attn).
+  - assert:
+      all:
+        - count: { of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_A\.weight', is: 12 }
+        - count: { of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_B\.weight', is: 12 }
+        - count: { of: 'lora::.*', is: 24 }
+
+  # BA = B @ A -> [out, in] = [2304, 768]
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'base::tmp_merge.h.\1.ba'
+
+  # Transpose to the Conv1D layout [in, out] = [768, 2304]
+  - permute:
+      from: 'base::tmp_merge\.h\.(\d+)\.ba'
+      to: 'base::tmp_merge.h.\1.bat'
+      order: [1, 0]
+
+  # scale = lora_alpha / r = 32 / 16 = 2
+  - scale:
+      from: 'base::tmp_merge\.h\.(\d+)\.bat'
+      to: 'base::tmp_merge.h.\1.delta'
+      by: 2.0
+
+  # Exactly 12 deltas were built, with the base layout, before merging.
+  - assert:
+      all:
+        - count: { of: 'base::tmp_merge\.h\.\d+\.delta', is: 12 }
+        - shape: { of: 'base::tmp_merge.h.0.delta', is: [768, 2304] }
+        - dtype: { of: 'base::tmp_merge.h.0.delta', is: float32 }
+
+  # W += delta (in place, keeps name/shape/dtype)
+  - add_:
+      from: 'base::tmp_merge\.h\.(\d+)\.delta'
+      to: 'base::h.\1.attn.c_attn.weight'
+
+  # Drop every intermediate.
+  - delete: { target: 'base::tmp_merge\..*' }
+
+  # Required checks before writing.
+  - assert:
+      all:
+        - not: { exists: 'base::.*lora_.*' }
+        - not: { exists: 'base::tmp_merge.*' }
+        - shape: { of: 'base::h.0.attn.c_attn.weight', is: [768, 2304] }
+        - dtype: { of: 'base::h.0.attn.c_attn.weight', is: float32 }
+        - count: { of: 'base::h\.\d+\.attn\.c_attn\.weight', is: 12 }
+        - count: { of: 'base::.*', is: 160 }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB

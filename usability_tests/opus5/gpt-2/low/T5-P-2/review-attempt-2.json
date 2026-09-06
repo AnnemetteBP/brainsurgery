@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:15:06+00:00",
+  "finished_at": "2026-09-06T16:15:17+00:00",
+  "wall_clock_s": 10.8,
+  "tokens_in": 2,
+  "tokens_out": 579,
+  "cost_usd": 0.11554949999999999,
+  "verdict": "yes",
+  "verdict_text": "YES. The adapter names map correctly to `h.<i>.attn.c_attn.weight`, `scale` is read as `lora_alpha / r = 2`, the delta `B @ A` is transposed under `fan_in_fan_out = true` to `[768, 2304]`, the accumulation is done in float32 and cast back to the base dtype (float32), and all four required checks are asserted before writing. One caveat outside the shown code: the shard layout and index are produced entirely by `save_sharded_safetensors` from the unshown `_ckpt` helper, so clause 4 (100 MiB shard budget, `wte.weight` alone in its own shard, complete `weight_map`) cannot be verified from this artifact alone.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

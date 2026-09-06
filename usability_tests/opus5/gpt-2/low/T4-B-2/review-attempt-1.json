@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T07:17:33+00:00",
+  "finished_at": "2026-09-06T07:17:46+00:00",
+  "wall_clock_s": 12.8,
+  "tokens_in": 2,
+  "tokens_out": 744,
+  "cost_usd": 0.1258565,
+  "verdict_text": "NO\n\nThe plan omits one of the three mandatory checks: there is no assert that exactly 48 tensors were merged (e.g. a `count` of the MLP-matching pattern or of the `.tv1`/`.tv2` temporaries being 48), so a regex that silently matched fewer layers would still produce a 160-tensor output and pass. This violates the \"Required checks\" clause (\"exactly 48 tensors were merged\"). The arithmetic and ordering are otherwise correct \u2014 both task vectors are formed against the unmodified base before either `add_` is applied \u2014 and the non-MLP identity check and 160-tensor output check are present.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

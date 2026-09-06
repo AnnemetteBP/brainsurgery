@@ -1,0 +1,44 @@
+inputs:
+  - model::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # --- required checks (fail loudly before doing anything else) ---
+  - assert: { count: { of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_A\.weight', is: 12 } }
+  - assert: { count: { of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_B\.weight', is: 12 } }
+
+  # --- merge: delta = scale * (B @ A).T, added into the base Conv1D weight ---
+  # B @ A: [2304, 16] @ [16, 768] -> [2304, 768]
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'model::delta.\1'
+
+  # transpose to [768, 2304] to match the Conv1D [in, out] layout (fan_in_fan_out=true)
+  - permute:
+      from: 'model::delta\.(\d+)'
+      to: 'model::delta_t.\1'
+      order: [1, 0]
+
+  # scale = lora_alpha / r = 32 / 16 = 2
+  - scale_:
+      target: 'model::delta_t\.\d+'
+      by: 2
+
+  - add_:
+      from: 'model::delta_t\.(\d+)'
+      to: 'model::h.\1.attn.c_attn.weight'
+
+  # drop intermediates, nothing but the merged base tensors may remain
+  - delete: { target: 'model::delta\.\d+' }
+  - delete: { target: 'model::delta_t\.\d+' }
+
+  # --- required checks (final state) ---
+  - assert: { not: { exists: 'model::.*lora_.*' } }
+  - assert: { shape: { of: 'model::h.0.attn.c_attn.weight', is: [768, 2304] } }
+  - assert: { count: { of: 'model::.*', is: 160 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB

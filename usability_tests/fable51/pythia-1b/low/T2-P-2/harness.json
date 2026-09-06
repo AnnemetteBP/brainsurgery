@@ -1,0 +1,43 @@
+{
+  "phase": "solve",
+  "driver": "run_claude.py",
+  "model_id": "claude-fable-5-1",
+  "agent": "fable51",
+  "target": "pythia-1b",
+  "effort": "low",
+  "test": "T2",
+  "condition": "P",
+  "repeat": 2,
+  "started_at": "2026-09-06T09:06:45+00:00",
+  "finished_at": "2026-09-06T09:07:27+00:00",
+  "wall_clock_s": 41.6,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "max_turns": 40,
+  "timeout_s": 1800,
+  "turns": 5,
+  "tool_calls": 4,
+  "tokens_in": 130,
+  "tokens_out": 2207,
+  "cache_read_tokens": 127528,
+  "cache_write_tokens": 16931,
+  "tokens_in_total": 144589,
+  "cost_usd": 0.48456000000000005,
+  "duration_api_ms": 28975,
+  "session_id": "7e9ea46a-82c6-4477-b42f-b9e262f9910a",
+  "result_subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "executions": 2,
+  "failed_executions": [
+    {
+      "n": 1,
+      "command": "mkdir -p out/T2 && cat > out/T2/solution.py <<'EOF'\n\"\"\"T2: prune attention head 5 from every layer of Pythia-1B (GPT-NeoX layout).\"\"\"\nimport os\nimport sys\n\nimport torch\nfrom safetensors.torch import load_file, save_file\n\nHERE = os.path.dirname(os.path.abspath(__file__))\nSRC = os.path.join(HERE, \"..\"",
+      "message": "AssertionError",
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Done. The pruned checkpoint is at `out/T2/model.safetensors` with 244 tensors, written by `out/T2/solution.py`.\n\n- **What the script does:** for each of the 16 layers it drops the 768-row block of head 5 from the fused qkv weight and bias, and the 256-column block of head 5 from the dense weight, using index_select so piece order is preserved. All other tensors pass through untouched, and the four required shape and count checks run before saving.\n- **Executions:** 2. The first failed on an extra assertion I added that every tensor is float16, which the attention buffers violate. I removed that unneeded check and the second run succeeded.\n- **Report:** `out/T2/REPORT.md` records the above."
+}

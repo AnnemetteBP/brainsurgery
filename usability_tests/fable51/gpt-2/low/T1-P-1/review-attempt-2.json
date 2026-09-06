@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T1-defective.py",
+  "started_at": "2026-09-06T16:29:07+00:00",
+  "finished_at": "2026-09-06T16:29:12+00:00",
+  "wall_clock_s": 5.2,
+  "tokens_in": 2,
+  "tokens_out": 155,
+  "cost_usd": 0.19746075,
+  "verdict": "no",
+  "verdict_text": "NO. The script drops blocks {2, 5, 9}, but \"Required result\" clause 1 says to remove blocks 2, 5, 8. As a consequence, old block 8 survives and old block 9 is deleted, so the renumbering also disagrees with clause 2 (old 9 must become 6, old 8 must be gone). The output will have the right count and pass the local asserts, but the key-to-value mapping is wrong and fails the bit-exact grading against the reference.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

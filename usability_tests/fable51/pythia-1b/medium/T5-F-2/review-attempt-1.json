@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T11:14:05+00:00",
+  "finished_at": "2026-09-06T11:14:16+00:00",
+  "wall_clock_s": 10.7,
+  "tokens_in": 2,
+  "tokens_out": 597,
+  "cost_usd": 0.23641775,
+  "verdict_text": "YES\n\nThe visible logic matches every clause: adapter names map to base names, delta is `B @ A` in float32 (adapter tensors are float32, base is upcast), scaled by alpha over r read from the config, transposed only if `fan_in_fan_out` is true, added and cast back to the base dtype under the original name. No adapter or intermediate tensor enters the state dict, the other tensors are untouched, and all four required checks are asserted before writing with a 512 MiB shard limit.\n\nOne caveat: index generation, the byte-size accounting, and the single-large-tensor-per-shard rule are delegated to the unshown helper in `_ckpt.py`, so those cannot be confirmed from this file alone.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

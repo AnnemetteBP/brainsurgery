@@ -1,0 +1,32 @@
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # sanity: start from a 12-block checkpoint
+  - assert: { count: { of: 'h\.\d+\.attn\.c_attn\.weight', is: 12 } }
+  - assert: { count: { of: '.*', is: 160 } }
+
+  # 1. drop blocks 2, 5, 8 entirely
+  - delete: { target: 'h\.(2|5|8)\..*' }
+  - assert: { not: { exists: 'h\.(2|5|8)\..*' } }
+
+  # 2. renumber survivors, ascending by new index so no destination collides
+  - move: { from: 'h\.3\.(.*)', to: 'h.2.\1' }
+  - move: { from: 'h\.4\.(.*)', to: 'h.3.\1' }
+  - move: { from: 'h\.6\.(.*)', to: 'h.4.\1' }
+  - move: { from: 'h\.7\.(.*)', to: 'h.5.\1' }
+  - move: { from: 'h\.9\.(.*)', to: 'h.6.\1' }
+  - move: { from: 'h\.10\.(.*)', to: 'h.7.\1' }
+  - move: { from: 'h\.11\.(.*)', to: 'h.8.\1' }
+
+  # required checks
+  - assert: { not: { exists: 'h\.(9|10|11)\..*' } }
+  - assert: { count: { of: 'h\.\d+\.attn\.c_attn\.weight', is: 9 } }
+  - assert: { count: { of: '.*', is: 121 } }
+  # each surviving block is complete (13 tensors) and non-block tensors intact
+  - assert: { count: { of: 'h\.\d+\..*', is: 117 } }
+  - assert: { count: { of: '(wte\.weight|wpe\.weight|ln_f\.weight|ln_f\.bias)', is: 4 } }
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T11:10:52+00:00",
+  "finished_at": "2026-09-06T11:11:10+00:00",
+  "wall_clock_s": 18.2,
+  "tokens_in": 2,
+  "tokens_out": 1099,
+  "cost_usd": 0.24838975,
+  "verdict_text": "YES\n\nThe script verifies key-set equality across all three checkpoints, then checks every non-MLP tensor bit-exact against both fine-tunes before any merge, matching step 1. Each task vector is computed against the untouched float32 base, scaled by 0.4, summed, and cast back to the base dtype, matching step 2. Non-MLP tensors come from the base unchanged, the merged count is asserted to be 64, the output count to be 244, and the file lands at `out/T4/model.safetensors`. The only thing not verifiable from reading is the local `_ckpt.load_checkpoint` helper, which must return plain per-tensor `torch.Tensor` values for the equality checks and `save_file` to behave as intended.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

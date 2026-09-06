@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T07:41:33+00:00",
+  "finished_at": "2026-09-06T07:41:44+00:00",
+  "wall_clock_s": 11.2,
+  "tokens_in": 2,
+  "tokens_out": 675,
+  "cost_usd": 0.1209285,
+  "verdict_text": "YES\n\nThe merge follows the spec: `scale = lora_alpha / r = 2`, `delta = (B @ A).T` under `fan_in_fan_out = true` giving `[768, 2304]`, added in float32 and cast back to the base dtype (float32), name and shape preserved. Only base tensors are in `sd`, so no adapter or intermediate tensors reach the output, and all four required checks (12 pairs, no `lora_` names, `h.0.attn.c_attn.weight` shape, 160 tensors) are asserted before writing. Sharding is delegated to `save_sharded_safetensors(sd, out_dir, 104857600)` with the specified 100 MiB budget; its internal behavior is outside the reviewed text, but the call is as the spec requires.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

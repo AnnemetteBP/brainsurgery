@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T16:05:49+00:00",
+  "finished_at": "2026-09-06T16:05:54+00:00",
+  "wall_clock_s": 4.5,
+  "tokens_in": 2,
+  "tokens_out": 139,
+  "cost_usd": 0.0447198,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script computes keep_index correctly (head block 128, dropping head 5, indices 0..639 then 768..2047 for the 2048-wide axis with segments=1), applies it to q/k/v on axis 0 and o_proj on axis 1 for all 16 layers, asserts the required shapes and tensor count before writing, and saves exactly `out/T2/model.safetensors` with all other tensors untouched.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:51:38+00:00",
+  "finished_at": "2026-09-06T16:51:42+00:00",
+  "wall_clock_s": 3.8,
+  "tokens_in": 2,
+  "tokens_out": 125,
+  "cost_usd": 0.0470938,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script computes A/B correctly per layer/module with scale = alpha/r = 2, adds in float32 and casts back to float16, asserts all four required checks (16 merges, no \"lora_\" names, correct shape, 244 tensors total), and shards by 512 MiB tensor-data limit with oversized tensors alone in their own shard, writing a valid weight_map index.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "58c8f3b6928ed87177fb23f201e2133a96666f8e34cf6bf02687953191f81bd4"
+}

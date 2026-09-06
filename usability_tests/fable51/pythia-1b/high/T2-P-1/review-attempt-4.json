@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T2-defective.py",
+  "started_at": "2026-09-06T17:14:12+00:00",
+  "finished_at": "2026-09-06T17:14:14+00:00",
+  "wall_clock_s": 2.0,
+  "tokens_in": 0,
+  "tokens_out": 0,
+  "cost_usd": 0,
+  "verdict": "none",
+  "verdict_text": "You've reached your Fable limit. Switch to another model, or manage usage credits at claude.ai/settings/usage?from=cc_cli_limit_message, to continue.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": "The removed head is off by one (head N+1 instead of head N). All shapes are still correct, so the artifact's own shape checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

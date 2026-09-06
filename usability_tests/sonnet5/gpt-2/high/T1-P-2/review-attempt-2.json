@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T15:42:36+00:00",
+  "finished_at": "2026-09-06T15:43:11+00:00",
+  "wall_clock_s": 35.0,
+  "tokens_in": 2,
+  "tokens_out": 3064,
+  "cost_usd": 0.0714888,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 The script drops blocks {2,5,8}, renumbers the remaining blocks 0..8 via a bijective `enumerate(kept)` mapping that exactly matches the required old\u2192new correspondence (0\u21920,1\u21921,3\u21922,4\u21923,6\u21924,7\u21925,9\u21926,10\u21927,11\u21928), leaves non-block tensors untouched, and writes only `out/T1/model.safetensors`. It asserts (before `mkdir`/`save_file`) that the surviving layer indices equal `range(9)` \u2014 which by construction rules out any residual 9/10/11 and enforces exactly 9 contiguous blocks \u2014 and separately asserts the tensor count equals 121, satisfying all three \"Required checks,\" with assertion failure producing a non-zero exit and no written output as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

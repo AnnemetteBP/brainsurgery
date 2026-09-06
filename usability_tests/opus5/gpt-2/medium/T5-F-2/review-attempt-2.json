@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:16:30+00:00",
+  "finished_at": "2026-09-06T16:16:39+00:00",
+  "wall_clock_s": 9.9,
+  "tokens_in": 2,
+  "tokens_out": 588,
+  "cost_usd": 0.1166645,
+  "verdict": "yes",
+  "verdict_text": "YES. The script maps each `base_model.model.h.<i>.attn.c_attn.lora_{A,B}.weight` pair to `h.<i>.attn.c_attn.weight`, forms `B @ A` (`[2304, 768]`), transposes it because `fan_in_fan_out` is true, scales by `lora_alpha / r = 2`, and accumulates in float32, giving `[768, 2304]` float32 results with adapter tensors never inserted into the state dict. All four required checks are asserted before writing, and the output is written sharded to `out/T5` with a 104,857,600-byte limit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

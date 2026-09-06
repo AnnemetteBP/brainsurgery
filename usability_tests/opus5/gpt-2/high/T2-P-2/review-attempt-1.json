@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T08:06:46+00:00",
+  "finished_at": "2026-09-06T08:07:09+00:00",
+  "wall_clock_s": 23.1,
+  "tokens_in": 2,
+  "tokens_out": 1664,
+  "cost_usd": 0.1424415,
+  "verdict_text": "YES\n\nThe index construction (`keep_index`) yields exactly the required kept positions: for `c_attn.weight`/`bias` (3 segments \u00d7 12 heads \u00d7 64, skipping head 5 in each segment) it selects `0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303` in ascending order along the correct axis (dim 1 for the weight, dim 0 for the bias), and for `c_proj.weight` (1 segment) it selects rows `0..319, 384..767` along dim 0 \u2014 giving `[768, 2112]`, `[2112]`, `[704, 768]`. All 12 layers are covered, no other tensors are touched, names are preserved, and all four required checks are asserted before `save_file`.\n\nOne thing I could not verify from reading alone: the script imports `load_checkpoint` from a `_ckpt` module that is not part of the artifact shown, so its dtype/key-preservation behaviour is assumed rather than confirmed.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

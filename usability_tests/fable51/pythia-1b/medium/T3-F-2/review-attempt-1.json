@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T11:10:29+00:00",
+  "finished_at": "2026-09-06T11:10:43+00:00",
+  "wall_clock_s": 14.3,
+  "tokens_in": 2,
+  "tokens_out": 805,
+  "cost_usd": 0.24828675,
+  "verdict_text": "YES\n\nThe dtype, deletion, naming and assertion logic all match the specification: buffers are removed by full-match on the three listed names, exactly the four projection matrices per layer are cast to bfloat16 via float32 (bit-identical to a direct cast), everything else is upcast to float32, and the four required checks run before writing. The one thing that cannot be confirmed from this file is the sharding layout, since it is delegated to the unseen `save_sharded_safetensors` helper in `_ckpt`. That helper must write `model.safetensors.index.json` with a `weight_map`, keep shard data at or below 268,435,456 bytes, and place each of the two 206 MB embedding tensors alone in its own shard. If it honours those rules with the passed limit, the artifact satisfies every clause.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

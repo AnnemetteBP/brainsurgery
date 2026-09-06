@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T3.yaml",
+  "started_at": "2026-09-06T05:23:16+00:00",
+  "finished_at": "2026-09-06T05:23:27+00:00",
+  "wall_clock_s": 10.9,
+  "tokens_in": 2,
+  "tokens_out": 722,
+  "cost_usd": 0.0493118,
+  "verdict_text": "NO\n\nThe plan specifies `shard: 256MB`, but the specification requires shard limits of exactly 268,435,456 bytes (256 MiB), not a decimal 256,000,000-byte \"256MB\". If the tool interprets \"256MB\" as decimal megabytes (as is common), shards could be sized incorrectly relative to the required MiB-based 256 MiB (268,435,456-byte) cap in Required Result clause 5, causing over-large shards or a different shard layout than the hidden reference expects.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

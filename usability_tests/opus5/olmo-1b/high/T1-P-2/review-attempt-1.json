@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T08:17:55+00:00",
+  "finished_at": "2026-09-06T08:18:16+00:00",
+  "wall_clock_s": 21.2,
+  "tokens_in": 2,
+  "tokens_out": 1638,
+  "cost_usd": 0.1404495,
+  "verdict_text": "YES\n\nThe mapping `{old: new for new, old in enumerate(kept)}` yields exactly the renumbering the spec lists (0\u21920, 1\u21921, 3\u21922, \u2026 15\u219211), keys are rebuilt into a fresh dict so no collision can occur, non-block tensors are copied through untouched, and both required checks (contiguous 0..11 block set, which also excludes any block \u226512; total of 86 tensors) run before `save_file`, so a failure exits non-zero with no output written. One thing I could not verify from reading alone: the imported helper `_ckpt.load_checkpoint` is not part of the artifact shown, so correctness depends on it loading all 114 tensors from both shards via `model.safetensors.index.json`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T08:34:57+00:00",
+  "finished_at": "2026-09-06T08:35:22+00:00",
+  "wall_clock_s": 25.0,
+  "tokens_in": 2,
+  "tokens_out": 1908,
+  "cost_usd": 0.15238649999999998,
+  "verdict_text": "YES\n\nThe drop set, the `kept`/`renumber` mapping (0\u21920, 1\u21921, 3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211), the pass-through of the 4 non-block tensors, and the output path/count all match the specification; renaming into a fresh dict makes collisions impossible, and both guards (contiguous 0..11 layer set, which also excludes blocks 12\u201315, and `len(out) == 184`) run before any file is created, so a failure exits non-zero with no output written.\n\nTwo caveats that do not change the verdict: the checks are `assert` statements, so they would be stripped under `python -O`, and the script depends on an unshown `_ckpt.load_checkpoint` helper whose fidelity (dtype/value preservation) I cannot verify from this file alone.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

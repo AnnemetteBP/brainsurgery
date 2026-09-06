@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T1.yaml",
+  "started_at": "2026-09-06T11:01:05+00:00",
+  "finished_at": "2026-09-06T11:01:18+00:00",
+  "wall_clock_s": 12.1,
+  "tokens_in": 2,
+  "tokens_out": 749,
+  "cost_usd": 0.23980574999999998,
+  "verdict_text": "YES\n\nThe plan deletes the 28 tensors of blocks 2, 6, 10, 14, then moves surviving blocks in ascending order (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211). Each destination is free at the time of its move, either because it was deleted or because its previous occupant was already shifted down, so there are no collisions. Non-block tensors are untouched, values and dtypes are preserved by move, the three required checks are present as asserts, and the output is the single required file with 86 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

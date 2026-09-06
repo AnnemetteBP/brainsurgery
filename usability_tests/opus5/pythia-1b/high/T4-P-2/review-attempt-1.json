@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T08:42:05+00:00",
+  "finished_at": "2026-09-06T08:42:33+00:00",
+  "wall_clock_s": 27.7,
+  "tokens_in": 2,
+  "tokens_out": 2067,
+  "cost_usd": 0.1506455,
+  "verdict_text": "YES\n\nThe script performs the shared-tensor verification first (identical key sets across all three, plus bit-exact equality of every non-MLP tensor against the base), computes each task vector against the untouched `base` dict (`out` is a separate shallow copy, and `base[name]` is never mutated in place), applies `b + 0.4*(f1-b) + 0.4*(f2-b)` in float32 before casting back to the base's float16 dtype, copies all other tensors from the base under unchanged names, and asserts both `merged == 64` and `len(out) == 244` before writing the single file to `out/T4/model.safetensors`. The regex is anchored with `fullmatch` and covers exactly the four MLP tensor names per layer, so no non-MLP tensor is captured; it does not bound the layer index to 0..15, but the `merged == 64` check would catch any surplus.\n\nOne thing I could not verify from reading alone: the script imports `load_checkpoint` from a local `_ckpt` module that is not part of the artifact shown, so its loading behaviour (e.g. that it returns the raw fp16 tensors of a single file) is assumed rather than confirmed.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

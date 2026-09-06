@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T16:36:42+00:00",
+  "finished_at": "2026-09-06T16:36:52+00:00",
+  "wall_clock_s": 9.7,
+  "tokens_in": 2,
+  "tokens_out": 549,
+  "cost_usd": 0.22889674999999998,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script drops every tensor of blocks 2, 6, 10, 14, renumbers the survivors in original order by building the target index from the sorted kept list, passes non-block tensors and all values through untouched, and asserts before writing that the remaining block indices are exactly 0..11 and that the output has 184 tensors. That assertion pair covers all three required checks: no block 12 to 15 remains, exactly 12 blocks remain, and the tensor count is 184. The output goes to a single file at out/T1/model.safetensors. The one thing to note is that it imports `load_checkpoint` from a local `_ckpt` helper rather than being fully self-contained, which does not affect correctness against the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

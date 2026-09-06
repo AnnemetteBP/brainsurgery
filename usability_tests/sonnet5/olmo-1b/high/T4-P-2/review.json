@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T16:49:41+00:00",
+  "finished_at": "2026-09-06T16:50:07+00:00",
+  "wall_clock_s": 26.8,
+  "tokens_in": 2,
+  "tokens_out": 2508,
+  "cost_usd": 0.06573179999999999,
+  "verdict": "yes",
+  "verdict_text": "YES. The script verifies name equality across all three checkpoints and bit-exact equality on every non-MLP tensor via `assert torch.equal(...)` (satisfying step 1 and the \"shared-tensor verification\" required check) before performing any merge. It applies the exact merge formula `base + \u03bb(ft1-base) + \u03bb(ft2-base)` with \u03bb=0.4 in float32 to precisely the 48 MLP tensors matched by the layer regex, leaves all other tensors as bit-identical copies from `base`, and asserts `merged == 48` and `len(out) == 114` as required. It writes a single `model.safetensors` to `out/T4` (the default when invoked with no argument, matching the specified invocation), producing 114 keys total with unchanged names.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "39971c56f8f1ba950debcebf4fb42e1685eb2910891739a543fbb747ba8a390c"
+}

@@ -1,0 +1,43 @@
+{
+  "phase": "solve",
+  "driver": "run_claude.py",
+  "model_id": "claude-sonnet-5",
+  "agent": "sonnet5",
+  "target": "pythia-1b",
+  "effort": "high",
+  "test": "T4",
+  "condition": "P",
+  "repeat": 2,
+  "started_at": "2026-09-06T07:00:38+00:00",
+  "finished_at": "2026-09-06T07:01:45+00:00",
+  "wall_clock_s": 67.1,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "max_turns": 40,
+  "timeout_s": 1800,
+  "turns": 8,
+  "tool_calls": 7,
+  "tokens_in": 16,
+  "tokens_out": 4679,
+  "cache_read_tokens": 218180,
+  "cache_write_tokens": 21246,
+  "tokens_in_total": 239442,
+  "cost_usd": 0.177671,
+  "duration_api_ms": 50263,
+  "session_id": "668ba73e-a935-4110-9fce-5acb623cc200",
+  "result_subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "executions": 2,
+  "failed_executions": [
+    {
+      "n": 1,
+      "command": "./.venv/bin/python out/T4/solution.py",
+      "message": "FileNotFoundError: No such file or directory: \"/home/rootkidd/Projects/brainsurgery/usability_tests/sonnet5/pythia-1b/inputs/base/model.safetensors\"",
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Task T4 complete for condition P:\n\n- **Solution**: `out/T4/solution.py` \u2014 loads base/ft1/ft2, verifies identical tensor names and bit-identical non-MLP tensors across all three (aborting loudly otherwise), computes the task-vector merge on the 64 MLP tensors in float32 (`base + \u03bb(ft1\u2212base) + \u03bb(ft2\u2212base)`, \u03bb=0.4) cast back to float16, copies the other 180 tensors unchanged, and asserts the merged/output counts (64 and 244) before writing.\n- **Run result**: succeeded on the 2nd execution \u2014 first attempt crashed on a wrong relative-path calculation (`FileNotFoundError`), fixed and reran successfully. Output: `out/T4/model.safetensors` with 244 tensors (64 merged).\n- **Report**: written to `out/T4/REPORT.md` per the template, including the one failed execution and the noted `inputs/lora/` distractor that isn't part of this task's spec."
+}

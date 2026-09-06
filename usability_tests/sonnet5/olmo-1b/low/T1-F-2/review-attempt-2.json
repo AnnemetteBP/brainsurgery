@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T16:04:37+00:00",
+  "finished_at": "2026-09-06T16:04:43+00:00",
+  "wall_clock_s": 5.4,
+  "tokens_in": 2,
+  "tokens_out": 264,
+  "cost_usd": 0.0438498,
+  "verdict": "no",
+  "verdict_text": "NO. The script uses bare `assert` statements for the required checks; when run with Python's `-O` flag or `PYTHONOPTIMIZE` set, assertions are stripped, so the checks silently do not execute and the script would succeed even if validation would otherwise fail \u2014 this violates the \"fail loudly\" requirement of the Required checks section. Additionally, the checks only assert `len(out) == 86` and the layer index set equals `range(12)`, but never explicitly verify that no tensor of blocks 12, 13, 14, 15 remains (it's implied but not directly checked as specified). Also there's no non-zero exit guarantee beyond assert (acceptable if assertions aren't disabled), but the -O vulnerability alone violates the letter of \"must fail loudly ... if any of these does not hold.\"",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

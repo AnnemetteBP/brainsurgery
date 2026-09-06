@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T11:07:53+00:00",
+  "finished_at": "2026-09-06T11:08:04+00:00",
+  "wall_clock_s": 11.3,
+  "tokens_in": 2,
+  "tokens_out": 690,
+  "cost_usd": 0.23753375,
+  "verdict_text": "YES\n\nThe slicing logic matches the specification exactly. With segments=1 and block widths 768 (fused qkv rows) and 256 (dense columns), the kept-index builder skips head 5 and produces rows 0..3839 and 4608..6143 for the fused weight and bias, and columns 0..1279 and 1536..2047 for the output projection, in order. Index select preserves dtype, so float16 values stay bit-exact. All four required checks are asserted before writing, and the output goes to out/T2/model.safetensors with the original key set. One caveat from reading alone: the script depends on a `_ckpt.load_checkpoint` helper not shown here, so its dtype-preserving load behaviour cannot be confirmed from this artifact.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

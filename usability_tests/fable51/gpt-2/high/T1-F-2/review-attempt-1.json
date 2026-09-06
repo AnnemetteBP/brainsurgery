@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T11:17:32+00:00",
+  "finished_at": "2026-09-06T11:17:54+00:00",
+  "wall_clock_s": 22.2,
+  "tokens_in": 2,
+  "tokens_out": 1667,
+  "cost_usd": 0.27872975,
+  "verdict_text": "YES\n\nThe script does what the specification requires: it drops all tensors of blocks 2, 5 and 8, renumbers the survivors with the exact mapping given in \"Required result\" clause 2 (kept order 0,1,3,4,6,7,9,10,11 to 0..8), leaves names, values, shapes and dtypes otherwise untouched, and copies the four non-block tensors unchanged because they do not match the `h.<i>.<rest>` pattern. Writing into a fresh dictionary avoids the collision hazard. The two asserts run before the file is written and enforce all three \"Required checks\": block indices must be exactly {0..8} (so no block 9, 10 or 11 remains and exactly 9 blocks exist) and the total must be 121 tensors, with an AssertionError giving a non-zero exit and no output. Output lands at `out/T1/model.safetensors` by default.\n\nTwo minor caveats that do not change the verdict: correctness depends on the unseen `_ckpt.load_checkpoint` returning the raw tensor dict without altering dtypes, and the checks are plain `assert` statements, which Python skips under `-O`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

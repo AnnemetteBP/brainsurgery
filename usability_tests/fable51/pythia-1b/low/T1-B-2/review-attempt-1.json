@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-06T09:08:14+00:00",
+  "finished_at": "2026-09-06T09:08:24+00:00",
+  "wall_clock_s": 9.7,
+  "tokens_in": 2,
+  "tokens_out": 558,
+  "cost_usd": 0.24280475,
+  "verdict_text": "YES\n\nThe plan deletes exactly the 60 tensors of blocks 2, 6, 10 and 14 (guarded by a pre-count), then shifts the survivors in ascending order so every destination index is already vacant, matching the required mapping without collisions. The three required checks are implemented as asserts after the moves: no block 12 through 15 remains, exactly 12 fused projection weights remain, and the total is 184 tensors. Non-block tensors are untouched and the output path matches the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

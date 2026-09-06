@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T16:02:51+00:00",
+  "finished_at": "2026-09-06T16:02:56+00:00",
+  "wall_clock_s": 4.4,
+  "tokens_in": 2,
+  "tokens_out": 156,
+  "cost_usd": 0.0448978,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script correctly builds a keep-index for head 5 (rows 0..639 = heads 0-4, rows 768..2047 = heads 6-15) on axis 0 for q/k/v and axis 1 for o_proj, matching the required slicing exactly. It applies this per-layer to all 16 layers, leaves other tensors untouched, asserts the four required shapes and the 114-tensor count before writing, and saves to `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

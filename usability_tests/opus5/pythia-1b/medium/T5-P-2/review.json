@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:56:59+00:00",
+  "finished_at": "2026-09-06T16:57:22+00:00",
+  "wall_clock_s": 22.5,
+  "tokens_in": 2,
+  "tokens_out": 1529,
+  "cost_usd": 0.1476645,
+  "verdict": "yes",
+  "verdict_text": "YES. The script computes `scale = lora_alpha / r = 2`, forms `B @ A` in float32 with no transpose (since `fan_in_fan_out` is false), adds it to the float32-upcast base weight and casts back to float16, leaving names, shapes and dtypes intact; adapter tensors are read from a separate dict and never enter the output, so all 244 base names remain and no intermediate is added. All four required checks are asserted before any file is written. The greedy packer starts a new shard whenever adding a tensor would exceed 536,870,912 bytes of tensor data, which keeps every shard within the limit and isolates any tensor that exceeds it, and it writes `model.safetensors.index.json` with a `weight_map` covering every tensor, into the default `out/T5/`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "58c8f3b6928ed87177fb23f201e2133a96666f8e34cf6bf02687953191f81bd4"
+}

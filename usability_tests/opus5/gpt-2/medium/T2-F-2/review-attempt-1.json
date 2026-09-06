@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T07:36:25+00:00",
+  "finished_at": "2026-09-06T07:36:36+00:00",
+  "wall_clock_s": 10.6,
+  "tokens_in": 2,
+  "tokens_out": 725,
+  "cost_usd": 0.12017650000000002,
+  "verdict_text": "YES\n\nThe script's `keep_index` builds, for each of the `segments` concatenated blocks, the indices of all 12 heads except head 5, offset by `seg * 768`. For `c_attn.weight`/`bias` (3 segments) that yields exactly `0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303` in order, applied along dim 1 and dim 0 respectively; for `c_proj.weight` (1 segment) it yields `0..319, 384..767` along dim 0 (rows), giving `[704, 768]`. All 12 layers are covered, no other tensors are touched, names are unchanged, and the four required checks are asserted before `save_file` writes `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T08:41:48+00:00",
+  "finished_at": "2026-09-06T08:42:05+00:00",
+  "wall_clock_s": 17.1,
+  "tokens_in": 2,
+  "tokens_out": 1131,
+  "cost_usd": 0.18838749999999999,
+  "verdict_text": "I'll read the artifact's surroundings and the doc pack it was written against (reading only, no execution).\n\n`\u200b`\u200b`\n\nLet me look at the sandbox contents.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

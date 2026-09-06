@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T09:10:08+00:00",
+  "finished_at": "2026-09-06T09:10:20+00:00",
+  "wall_clock_s": 11.8,
+  "tokens_in": 2,
+  "tokens_out": 656,
+  "cost_usd": 0.34446175,
+  "verdict_text": "YES\n\nThe plan slices exactly the required row ranges (0..3839 and 4608..6143) for the fused weight and bias and the required column ranges (0..1279 and 1536..2047) for the dense weight, concatenates them along the correct axes (dim 0 for the fused projections, dim 1 for the output projection) in the correct order, restores the original tensor names, deletes all temporaries, leaves every other tensor untouched, and asserts the four required checks (three layer-0 shapes and the 244-tensor count) before writing to `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

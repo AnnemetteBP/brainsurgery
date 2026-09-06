@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T16:29:34+00:00",
+  "finished_at": "2026-09-06T16:29:49+00:00",
+  "wall_clock_s": 15.2,
+  "tokens_in": 2,
+  "tokens_out": 940,
+  "cost_usd": 0.25707274999999996,
+  "verdict": "yes",
+  "verdict_text": "YES",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "8adafa570c1e0368dca8be6f08d2fd86ce3b24b61e44ee0c9d0892ee32f0ab0f"
+}

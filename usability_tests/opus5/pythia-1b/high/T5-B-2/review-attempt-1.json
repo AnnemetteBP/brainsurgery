@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T08:49:38+00:00",
+  "finished_at": "2026-09-06T08:51:22+00:00",
+  "wall_clock_s": 104.4,
+  "tokens_in": 4,
+  "tokens_out": 8189,
+  "cost_usd": 0.417015,
+  "verdict_text": "NO\n\n1. The plan declares `shard: 512MB`, but the specification requires a 512 MiB threshold and spells out the exact figure (536,870,912 bytes); under the usual convention `MB` is 512,000,000, roughly 25 MB short, so the greedy packer can close a shard one tensor earlier than the reference and produce a different shard assignment \u2014 violating the \"Required result\" clause 4 on sharding (and contradicting the plan's own comment, which says \"512 MiB (536,870,912 bytes)\").\n2. Everything else in the merge is right: `matmul` of the float32 `lora_B` by `lora_A` yields a float32 delta, `scale_ by 2` applies `alpha/r`, the base weight is cast to float32 before `add_` and back to float16 after, no transpose is applied (correct for `fan_in_fan_out = false`), and the deltas are deleted before output.\n3. One secondary weakness: the required check \"no tensor name containing `lora_` is in the output\" is implemented as `not exists 'model::.*lora_.*'`, which is scoped to the base namespace that never held adapter tensors and so can never fail; the adapter tensors themselves are never deleted from the `lora::` namespace, so this check offers no protection if the writer emits more than the `model::` namespace.\n4. The other three required checks (16 pairs, shape `[6144, 2048]`, 244 output tensors) are present and correctly placed before the write.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

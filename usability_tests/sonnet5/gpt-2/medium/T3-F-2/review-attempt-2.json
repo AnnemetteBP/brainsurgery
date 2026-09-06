@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T16:01:20+00:00",
+  "finished_at": "2026-09-06T16:01:28+00:00",
+  "wall_clock_s": 8.3,
+  "tokens_in": 2,
+  "tokens_out": 557,
+  "cost_usd": 0.0460458,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly casts exactly the 48 named projection matrices to bfloat16 via `.float().to(torch.bfloat16)` (equivalent to `.to(bfloat16)` since inputs are already float32), casts/preserves everything else as float32, drops the 12 `h.<i>.attn.bias` buffers without touching other tensors, keeps names unchanged, and asserts the four required checks (48 bfloat16 tensors, `h.0.attn.c_attn.weight` bfloat16, `wte.weight` float32, 148 total tensors) before writing. Sharding is delegated to `save_sharded_safetensors` with the correct 64 MiB limit, consistent with the spec's shard-size and index-file requirements.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

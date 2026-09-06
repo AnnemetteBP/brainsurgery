@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T16:04:13+00:00",
+  "finished_at": "2026-09-06T16:04:41+00:00",
+  "wall_clock_s": 27.8,
+  "tokens_in": 2,
+  "tokens_out": 2335,
+  "cost_usd": 0.06633280000000001,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly maps adapter keys via `base_model.model.model.layers.<i>.<module>` to base keys `model.layers.<i>.<module>.weight`, computes `delta = B @ A` (shapes `[2048,16]@[16,2048]=[2048,2048]`), applies `scale = lora_alpha/r = 2`, skips transposition per `fan_in_fan_out=false`, and adds in float32 before casting back to the original dtype, matching the required-result formula. All four required checks (32 merges, no `lora_` names, correct shape for layer-0 q_proj, exactly 114 tensors) are asserted before the sharded write, and the adapter dict is never merged into `sd`, so no adapter/intermediate tensors leak into the output.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

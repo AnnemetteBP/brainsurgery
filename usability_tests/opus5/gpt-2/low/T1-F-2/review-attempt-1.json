@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T07:11:43+00:00",
+  "finished_at": "2026-09-06T07:11:53+00:00",
+  "wall_clock_s": 10.1,
+  "tokens_in": 2,
+  "tokens_out": 566,
+  "cost_usd": 0.11402049999999998,
+  "verdict_text": "YES\n\nThe script drops blocks 2/5/8, maps survivors in original order (`{old: new for new, old in enumerate(kept)}` \u2192 3\u21922, 4\u21923, 6\u21924, 7\u21925, 9\u21926, 10\u21927, 11\u21928), builds a fresh dict so no rename can overwrite a survivor, keeps the 4 non-block tensors and all values/shapes/dtypes untouched, and asserts both that the surviving indices are exactly 0..8 (which also excludes 9/10/11) and that the total is 121 \u2014 all before `save_file`, so a failure aborts with a non-zero exit and no output at `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

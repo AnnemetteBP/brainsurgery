@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T09:08:46+00:00",
+  "finished_at": "2026-09-06T09:09:00+00:00",
+  "wall_clock_s": 13.9,
+  "tokens_in": 2,
+  "tokens_out": 781,
+  "cost_usd": 0.24504674999999998,
+  "verdict_text": "NO\n\nThe dtype casting, buffer deletion, name preservation, and the four required pre-write checks are all correctly implemented and match clauses 1 through 4 and \"Required checks\". However, the entire sharded output (clause 5: shard files, `model.safetensors.index.json` with a complete `weight_map`, the 256 MiB per-shard cap, and oversized tensors stored alone) is delegated to `save_sharded_safetensors` from an unshown module `_ckpt`, so the artifact as presented does not demonstrably satisfy clause 5. The same applies to `load_checkpoint`, whose loading semantics are not visible. In addition, the condition rules require a standalone script using only PyTorch and `safetensors`; importing a helper module `_ckpt` is not standalone, so the artifact also does not conform to the \"Condition P\" script requirement.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

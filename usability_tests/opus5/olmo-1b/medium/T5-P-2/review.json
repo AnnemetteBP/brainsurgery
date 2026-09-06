@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T16:55:30+00:00",
+  "finished_at": "2026-09-06T16:55:50+00:00",
+  "wall_clock_s": 20.8,
+  "tokens_in": 2,
+  "tokens_out": 1471,
+  "cost_usd": 0.14626850000000002,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script correctly maps `base_model.model.model.layers.<i>.<module>.lora_{A,B}.weight` to `model.layers.<i>.<module>.weight`, computes `delta = B @ A` (`[2048,16] @ [16,2048]` \u2192 `[2048,2048]`) with no transpose since `fan_in_fan_out` is false, and adds it scaled by `lora_alpha / r = 2` in float32 without mutating any tensor in place. Adapter tensors are never inserted into the state dict, so the output holds exactly the 114 base names, and all four required checks are asserted before writing. The sharding packs tensors greedily to at most 536,870,912 bytes of tensor data, flushing before an overflowing tensor and letting an oversized tensor stand alone, and writes an index whose `weight_map` covers every tensor.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "1403be5a301448a3be36cef9201cdc2800acea2b4cfbb5c8de76cd3a94e33689"
+}

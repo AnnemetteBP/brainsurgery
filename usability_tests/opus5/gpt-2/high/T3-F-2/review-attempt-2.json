@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T16:12:28+00:00",
+  "finished_at": "2026-09-06T16:12:50+00:00",
+  "wall_clock_s": 21.9,
+  "tokens_in": 2,
+  "tokens_out": 1654,
+  "cost_usd": 0.13892650000000004,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script drops exactly the 12 `h.<i>.attn.bias` buffers (fullmatch on the buffer pattern), casts exactly the 48 projection matrices with `tensor.to(torch.bfloat16)` (round-to-nearest-even), leaves every other tensor float32 with unchanged values, preserves names, and asserts all four required checks (48 bf16, `h.0.attn.c_attn.weight` bf16, `wte.weight` fp32, 148 tensors) before writing. One caveat on verifiability: the sharding and index-file requirements (clause 5) are delegated to `_ckpt.save_sharded_safetensors`, which is not part of the artifact shown, so the 64 MiB shard limit, the lone-shard placement of `wte.weight`, and the `model.safetensors.index.json` `weight_map` are correct only if that helper is.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

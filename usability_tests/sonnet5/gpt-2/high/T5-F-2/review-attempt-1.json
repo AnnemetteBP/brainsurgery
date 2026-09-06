@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T06:37:56+00:00",
+  "finished_at": "2026-09-06T06:38:33+00:00",
+  "wall_clock_s": 37.4,
+  "tokens_in": 2,
+  "tokens_out": 3210,
+  "cost_usd": 0.0752128,
+  "verdict_text": "YES",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

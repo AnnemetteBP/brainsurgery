@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T08:54:25+00:00",
+  "finished_at": "2026-09-06T08:54:35+00:00",
+  "wall_clock_s": 10.0,
+  "tokens_in": 2,
+  "tokens_out": 498,
+  "cost_usd": 0.22362075,
+  "verdict_text": "YES\n\nThe script builds the keep index for each 768-wide segment as heads 0..4 and 6..11 in order, which is exactly the column ranges `0..319`, `384..767` per segment listed in clauses 1 and 2, and the same index on axis 0 with one segment gives rows `0..319`, `384..767` for the output projection in clause 3. Slicing via `index_select` keeps dtype and leaves all other tensors and names untouched, the four required checks are asserted before writing, and the output goes to `out/T2/model.safetensors` with the original 160 keys.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

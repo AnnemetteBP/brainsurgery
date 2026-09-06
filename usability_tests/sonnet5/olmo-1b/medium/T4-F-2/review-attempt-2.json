@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T16:06:13+00:00",
+  "finished_at": "2026-09-06T16:06:16+00:00",
+  "wall_clock_s": 3.4,
+  "tokens_in": 2,
+  "tokens_out": 123,
+  "cost_usd": 0.041512799999999996,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script verifies shared tensor names and bit-exact equality outside the 48 MLP tensors (aborting via assert if violated), computes the merge formula in float32 exactly as specified, asserts exactly 48 tensors were merged and 114 total, and writes a single `out/T4/model.safetensors`. This satisfies steps 1\u20134 and all required checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

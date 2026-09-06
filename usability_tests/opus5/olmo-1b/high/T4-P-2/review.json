@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T16:54:21+00:00",
+  "finished_at": "2026-09-06T16:54:42+00:00",
+  "wall_clock_s": 20.9,
+  "tokens_in": 2,
+  "tokens_out": 1425,
+  "cost_usd": 0.13302950000000002,
+  "verdict": "yes",
+  "verdict_text": "YES. The script loads the sharded base via its index plus the two fine-tune files, verifies identical key sets and bit-exact equality of every non-MLP tensor against both fine-tunes before merging (step 1), applies `base + 0.4*(ft1-base) + 0.4*(ft2-base)` in float32 to exactly the 48 `mlp.{gate_proj,up_proj,down_proj}.weight` tensors always against the untouched `base` dict (step 2), copies all other base tensors unchanged with identical names (step 3), and asserts `merged == 48` and `len(out) == 114` before writing `out/T4/model.safetensors` (step 4 and the required checks). The duplicate `import json` and the optional `sys.argv[1]` output-path override are cosmetic; the default path is the one the specification requires.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "39971c56f8f1ba950debcebf4fb42e1685eb2910891739a543fbb747ba8a390c"
+}

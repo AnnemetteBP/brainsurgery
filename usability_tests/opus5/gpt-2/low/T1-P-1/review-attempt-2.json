@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T1-defective.py",
+  "started_at": "2026-09-06T16:14:04+00:00",
+  "finished_at": "2026-09-06T16:14:10+00:00",
+  "wall_clock_s": 6.7,
+  "tokens_in": 2,
+  "tokens_out": 330,
+  "cost_usd": 0.1055115,
+  "verdict": "no",
+  "verdict_text": "NO. The script drops blocks `{2, 5, 9}` instead of blocks 2, 5, 8, violating Required result clause 1; consequently the renumbering map is also wrong (old 8 becomes 6, old 10 becomes 7, old 11 becomes 8, and old 9 is deleted), violating clause 2 and failing the bit-exact key/value comparison in Grading. The docstring likewise states the wrong block set, so this is a substantive error, not a typo in one place. Counts still come out to 121 tensors and 9 blocks, so the required checks pass while the result is silently wrong \u2014 exactly the failure mode the specification warns about.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

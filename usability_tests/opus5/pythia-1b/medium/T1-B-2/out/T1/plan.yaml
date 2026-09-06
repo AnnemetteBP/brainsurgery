@@ -1,0 +1,53 @@
+# T1: depth pruning of Pythia-1B (16 blocks -> 12 blocks) with renumbering.
+#
+# Drop blocks 2, 6, 10, 14, then shift the survivors down so indices are
+# contiguous 0..11.  The moves run in ascending destination order, so every
+# destination index is already free when it is written:
+#   2,6,10,14 are freed by the delete; 3->2 then frees 3 for 4->3, and so on.
+
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # ---- preflight: this really is the 16-block checkpoint we expect ----
+  - assert: { count: { of: '.*', is: 244 } }
+  - assert: { count: { of: 'gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight', is: 16 } }
+  - assert: { count: { of: 'gpt_neox\.layers\.\d+\..*', is: 240 } }
+  - assert: { shape: { of: 'gpt_neox\.layers\.0\.attention\.query_key_value\.weight', is: [6144, 2048] } }
+
+  # ---- 1. remove the pruned blocks (15 tensors each, 60 total) ----
+  - delete: { target: 'gpt_neox\.layers\.(2|6|10|14)\..*' }
+  - assert: { count: { of: 'gpt_neox\.layers\.\d+\..*', is: 180 } }
+  - assert: { not: { exists: 'gpt_neox\.layers\.(2|6|10|14)\..*' } }
+
+  # ---- 2. renumber the survivors, ascending so no destination collides ----
+  - move: { from: 'gpt_neox\.layers\.3\.(.*)',  to: 'gpt_neox.layers.2.\1' }
+  - move: { from: 'gpt_neox\.layers\.4\.(.*)',  to: 'gpt_neox.layers.3.\1' }
+  - move: { from: 'gpt_neox\.layers\.5\.(.*)',  to: 'gpt_neox.layers.4.\1' }
+  - move: { from: 'gpt_neox\.layers\.7\.(.*)',  to: 'gpt_neox.layers.5.\1' }
+  - move: { from: 'gpt_neox\.layers\.8\.(.*)',  to: 'gpt_neox.layers.6.\1' }
+  - move: { from: 'gpt_neox\.layers\.9\.(.*)',  to: 'gpt_neox.layers.7.\1' }
+  - move: { from: 'gpt_neox\.layers\.11\.(.*)', to: 'gpt_neox.layers.8.\1' }
+  - move: { from: 'gpt_neox\.layers\.12\.(.*)', to: 'gpt_neox.layers.9.\1' }
+  - move: { from: 'gpt_neox\.layers\.13\.(.*)', to: 'gpt_neox.layers.10.\1' }
+  - move: { from: 'gpt_neox\.layers\.15\.(.*)', to: 'gpt_neox.layers.11.\1' }
+
+  # ---- 3. required checks ----
+  # no tensor of blocks 12..15 remains
+  - assert: { not: { exists: 'gpt_neox\.layers\.(12|13|14|15)\..*' } }
+  # exactly 12 blocks remain
+  - assert: { count: { of: 'gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight', is: 12 } }
+  - assert: { count: { of: 'gpt_neox\.layers\.(0|1|2|3|4|5|6|7|8|9|10|11)\..*', is: 180 } }
+  # the output has exactly 184 tensors
+  - assert: { count: { of: '.*', is: 184 } }
+
+  # ---- 4. the 4 non-block tensors are untouched ----
+  - assert: { shape: { of: 'gpt_neox\.embed_in\.weight', is: [50304, 2048] } }
+  - assert: { shape: { of: 'embed_out\.weight', is: [50304, 2048] } }
+  - assert: { shape: { of: 'gpt_neox\.final_layer_norm\.weight', is: [2048] } }
+  - assert: { shape: { of: 'gpt_neox\.final_layer_norm\.bias', is: [2048] } }
+  - assert: { dtype: { of: 'gpt_neox\.layers\.11\.attention\.dense\.weight', is: float16 } }
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors

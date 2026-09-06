@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T10:59:33+00:00",
+  "finished_at": "2026-09-06T10:59:43+00:00",
+  "wall_clock_s": 10.7,
+  "tokens_in": 2,
+  "tokens_out": 592,
+  "cost_usd": 0.23340875000000003,
+  "verdict_text": "YES\n\nThe script builds the keep index for one segment of 16 blocks of 128 rows, skipping block 5, which yields exactly rows 0..639 and 768..2047 in order. It applies that index on axis 0 for q, k and v and on axis 1 for o_proj, producing [1920, 2048] and [2048, 1920]. All other tensors and names are left untouched, the five required assertions run before the write, and the result is saved as a single file at the required path. The only thing not visible is the `_ckpt.load_checkpoint` helper, which is assumed to merge both shards into one 114-entry float32 state dict.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

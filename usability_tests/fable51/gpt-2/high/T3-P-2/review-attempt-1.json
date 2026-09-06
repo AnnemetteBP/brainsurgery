@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T11:19:09+00:00",
+  "finished_at": "2026-09-06T11:19:30+00:00",
+  "wall_clock_s": 21.5,
+  "tokens_in": 2,
+  "tokens_out": 1548,
+  "cost_usd": 0.26861475,
+  "verdict_text": "YES\n\nThe dropping of the 12 `h.<i>.attn.bias` buffers, the bfloat16 cast of exactly the 48 projection matrices via a full-match regex, the float32 passthrough of every other tensor with unchanged values, unchanged names, the four required checks as pre-write asserts, and the 67,108,864-byte shard limit all match the specification.\n\nOne caveat: loading and sharding are delegated to `_ckpt.load_checkpoint` and `_ckpt.save_sharded_safetensors`, which are not part of the shown artifact. The index file name, the `weight_map` contents, and the lone-shard rule for `wte.weight` cannot be verified from this script alone and depend on that helper honoring the size limit as specified.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}
