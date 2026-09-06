@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -312,6 +313,7 @@ def run_review(args, sandbox: Path, env: dict) -> None:
     answers = json.loads((HERE / "review" / args.target / "answers.json").read_text())
     review = {
         "phase": "review", "artifact_kind": kind, "artifact": str(art.relative_to(HERE)),
+        "artifact_sha256": hashlib.sha256(art.read_bytes()).hexdigest(),
         "started_at": rstart, "finished_at": now(), "wall_clock_s": round(rwall, 1),
         "tokens_in": rsum["tokens_in"], "tokens_out": rsum["tokens_out"], "cost_usd": rsum["cost_usd"],
         "verdict": verdict, "verdict_text": verdict_text, "auto_says_defective": says_defective,

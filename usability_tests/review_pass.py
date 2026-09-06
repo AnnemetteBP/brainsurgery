@@ -14,6 +14,7 @@ whose review.json already carries `protocol` equal to --protocol are skipped.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -26,13 +27,24 @@ REPO = HERE.parent
 DEFAULT_MODELS = {"sonnet5": "claude-sonnet-5", "opus5": "claude-opus-5", "fable51": "claude-fable-5-1"}
 
 
+def artifact_sha(cell: Path, review: dict) -> str | None:
+    """sha256 of the artifact this cell's review must be based on, as it is on disk now."""
+    rel = review.get("artifact")
+    if not rel:
+        return None
+    art = HERE / rel
+    return hashlib.sha256(art.read_bytes()).hexdigest() if art.exists() else None
+
+
 def review_cell(cell: Path, model: str, args) -> str:
     agent, target, effort, run = cell.parts[-4:]
     test, cond, rep = run.split("-")
     tag = f"{agent}/{target}/{effort}/{run}"
     rv = cell / "review.json"
-    if not args.force and rv.exists() and json.loads(rv.read_text()).get("protocol") == args.protocol:
-        return f"skip   {tag}"
+    if not args.force and rv.exists():
+        prev = json.loads(rv.read_text())
+        if prev.get("protocol") == args.protocol and prev.get("artifact_sha256") == artifact_sha(cell, prev):
+            return f"skip   {tag}"
     cmd = [sys.executable, str(HERE / "run_claude.py"), test, cond, "--agent", agent, "--model", model,
            "--target", target, "--effort", effort, "--repeat", rep, "--review-only"]
     for attempt in range(1, args.max_attempts + 1):
