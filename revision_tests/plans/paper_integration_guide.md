@@ -170,6 +170,18 @@ absolute paths; copy only non-identifying hardware, software-version, and
 filesystem fields into the anonymous paper. No completed evaluation must be
 rerun to obtain this information.
 
+On the UCloud checkout, the existing raw records are converted directly into
+three anonymous committed result files and the LaTeX paragraph with:
+
+```bash
+.venv/bin/python revision_tests/export_linux_environment.py
+```
+
+The exporter refuses missing source records and rejects hostnames, common
+absolute-path prefixes, Git remotes, and GPU UUIDs. Its four generated files
+are then committed through the normal results workflow; no archive or manual
+copy is involved.
+
 The robustness runner also captured its Linux environment at
 `log/revision_tests/eacl2027_robustness_linux_2dbcd50/robustness/environment.json`.
 The two macOS correctness environment records are already committed inside
