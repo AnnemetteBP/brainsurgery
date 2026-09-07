@@ -1,5 +1,5 @@
 % Qualitative coverage map. This is not a performance-results table.
-% Status before the reported Linux runs and official usability cohort.
+% Status after the reported Linux runs; official usability cohort pending.
 \begin{table*}[t]
   \centering
   \small
@@ -9,16 +9,16 @@
     \midrule
     Regex/capture key rewriting
       & \texttt{torch-state-bridge}
-      & Direct (R01)
-      & Same contract; exact tensor oracle. \\
+      & Direct, complete (R01)
+      & 5/5 outputs per tool passed the exact tensor oracle. \\
     Weighted checkpoint merge
       & MergeKit
-      & Direct (M01)
-      & Same contract; independent numerical oracle. \\
+      & Direct, complete (M01)
+      & 5/5 outputs per tool passed the numerical oracle. \\
     Task-vector arithmetic
       & MergeKit
-      & Direct (M02)
-      & Same contract; independent numerical oracle. \\
+      & Direct, complete (M02)
+      & 5/5 outputs per tool passed the numerical oracle. \\
     Block deletion/reindexing
       & MergeKit slicing (adjacent)
       & Usability T1
@@ -29,15 +29,15 @@
       & Not an equivalent MergeKit head-pruning task. \\
     Mixed precision and sharded export
       & PyTorch/safetensors
-      & Usability T3; scaling
-      & Operation-matched systems evidence; Linux run pending. \\
+      & Scaling complete; usability T3 pending
+      & All 150/150 scaling attempts passed. \\
     LoRA merge and export
       & PEFT; MergeKit (adjacent)
       & Usability T5
       & No fixed-tool result; report the package actually selected. \\
     File-backed/out-of-core execution
       & PyTorch in-memory; MergeKit (adjacent)
-      & Scaling
+      & Scaling complete
       & Arena is compared directly with Python/PyTorch, not MergeKit. \\
     MoE construction/upcycling
       & MergeKit
