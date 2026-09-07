@@ -13,10 +13,11 @@ and the Codex runs. Everything else is done and committed.
 | Reviews, Sonnet 5 and Opus 5 | complete under the final protocol (`review-v2`) against the final artifacts |
 | Reviews, Fable 5.1 | **138 stale**, blocked by a model-specific account limit |
 | Codex runs | 3 cells exist (`usability_tests/astra/gpt-2/light/T1-*-1`), the rest not run |
+| Doc-consultation time | derived from the transcripts for all 810 Claude cells and committed as `doctime.json`; results in `README.md` |
 
 Records per cell: `run.json`, `harness.json`, `grade.json`, `review.json`,
-`env-freeze.txt`, the participant's artifact under `out/<test>/` and its
-`REPORT.md`. `analyze.py` reads only the JSON files.
+`doctime.json`, `env-freeze.txt`, the participant's artifact under
+`out/<test>/` and its `REPORT.md`. `analyze.py` reads only the JSON files.
 
 ## 2. Uncommitted work in the tree
 
@@ -68,6 +69,7 @@ Then the final tables:
 
 ```bash
 .venv/bin/python usability_tests/resummarise.py     # execution counts from transcripts
+.venv/bin/python usability_tests/doc_time.py        # doc-consultation time from transcripts
 .venv/bin/python usability_tests/analyze.py         # per agent/target/effort/condition + pooled
 ```
 
@@ -110,7 +112,12 @@ AGENT=<name> MODEL=<model-id> PRICE_IN=<usd> PRICE_OUT=<usd> \
 
 Repeat 1 first and completely, then repeat 2 (`... 2 2`). Odd repeats show the
 defective artifact to the reviewer, even repeats the correct one; both are
-needed for detection and false-alarm rates.
+needed for detection and false-alarm rates. Transcripts are not committed, so
+anything derived from them has to be extracted on that machine
+(`.venv/bin/python usability_tests/doc_time.py`) before cleanup, but note that
+`doc_time.py` reads Claude Code transcripts only and skips Codex ones as
+unsupported: extend it against one real Codex transcript if the doc-time
+column is wanted for both vendors.
 
 Parity requirements, all in `usability_tests/AGENTS.md` under "Running the same
 study with another driver": same commit, verified data, same cells, sandboxes
@@ -136,6 +143,9 @@ time cap, so `cap_hit` values are not directly comparable; the tier names are
   tmpfs. Verification scratch belongs on `/mnt/nvme/brainsurgery/log/`.
 - **Sandboxes are deleted after grading** (`--keep-artifacts` to keep them);
   the pilot's 45 cells used 140 GB, the study data is 107 MB.
+- **Transcripts are gitignored**, so a measure derived from one is lost when
+  the machine is cleaned. `doc_time.py` writes `doctime.json` per cell;
+  run it before cleanup, and on every machine that drives an agent.
 - **A review is only valid for the artifact it read.** If any reference or
   defective variant changes, `review_pass.py` will redo exactly the affected
   reviews; never edit those files without rerunning it.

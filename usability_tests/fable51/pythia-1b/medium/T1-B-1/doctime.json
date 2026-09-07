@@ -1,0 +1,11 @@
+{
+ "protocol": "doctime-v1",
+ "source": "transcript.jsonl",
+ "condition": "B",
+ "doc_calls": 3,
+ "doc_bytes": 11507,
+ "doc_time_s": 8.9,
+ "doc_time_lower_s": 5.2,
+ "spans_closed_by_action": 1,
+ "mixed_messages": 0
+}

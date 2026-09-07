@@ -112,6 +112,7 @@ ignores checkpoints, environments, transcripts and copied inputs.
 | Retries, errors | `harness.json`: executions of the script/plan, failed executions with an error class each, first-execution success, executions until first success |
 | Tokens and cost | `harness.json`: input/output/cache tokens and cost from the provider (Claude Code reports `total_cost_usd`) |
 | Time to solution | `harness.json` wall clock of the solve phase, reported over passing runs |
+| Doc-consultation time | `doctime.json`, derived from `transcript.jsonl` by `doc_time.py`: the time spent fetching documentation and digesting it, per run. In condition B that is the doc pack; P and F have no doc pack and the equivalent (`--help`, `pydoc`, reading a package under `site-packages`) is near-zero. Claude Code transcripts only so far |
 | Bug-detection ability | `review.json`: after solving, the same model reviews one artifact for the same task (defective on odd repeats, correct on even) and must say whether it meets the specification; the experimenter confirms `detected` against `review/<target>/answers.json`. Reported as detection rate on defective artifacts and false-alarm rate on correct ones |
 | Self-report | `out/<test>/REPORT.md`: attempts, pitfalls, unclear points, tools used (F) |
 
@@ -263,6 +264,54 @@ checks in a plan are for. Bug detection is at or near 100 percent in all
 conditions, but only defective artifacts were shown (odd repeat); the
 false-alarm rate needs repeat 2. Repeat 1 cost 280.63 USD in total (233 solve,
 47 review) and about 5 hours of wall clock at four cells in parallel.
+
+## Doc-consultation time
+
+Over both repeats (810 runs), `doc_time.py` measures how much of each solve
+went into reading documentation: for every tool call that fetches
+documentation, the span from the call to the first assistant message after
+its result, that is the fetch plus the model turn that consumes it,
+overlapping spans merged. The numbers below are condition B, the only
+condition with a doc pack.
+
+| Group | Runs | Median doc time | Median solve time | Share of solve | Median reads | Median KB read |
+|---|---|---|---|---|---|---|
+| all B | 270 | 35 s | 128 s | 28% | 7 | 49 |
+| Sonnet 5 | 90 | 58 s | 164 s | 33% | 9 | 60 |
+| Opus 5 | 90 | 28 s | 127 s | 22% | 7 | 42 |
+| Fable 5.1 | 90 | 30 s | 104 s | 29% | 6 | 49 |
+| low | 90 | 21 s | 97 s | 23% | 5 | 35 |
+| medium | 90 | 34 s | 115 s | 29% | 7 | 47 |
+| high | 90 | 54 s | 181 s | 30% | 8 | 65 |
+| T1 | 54 | 29 s | 100 s | 27% | 6 | 40 |
+| T2 | 54 | 32 s | 115 s | 28% | 6 | 48 |
+| T3 | 54 | 23 s | 95 s | 24% | 6 | 39 |
+| T4 | 54 | 65 s | 194 s | 33% | 8 | 65 |
+| T5 | 54 | 40 s | 152 s | 26% | 8 | 60 |
+
+Pooled, 200 of the 670 minutes of condition-B solve wall clock is doc
+consultation, 30 percent; per run it ranges from 6 s to 296 s and is stable
+across repeats (median 35 s and 36 s) and across targets (28 to 39 s). It
+grows with the effort tier in every agent (Sonnet 5 34/50/67 s, Opus 5
+18/27/46 s, Fable 5.1 18/28/52 s) and it is largest on T4, the multi-input
+task-vector merge, which is also the longest task.
+
+Two things bound how far this can be read:
+
+- It is agent latency, not human reading time. It compares conditions,
+  agents, tiers and tasks with each other; it is not an estimate of what a
+  practitioner would spend on the same documentation.
+- There is no symmetric baseline. P consulted nothing at all (0 of 270 runs),
+  F inspected an installed package in 32 of 270 runs for 11 minutes in total;
+  both work from what the model already knows about torch, peft and the merge
+  toolkits. So the doc-reading cost is the cost of a tool the models have not
+  memorised, and it cannot be phrased as a comparison against the
+  documentation of the alternatives.
+
+The attribution itself is tight: no assistant message ever mixed a doc read
+with other tool calls, and only 41 of 1968 doc reads are followed by a
+message that acts rather than thinks or reads on, so the upper and lower
+bounds of the measure differ by 1 percent (200 min against 198 min).
 
 ## Pilot, and what it changed
 
