@@ -214,6 +214,74 @@ def behavioral() -> Check:
     return Check("Expanded behavioral analysis", "PENDING", f"no evidence bundle matches canonical protocol {protocol_id}")
 
 
+def behavioral_methodology() -> Check:
+    protocol_path = REPO / "revision_tests/behavioral/methodology_protocol.yaml"
+    protocol = yaml.safe_load(protocol_path.read_text(encoding="utf-8"))
+    protocol_id = protocol["protocol_id"]
+    root = REPO / "revision_tests/behavioral/results"
+    required = ["summary.json", "evidence.json", "table.md", "table.tex", "paper_text.md", "paper_text.tex"]
+    candidates = []
+    for evidence_path in root.glob("*/evidence.json"):
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+        if evidence.get("protocol_id") == protocol_id:
+            candidates.append((evidence_path.parent, evidence))
+    for directory, evidence in candidates:
+        structural = evidence.get("structural_losslessness", {})
+        ablation = evidence.get("pythia_precision_ablation", {})
+        structural_results = structural.get("results", [])
+        ablation_results = ablation.get("results", [])
+        expected_structural = protocol["structural_losslessness"]["model_ids"]
+        expected_ablation = protocol["pythia_precision_ablation"]["model_ids"]
+        expected_arms = {arm["id"] for arm in protocol["pythia_precision_ablation"]["arms"]}
+
+        def valid_result(item: dict[str, Any], *, structural: bool) -> bool:
+            comparisons = item.get("comparisons", {})
+            if set(comparisons) != {"original_vs_brainsurgery", "pytorch_vs_brainsurgery"}:
+                return False
+            for comparison in comparisons.values():
+                if comparison.get("aggregate", {}).get("prompt_count") != 70:
+                    return False
+                if len(comparison.get("prompts", [])) != 70:
+                    return False
+                if not comparison.get("numeric_health", {}).get("passed"):
+                    return False
+            oracles = item.get("tensor_oracles", {})
+            if structural:
+                return all(oracle.get("passed") for oracle in oracles.values())
+            return oracles.get("pytorch_vs_brainsurgery", {}).get("passed") is True
+
+        counts_ok = (
+            [item.get("id") for item in structural_results] == expected_structural
+            and len(ablation_results) == len(expected_ablation) * len(expected_arms)
+            and {item.get("id") for item in ablation_results} == set(expected_ablation)
+            and {item.get("arm") for item in ablation_results} == expected_arms
+        )
+        artifacts_ok = all((directory / name).is_file() for name in required)
+        complete = (
+            evidence.get("protocol_sha256") == sha256(protocol_path)
+            and evidence.get("gpu")
+            and counts_ok
+            and all(valid_result(item, structural=True) for item in structural_results)
+            and all(valid_result(item, structural=False) for item in ablation_results)
+            and artifacts_ok
+        )
+        detail = (
+            f"{directory.relative_to(REPO)}: structural losslessness 10 models/700 prompts; "
+            f"Pythia precision ablation 8 model-dtype arms/560 prompts; "
+            f"negative threshold results retained"
+        )
+        if complete:
+            return Check("Behavioral methodology correction", "PASS", detail)
+        missing = [name for name in required if not (directory / name).is_file()]
+        return Check(
+            "Behavioral methodology correction",
+            "BLOCKED",
+            f"{directory.relative_to(REPO)} matches {protocol_id}, but failed count, health, oracle, or artifact validation"
+            + (": missing " + ", ".join(missing) if missing else ""),
+        )
+    return Check("Behavioral methodology correction", "PENDING", f"no evidence bundle matches {protocol_id}")
+
+
 def usability() -> Check:
     official = REPO / "usability_tests/astra_eacl2027"
     if not official.is_dir():
@@ -244,7 +312,15 @@ def main() -> int:
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--strict", action="store_true", help="return nonzero unless every required gate passes")
     args = parser.parse_args()
-    checks = [correctness(), *linux_results(), environment_records(), behavioral(), usability(), manuscript()]
+    checks = [
+        correctness(),
+        *linux_results(),
+        environment_records(),
+        behavioral(),
+        behavioral_methodology(),
+        usability(),
+        manuscript(),
+    ]
     if args.json:
         print(json.dumps([asdict(check) for check in checks], indent=2))
     else:
