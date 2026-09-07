@@ -265,11 +265,11 @@ def ablation_arm(
     analysis_case = dict(case, expected_weight_dtype=arm["inference_dtype"])
     comparisons = {
         "original_vs_brainsurgery": analyze_pair(
-            source, bs_restored, source, analysis_case, protocol,
+            source, bs_restored, original_source, analysis_case, protocol,
             case_root / "original_vs_brainsurgery.json", args.smoke_limit,
         ),
         "pytorch_vs_brainsurgery": analyze_pair(
-            pytorch_restored, bs_restored, source, analysis_case, protocol,
+            pytorch_restored, bs_restored, original_source, analysis_case, protocol,
             case_root / "pytorch_vs_brainsurgery.json", args.smoke_limit,
         ),
     }
