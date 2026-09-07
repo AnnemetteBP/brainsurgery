@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "artifact_sha256": "290fb5d27c5146e7ca4ba58700f2848f1be69af03d5dfc0f099fe8daed8118df",
+  "started_at": "2026-09-06T18:15:41+00:00",
+  "finished_at": "2026-09-06T18:15:48+00:00",
+  "wall_clock_s": 6.2,
+  "tokens_in": 2,
+  "tokens_out": 346,
+  "cost_usd": 0.0485468,
+  "verdict": "no",
+  "verdict_text": "NO. The projection matrices are cast via `tensor.float().to(torch.bfloat16)`, which first forces the tensor to float32 before down-casting to bfloat16 \u2014 since the input is already float32, this is equivalent to `tensor.to(torch.bfloat16)` and does not itself violate round-to-nearest-even, so that part is fine. However, the packing loop in `save_sharded_safetensors` only starts a new shard when `cur` is non-empty and `cur_size + size > max_bytes`, meaning a shard can still be closed and then an oversized tensor (embed_tokens/lm_head at 412MB) gets appended to a fresh empty shard alone, which is correct \u2014 but subsequent normal tensors after an oversized one get added to that same `cur` since it's never force-closed after an oversized single-tensor shard, violating the requirement that \"a single tensor larger than [256MiB] is stored alone in its own shard\" (clause under Required result item 5). This can cause a shard to contain both the oversized tensor and additional trailing tensors.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

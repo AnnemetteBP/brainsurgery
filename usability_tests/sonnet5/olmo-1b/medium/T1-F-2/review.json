@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "artifact_sha256": "2e3d85542db24c3ba5659fcde0db87634ab4438d0de4e40d4df970a213244889",
+  "started_at": "2026-09-06T18:15:58+00:00",
+  "finished_at": "2026-09-06T18:16:06+00:00",
+  "wall_clock_s": 7.8,
+  "tokens_in": 2,
+  "tokens_out": 587,
+  "cost_usd": 0.0478978,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script drops exactly blocks {2,6,10,14}, renumbers the remaining 12 blocks via `enumerate(kept)` which produces exactly the mapping the spec lists (0\u21920,1\u21921,3\u21922,4\u21923,5\u21924,7\u21925,8\u21926,9\u21927,11\u21928,12\u21929,13\u219210,15\u219211), passes non-block tensors through unchanged, and only calls `save_file` after asserting the layer set is `{0..11}` and the tensor count is 86, so a failed check raises before any output is written.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

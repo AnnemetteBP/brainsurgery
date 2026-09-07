@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T12:11:10+00:00",
+  "finished_at": "2026-09-06T12:11:48+00:00",
+  "wall_clock_s": 38.3,
+  "tokens_in": 2,
+  "tokens_out": 2718,
+  "cost_usd": 0.1813975,
+  "verdict": "no",
+  "verdict_text": "NO.\n\nThe plan never removes the adapter tensors: `lora::` is loaded as an input namespace and only `delta` intermediates are deleted, so the 64 `base_model.model.model.layers.<i>.<module>.lora_{A,B}.weight` tensors survive into `out/T5`, violating required result 2 (\"No adapter tensor ... appears in the output\") and the 114-tensor key set in result 4. The two asserts that were supposed to catch exactly this are scoped to the wrong namespace and are therefore vacuous: `assert: not: exists: 'model::.*lora_.*'` searches only the `model::` namespace, where no name containing `lora_` is ever created, and `assert: count: { of: 'model::.*', is: 114 }` counts only that namespace rather than the output, so both pass no matter how many adapter tensors remain. This violates the \"Required checks\" clause, which demands the run fail loudly if \"no tensor name containing `lora_` is in the output\" or \"the output has exactly 114 tensors\" does not hold; the patterns needed to be namespace-agnostic (e.g. `'.*lora_.*'`) or the `lora::` tensors deleted before output. The merge arithmetic itself is correct \u2014 `B @ A` with no transpose per `fan_in_fan_out = false`, scaled by `alpha/r = 2`, added in float32 \u2014 as is the `count ... is: 32` check on `lora_A` weights, so the defect is confined to cleanup and to the two unenforceable checks.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

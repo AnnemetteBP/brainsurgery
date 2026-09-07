@@ -1,0 +1,60 @@
+# T3: mixed-precision export with sharding (GPT-2 124M)
+#
+# - 48 projection matrices  -> bfloat16
+# - everything else         -> untouched float32
+# - 12 causal-mask buffers  -> deleted
+# - output                  -> sharded safetensors dir + index, 64 MiB budget
+
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # 0. Sanity: the input is what we think it is.
+  - assert:
+      all:
+        - count: { of: '.*', is: 160 }
+        - count: { of: 'h\.\d+\.attn\.bias', is: 12 }
+        - count:
+            of: 'h\.\d+\.(?:attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight'
+            is: 48
+
+  # 1. Drop the non-parameter causal-mask buffers (h.<i>.attn.bias only;
+  #    the projection biases are h.<i>.attn.c_*.bias and are not matched).
+  - delete: { target: 'h\.\d+\.attn\.bias' }
+
+  # 2. Cast exactly the projection matrices in place. The pattern is anchored
+  #    on the four module names, so wte/wpe/ln_*/`*.bias` are never touched.
+  - cast_:
+      target: 'h\.\d+\.(?:attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight'
+      to: bfloat16
+
+  # 3. Required checks -- must fail loudly before anything is written.
+  - assert:
+      all:
+        # exactly 48 tensors are bfloat16: the 48 projections are bf16 ...
+        - count:
+            of: 'h\.\d+\.(?:attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight'
+            is: 48
+        - dtype:
+            of: 'h\.\d+\.(?:attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight'
+            is: bfloat16
+        # ... and every one of the remaining 100 tensors is still float32.
+        - count:
+            of: '(?!h\.\d+\.(?:attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight$).*'
+            is: 100
+        - dtype:
+            of: '(?!h\.\d+\.(?:attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight$).*'
+            is: float32
+        # named spot checks
+        - dtype: { of: 'h\.0\.attn\.c_attn\.weight', is: bfloat16 }
+        - dtype: { of: 'wte\.weight', is: float32 }
+        # buffers gone, no parameter lost ('count: is: 0' is not usable here:
+        # the resolver treats a zero-match reference as an error, so the
+        # absence of the buffers is expressed as a negated 'exists').
+        - not: { exists: 'h\.\d+\.attn\.bias' }
+        - count: { of: '.*', is: 148 }
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 64MB

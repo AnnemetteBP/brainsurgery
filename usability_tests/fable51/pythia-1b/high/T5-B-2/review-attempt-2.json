@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T12:06:43+00:00",
+  "finished_at": "2026-09-06T12:07:06+00:00",
+  "wall_clock_s": 23.2,
+  "tokens_in": 2,
+  "tokens_out": 1605,
+  "cost_usd": 0.30568575,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan computes B @ A in float32 from the lora_B/lora_A pairs, scales by alpha/r = 2, upcasts the 16 target weights to float32, adds the delta, casts back to float16, and deletes the intermediate `.delta` tensors, matching Required result 1 and 2. Untouched base tensors pass through unchanged. All four required checks are present as asserts before the output: lora_A count of 16 plus delta count of 16, no `lora_` name in the model alias, shape of layer 0 query_key_value, and a total of 244 tensors. Output is safetensors to `out/T5` with `shard: 512MB`, which BrainSurgery interprets as 512 MiB, so the index and per-shard limit follow the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

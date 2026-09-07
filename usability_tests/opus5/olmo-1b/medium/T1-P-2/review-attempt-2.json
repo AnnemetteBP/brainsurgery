@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T16:20:24+00:00",
+  "finished_at": "2026-09-06T16:20:36+00:00",
+  "wall_clock_s": 11.6,
+  "tokens_in": 2,
+  "tokens_out": 734,
+  "cost_usd": 0.11625049999999998,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops blocks 2, 6, 10, 14, maps the survivors in original order to 0..11 (`kept` is ascending, so old 3\u21922, 7\u21925, 11\u21928, 15\u219211 as required), renames only the block index while carrying tensors through unchanged, and leaves the two non-block tensors untouched. Both assertions \u2014 surviving indices exactly `set(range(12))`, which also rules out any block 12\u201315 tensor, and a total of 86 tensors \u2014 run before `save_file`, so a failure exits non-zero with nothing written to `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

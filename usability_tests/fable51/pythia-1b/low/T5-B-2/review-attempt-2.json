@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T12:07:38+00:00",
+  "finished_at": "2026-09-06T12:07:52+00:00",
+  "wall_clock_s": 14.6,
+  "tokens_in": 2,
+  "tokens_out": 887,
+  "cost_usd": 0.26969075000000003,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan computes `delta = B @ A` from the float32 adapter, scales by alpha/r = 2, casts each target weight to float32 before adding, casts back to float16, deletes the intermediate, and all four required checks are expressed as `assert` transforms that run before the sharded write. The only unverifiable point is the unit of `shard: 512MB`; the plan asserts it is binary (536,870,912 bytes), which matches the specification's limit and would place each 206 MB embedding alone in its own shard only if the accumulated-size packing rule matches the reference.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

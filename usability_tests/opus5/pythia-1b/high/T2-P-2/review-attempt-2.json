@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T16:22:27+00:00",
+  "finished_at": "2026-09-06T16:22:42+00:00",
+  "wall_clock_s": 14.9,
+  "tokens_in": 2,
+  "tokens_out": 1056,
+  "cost_usd": 0.12866049999999998,
+  "verdict": "yes",
+  "verdict_text": "YES. The keep-index construction yields exactly rows `0..3839` and `4608..6143` for the fused `query_key_value` weight and bias (8 head blocks of 768, dropping block 5, dim 0), and columns `0..1279` and `1536..2047` for `attention.dense.weight` (8 blocks of 256, dropping block 5, dim 1), applied to all 16 layers with names, dtypes and all other tensors untouched. The four required checks are asserted before the single `out/T2/model.safetensors` is written, and `index_select` preserves float16 values bit-exactly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

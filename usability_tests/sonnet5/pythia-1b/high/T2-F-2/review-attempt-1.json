@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T06:56:41+00:00",
+  "finished_at": "2026-09-06T06:57:04+00:00",
+  "wall_clock_s": 23.2,
+  "tokens_in": 2,
+  "tokens_out": 1950,
+  "cost_usd": 0.0630788,
+  "verdict_text": "YES\n\nThe artifact correctly implements the specification: `keep_index` builds row/column-keep lists per 768-wide (QKV) or 256-wide (dense) head blocks, skipping head 5 and concatenating the remaining blocks in ascending order, which produces exactly rows/columns `0..3839, 4608..6143` for query_key_value and `0..1279, 1536..2047` for dense.weight, matching the required result clauses 1\u20133. All other tensors are left untouched (clause 4), the required shape/count asserts run before `save_file` (fail-loudly requirement), and the output writes 244 tensors to `out/T2/model.safetensors` (clause 5).",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

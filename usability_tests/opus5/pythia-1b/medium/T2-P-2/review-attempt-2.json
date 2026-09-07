@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T16:26:03+00:00",
+  "finished_at": "2026-09-06T16:26:17+00:00",
+  "wall_clock_s": 13.2,
+  "tokens_in": 2,
+  "tokens_out": 794,
+  "cost_usd": 0.1221305,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe keep index for `[6144, ...]` tensors with block 768 skips h=5, yielding rows 0..3839 then 4608..6143 in order (clauses 1 and 2); for `attention.dense.weight` it selects along dim 1 with block 256, keeping columns 0..1279 then 1536..2047 (clause 3). Only the three head-bearing tensors per layer for layers 0..15 are touched, names are preserved, and all 244 tensors are written to a single `out/T2/model.safetensors` (clauses 4 and 5). `index_select` preserves the float16 dtype, so values are bit-exact. All four required checks are asserted before `save_file`. One caveat outside the artifact: it depends on an unshown `_ckpt.load_checkpoint`, so correctness of dtype and key-set preservation on load rests on that helper.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

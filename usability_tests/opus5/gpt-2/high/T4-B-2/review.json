@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T16:12:50+00:00",
+  "finished_at": "2026-09-06T16:13:48+00:00",
+  "wall_clock_s": 57.8,
+  "tokens_in": 2,
+  "tokens_out": 4463,
+  "cost_usd": 0.2196785,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan verifies the precondition first (160 tensors in each fine-tune, plus pairwise `equal` over the 112 non-MLP names via a full-match negative lookahead that excludes exactly the four MLP tensor names per layer), and together with the later copies of all 48 MLP tensors from each fine-tune this pins the name sets to be identical. Both task vectors are built against the unmodified base \u2014 `copy` ft\u2192`.tv1`/`.tv2`, then `subtract_` the base into them (giving `ft - base`), then `scale_` by 0.4 \u2014 and only after both exist are they added back with `add_`, so the ordering hazard is avoided and the result is `base + 0.4*(ft1-base) + 0.4*(ft2-base)` in float32. The required checks are all present as `assert` transforms: the shared-tensor verification, 48 merged tensors (asserted for each of the two task-vector sets), and 160 tensors in the output after the scratch `.tv1`/`.tv2` tensors are deleted. Names are unchanged and the output path is exactly `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "8adafa570c1e0368dca8be6f08d2fd86ce3b24b61e44ee0c9d0892ee32f0ab0f"
+}

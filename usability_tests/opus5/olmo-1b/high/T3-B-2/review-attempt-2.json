@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T12:10:15+00:00",
+  "finished_at": "2026-09-06T12:11:10+00:00",
+  "wall_clock_s": 54.3,
+  "tokens_in": 2,
+  "tokens_out": 4005,
+  "cost_usd": 0.2127895,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan casts exactly the 112 projection matrices (7 per layer \u00d7 16 layers) to bfloat16 and leaves the other two tensors float32 (the leading `.*` \u2192 float32 cast is a no-op on an all-float32 input, and it runs before the bfloat16 cast), renames nothing, deletes nothing, and writes `out/T3` as sharded safetensors with a 256 MiB shard budget. The required checks are all enforced before writing: the count-112 assert plus the \"all projections are bfloat16\" and \"everything else is float32\" dtype asserts together imply exactly 112 bfloat16 tensors (given the count-114 assert), and the two named-tensor dtype asserts are present literally. The \"exactly 112 bfloat16\" check is expressed as that pair of dtype asserts rather than a direct count of bfloat16 tensors, but it is equivalent and still fails loudly on any deviation.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

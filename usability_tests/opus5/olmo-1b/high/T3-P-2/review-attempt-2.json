@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:17:56+00:00",
+  "finished_at": "2026-09-06T16:18:20+00:00",
+  "wall_clock_s": 23.8,
+  "tokens_in": 2,
+  "tokens_out": 1838,
+  "cost_usd": 0.14597750000000004,
+  "verdict": "yes",
+  "verdict_text": "YES.\n\nThe regex `matrix_re` with `fullmatch` selects exactly the 7 projection names per layer (16 \u00d7 7 = 112) and nothing else, so `model.embed_tokens.weight` and `lm_head.weight` are untouched; the cast is `.to(torch.bfloat16)`, which is round-to-nearest-even as required, and all other tensors stay float32 with unchanged values since the input is already float32. `buffer_re` contains `(?!)`, an always-failing lookahead, so it never matches and nothing is deleted \u2014 which matches clause 3's \"do not delete anything\". All four required checks are asserted before writing, and names are never rewritten. The sharded output is delegated to `save_sharded_safetensors(out, out_dir, 268435456)`, which is called with the correct 256 MiB budget and target directory.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

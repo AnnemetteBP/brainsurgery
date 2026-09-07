@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T1.yaml",
+  "started_at": "2026-09-06T15:42:28+00:00",
+  "finished_at": "2026-09-06T15:43:08+00:00",
+  "wall_clock_s": 40.0,
+  "tokens_in": 2,
+  "tokens_out": 3596,
+  "cost_usd": 0.085418,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan correctly deletes blocks 2/5/8 (39 tensors), then renumbers the survivors via moves ordered 3\u21922, 4\u21923, 6\u21924, 7\u21925, 9\u21926, 10\u21927, 11\u21928; simulating the sequence shows each destination is vacated by an earlier move before being written, so no collision ever occurs, and the final mapping (0\u21920, 1\u21921, 3\u21922, 4\u21923, 6\u21924, 7\u21925, 9\u21926, 10\u21927, 11\u21928) exactly matches the spec's required mapping. All three required checks are present as asserts (`h.(9|10|11)` absent, exactly 9 `attn.c_attn.weight` tensors, exactly 121 total tensors), matching \"Required checks\" verbatim, and the output path/count (121 = 160 \u2212 39) matches \"Required result.\"",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "a2bf58fa161beaa548001c9117f50c54170d38a853ccd19b3279192a1eb2dcdb"
+}

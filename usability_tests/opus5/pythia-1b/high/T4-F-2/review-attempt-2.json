@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T16:23:17+00:00",
+  "finished_at": "2026-09-06T16:23:33+00:00",
+  "wall_clock_s": 16.0,
+  "tokens_in": 2,
+  "tokens_out": 1057,
+  "cost_usd": 0.12484650000000001,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script loads all three checkpoints, verifies identical key sets and bit-identical non-MLP tensors (base vs ft1 and base vs ft2, which transitively covers ft1 vs ft2) before writing anything, and aborts via assertions otherwise. The regex `fullmatch` selects exactly the four MLP tensor names per layer; each task vector is computed against the untouched `base` tensor (the merged result is assigned into the separate `out` dict, so no in-place contamination of the base), in float32, then cast back to the base dtype. All other tensors are carried over unchanged from `base` under their original names, and the required guards (`merged == 64`, `len(out) == 244`) are present before saving to `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

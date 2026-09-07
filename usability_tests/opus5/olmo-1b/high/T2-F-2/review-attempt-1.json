@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T08:23:15+00:00",
+  "finished_at": "2026-09-06T08:23:35+00:00",
+  "wall_clock_s": 19.6,
+  "tokens_in": 2,
+  "tokens_out": 1415,
+  "cost_usd": 0.14094450000000003,
+  "verdict_text": "YES\n\nThe keep-index construction (`segments=1`, `seg_size=2048`, `block=128`, skipping `h == 5`) yields exactly `arange(0,640)` concatenated with `arange(768,2048)`, applied along dim 0 for q/k/v and dim 1 for o_proj across all 16 layers, leaving the other 50 tensors untouched. The four shape assertions and the 114-tensor count check run before `save_file`, and the output is the single file `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

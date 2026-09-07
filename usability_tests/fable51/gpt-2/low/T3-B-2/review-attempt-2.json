@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T12:04:07+00:00",
+  "finished_at": "2026-09-06T12:04:15+00:00",
+  "wall_clock_s": 7.6,
+  "tokens_in": 2,
+  "tokens_out": 363,
+  "cost_usd": 0.22811775,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan deletes the 12 causal-mask buffers, casts exactly the 48 per-layer projection matrices to bfloat16 while leaving everything else float32 with unchanged values, keeps tensor names intact, encodes all four required checks as asserts that run before the output is written, and emits a sharded safetensors checkpoint under `out/T3` with a 64 MiB per-shard cap, which matches every clause of the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

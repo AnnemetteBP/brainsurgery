@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "artifact_sha256": "86c4df1bf481a3ef792ee9229bb90618bb7950a8c1fe8610059fe3411ee71f43",
+  "started_at": "2026-09-06T18:13:13+00:00",
+  "finished_at": "2026-09-06T18:13:41+00:00",
+  "wall_clock_s": 27.2,
+  "tokens_in": 2,
+  "tokens_out": 2456,
+  "cost_usd": 0.07409800000000001,
+  "verdict": "yes",
+  "verdict_text": "YES",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

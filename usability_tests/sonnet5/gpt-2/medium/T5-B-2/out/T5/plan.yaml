@@ -1,0 +1,44 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Sanity: exactly 12 adapter pairs (one A/B pair per layer, attn.c_attn only).
+  - assert: { count: { of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_A\.weight', is: 12 } }
+  - assert: { count: { of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_B\.weight', is: 12 } }
+
+  # delta_lin = B @ A, shape [2304, 768] (nn.Linear convention: [out, in]).
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'base::_tmp.\1.delta_lin'
+
+  # Conv1D base layout is [in, out]; transpose the Linear-convention product (fan_in_fan_out=true).
+  - permute:
+      from: 'base::_tmp\.(\d+)\.delta_lin'
+      to: 'base::_tmp.\1.delta_conv1d'
+      order: [1, 0]
+
+  # scale = lora_alpha / r = 32 / 16 = 2
+  - scale:
+      from: 'base::_tmp\.(\d+)\.delta_conv1d'
+      to: 'base::_tmp.\1.delta_scaled'
+      by: 2.0
+
+  # Fold into the base weight in place; keeps name, shape [768, 2304], dtype float32.
+  - add_:
+      from: 'base::_tmp\.(\d+)\.delta_scaled'
+      to: 'base::h.\1.attn.c_attn.weight'
+
+  # Drop every intermediate tensor; only base's original 160 names may remain.
+  - delete: { target: 'base::_tmp\..*' }
+
+  # Required checks: fail loudly before writing if any of these does not hold.
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert: { shape: { of: 'base::h.0.attn.c_attn.weight', is: [768, 2304] } }
+  - assert: { count: { of: 'base::.*', is: 160 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB

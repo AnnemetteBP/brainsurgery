@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T16:12:32+00:00",
+  "finished_at": "2026-09-06T16:12:55+00:00",
+  "wall_clock_s": 22.3,
+  "tokens_in": 2,
+  "tokens_out": 1636,
+  "cost_usd": 0.13740650000000001,
+  "verdict": "no",
+  "verdict_text": "NO.\n\nClauses 1\u20134 and the four required checks are handled correctly: `fullmatch` on the two regexes selects exactly the 48 projection matrices and the 12 `h.<i>.attn.bias` buffers, the cast is a plain `.to(torch.bfloat16)` from float32, names are untouched, and all four assertions run before writing. The defect is clause 5: the entire sharded-output requirement \u2014 the `model.safetensors.index.json` index with a complete `weight_map`, the 64 MiB per-shard data cap, and the rule that an oversize tensor such as `wte.weight` sits alone in its own shard \u2014 is delegated to `save_sharded_safetensors` imported from a `_ckpt` module that is not part of the artifact, so none of that behavior is present or verifiable here. The artifact is also not the standalone script the condition requires; run as `python out/T3/solution.py` it raises `ModuleNotFoundError` unless an unshown `_ckpt.py` happens to sit beside it.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

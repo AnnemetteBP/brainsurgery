@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T3.yaml",
+  "started_at": "2026-09-06T07:29:42+00:00",
+  "finished_at": "2026-09-06T07:29:53+00:00",
+  "wall_clock_s": 11.1,
+  "tokens_in": 2,
+  "tokens_out": 637,
+  "cost_usd": 0.1228015,
+  "verdict_text": "NO\n\nTwo problems, both in the plan's final clauses. (1) `shard: 256MB` specifies 256,000,000 bytes, not the 256 MiB (268,435,456 bytes) required by clause 5; since the grader compares the sharded layout against a hidden reference built with the MiB limit, the shard boundaries \u2014 and hence the `weight_map` \u2014 will differ, even though the smaller limit technically stays \"at most 256 MiB\". (2) The first required check is not implemented as specified: instead of asserting that exactly 64 tensors *are bfloat16*, the plan asserts that exactly 64 tensor *names match the projection pattern*, which is true of the input regardless of any cast and would not fail if the bfloat16 cast were skipped or over-applied. The remaining requirements (buffer deletion, blanket float32 upcast before the targeted bfloat16 cast, unchanged names, the other three asserts) are correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

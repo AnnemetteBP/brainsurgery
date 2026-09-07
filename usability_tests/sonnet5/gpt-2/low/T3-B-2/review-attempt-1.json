@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T05:08:12+00:00",
+  "finished_at": "2026-09-06T05:08:22+00:00",
+  "wall_clock_s": 9.5,
+  "tokens_in": 2,
+  "tokens_out": 604,
+  "cost_usd": 0.0423618,
+  "verdict_text": "NO\n\nThe plan specifies `shard: 64MB` for the output, but the specification requires shards to total at most 64 MiB (67,108,864 bytes) of tensor data, not 64 MB (a decimal megabyte, 64,000,000 bytes). Unless BrainSurgery's `shard` option specifically interprets `MB` as MiB (binary), this under-specifies the shard boundary relative to Required Result clause 5, potentially producing shards that split differently than the hidden reference and failing the bit-exact/sharding-rule comparison in `grade.py`. The dtype casting, deletion, and assert-check logic otherwise correctly implement clauses 1\u20134 and the Required Checks section.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

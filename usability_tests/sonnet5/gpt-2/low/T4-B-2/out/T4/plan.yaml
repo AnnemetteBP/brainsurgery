@@ -1,0 +1,68 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors
+
+transforms:
+  # --- Step 1: verify preconditions before touching anything ---
+
+  # All three checkpoints have exactly 160 tensors.
+  - assert: { count: { of: 'base::.*', is: 160 } }
+  - assert: { count: { of: 'ft1::.*', is: 160 } }
+  - assert: { count: { of: 'ft2::.*', is: 160 } }
+
+  # Exactly 48 MLP tensors exist in the base (the ones we are allowed to touch).
+  - assert: { count: { of: 'base::h\.\d+\.mlp\.(c_fc|c_proj)\.(weight|bias)', is: 48 } }
+
+  # Every non-MLP tensor is bit-identical between base and each fine-tune
+  # (this also fails if a name is missing/renamed on either side, since the
+  # rewritten right-hand reference would then match nothing).
+  - assert:
+      equal:
+        left: 'base::(?!h\.\d+\.mlp\.).+'
+        right: 'ft1::\g<0>'
+  - assert:
+      equal:
+        left: 'base::(?!h\.\d+\.mlp\.).+'
+        right: 'ft2::\g<0>'
+
+  # --- Step 2: build each task vector against the *unmodified* base ---
+
+  # delta1 = ft1 - base, delta2 = ft2 - base, for the 48 MLP tensors only.
+  - copy:
+      from: 'ft1::h\.(\d+)\.mlp\.(c_fc|c_proj)\.(weight|bias)'
+      to: 'base::delta1.h.\1.mlp.\2.\3'
+  - copy:
+      from: 'ft2::h\.(\d+)\.mlp\.(c_fc|c_proj)\.(weight|bias)'
+      to: 'base::delta2.h.\1.mlp.\2.\3'
+
+  - subtract_:
+      from: 'base::h\.(\d+)\.mlp\.(c_fc|c_proj)\.(weight|bias)'
+      to: 'base::delta1.h.\1.mlp.\2.\3'
+  - subtract_:
+      from: 'base::h\.(\d+)\.mlp\.(c_fc|c_proj)\.(weight|bias)'
+      to: 'base::delta2.h.\1.mlp.\2.\3'
+
+  # Scale both task vectors by lambda = 0.4.
+  - scale_: { target: 'base::delta1\..*', by: 0.4 }
+  - scale_: { target: 'base::delta2\..*', by: 0.4 }
+
+  # --- Step 3: apply the scaled task vectors to the (still unmodified) base ---
+
+  - add_:
+      from: 'base::delta1.h.(\d+).mlp.(c_fc|c_proj).(weight|bias)'
+      to: 'base::h.\1.mlp.\2.\3'
+  - add_:
+      from: 'base::delta2.h.(\d+).mlp.(c_fc|c_proj).(weight|bias)'
+      to: 'base::h.\1.mlp.\2.\3'
+
+  # Drop the scratch task-vector tensors; they must not appear in the output.
+  - delete: { target: 'base::delta1\..*' }
+  - delete: { target: 'base::delta2\..*' }
+
+  # --- Step 4: final shape of the result ---
+  - assert: { count: { of: 'base::.*', is: 160 } }

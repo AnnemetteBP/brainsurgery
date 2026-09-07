@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T1.yaml",
+  "started_at": "2026-09-06T08:23:44+00:00",
+  "finished_at": "2026-09-06T08:24:59+00:00",
+  "wall_clock_s": 74.6,
+  "tokens_in": 2,
+  "tokens_out": 5767,
+  "cost_usd": 0.2478165,
+  "verdict_text": "YES\n\nThe plan matches the specification on every point I can check from reading:\n\n- **Deletion**: `model\\.layers\\.(2|6|10|14)\\.` targets exactly blocks 2, 6, 10, 14; the alternation is anchored between `layers\\.` and `\\.`, so it cannot stray onto `12`/`14`-prefixed neighbours like `model.layers.12.\u2026` (after `layers.` the candidate `10`/`14` would need `0`/`4` where `2` stands).\n- **Renumbering**: the ten `move` rules reproduce the required mapping exactly (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211), and 0/1 are left untouched. Processing ascending source-first means every destination is vacant at the time of its move \u2014 2/6/10 were deleted, and 3, 4, 5, 7, 8, 9, 11 were each emptied by the preceding move \u2014 so no surviving block is overwritten. The two-digit source patterns (`11`, `12`, `13`, `15`) cannot alias the single-digit ones because `layers\\.3\\.` does not occur inside `layers.13.`.\n- **Checks**: all three required assertions are present and placed after the mutations, so a violation aborts before `save_output`: absence of blocks 12\u201315, exactly 12 `q_proj` tensors, and 86 total tensors (12 \u00d7 7 + 2 = 86 = 114 \u2212 28). The extra pre-delete `count \u2026 is: 28` assertion is a harmless strengthening.\n- **Output**: written to the required single path `out/T1/model.safetensors`; the two non-block tensors are never named by any transform, so they pass through unchanged.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

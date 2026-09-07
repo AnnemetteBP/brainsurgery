@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:52:22+00:00",
+  "finished_at": "2026-09-06T16:53:07+00:00",
+  "wall_clock_s": 45.1,
+  "tokens_in": 2,
+  "tokens_out": 4057,
+  "cost_usd": 0.0864218,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 The script computes `scale = lora_alpha/r = 2`, forms `delta = B @ A` in float32 without transposition (since `fan_in_fan_out` is false), adds it to the float32 cast of the base weight, and casts back to float16, matching the required merge formula and layout. It contains all four required guard checks (16 pairs merged, no `lora_` names, correct shape for the check tensor, 244 total tensors) that fail loudly via `assert` before writing. It implements greedy shard packing that fills shards up to 512 MiB of tensor data and naturally isolates any tensor whose size alone would overflow, then writes `model.safetensors.index.json` with a complete `weight_map`, satisfying the output and sharding requirements.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "58c8f3b6928ed87177fb23f201e2133a96666f8e34cf6bf02687953191f81bd4"
+}

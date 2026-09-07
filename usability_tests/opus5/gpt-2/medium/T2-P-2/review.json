@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:53:41+00:00",
+  "finished_at": "2026-09-06T16:53:51+00:00",
+  "wall_clock_s": 9.6,
+  "tokens_in": 2,
+  "tokens_out": 582,
+  "cost_usd": 0.11571749999999999,
+  "verdict": "yes",
+  "verdict_text": "YES. The keep-index construction drops head 5 within each of the three 768-wide q/k/v segments of `c_attn` along dim 1 (weight) and dim 0 (bias), yielding exactly columns `0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303` in order, and drops rows `320..383` of `c_proj.weight` along dim 0, giving `[704, 768]`; all other tensors and names are untouched, the four required checks are asserted before writing, and the result is saved as a single `out/T2/model.safetensors` with 160 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "92365477d5a2b031d04772e00c37605dd514b7028b7484314cd0975b48bb00f5"
+}

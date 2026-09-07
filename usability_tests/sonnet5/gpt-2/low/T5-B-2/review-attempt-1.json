@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T05:10:42+00:00",
+  "finished_at": "2026-09-06T05:10:53+00:00",
+  "wall_clock_s": 10.3,
+  "tokens_in": 2,
+  "tokens_out": 768,
+  "cost_usd": 0.04681779999999999,
+  "verdict_text": "NO\n\nThe plan specifies `shard: 100MB`, but the spec requires the 100 MiB (104,857,600-byte) threshold exactly. If BrainSurgery's `shard` size parser interprets \"100MB\" as the decimal megabyte (100,000,000 bytes) rather than 100 MiB, shards will be built to a smaller threshold than required, violating the \"at most 100 MiB (104,857,600 bytes) of tensor data\" clause under \"Required result\" \u00a74. This also risks silently producing a different shard layout than the hidden reference, which `grade.py` explicitly checks (\"sharding rules\"). The plan should use an explicit byte count (`104857600`) or a unit unambiguously meaning MiB to match the spec's stated byte value.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

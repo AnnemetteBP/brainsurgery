@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T16:55:10+00:00",
+  "finished_at": "2026-09-06T16:55:18+00:00",
+  "wall_clock_s": 7.6,
+  "tokens_in": 2,
+  "tokens_out": 430,
+  "cost_usd": 0.1152505,
+  "verdict": "yes",
+  "verdict_text": "YES. The script loads all shards via the index, and `keep_index(1, 2048, 128)` yields exactly `0..639` followed by `768..2047` (skipping head 5's block `640..767`), applied along dim 0 for q/k/v and dim 1 for o_proj on all 16 layers, leaving every other tensor untouched. It asserts the four required shapes and the 114-tensor count before writing, and saves a single `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "ac8af64e711652c405ff809a29f0354d71b5d7443fe49c8dc6ee86e8572e3109"
+}

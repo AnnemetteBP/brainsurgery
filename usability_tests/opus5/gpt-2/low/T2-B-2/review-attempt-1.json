@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T07:14:48+00:00",
+  "finished_at": "2026-09-06T07:15:00+00:00",
+  "wall_clock_s": 12.3,
+  "tokens_in": 2,
+  "tokens_out": 826,
+  "cost_usd": 0.1824985,
+  "verdict_text": "YES\n\nThe six column ranges match head 5's block at offset 320\u2013383 within each 768-wide q/k/v segment (0:320+384:768, 768:1088+1152:1536, 1536:1856+1920:2304), concatenated along dim 1 in the required order; the bias uses the same ranges on dim 0, and `c_proj.weight` keeps rows 0:320 and 384:768 on dim 0. Originals are deleted and rewritten under the same names, temporaries are removed before output, all other tensors are untouched, and the four required assertions (three shapes plus a count of 160) run before the single output file is written.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

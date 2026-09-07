@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T16:33:35+00:00",
+  "finished_at": "2026-09-06T16:33:44+00:00",
+  "wall_clock_s": 8.8,
+  "tokens_in": 2,
+  "tokens_out": 455,
+  "cost_usd": 0.22608775000000003,
+  "verdict": "yes",
+  "verdict_text": "YES. The script scales by lora_alpha / r from the adapter config, honours fan_in_fan_out, computes B @ A in float32, adds it into the 32 target weights while keeping their names, shape and dtype, enforces all four required checks before writing, and writes the result sharded at the 512 MiB limit through the `save_sharded_safetensors` helper. The only unverifiable part is that helper's sharding and index behaviour, which is outside the artifact shown.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

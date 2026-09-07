@@ -1,0 +1,88 @@
+inputs:
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors
+
+transforms:
+  # ---------------------------------------------------------------------
+  # Step 1: verify preconditions before touching anything.
+  #   - all three checkpoints have 114 tensors
+  #   - all three have exactly the 48 MLP tensors we expect to merge
+  #   - every tensor outside those 48 is bit-identical in all three
+  #     (equal also requires the right-hand tensor to exist under the
+  #     same name, so this proves the non-MLP name sets match too; with
+  #     the counts above matching on both sides, the full name sets must
+  #     match as well)
+  # ---------------------------------------------------------------------
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  - assert: { count: { of: 'ft1::.*', is: 114 } }
+  - assert: { count: { of: 'ft2::.*', is: 114 } }
+
+  - assert: { count: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft1::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft2::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+
+  - assert:
+      equal:
+        left: 'base::(?!model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight).+'
+        right: 'ft1::\g<0>'
+  - assert:
+      equal:
+        left: 'base::(?!model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight).+'
+        right: 'ft2::\g<0>'
+
+  # ---------------------------------------------------------------------
+  # Step 2: task-vector merge of the 48 MLP tensors, each fine-tune's task
+  # vector taken against the unmodified base (lambda = 0.4):
+  #
+  #   out = base + lambda*(ft1-base) + lambda*(ft2-base)
+  #       = base*(1 - 2*lambda) + lambda*ft1 + lambda*ft2
+  #
+  # Computed via scratch tensors on the base:: alias only (so the output
+  # alias stays unambiguous), then assigned back into the original slots.
+  # ---------------------------------------------------------------------
+  - copy:
+      from: 'base::model\.layers\.(\d+)\.mlp\.(gate_proj|up_proj|down_proj)\.weight'
+      to: 'base::_tv_acc.\1.\2'
+
+  # Explicit check that exactly 48 tensors entered the merge.
+  - assert: { count: { of: 'base::_tv_acc\..*', is: 48 } }
+
+  - scale_:
+      target: 'base::_tv_acc\.(\d+)\.(gate_proj|up_proj|down_proj)'
+      by: 0.2
+
+  - scale:
+      from: 'ft1::model\.layers\.(\d+)\.mlp\.(gate_proj|up_proj|down_proj)\.weight'
+      to: 'base::_tv_ft1.\1.\2'
+      by: 0.4
+  - scale:
+      from: 'ft2::model\.layers\.(\d+)\.mlp\.(gate_proj|up_proj|down_proj)\.weight'
+      to: 'base::_tv_ft2.\1.\2'
+      by: 0.4
+
+  - add_:
+      from: 'base::_tv_ft1\.(\d+)\.(gate_proj|up_proj|down_proj)'
+      to: 'base::_tv_acc.\1.\2'
+  - add_:
+      from: 'base::_tv_ft2\.(\d+)\.(gate_proj|up_proj|down_proj)'
+      to: 'base::_tv_acc.\1.\2'
+
+  - assign:
+      from: 'base::_tv_acc\.(\d+)\.(gate_proj|up_proj|down_proj)'
+      to: 'base::model.layers.\1.mlp.\2.weight'
+
+  # Drop the scratch tensors; only the original 114 names remain.
+  - delete: { target: 'base::_tv_acc\..*' }
+  - delete: { target: 'base::_tv_ft1\..*' }
+  - delete: { target: 'base::_tv_ft2\..*' }
+
+  # ---------------------------------------------------------------------
+  # Required checks on the final result.
+  # ---------------------------------------------------------------------
+  - assert: { count: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'base::.*', is: 114 } }

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T08:21:14+00:00",
+  "finished_at": "2026-09-06T08:21:34+00:00",
+  "wall_clock_s": 19.9,
+  "tokens_in": 2,
+  "tokens_out": 1521,
+  "cost_usd": 0.14248950000000002,
+  "verdict_text": "YES\n\nThe script drops rows/columns 640\u2013767 (head 5 of 16 \u00d7 128) from `q_proj`, `k_proj`, `v_proj` on dim 0 and from `o_proj` on dim 1, for all 16 layers, leaving the kept indices in ascending order `0..639, 768..2047` as required. It touches no other tensors, preserves names and dtype, asserts the four layer-0 shapes and the 114-tensor count before writing, and saves a single `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

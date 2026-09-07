@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:00:42+00:00",
+  "finished_at": "2026-09-06T16:00:46+00:00",
+  "wall_clock_s": 4.0,
+  "tokens_in": 2,
+  "tokens_out": 108,
+  "cost_usd": 0.0438088,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the artifact correctly maps adapter names to base names for all 12 layer/module pairs, computes `scale * (B @ A).T` in float32 with scale=alpha/r=2 (matching fan_in_fan_out=true), leaves other tensors untouched, and enforces all four required checks before writing a sharded output.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

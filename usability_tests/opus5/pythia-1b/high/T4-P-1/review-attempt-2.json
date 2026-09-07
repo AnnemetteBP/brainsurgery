@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:23:27+00:00",
+  "finished_at": "2026-09-06T16:23:35+00:00",
+  "wall_clock_s": 8.1,
+  "tokens_in": 2,
+  "tokens_out": 566,
+  "cost_usd": 0.11160149999999999,
+  "verdict": "no",
+  "verdict_text": "NO. The merge arithmetic in step 2 is wrong: the script computes `tmp = base + \u03bb(ft1 - base)` and then `out = tmp + \u03bb(ft2 - tmp)`, taking the second task vector against the already-merged tensor instead of against the unmodified base. This expands to `0.36*base + 0.24*ft1 + 0.40*ft2`, whereas the specified formula `base + \u03bb(ft1-base) + \u03bb(ft2-base)` gives `0.20*base + 0.40*ft1 + 0.40*ft2`. This is precisely the ordering hazard the specification calls out, and it violates the \"Required result\" clause 2; the ft1 coefficient is off by 0.16, far beyond the 1e-3 relative Frobenius tolerance. The rest of the script (name-set and shared-tensor verification, float32 computation with cast back to float16, the 64-merged and 244-tensor assertions, single output file) matches the specification.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

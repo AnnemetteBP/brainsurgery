@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T16:37:57+00:00",
+  "finished_at": "2026-09-06T16:38:08+00:00",
+  "wall_clock_s": 10.7,
+  "tokens_in": 2,
+  "tokens_out": 648,
+  "cost_usd": 0.23222474999999998,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe head-index construction yields rows 0..3839 and 4608..6143 for the fused projection and bias, and columns 0..1279 and 1536..2047 for the dense weight, in ascending order, across all 16 layers. All other tensors and names are untouched, the four required checks are asserted before writing, and the output is a single file with 244 tensors. The only assumption is that the imported `load_checkpoint` helper returns the safetensors tensors unmodified in float16, which is how such a kit helper is expected to behave.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

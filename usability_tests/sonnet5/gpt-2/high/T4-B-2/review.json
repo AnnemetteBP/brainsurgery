@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T15:43:36+00:00",
+  "finished_at": "2026-09-06T15:44:54+00:00",
+  "wall_clock_s": 77.4,
+  "tokens_in": 2,
+  "tokens_out": 6855,
+  "cost_usd": 0.1140298,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan verifies non-MLP tensor equality between base/ft1 and base/ft2 before any mutation (steps 1\u20132), computes each task vector against the unmodified base tensors (copy \u2192 subtract_ from base \u2192 scale_ by 0.4) before either is applied, then adds both task vectors to the base tensors in place \u2014 reproducing `base + \u03bb(ft1\u2212base) + \u03bb(ft2\u2212base)` exactly as specified. It asserts 48 tensors were staged for merge, deletes the temporary `.tv1`/`.tv2` tensors, and asserts the final tensor count is 160, satisfying all three required checks and writing a single `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "8adafa570c1e0368dca8be6f08d2fd86ce3b24b61e44ee0c9d0892ee32f0ab0f"
+}

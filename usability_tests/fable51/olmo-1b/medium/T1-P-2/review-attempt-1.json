@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T10:58:29+00:00",
+  "finished_at": "2026-09-06T10:58:42+00:00",
+  "wall_clock_s": 13.4,
+  "tokens_in": 2,
+  "tokens_out": 825,
+  "cost_usd": 0.23535374999999997,
+  "verdict_text": "YES\n\nThe script drops blocks 2, 6, 10, 14, renumbers the survivors in original order via an injective old-to-new map (0,1,3,4,5,7,8,9,11,12,13,15 to 0..11), passes the two non-block tensors through untouched, and writes a single `out/T1/model.safetensors`. The check that the surviving layer index set equals exactly {0..11} covers both \"no blocks 12-15 remain\" and \"exactly 12 blocks remain\", and the 86-tensor count is asserted; both assertions run before the output is written, so failure leaves no output. The only observations are that it depends on a sandbox helper `_ckpt.load_checkpoint` for reading the sharded input, and the checks use `assert`, which would be skipped under `python -O`; neither violates a specification clause.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

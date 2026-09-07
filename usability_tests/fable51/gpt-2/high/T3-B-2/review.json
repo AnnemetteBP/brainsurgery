@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T16:27:54+00:00",
+  "finished_at": "2026-09-06T16:28:16+00:00",
+  "wall_clock_s": 22.1,
+  "tokens_in": 2,
+  "tokens_out": 1631,
+  "cost_usd": 0.27800475,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan deletes exactly the 12 `h.<i>.attn.bias` buffers, keeps all other tensors float32 with values untouched (the `.*` cast to float32 is a no-op on float32 input), and casts only the four projection matrices per layer to bfloat16 via a fully anchored pattern that excludes `wte.weight`, `wpe.weight`, norms and biases. Tensor names are unchanged. All four required checks are present as `assert` transforms before writing: the count of the 48 matrix pattern is 48, those 48 are bfloat16 and every other tensor is float32 (together equivalent to \"exactly 48 bfloat16\"), `h.0.attn.c_attn.weight` is bfloat16, `wte.weight` is float32, and the total count is 148. Output is a sharded safetensors directory at `out/T3` with a 64 MiB per-shard limit, which yields the index file and places the oversized `wte.weight` alone in its own shard.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "93394a22ec30786239ce4e8f33732f68fd4b4b76310b64169ddce745c2a0924e"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T08:18:18+00:00",
+  "finished_at": "2026-09-06T08:18:37+00:00",
+  "wall_clock_s": 18.1,
+  "tokens_in": 2,
+  "tokens_out": 1311,
+  "cost_usd": 0.1367885,
+  "verdict_text": "YES\n\nThe merge is correct: `scale = lora_alpha / r = 2`, `delta = B @ A` gives `[2304, 768]`, and `fan_in_fan_out = true` triggers the transpose to `[768, 2304]` before the scaled add, in float32 with the original name/shape/dtype preserved. Only base tensors are ever written back into `sd`, so no adapter or intermediate tensor reaches the output, and the untouched 148 tensors are passed through bit-exactly. All four required checks are asserted before `save_sharded_safetensors` is called, and the shard limit constant matches the specified 104,857,600 bytes.\n\nOne caveat I cannot verify by reading: the sharding and index-file behaviour (including placing the oversized `wte.weight` alone in its own shard) lives in the unshown `_ckpt.save_sharded_safetensors` helper, so my YES covers the script's own logic and assumes that helper implements clause 4 as named.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

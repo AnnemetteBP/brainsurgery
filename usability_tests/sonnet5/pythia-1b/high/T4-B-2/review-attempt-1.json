@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T07:10:02+00:00",
+  "finished_at": "2026-09-06T07:10:53+00:00",
+  "wall_clock_s": 50.6,
+  "tokens_in": 2,
+  "tokens_out": 4598,
+  "cost_usd": 0.09533679999999999,
+  "verdict_text": "NO\n\nThe plan never asserts that exactly 64 tensors were merged \u2014 it only asserts `count(ft1::.*)==244`, `count(ft2::.*)==244`, and at the end `count(base::.*)==244`, with no assertion on the number of MLP tensors matched/copied (the `.tv1`/`.tv2` count, or equivalently the count of tensors matching the MLP regex). This violates the \"Required checks\" clause \"exactly 64 tensors were merged,\" which the plan must implement as an `assert` and does not. The step-1 name/equality checks and the final 244-count check are present and appear correctly implemented (equal-outside-MLP asserts against both ft1 and ft2, plus a final total-count assert), and the arithmetic correctly computes each task vector against the unmodified base before combining, satisfying the ordering requirement. The sole gap is the missing explicit \"64 merged\" assertion required by the spec.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

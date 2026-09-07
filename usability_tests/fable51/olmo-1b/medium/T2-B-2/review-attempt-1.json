@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T2.yaml",
+  "started_at": "2026-09-06T11:02:58+00:00",
+  "finished_at": "2026-09-06T11:03:09+00:00",
+  "wall_clock_s": 10.8,
+  "tokens_in": 2,
+  "tokens_out": 717,
+  "cost_usd": 0.37199175,
+  "verdict_text": "I'll check the plan's constructs against the doc pack before answering.\n\n\n<invoke name=\"Grep\">\n<parameter name=\"pattern\">count</parameter>\n<parameter name=\"path\">/home/rootkidd/Projects/brainsurgery/usability_tests/fable51/olmo-1b/medium/T2-B-2/docpack/help.txt</parameter>\n<parameter name=\"output_mode\">content</parameter>\n<parameter name=\"-n\">true</parameter>\n</invoke>\n<invoke name=\"Grep\">\n<parameter name=\"pattern\">\\\\\\\\1|backreference|capture group</parameter>\n<parameter name=\"path\">/home/rootkidd/Projects/brainsurgery/usability_tests/fable51/olmo-1b/medium/T2-B-2/docpack/README.md</parameter>\n<parameter name=\"output_mode\">content</parameter>\n<parameter name=\"-n\">true</parameter>\n</invoke>",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T09:03:32+00:00",
+  "finished_at": "2026-09-06T09:03:45+00:00",
+  "wall_clock_s": 13.5,
+  "tokens_in": 2,
+  "tokens_out": 836,
+  "cost_usd": 0.23394974999999998,
+  "verdict_text": "YES\n\nThe script matches the specification: it checks name-set equality across all three checkpoints, verifies every non-MLP tensor is bit-identical in base, ft1 and ft2 before any merge, computes each of the 48 MLP tensors as `base + 0.4*(ft1-base) + 0.4*(ft2-base)` in float32 against the unmodified base (the `base` dict is never mutated, so ordering is correct), copies all other tensors from base unchanged, asserts exactly 48 merged and 114 output tensors, and writes a single `out/T4/model.safetensors`.\n\nMinor caveats, not violations: it relies on bare `assert` (disabled under `python -O`) and on an unshown `_ckpt.load_checkpoint` helper to read the sharded base directory correctly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

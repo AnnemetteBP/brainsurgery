@@ -6,10 +6,15 @@ transforms:
   - cast_: { target: '.*', to: float32 }
   - assert: { count: { of: 'h\.(\d+)\.(attn\.c_attn\.weight|mlp\.c_fc\.weight|mlp\.c_proj\.weight)', is: 36 } }
   - cast_: { target: 'h\.(\d+)\.(attn\.c_attn\.weight|mlp\.c_fc\.weight|mlp\.c_proj\.weight)', to: bfloat16 }
+  # Required checks. "exactly 36 tensors are bfloat16": the 36 matrices
+  # are bfloat16 and every other tensor is float32, so no other tensor can be bfloat16.
+  - assert: { dtype: { of: 'h\.(\d+)\.(attn\.c_attn\.weight|mlp\.c_fc\.weight|mlp\.c_proj\.weight)', is: bfloat16 } }
+  - assert: { dtype: { of: '(?!h\.\d+\.(?:attn\.c_attn\.weight|mlp\.c_fc\.weight|mlp\.c_proj\.weight)$).+', is: float32 } }
   - assert: { dtype: { of: h.0.attn.c_attn.weight, is: bfloat16 } }
   - assert: { dtype: { of: wte.weight, is: float32 } }
   - assert: { count: { of: '.*', is: 148 } }
 output:
   path: out/T3
   format: safetensors
+  # BrainSurgery shard units are binary: 64MB = 64 MiB (67,108,864 bytes) of tensor data per shard.
   shard: 64MB

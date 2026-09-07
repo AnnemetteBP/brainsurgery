@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T16:05:57+00:00",
+  "finished_at": "2026-09-06T16:06:09+00:00",
+  "wall_clock_s": 12.7,
+  "tokens_in": 2,
+  "tokens_out": 858,
+  "cost_usd": 0.0527448,
+  "verdict": "no",
+  "verdict_text": "NO. The plan sets `shard: 256MB`, but the spec requires each shard to hold at most 268,435,456 bytes (256 MiB, binary) of tensor data \u2014 if BrainSurgery's `MB` suffix is decimal (256,000,000 bytes) rather than binary, the shards will not meet the required threshold, violating Required result clause 5. The plan's own comment merely asserts without verification that \"BrainSurgery shard units are binary,\" which is not something the artifact demonstrates or checks (no assert on shard byte totals), so this critical sizing requirement is unverified and likely wrong.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "3b3c623b5d02a5e2d373b5578feacdf78c13a7a575f3759de43c39aa564e7c8f"
+}

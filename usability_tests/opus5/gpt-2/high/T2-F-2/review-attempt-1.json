@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T08:10:23+00:00",
+  "finished_at": "2026-09-06T08:10:40+00:00",
+  "wall_clock_s": 16.8,
+  "tokens_in": 2,
+  "tokens_out": 1264,
+  "cost_usd": 0.1336165,
+  "verdict_text": "YES\n\nThe keep-index construction reproduces the specified column/row ranges exactly: for `c_attn.weight`/`bias` it walks 3 segments of 768 with 64-wide head blocks, skipping head 5 in each, giving `0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303` in ascending order (`index_select` preserves the index order); for `c_proj.weight` it uses one 768 segment on axis 0, giving rows `0..319, 384..767`. All 12 layers are processed, no other tensors are touched, names are unchanged, and the four required checks (three layer-0 shapes plus the 160-tensor count) run before `save_file` writes `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

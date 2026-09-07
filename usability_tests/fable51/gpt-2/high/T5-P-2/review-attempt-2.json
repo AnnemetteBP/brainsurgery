@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:28:54+00:00",
+  "finished_at": "2026-09-06T16:29:10+00:00",
+  "wall_clock_s": 15.7,
+  "tokens_in": 2,
+  "tokens_out": 1005,
+  "cost_usd": 0.24796375,
+  "verdict": "no",
+  "verdict_text": "NO. The artifact delegates the entire sharded export to `save_sharded_safetensors` from an external module `_ckpt` that is not part of the artifact, so nothing in the artifact implements or lets a reviewer verify the \"Required result\" clause 4: the `model.safetensors.index.json` index with a complete `weight_map`, the 100 MiB per-shard cap on tensor data, and the rule that an oversized tensor like `wte.weight` goes alone in its own shard. The task also expects a self-contained script (the condition rules require a standalone Python script using only PyTorch and `safetensors`), and importing a helper module that may not exist in the fresh sandbox violates that. The merge arithmetic itself (`B @ A`, transpose per `fan_in_fan_out`, scale 2, float32, in-place update of the base key) and the four required checks are correct, but the output requirement is unverified and effectively unimplemented within the artifact.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

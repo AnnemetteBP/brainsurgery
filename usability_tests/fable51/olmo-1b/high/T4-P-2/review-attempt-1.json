@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T11:32:29+00:00",
+  "finished_at": "2026-09-06T11:32:55+00:00",
+  "wall_clock_s": 25.9,
+  "tokens_in": 2,
+  "tokens_out": 1816,
+  "cost_usd": 0.28135975,
+  "verdict_text": "YES\n\nThe script matches the specification, assuming the unshown helper `_ckpt.load_checkpoint` returns a name-to-tensor dict for both the sharded base directory and the single-file fine-tunes.\n\n- **Step 1 verification runs first.** It checks the three key sets are equal, then requires bit-exact equality via `torch.equal` on every tensor not matched by the MLP regex, aborting on the first mismatch. The regex is anchored with `fullmatch`, so only the 48 gate, up and down projections are excluded.\n- **Merge uses the unmodified base.** The output dict is a shallow copy, so replacing `out[name]` never touches `base[name]`. Both task vectors are taken against the original base, in float32, then cast back to the base dtype, which is float32 already.\n- **Required checks are present.** Merged count must equal 48 and output length must equal 114. Unchanged tensors are the base tensor objects themselves, so they stay bit-exact.\n- **Output location and form are right.** One file at `out/T4/model.safetensors` by default, with unchanged names. OLMo-1B-0724-hf has no tied weights, so `save_file` will not reject shared storage.\n\nOne minor observation, not a spec violation: the checks are plain `assert` statements, which vanish under `python -O`. Under the prescribed `python out/T4/solution.py` invocation they fail loudly as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

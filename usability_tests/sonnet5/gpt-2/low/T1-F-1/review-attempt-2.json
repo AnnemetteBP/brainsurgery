@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T1-defective.py",
+  "started_at": "2026-09-06T15:59:49+00:00",
+  "finished_at": "2026-09-06T15:59:53+00:00",
+  "wall_clock_s": 4.5,
+  "tokens_in": 2,
+  "tokens_out": 125,
+  "cost_usd": 0.05014899999999999,
+  "verdict": "no",
+  "verdict_text": "NO \u2014 the script drops blocks {2, 5, 9} instead of the required {2, 5, 8}, violating clause 1 and the renumbering mapping in clause 2 (old 8 should map to new 6, old 9/10/11 should map to new 6/7/8, but this script keeps 8 and removes 9 instead, producing wrong key set/values for blocks 6-8).",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

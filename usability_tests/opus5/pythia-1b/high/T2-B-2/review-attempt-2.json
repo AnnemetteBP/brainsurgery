@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T12:13:29+00:00",
+  "finished_at": "2026-09-06T12:14:13+00:00",
+  "wall_clock_s": 43.2,
+  "tokens_in": 2,
+  "tokens_out": 3165,
+  "cost_usd": 0.24446150000000003,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe slice boundaries match head 5 exactly: rows `3840..4607` (768\u00d75 through 768\u00d76\u22121) are the removed block in the fused `query_key_value` weight and bias, so keeping `[0:3840]` and `[4608:6144]` and concatenating them in that order on dim 0 satisfies clauses 1 and 2; columns `1280..1535` (256\u00d75 through 256\u00d76\u22121) are head 5's block in `attention.dense.weight`, so `[:, 0:1280]` + `[:, 1536:2048]` on dim 1 satisfies clause 3. The regex-driven copies cover all 16 layers, the temporaries are deleted before output so no extra names survive, and no other tensor is touched, satisfying clauses 4 and 5. All four required checks are present as `assert` transforms placed after the last transform and before `output`, so a shape or count mismatch aborts the run before writing.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-06T05:18:34+00:00",
+  "finished_at": "2026-09-06T05:18:42+00:00",
+  "wall_clock_s": 7.9,
+  "tokens_in": 2,
+  "tokens_out": 448,
+  "cost_usd": 0.045831800000000006,
+  "verdict_text": "NO\n\nThe plan never asserts that exactly 48 tensors were merged, which is one of the explicitly \"Required checks.\" It also never verifies that the three checkpoints share the *same tensor names* (spec step 1) \u2014 it only checks tensor counts for ft1/ft2 and asserts value-equality on the non-MLP regex, which would silently pass even if a non-MLP tensor were renamed or an MLP tensor were missing/extra, since equality assertions don't enforce key-set identity. This violates \"verify that the three checkpoints have the same tensor names ... Abort with an error if not\" and the required \"exactly 48 tensors were merged\" check.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

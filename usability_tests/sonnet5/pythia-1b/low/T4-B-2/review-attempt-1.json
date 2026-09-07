@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T05:26:17+00:00",
+  "finished_at": "2026-09-06T05:26:25+00:00",
+  "wall_clock_s": 8.3,
+  "tokens_in": 2,
+  "tokens_out": 451,
+  "cost_usd": 0.051641799999999995,
+  "verdict_text": "NO\n\nThe plan omits the explicit \"exactly 64 tensors were merged\" check required by the \"Required checks\" section \u2014 it only asserts total counts of 244 for base/ft1/ft2 and never asserts that the count of tensors matching the MLP regex (the ones actually copied/scaled/summed) is 64. This violates the specification's required-checks clause, which lists that verification as mandatory alongside the shared-tensor and total-count checks.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

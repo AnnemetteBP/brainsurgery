@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T15:43:34+00:00",
+  "finished_at": "2026-09-06T15:44:42+00:00",
+  "wall_clock_s": 68.7,
+  "tokens_in": 2,
+  "tokens_out": 6226,
+  "cost_usd": 0.1026598,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly deletes exactly the 12 `h.<i>.attn.bias` buffers, casts exactly the 48 named projection matrices to bfloat16 via `.to(torch.bfloat16)` (satisfying round-to-nearest-even), and leaves everything else (embeddings, layer norms, biases) as float32 with unchanged values, matching Required Result items 1\u20134. The four required checks (48 bfloat16 tensors, `h.0.attn.c_attn.weight` bfloat16, `wte.weight` float32, 148 total tensors) are all asserted before writing, matching the \"Required checks\" clause. Tensor names are preserved unchanged, and the sharding/index-file production is delegated to `save_sharded_safetensors` with the correct 64 MiB (67,108,864-byte) limit passed in, consistent with the sharding clause.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

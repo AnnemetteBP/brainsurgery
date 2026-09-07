@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T12:00:48+00:00",
+  "finished_at": "2026-09-06T12:01:14+00:00",
+  "wall_clock_s": 26.5,
+  "tokens_in": 2,
+  "tokens_out": 1909,
+  "cost_usd": 0.10828025000000001,
+  "verdict": "none",
+  "verdict_text": "I'll check the plan's slice ranges, concat order and assert syntax against the spec and the doc pack.\n\n\n<invoke name=\"Grep\">\n<invoke name=\"pattern\">^(concat|count|copy|delete)|dim:|count:</invoke>\n<invoke name=\"path\">/home/rootkidd/Projects/brainsurgery/usability_tests/fable51/gpt-2/high/T2-B-2/docpack/help.txt</invoke>\n<invoke name=\"output_mode\">content</invoke>\n<invoke name=\"head_limit\">40</invoke>\n</invoke>\n<invoke name=\"Read\">\n<invoke name=\"file_path\">/home/rootkidd/Projects/brainsurgery/usability_tests/fable51/gpt-2/high/T2-B-2/docpack/README.md</invoke>\n<invoke name=\"limit\">120</invoke>\n</invoke>\n</invoke>",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

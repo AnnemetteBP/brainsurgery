@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T16:16:24+00:00",
+  "finished_at": "2026-09-06T16:16:59+00:00",
+  "wall_clock_s": 35.1,
+  "tokens_in": 2,
+  "tokens_out": 2483,
+  "cost_usd": 0.1663195,
+  "verdict": "no",
+  "verdict_text": "NO \u2014 the plan never removes the adapter tensors from the `lora` input namespace. It deletes only the intermediate `model::h.<i>.attn.c_attn.delta` / `delta_t` tensors, so the 24 `base_model.model.h.<i>.attn.c_attn.lora_A/B.weight` tensors are still in the state dict when `save_output` runs, giving 184 tensors in `out/T5` instead of 160 and leaving adapter tensors in the output. This violates Required result clauses 2 (\"No adapter tensor ... appears in the output\") and 4 (\"Expected total: 160 tensors, the same names as the base\").\n\nThe two guards that were supposed to catch this are scoped to the wrong namespace: `assert: { not: { exists: 'model::.*lora_.*' } }` and `assert: { count: { of: 'model::.*', is: 160 } }` only inspect the `model` namespace, so they pass while the `lora::` tensors survive \u2014 meaning the required checks \"no tensor name containing `lora_` is in the output\" and \"the output has exactly 160 tensors\" are not actually implemented. The merge arithmetic itself (matmul B@A, transpose via `permute [1,0]`, `scale_ by 2`, `add_` into the base weight) is correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

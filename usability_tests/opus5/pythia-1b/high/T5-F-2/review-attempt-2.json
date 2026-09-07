@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:23:59+00:00",
+  "finished_at": "2026-09-06T16:24:17+00:00",
+  "wall_clock_s": 18.1,
+  "tokens_in": 2,
+  "tokens_out": 1321,
+  "cost_usd": 0.1370395,
+  "verdict": "yes",
+  "verdict_text": "YES. The script derives `scale = lora_alpha / r = 2` and `transpose` from `adapter_config.json`, computes `delta = B @ A` as `[6144, 2048]` with no transposition since `fan_in_fan_out` is false, accumulates in float32 (`sd[key].float() + scale * delta`, with the adapter already float32) and casts back to the original float16 dtype \u2014 note the right-hand side is fully evaluated before rebinding, so `sd[key].dtype` is the pre-merge float16. It touches only the 16 adapted keys in place, so no adapter or intermediate tensor ever enters `sd` and the other 228 tensors stay bit-exact. All four required checks are asserted before writing: 16 merges, no `lora_` name, the layer-0 QKV shape `[6144, 2048]`, and 244 tensors; missing adapter keys would raise `KeyError` rather than silently reduce the count. Sharding at 536,870,912 bytes is delegated to `save_sharded_safetensors`, which is outside the shown artifact and so is not assessed here.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

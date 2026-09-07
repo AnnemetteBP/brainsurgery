@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T08:44:08+00:00",
+  "finished_at": "2026-09-06T08:44:29+00:00",
+  "wall_clock_s": 20.5,
+  "tokens_in": 2,
+  "tokens_out": 1527,
+  "cost_usd": 0.1381855,
+  "verdict_text": "YES\n\nThe script loads all three checkpoints, asserts identical key sets, and asserts bit-equality (`torch.equal`) of every non-MLP tensor against the base in both fine-tunes before any merging occurs, satisfying step 1. The merge uses the unmodified `base[name]` for both task vectors (no sequential contamination), computes in float32 via `.float()`, applies \u03bb = 0.4 to each difference, and casts back to the base's float16 dtype, satisfying step 2. `out = dict(base)` carries the remaining 180 tensors through unchanged with unchanged names, and only the 64 regex-matched MLP tensors are overwritten, satisfying steps 3 and 4. The three required checks are all present and fail loudly: the shared-tensor asserts, `assert merged == 64`, and `assert len(out) == 244`. The regex uses `fullmatch` so it cannot match unintended names, and the output is written to a single `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

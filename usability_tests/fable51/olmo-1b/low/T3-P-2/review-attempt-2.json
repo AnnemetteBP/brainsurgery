@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:33:14+00:00",
+  "finished_at": "2026-09-06T16:33:22+00:00",
+  "wall_clock_s": 7.4,
+  "tokens_in": 2,
+  "tokens_out": 305,
+  "cost_usd": 0.21059175000000002,
+  "verdict": "yes",
+  "verdict_text": "YES. The script casts exactly the 112 layer projection matrices to bfloat16 via a fullmatch regex, keeps all other tensors float32 with unchanged values, deletes nothing (the buffer regex can never match), preserves names, performs the four required checks before writing, and writes a sharded safetensors checkpoint with a 256 MiB shard limit to `out/T3`, assuming the kit-provided `save_sharded_safetensors` helper enforces the size rule and emits the index file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

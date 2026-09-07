@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T07:28:58+00:00",
+  "finished_at": "2026-09-06T07:29:08+00:00",
+  "wall_clock_s": 10.0,
+  "tokens_in": 2,
+  "tokens_out": 583,
+  "cost_usd": 0.1749275,
+  "verdict_text": "YES\n\nThe plan removes exactly head 5 in every layer: rows `3840..4607` (= `768*5 .. 768*5+767`) are dropped from both `query_key_value.weight` and `.bias` by keeping `[0:3840]` and `[4608:6144]` and concatenating them in that order on dim 0, and columns `1280..1535` (= `256*5 ..`) are dropped from `attention.dense.weight` by keeping `[:, 0:1280]` and `[:, 1536:2048]` concatenated on dim 1. The temporaries are copies, so deleting the originals before the concats is safe, and the temporaries are themselves deleted before output, restoring the original names and the 244-tensor key set. All four required checks are present as `assert` transforms and run before the write. No other tensors are touched, and the output path matches `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

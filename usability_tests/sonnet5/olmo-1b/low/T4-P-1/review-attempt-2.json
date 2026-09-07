@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:05:14+00:00",
+  "finished_at": "2026-09-06T16:05:19+00:00",
+  "wall_clock_s": 5.1,
+  "tokens_in": 2,
+  "tokens_out": 243,
+  "cost_usd": 0.0423298,
+  "verdict": "no",
+  "verdict_text": "NO: The merge computes `tmp = b + \u03bb(f1-b)` then `tmp + \u03bb(f2-tmp)`, applying the second task vector against the already-updated `tmp` rather than against the unmodified base `b`, violating the ordering requirement in step 2 (`out[X] = base[X] + \u03bb(ft1[X]-base[X]) + \u03bb(ft2[X]-base[X])`) and the \"Arithmetic hazard\" note that each task vector must be taken against the unmodified base. This yields `b + \u03bb(f1-b) + \u03bb(f2-b) - \u03bb\u00b2(f2-f1)`, which differs from the spec's formula by a second-order term, likely exceeding the 1e-5 relative Frobenius tolerance.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

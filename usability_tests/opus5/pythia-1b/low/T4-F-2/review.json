@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "artifact_sha256": "c853a23e2b6879d190c754b8ad01ba13b9e6b628b241b1be72b6e7567bc9060f",
+  "started_at": "2026-09-06T18:22:59+00:00",
+  "finished_at": "2026-09-06T18:23:05+00:00",
+  "wall_clock_s": 5.7,
+  "tokens_in": 2,
+  "tokens_out": 249,
+  "cost_usd": 0.10642950000000001,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script verifies identical key sets and bit-exact equality of all non-MLP tensors before merging, computes `base + 0.4*(ft1-base) + 0.4*(ft2-base)` in float32 against the unmodified base for exactly the 64 MLP tensors, casts back to the base dtype, copies everything else unchanged, asserts the 64-merged and 244-tensor counts, and writes a single `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

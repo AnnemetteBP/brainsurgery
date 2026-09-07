@@ -11,14 +11,19 @@ transforms:
       to: 'model::gpt_neox.layers.\1.\2.delta'
   # nn.Linear layout: no transpose needed
   # defect: the alpha / r scale is missing
+  # Required check: exactly 16 adapter pairs were found (above) and merged (one delta each).
+  - assert: { count: { of: 'model::gpt_neox\.layers\.\d+\.(attention\.query_key_value)\.delta', is: 16 } }
   - cast_: { target: 'model::gpt_neox\.layers\.\d+\.(attention\.query_key_value)\.weight', to: float32 }
   - add_: { from: 'model::gpt_neox\.layers\.(\d+)\.(attention\.query_key_value)\.delta', to: 'model::gpt_neox.layers.\1.\2.weight' }
   - cast_: { target: 'model::gpt_neox\.layers\.\d+\.(attention\.query_key_value)\.weight', to: float16 }
   - delete: { target: 'model::gpt_neox\.layers\.\d+\.(attention\.query_key_value)\.delta(_t)?' }
+  # Only the `model` alias is written; drop the adapter namespace anyway so no adapter tensor can reach the output.
+  - delete: { target: 'lora::.*' }
   - assert: { not: { exists: 'model::.*lora_.*' } }
   - assert: { shape: { of: model::gpt_neox.layers.0.attention.query_key_value.weight, is: [6144, 2048] } }
   - assert: { count: { of: 'model::.*', is: 244 } }
 output:
   path: out/T5
   format: safetensors
+  # BrainSurgery shard units are binary: 512MB = 512 MiB (536,870,912 bytes) of tensor data per shard.
   shard: 512MB

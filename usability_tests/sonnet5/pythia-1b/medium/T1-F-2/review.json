@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "artifact_sha256": "445483f5b51837497d7a08eb024b2a58686278532f4e520bfcee7541bc7697c1",
+  "started_at": "2026-09-06T18:17:47+00:00",
+  "finished_at": "2026-09-06T18:18:06+00:00",
+  "wall_clock_s": 19.0,
+  "tokens_in": 2,
+  "tokens_out": 1674,
+  "cost_usd": 0.060938799999999994,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly drops blocks {2,6,10,14}, renumbers the remaining blocks via `enumerate(kept)` producing exactly the mapping specified (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211), leaves the 4 non-block tensors untouched, and asserts both that surviving layer indices equal exactly `{0..11}` and that the output has exactly 184 tensors before writing anything, so a failed check raises `AssertionError` (non-zero exit) prior to `save_file`. This satisfies all three required checks and the renumbering/removal requirements of the spec.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

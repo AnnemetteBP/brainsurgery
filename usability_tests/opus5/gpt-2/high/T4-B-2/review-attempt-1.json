@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T08:18:54+00:00",
+  "finished_at": "2026-09-06T08:19:57+00:00",
+  "wall_clock_s": 62.6,
+  "tokens_in": 2,
+  "tokens_out": 4831,
+  "cost_usd": 0.22805150000000002,
+  "verdict_text": "NO\n\nThe plan omits one of the three mandatory \"Required checks\": there is no assertion that **exactly 48 tensors were merged**. It asserts `count: 160` for `ft1`, for `ft2`, and for `base` after the merge (covering the 160-tensor output requirement), and it asserts equality of all non-MLP tensors between base/ft1 and base/ft2 (covering step 1's shared-tensor verification), but nothing constrains the cardinality of the MLP selection \u2014 no `count ... is: 48` on the MLP pattern or on the `.tv1`/`.tv2` temporaries. Consequently, if the MLP regex matched fewer (or more) than 48 tensors \u2014 e.g. a layer missing from a checkpoint, or a name variant \u2014 the run would still succeed silently, which is precisely the failure mode that check exists to catch. This violates the \"Required checks\" clause (\"exactly 48 tensors were merged\"); the arithmetic itself (both task vectors formed against the unmodified base, scaled by 0.4, then added, temporaries deleted, everything else left untouched) is correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

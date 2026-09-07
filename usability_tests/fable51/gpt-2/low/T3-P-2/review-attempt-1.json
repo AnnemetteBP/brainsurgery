@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T08:54:41+00:00",
+  "finished_at": "2026-09-06T08:54:53+00:00",
+  "wall_clock_s": 11.9,
+  "tokens_in": 2,
+  "tokens_out": 671,
+  "cost_usd": 0.22410475,
+  "verdict_text": "NO\n\nThe script delegates the entire sharded-output layout to `save_sharded_safetensors` from an unshown helper module `_ckpt`, so the artifact as presented does not demonstrably satisfy clause 5 of \"Required result\": the 64 MiB tensor-data limit per shard, the lone-shard rule for `wte.weight`, and the `model.safetensors.index.json` with a complete `weight_map`. Condition P also requires a standalone script using only PyTorch and `safetensors`, and importing a private `_ckpt` module (also for `load_checkpoint`) violates that. The visible logic is otherwise correct: the 48 projection matrices are cast to bfloat16 with round-to-nearest, the 12 `h.<i>.attn.bias` buffers are dropped, all other tensors stay float32 with names unchanged, and all four required checks are asserted before writing. Note also that `sys.argv[1]` can redirect output away from `out/T3/`, though the default path is correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

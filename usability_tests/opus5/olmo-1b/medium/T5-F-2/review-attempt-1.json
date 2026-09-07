@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T07:51:26+00:00",
+  "finished_at": "2026-09-06T07:51:38+00:00",
+  "wall_clock_s": 11.8,
+  "tokens_in": 2,
+  "tokens_out": 800,
+  "cost_usd": 0.1259325,
+  "verdict_text": "YES\n\nThe script builds the correct adapter key prefix (`base_model.model.model.layers.<i>.<module>`), reads `scale = lora_alpha / r = 2` and `fan_in_fan_out` from the config rather than hardcoding, computes `delta = B @ A` as `[2048, 2048]` with no transpose (since `fan_in_fan_out` is false), accumulates in float32 and restores the original dtype, leaves all other base tensors untouched, and writes no adapter or intermediate tensor into `sd`. All four required checks (32 merges, no `lora_` names, `q_proj` shape `[2048, 2048]`, 114 tensors) are asserted before the write, and the export goes to `out/T5` with a 512 MiB shard limit.\n\nTwo things I could not verify from reading alone, since they live in the unshown `_ckpt` helper: that `load_checkpoint` correctly assembles the two input shards, and that `save_sharded_safetensors` emits the index with a complete `weight_map` and places each oversized tensor alone in its own shard.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

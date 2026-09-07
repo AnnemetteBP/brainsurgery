@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T16:22:48+00:00",
+  "finished_at": "2026-09-06T16:23:16+00:00",
+  "wall_clock_s": 28.4,
+  "tokens_in": 2,
+  "tokens_out": 2091,
+  "cost_usd": 0.1559635,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script implements every clause of the spec: it drops exactly the 48 buffers via a full-match regex (244 \u2192 196 tensors), casts exactly the 64 listed projection matrices to bfloat16 through float32 (round-to-nearest-even), upcasts all remaining tensors to float32 without renaming anything, and runs all four required checks as assertions before any write.\n\nOne caveat outside the shown code: clause 5 (shard files, `model.safetensors.index.json` weight map, 256 MiB per-shard cap, oversized tensors alone in their own shard) is entirely delegated to `save_sharded_safetensors` from the `_ckpt` module, which is not part of the artifact text \u2014 its arguments (`out`, `out_dir`, `MAX_SHARD`) are correct, but its behaviour is unverifiable from what is given here.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

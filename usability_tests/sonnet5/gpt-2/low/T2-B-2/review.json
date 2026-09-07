@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T16:00:05+00:00",
+  "finished_at": "2026-09-06T16:00:09+00:00",
+  "wall_clock_s": 4.6,
+  "tokens_in": 2,
+  "tokens_out": 108,
+  "cost_usd": 0.0698228,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 slices, deletes, and concat order for c_attn.weight (dim 1), c_attn.bias (dim 0), and c_proj.weight (dim 0) match the required column/row block sequences per layer, all 12 layers are covered, temp tensors are cleaned up, required asserts are present, and the output path is correct.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "2a90440e95bfda5b4824e5a3b755f3e68e122c210829f0e9be6c5734946874bd"
+}

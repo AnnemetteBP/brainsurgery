@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T16:23:43+00:00",
+  "finished_at": "2026-09-06T16:25:28+00:00",
+  "wall_clock_s": 105.1,
+  "tokens_in": 2,
+  "tokens_out": 7745,
+  "cost_usd": 0.30092850000000004,
+  "verdict": "no",
+  "verdict_text": "NO. The plan loads `inputs/lora/adapter_model.safetensors` into the `lora::` namespace and never deletes it: after the merge, the 32 adapter tensors are still in the state dict and get written to `out/T5`, violating required-result clause 2 (\"No adapter tensor and no intermediate tensor appears in the output\") and clause 4's \"Expected total: 244 tensors, the same names as the base\" \u2014 the participant deletes the `delta` intermediates but not the adapter factors. The two required checks that would have caught this are scoped to the wrong thing: `assert: { not: { exists: 'model::.*lora_.*' } }` only inspects the `model::` namespace (where no `lora_` name could ever exist, since the matmul writes to `...delta`), and `assert: { count: { of: 'model::.*', is: 244 } }` counts only the `model::` namespace rather than the tensor set actually being written, so neither implements \"in the output\" as the Required checks demand. The merge arithmetic itself is right (`B @ A` with no transpose, scale 2, float32 accumulate, cast back to float16), and the shape check is correct, so this is the sole defect. Fixing it requires a `delete: { target: 'lora::.*' }` before the asserts, with the existence/count checks then covering the full output.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

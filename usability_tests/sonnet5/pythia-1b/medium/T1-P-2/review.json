@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T16:52:03+00:00",
+  "finished_at": "2026-09-06T16:52:18+00:00",
+  "wall_clock_s": 14.4,
+  "tokens_in": 2,
+  "tokens_out": 1182,
+  "cost_usd": 0.0555658,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script drops exactly blocks {2,6,10,14}, renumbers the remaining 12 via `enumerate(kept)` in ascending original order, which produces precisely the mapping specified (old 3\u21922, old 4\u21923, \u2026, old 15\u219211), preserves the 4 non-block tensors unmodified, asserts `len(out) == 184` and that surviving layer indices equal `range(12)` (which necessarily excludes 12\u201315) before writing, and only writes `out/T1/model.safetensors` after both assertions pass, satisfying all required checks and result clauses.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "445483f5b51837497d7a08eb024b2a58686278532f4e520bfcee7541bc7697c1"
+}

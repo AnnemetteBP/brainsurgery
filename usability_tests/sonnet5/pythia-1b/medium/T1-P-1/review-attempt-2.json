@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T1-defective.py",
+  "started_at": "2026-09-06T16:10:20+00:00",
+  "finished_at": "2026-09-06T16:10:25+00:00",
+  "wall_clock_s": 4.7,
+  "tokens_in": 2,
+  "tokens_out": 193,
+  "cost_usd": 0.0449078,
+  "verdict": "no",
+  "verdict_text": "NO: The script drops block 15 instead of block 14 (`DROP = {2, 6, 10, 15}`), violating spec clause \"Remove every tensor of blocks 2, 6, 10, 14\" and the exact renumbering mapping given (old 12\u21929, old 13\u219210, old 15\u219211, which requires 14 to be dropped, not 15). This also means the \"no tensor of blocks 12, 13, 14, 15 remains\" required check would actually fail if run against a correct reference, since block 14 is retained (renumbered to 11) while block 15's tensors are dropped instead.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

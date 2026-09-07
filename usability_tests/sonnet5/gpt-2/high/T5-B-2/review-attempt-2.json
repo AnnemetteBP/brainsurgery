@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T15:43:59+00:00",
+  "finished_at": "2026-09-06T15:45:18+00:00",
+  "wall_clock_s": 79.4,
+  "tokens_in": 2,
+  "tokens_out": 7139,
+  "cost_usd": 0.11534780000000001,
+  "verdict": "no",
+  "verdict_text": "NO. The plan never deletes the original `lora::\u2026lora_A.weight` / `lora::\u2026lora_B.weight` tensors that feed the `matmul` step \u2014 it only deletes the derived `model::h.\\d+.(attn.c_attn).delta(_t)?` intermediates it created. Since `matmul`/`add_` read their `from_a`/`from_b`/`from` operands rather than consuming them (as shown by the plan itself needing an explicit `delete` for `delta`/`delta_t` even though those were also just \"from\" operands of `add_`), the 24 original adapter tensors in the `lora::` namespace remain unconsumed and would be carried into the final merged output. That directly violates Required Result clause 2 (\"No adapter tensor \u2026 appears in the output\") and clause 4 (\"Expected total: 160 tensors\" \u2014 the actual output would have 184). The plan's own safety checks (`not: exists 'model::.*lora_.*'` and `count of 'model::.*' is 160`) only scan the `model::` namespace, so they cannot detect these leftover `lora::` tensors, meaning the \"Required checks\" are not actually enforcing the spec's guarantee.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

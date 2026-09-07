@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T16:00:38+00:00",
+  "finished_at": "2026-09-06T16:00:42+00:00",
+  "wall_clock_s": 3.9,
+  "tokens_in": 2,
+  "tokens_out": 158,
+  "cost_usd": 0.0413738,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script verifies the shared-tensor precondition against the unmodified base checkpoints for both ft1 and ft2, computes each MLP tensor's merge using base as the common reference point (satisfying the ordering requirement in the objective/\"Why it is meaningful\" section), performs the arithmetic in float32, asserts exactly 48 merged and 160 total tensors, and writes to `out/T4/model.safetensors`. This matches all Required result and Required checks clauses.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

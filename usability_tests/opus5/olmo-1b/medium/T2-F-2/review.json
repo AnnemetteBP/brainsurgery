@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "artifact_sha256": "ac8af64e711652c405ff809a29f0354d71b5d7443fe49c8dc6ee86e8572e3109",
+  "started_at": "2026-09-06T18:21:31+00:00",
+  "finished_at": "2026-09-06T18:21:42+00:00",
+  "wall_clock_s": 10.7,
+  "tokens_in": 2,
+  "tokens_out": 599,
+  "cost_usd": 0.1206005,
+  "verdict": "yes",
+  "verdict_text": "YES. The script loads both shards via the index, and for each of the 16 layers builds the keep index `0..639, 768..2047` (16 head blocks of 128, dropping block 5) and applies it along dim 0 for q/k/v and dim 1 for o_proj, which matches required-result clauses 1\u20134 exactly; all other tensors are untouched and names are preserved (clause 5). The four shape assertions and the 114-tensor count assertion all run before `save_file`, satisfying the \"fail loudly before writing\" requirement, and the output is the single file `out/T2/model.safetensors` (clause 6). `index_select` preserves the float32 dtype, and `.contiguous()` makes the slices safe to serialize.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

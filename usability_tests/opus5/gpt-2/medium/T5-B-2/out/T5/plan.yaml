@@ -1,0 +1,65 @@
+# T5: merge a PEFT LoRA adapter into GPT-2 base weights, sharded export.
+#
+# alpha / r = 32 / 16 = 2.  fan_in_fan_out = true, so the base weight is
+# Conv1D [in, out] = [768, 2304] while B @ A is [out, in] = [2304, 768];
+# the product must be transposed before it is added.
+#
+# All writes target the `base` alias so the output model is unambiguous.
+
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # --- preconditions on the adapter ---------------------------------------
+  - assert:
+      all:
+        - count: { of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_A\.weight', is: 12 }
+        - count: { of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_B\.weight', is: 12 }
+        - count: { of: 'lora::.*', is: 24 }
+        - shape: { of: 'lora::base_model\.model\.h\.0\.attn\.c_attn\.lora_A\.weight', is: [16, 768] }
+        - shape: { of: 'lora::base_model\.model\.h\.0\.attn\.c_attn\.lora_B\.weight', is: [2304, 16] }
+        - count: { of: 'base::.*', is: 160 }
+
+  # --- delta = B @ A  ->  [2304, 768] -------------------------------------
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'base::loramerge.\1.attn.c_attn.delta'
+  - assert:
+      all:
+        - count: { of: 'base::loramerge\..*\.delta', is: 12 }
+        - shape: { of: 'base::loramerge\.0\.attn\.c_attn\.delta', is: [2304, 768] }
+
+  # --- scale by alpha / r, then transpose to the Conv1D layout ------------
+  - scale_: { target: 'base::loramerge\..*\.delta', by: 2.0 }
+  - permute:
+      from: 'base::loramerge\.(\d+)\.attn\.c_attn\.delta'
+      to: 'base::loramerge.\1.attn.c_attn.deltaT'
+      order: [1, 0]
+  - assert:
+      all:
+        - count: { of: 'base::loramerge\..*\.deltaT', is: 12 }
+        - shape: { of: 'base::loramerge\.0\.attn\.c_attn\.deltaT', is: [768, 2304] }
+
+  # --- fold into the base weights -----------------------------------------
+  - add_:
+      from: 'base::loramerge\.(\d+)\.attn\.c_attn\.deltaT'
+      to: 'base::h.\1.attn.c_attn.weight'
+
+  # --- drop every intermediate --------------------------------------------
+  - delete: { target: 'base::loramerge\..*' }
+
+  # --- required checks on what is about to be written ---------------------
+  - assert:
+      all:
+        - not: { exists: 'base::.*lora_.*' }
+        - not: { exists: 'base::loramerge.*' }
+        - shape: { of: 'base::h\.0\.attn\.c_attn\.weight', is: [768, 2304] }
+        - dtype: { of: 'base::h\.0\.attn\.c_attn\.weight', is: float32 }
+        - count: { of: 'base::.*', is: 160 }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB

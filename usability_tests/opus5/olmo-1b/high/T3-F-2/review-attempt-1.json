@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T08:27:03+00:00",
+  "finished_at": "2026-09-06T08:27:22+00:00",
+  "wall_clock_s": 19.1,
+  "tokens_in": 2,
+  "tokens_out": 1438,
+  "cost_usd": 0.1388815,
+  "verdict_text": "YES\n\nThe script casts exactly the 112 named projection matrices to bfloat16 via `tensor.to(torch.bfloat16)` (RNE), leaves every other tensor as float32 with unchanged values, renames nothing, deletes nothing (the `buffer_re` pattern `((?!))` contains an always-failing negative lookahead, so the `continue` branch is dead code and no tensor is dropped \u2014 harmless here since there are no buffers), and runs all four required checks as assertions before `save_sharded_safetensors` is called. The `matrix_re.fullmatch` anchoring prevents the over-broad `.*weight` hazard, so `model.embed_tokens.weight` and `lm_head.weight` stay float32.\n\nOne caveat outside the artifact's text: clause 5's sharding behaviour (256 MiB cap, oversized tensors alone in their own shard, `weight_map` covering all 114 names) is entirely delegated to the unshown `_ckpt.save_sharded_safetensors`, so it can't be verified from this file alone.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

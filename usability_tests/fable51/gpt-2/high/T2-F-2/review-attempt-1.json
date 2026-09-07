@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T11:20:52+00:00",
+  "finished_at": "2026-09-06T11:21:03+00:00",
+  "wall_clock_s": 11.8,
+  "tokens_in": 2,
+  "tokens_out": 785,
+  "cost_usd": 0.23875074999999998,
+  "verdict_text": "YES\n\nThe script builds the keep index exactly as the specification lists it. For the fused projection it walks three 768-wide segments, skips the 64-wide block for head 5 in each, and yields columns 0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303 in order. The same index applied along axis 0 handles the bias, and the single-segment variant yields rows 0..319 and 384..767 for the output projection. All other tensors are left untouched, names are preserved, the four required checks are asserted before writing, and the output goes to `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T11:20:54+00:00",
+  "finished_at": "2026-09-06T11:21:07+00:00",
+  "wall_clock_s": 13.0,
+  "tokens_in": 2,
+  "tokens_out": 897,
+  "cost_usd": 0.23830475,
+  "verdict_text": "YES\n\nThe visible logic matches every clause: the buffer regex drops exactly the 12 `h.<i>.attn.bias` tensors, the matrix regex with `fullmatch` selects exactly the 48 projection weights and casts them via `.to(torch.bfloat16)` (round-to-nearest-even), all other tensors are kept in float32 with values unchanged, names are preserved, and the four required assertions run before the write. One caveat: the sharding itself (64 MiB limit, oversized `wte.weight` alone in its shard, `model.safetensors.index.json` with a complete `weight_map`) is delegated to `save_sharded_safetensors` in the unseen `_ckpt` helper, so that part is assumed correct rather than verified from this file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

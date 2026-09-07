@@ -1,0 +1,75 @@
+# T2: structured attention-head pruning of OLMo-1B-0724-hf.
+#
+# Remove head 5 (0-based) of 16 heads x 128 dims from every layer:
+#   q/k/v_proj.weight [2048, 2048] -> [1920, 2048]  (heads are row blocks)
+#   o_proj.weight     [2048, 2048] -> [2048, 1920]  (heads are column blocks)
+# Kept slices, in order: 0..639 (heads 0-4) then 768..2047 (heads 6-15).
+#
+# Strategy, applied to all 16 layers at once with regex captures:
+#   1. `copy` a correctly *shaped* slice of the original into a scratch name
+#      (`<proj>.pruned`); its contents are irrelevant, both halves are
+#      overwritten in steps 2-3.
+#   2. `assign` the head 0-4 block into the front of the scratch tensor.
+#   3. `assign` the head 6-15 block right behind it.
+#   4. `delete` the original tensor, then `move` the scratch tensor onto its name.
+
+inputs:
+  - model::inputs/base
+
+transforms:
+  # ---- Preflight: the layout this plan assumes -------------------------------
+  - assert: { count: { of: 'model::.*', is: 114 } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.[qkv]_proj\.weight', is: 48 } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.o_proj\.weight', is: 16 } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.q_proj\.weight', is: [2048, 2048] } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.k_proj\.weight', is: [2048, 2048] } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.v_proj\.weight', is: [2048, 2048] } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.o_proj\.weight', is: [2048, 2048] } }
+
+  # ---- q_proj / k_proj / v_proj: drop rows 640..767 --------------------------
+  - copy:
+      from: 'model::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight::[128:, :]'
+      to: 'model::model.layers.\1.self_attn.\2_proj.pruned'
+  - assign:
+      from: 'model::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight::[:640, :]'
+      to: 'model::model.layers.\1.self_attn.\2_proj.pruned::[:640, :]'
+  - assign:
+      from: 'model::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight::[768:, :]'
+      to: 'model::model.layers.\1.self_attn.\2_proj.pruned::[640:, :]'
+
+  # ---- o_proj: drop columns 640..767 -----------------------------------------
+  - copy:
+      from: 'model::model\.layers\.(\d+)\.self_attn\.o_proj\.weight::[:, 128:]'
+      to: 'model::model.layers.\1.self_attn.o_proj.pruned'
+  - assign:
+      from: 'model::model\.layers\.(\d+)\.self_attn\.o_proj\.weight::[:, :640]'
+      to: 'model::model.layers.\1.self_attn.o_proj.pruned::[:, :640]'
+  - assign:
+      from: 'model::model\.layers\.(\d+)\.self_attn\.o_proj\.weight::[:, 768:]'
+      to: 'model::model.layers.\1.self_attn.o_proj.pruned::[:, 640:]'
+
+  # ---- Put the pruned tensors back under the original names ------------------
+  - delete: { target: 'model::model\.layers\.\d+\.self_attn\.[qkvo]_proj\.weight' }
+  - move:
+      from: 'model::model\.layers\.(\d+)\.self_attn\.([qkvo])_proj\.pruned'
+      to: 'model::model.layers.\1.self_attn.\2_proj.weight'
+
+  # ---- Required checks (must hold before writing) ----------------------------
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.q_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.k_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.v_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.o_proj\.weight', is: [2048, 1920] } }
+  - assert: { count: { of: 'model::.*', is: 114 } }
+
+  # ---- Same checks for every remaining layer, plus dtype / leftovers ---------
+  - assert:
+      all:
+        - shape: { of: 'model::model\.layers\.15\.self_attn\.q_proj\.weight', is: [1920, 2048] }
+        - shape: { of: 'model::model\.layers\.15\.self_attn\.o_proj\.weight', is: [2048, 1920] }
+        - dtype: { of: 'model::model\.layers\.0\.self_attn\.q_proj\.weight', is: float32 }
+        - not: { exists: 'model::.*\.pruned' }
+        - count: { of: 'model::model\.layers\.\d+\.mlp\.\w+\.weight', is: 48 }
+
+output:
+  path: out/T2/model.safetensors
+  format: safetensors

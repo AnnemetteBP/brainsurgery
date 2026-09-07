@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T16:56:23+00:00",
+  "finished_at": "2026-09-06T16:56:29+00:00",
+  "wall_clock_s": 6.4,
+  "tokens_in": 2,
+  "tokens_out": 304,
+  "cost_usd": 0.1115405,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script drops rows 3840\u20134607 of the fused QKV weight and bias (head 5's 768-row interleaved block) and columns 1280\u20131535 of `attention.dense.weight`, preserving order, dtype, names and all other tensors, then asserts the four required checks before writing a single `out/T2/model.safetensors` with 244 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "19811be17039bc4fdfc951cd8a9d0a6007411fc2e97a4a7c5b907b17b5612d65"
+}

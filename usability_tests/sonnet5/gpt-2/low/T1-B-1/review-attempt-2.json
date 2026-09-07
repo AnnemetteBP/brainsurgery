@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/B/T1-defective.yaml",
+  "started_at": "2026-09-06T15:44:54+00:00",
+  "finished_at": "2026-09-06T15:44:55+00:00",
+  "wall_clock_s": 1.6,
+  "tokens_in": 0,
+  "tokens_out": 0,
+  "cost_usd": 0,
+  "verdict": "none",
+  "verdict_text": "You've hit your session limit \u00b7 resets 5:50pm (Europe/Copenhagen)",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

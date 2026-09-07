@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T1-defective.py",
+  "started_at": "2026-09-06T16:10:17+00:00",
+  "finished_at": "2026-09-06T16:10:20+00:00",
+  "wall_clock_s": 3.8,
+  "tokens_in": 2,
+  "tokens_out": 165,
+  "cost_usd": 0.045026800000000006,
+  "verdict": "no",
+  "verdict_text": "NO: the script drops block 15 instead of block 14 (`DROP = {2, 6, 10, 15}`), violating Required result clause 1, which specifies removing blocks 2, 6, 10, 14. This also breaks clause 2's exact renumbering mapping (old 14\u219211 and old 15 dropped, rather than old 15\u219211 and old 14 dropped), producing a key set that does not match the specified/hidden reference despite passing the script's own internal assertions and the stated \"Required checks.\"",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

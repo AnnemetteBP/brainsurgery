@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T16:22:58+00:00",
+  "finished_at": "2026-09-06T16:24:09+00:00",
+  "wall_clock_s": 70.8,
+  "tokens_in": 2,
+  "tokens_out": 5398,
+  "cost_usd": 0.2538695,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan is correct. It verifies the precondition first (counts of 244 for `ft1`/`ft2`, plus bit-equality of every non-MLP tensor in `base` against both fine-tunes via a negative-lookahead pattern and `\\g<0>` backreference, which together also pin the name sets: 180 matched non-MLP names + 64 successfully copied MLP names = 244). Both task vectors are materialized as `.tv1`/`.tv2` temporaries and reduced to `0.4 * (ftN - base)` in float32 *before* either is added back, so each is taken against the unmodified base, avoiding the ordering hazard; the two `add_` steps then accumulate onto the float32 base copy, matching the required formula, and the final `cast_` returns the 64 MLP tensors to float16. The temporaries are deleted before output, the required checks are present as asserts (64 for each task-vector set, 244 for the final tensor set), non-MLP tensors are never written to, and names are unchanged.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "4520528c09be2960410630ec87aaa38043195552a4272c3a46c22c858737d752"
+}

@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T16:30:52+00:00",
+  "finished_at": "2026-09-06T16:31:06+00:00",
+  "wall_clock_s": 13.6,
+  "tokens_in": 2,
+  "tokens_out": 795,
+  "cost_usd": 0.22498175,
+  "verdict": "yes",
+  "verdict_text": "YES. The script verifies identical key sets and bit-exact equality of every non-MLP tensor across all three checkpoints before any merge, computes each task vector against the unmodified base in float32, casts back to the base dtype (float32), asserts exactly 48 merged tensors and 160 output tensors, and writes a single `out/T4/model.safetensors`. The only assumption is that the helper `load_checkpoint` from `_ckpt` returns a plain name-to-tensor dict, which the surrounding code requires.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

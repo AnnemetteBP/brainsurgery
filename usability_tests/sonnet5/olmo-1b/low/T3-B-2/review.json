@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T16:04:56+00:00",
+  "finished_at": "2026-09-06T16:05:02+00:00",
+  "wall_clock_s": 6.0,
+  "tokens_in": 2,
+  "tokens_out": 340,
+  "cost_usd": 0.047556799999999996,
+  "verdict": "no",
+  "verdict_text": "NO. The plan casts everything to float32 first, then casts the 112 projection matrices to bfloat16 directly from float32 \u2014 but the required cast is `tensor.to(torch.bfloat16)` applied to the original tensor values, and since the source checkpoint is already float32, this actually matches spec here, so that part is fine. The real defect is the `shard: 256MB` output setting: per the spec \"256 MiB (268,435,456 bytes)\" but `256MB` as commonly interpreted by tooling could mean 256\u00d710^6 = 256,000,000 bytes (decimal MB), not 268,435,456 bytes (MiB) \u2014 the comment claims BrainSurgery interprets it as binary MiB but this is asserted, not verified against actual `brainsurgery` semantics, making the shard-size requirement unverified/unchecked in the plan itself (no assert enforces shard byte totals \u2264 268,435,456), violating Required result clause 5's shard-size bound and the \"fail loudly\" expectation for produced output layout.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "3b3c623b5d02a5e2d373b5578feacdf78c13a7a575f3759de43c39aa564e7c8f"
+}

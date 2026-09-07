@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-06T07:26:49+00:00",
+  "finished_at": "2026-09-06T07:27:03+00:00",
+  "wall_clock_s": 14.0,
+  "tokens_in": 2,
+  "tokens_out": 930,
+  "cost_usd": 0.1332705,
+  "verdict_text": "YES\n\nThe plan deletes blocks 2, 6, 10, 14 (asserting the expected 60 tensors first), then renumbers survivors in ascending order (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211), so each destination index is vacated before it is written and no collision occurs. The rename patterns capture the remainder of each name and reuse it, leaving values, shapes and dtypes untouched, and the four non-block tensors are never matched. The three required checks are present as `assert` transforms (no residual 12\u201315 blocks, exactly 12 `query_key_value.weight` matches, 184 tensors total, which matches 12\u00d715+4), and the output path is `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

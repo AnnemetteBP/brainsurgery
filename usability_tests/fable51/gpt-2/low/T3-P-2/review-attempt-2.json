@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T16:29:29+00:00",
+  "finished_at": "2026-09-06T16:29:41+00:00",
+  "wall_clock_s": 12.0,
+  "tokens_in": 2,
+  "tokens_out": 684,
+  "cost_usd": 0.22172075000000002,
+  "verdict": "no",
+  "verdict_text": "NO. The transform and the four required checks are correct, but requirement 5 (sharded output with `model.safetensors.index.json`, a 64 MiB per-shard cap on tensor data, and `wte.weight` alone in its own shard) is entirely delegated to `save_sharded_safetensors` from an external `_ckpt` module that is not part of the artifact, so the sharding layout and index file cannot be established from what was submitted. This also violates the condition's rule that the solution be a standalone script using only PyTorch and `safetensors`, since `_ckpt` is neither shown nor a listed package. The buffer and matrix regexes and the dtype handling are otherwise exactly as specified.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

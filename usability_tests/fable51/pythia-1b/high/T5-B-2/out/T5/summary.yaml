@@ -1,0 +1,89 @@
+transforms:
+- assert:
+    count:
+      of: base::.*
+      is: 244
+- assert:
+    count:
+      of: lora::.*\.lora_A\.weight
+      is: 16
+- assert:
+    count:
+      of: lora::.*\.lora_B\.weight
+      is: 16
+- assert:
+    count:
+      of: lora::.*
+      is: 32
+- assert:
+    shape:
+      of: lora::base_model.model.gpt_neox.layers.0.attention.query_key_value.lora_A.weight
+      is:
+      - 16
+      - 2048
+- assert:
+    shape:
+      of: lora::base_model.model.gpt_neox.layers.0.attention.query_key_value.lora_B.weight
+      is:
+      - 6144
+      - 16
+- assert:
+    dtype:
+      of: lora::.*
+      is: float32
+- assert:
+    dtype:
+      of: base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight
+      is: float16
+- matmul:
+    from_a: lora::base_model\.model\.(gpt_neox\.layers\.\d+\.attention\.query_key_value)\.lora_B\.weight
+    from_b: lora::base_model.model.\1.lora_A.weight
+    to: base::\1.delta
+- assert:
+    count:
+      of: base::.*\.delta
+      is: 16
+- assert:
+    shape:
+      of: base::.*\.delta
+      is:
+      - 6144
+      - 2048
+- assert:
+    dtype:
+      of: base::.*\.delta
+      is: float32
+- scale_:
+    target: base::.*\.delta
+    by: 2.0
+- cast_:
+    target: base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight
+    to: float32
+- add_:
+    from: base::(gpt_neox\.layers\.\d+\.attention\.query_key_value)\.delta
+    to: base::\1.weight
+- cast_:
+    target: base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight
+    to: float16
+- delete:
+    target: base::.*\.delta
+- assert:
+    not:
+      exists: base::.*lora_.*
+- assert:
+    not:
+      exists: base::.*\.delta
+- assert:
+    shape:
+      of: base::gpt_neox.layers.0.attention.query_key_value.weight
+      is:
+      - 6144
+      - 2048
+- assert:
+    dtype:
+      of: base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight
+      is: float16
+- assert:
+    count:
+      of: base::.*
+      is: 244

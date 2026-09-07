@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T07:48:45+00:00",
+  "finished_at": "2026-09-06T07:49:04+00:00",
+  "wall_clock_s": 19.2,
+  "tokens_in": 2,
+  "tokens_out": 1305,
+  "cost_usd": 0.13586050000000002,
+  "verdict_text": "NO\n\nThe required check \"exactly 112 tensors are bfloat16\" is not implemented: the plan's `assert count` merely counts tensors whose *names* match the projection regex, and it runs *before* the cast, so it verifies nothing about dtype and would pass even if the bfloat16 cast were wrong or absent \u2014 a violation of the \"Required checks\" clause. The only dtype assertions present cover a single tensor (`model.layers.0.self_attn.q_proj.weight`) and `model.embed_tokens.weight`, leaving the 112-tensor dtype condition unverified. Second, `shard: 256MB` does not clearly express the required 256 MiB = 268,435,456 byte limit; if the tool reads `MB` as 10^6 bytes the shard boundaries will differ from the reference layout required by clause 5, which grading compares exactly. The initial `cast_: {target: '.*', to: float32}` is a harmless no-op given the all-float32 input, and the cast targeting itself is correctly scoped to the 112 projection matrices, so the substantive output may still be right apart from sharding.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

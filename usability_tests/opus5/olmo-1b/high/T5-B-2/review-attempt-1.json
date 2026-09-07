@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T08:35:12+00:00",
+  "finished_at": "2026-09-06T08:35:45+00:00",
+  "wall_clock_s": 32.5,
+  "tokens_in": 2,
+  "tokens_out": 2359,
+  "cost_usd": 0.1660115,
+  "verdict_text": "I'll read the doc pack to check the semantics the plan relies on.\n\n**Tool Call: Bash**\n```json\n{\n  \"command\": \"ls -R docpack | head -50\",\n  \"description\": \"List doc pack contents\"\n}\n```\n\n**Tool Result:**\n\n````\ndocpack:\nREADME.md\nexamples\nhelp.txt\ninterfaces-reference.md\n\ndocpack/examples:\nexample_moe_upcycle.yaml\ndocpack/examples/\nexample_phlora_expression_.yaml\nexample_gpt2_all_transforms.yaml\n````\n\n**Tool Call: Read**\n```json\n{\n  \"file_path\": \"/home/rootkidd/Projects/brainsurgery/usability_tests/opus5/olmo-1b/high/T5-B-2/docpack/README.md\"\n}\n```\n\n**Tool Result:**\n\n````\n     1\u2192# BrainSurgery\n     2\u2192\n     3\u2192**Model checkpoint surgery via declarative YAML plans.**\n     4\u2192\n     5\u2192BrainSurgery edits model checkpoints without loading the model: it reads\n     6\u2192safetensors or PyTorch checkpoints, applies an ordered list of tensor\n     7\u2192transforms, and writes a new checkpoint. Everything is described in a YAML\n     8\u2192plan; no Python is required.\n     9\u2192\n    10\u2192## Installation\n    11\u2192\n    12\u2192```bash\n    13\u2192pip install -e .\n    14\u2192```\n    15\u2192\n    16\u2192## Quick start\n    17\u2192\n    18\u2192```\n    19\u2192brainsurgery plan.yaml\n    20\u2192```\n    21\u2192\n    22\u2192A plan has three sections:\n    23\u2192\n    24\u2192```yaml\n    25\u2192inputs:\n    26\u2192  - base::path/to/checkpoint\n    27\u2192  - other::path/to/another\n    28\u2192transforms:\n    29\u2192  - copy: { from: 'base::model.embed.weight', to: 'base::model.embed_copy.weight' }\n    30\u2192output:\n    31\u2192  path: out/model\n    32\u2192  format: safetensors\n    33\u2192  shard: 4GB\n    34\u2192```\n    35\u2192\n    36\u2192## Inputs\n    17\u2192\n    18\u2192...\n````",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

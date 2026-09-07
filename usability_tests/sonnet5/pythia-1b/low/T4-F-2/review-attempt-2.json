@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T16:10:01+00:00",
+  "finished_at": "2026-09-06T16:10:04+00:00",
+  "wall_clock_s": 3.6,
+  "tokens_in": 2,
+  "tokens_out": 117,
+  "cost_usd": 0.0421418,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script verifies shared tensors match across all three checkpoints, aborts via assertions if not, merges exactly the 64 MLP tensors using the correct formula in float32 cast back to float16, leaves the other 180 tensors unchanged, asserts the output has exactly 244 tensors, and writes to out/T4/model.safetensors as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

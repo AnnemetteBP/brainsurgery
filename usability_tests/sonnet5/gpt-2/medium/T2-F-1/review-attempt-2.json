@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T2-defective.py",
+  "started_at": "2026-09-06T16:01:09+00:00",
+  "finished_at": "2026-09-06T16:01:13+00:00",
+  "wall_clock_s": 3.8,
+  "tokens_in": 2,
+  "tokens_out": 170,
+  "cost_usd": 0.0435518,
+  "verdict": "no",
+  "verdict_text": "NO. The artifact drops head 6 (`DROP_HEAD = 6`), but the specification requires removing head 5, which violates the \"Required result\" clause (\"For every layer `i`, remove head 5\"). This produces wrong column/row ranges (e.g., keeps columns 320..383 instead of dropping them, and drops 384..447 instead of keeping them), so the output will not match the specified `[768, 2112]`/`[2112]`/`[704, 768]` slicing pattern or the hidden reference values.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The removed head is off by one (head N+1 instead of head N). All shapes are still correct, so the artifact's own shape checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T11:14:21+00:00",
+  "finished_at": "2026-09-06T11:14:42+00:00",
+  "wall_clock_s": 21.6,
+  "tokens_in": 2,
+  "tokens_out": 1454,
+  "cost_usd": 0.30212975,
+  "verdict_text": "NO\n\nThe plan omits the second required check: nothing asserts that exactly 64 tensors were merged. There is no `count` assert on the MLP pattern (or on the `tv1`/`tv2` temporaries), so if `copy`, `subtract_`, `scale_` or `add_` silently matched fewer than 64 tensors, the run would still finish and the final `count: 244` on `base` would still pass, since the temporaries are deleted and the base keeps its original 244 names regardless. This violates the \"Required checks\" clause (\"exactly 64 tensors were merged\") and thereby the requirement that the solution fail loudly.\n\nSecondary gap under step 1: the name-set verification is only indirect. The plan asserts `ft1` and `ft2` each have 244 tensors and that base's non-MLP tensors equal their `ft1`/`ft2` counterparts, but it never asserts base's own name count or that the 64 MLP names exist in all three before touching anything, so a base with an extra or missing MLP tensor would not be caught before the merge starts.\n\nThe arithmetic itself is correct: both task vectors are taken against the unmodified float32 base before either is added, scaled by 0.4, then summed into base and cast back to float16.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

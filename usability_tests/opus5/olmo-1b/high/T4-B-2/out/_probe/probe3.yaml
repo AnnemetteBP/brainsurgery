@@ -1,0 +1,4 @@
+inputs:
+  - a::inputs/lora/adapter_model.safetensors
+transforms:
+  - assert: { count: { of: "a::.*", is: 63 } }

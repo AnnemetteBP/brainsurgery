@@ -1,0 +1,60 @@
+# T5: LoRA "merge and unload" for OLMo-1B-0724-hf, with sharded export.
+#
+# delta = (lora_alpha / r) * B @ A = 2 * B @ A, added into the base weight.
+# fan_in_fan_out = false and the base uses nn.Linear [out, in] layout, so
+# B @ A ([2048,16] @ [16,2048] = [2048,2048]) is added without transposition.
+#
+# Only the `base` alias is ever written to, so `output` resolves to it; the
+# `lora` alias stays read-only and its tensors never reach the output.
+
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # --- Preflight -----------------------------------------------------------
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.[qv]_proj\.lora_A\.weight'
+        is: 32
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.[qv]_proj\.lora_B\.weight'
+        is: 32
+  - assert: { shape: { of: 'lora::base_model\.model\.model\.layers\.0\.self_attn\.q_proj\.lora_A\.weight', is: [16, 2048] } }
+  - assert: { shape: { of: 'lora::base_model\.model\.model\.layers\.0\.self_attn\.q_proj\.lora_B\.weight', is: [2048, 16] } }
+  - assert: { dtype: { of: 'lora::.*', is: float32 } }
+  - assert: { dtype: { of: 'base::model\.layers\.(\d+)\.self_attn\.[qv]_proj\.weight', is: float32 } }
+  - assert: { shape: { of: 'base::model\.layers\.(\d+)\.self_attn\.[qv]_proj\.weight', is: [2048, 2048] } }
+
+  # --- delta = B @ A, into a scratch name inside the output alias ----------
+  - matmul:
+      from_a: 'lora::base_model\.model\.model\.layers\.(\d+)\.(self_attn\.[qv]_proj)\.lora_B\.weight'
+      from_b: 'lora::base_model.model.model.layers.\1.\2.lora_A.weight'
+      to: 'base::merge_delta.\1.\2'
+
+  # Exactly 32 adapter pairs were found and merged.
+  - assert: { count: { of: 'base::merge_delta\..*', is: 32 } }
+  - assert: { shape: { of: 'base::merge_delta\..*', is: [2048, 2048] } }
+
+  # --- scale by alpha / r = 32 / 16 = 2, then fold into the base weights ---
+  - scale_: { target: 'base::merge_delta\..*', by: 2.0 }
+  - add_:
+      from: 'base::merge_delta\.(\d+)\.(self_attn\.[qv]_proj)'
+      to: 'base::model.layers.\1.\2.weight'
+
+  # --- drop every intermediate tensor -------------------------------------
+  - delete: { target: 'base::merge_delta\..*' }
+
+  # --- Required checks, before writing ------------------------------------
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert: { not: { exists: 'base::merge_delta\..*' } }
+  - assert: { shape: { of: 'base::model\.layers\.0\.self_attn\.q_proj\.weight', is: [2048, 2048] } }
+  - assert: { dtype: { of: 'base::model\.layers\.0\.self_attn\.q_proj\.weight', is: float32 } }
+  - assert: { count: { of: 'base::.*', is: 114 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

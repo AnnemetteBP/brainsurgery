@@ -1,0 +1,64 @@
+# T2: prune head 5 (rows/cols 640..767) from every attention projection of OLMo-1B-0724-hf.
+inputs:
+  - model::inputs/base
+
+transforms:
+  # Preflight: input layout as described in the task.
+  - assert: { count: { of: '.*', is: 114 } }
+  - assert: { count: { of: 'model\.layers\.\d+\.self_attn\.[qkvo]_proj\.weight', is: 64 } }
+  - assert: { shape: { of: 'model\.layers\.0\.self_attn\.q_proj\.weight', is: [2048, 2048] } }
+  - assert: { shape: { of: 'model\.layers\.0\.self_attn\.o_proj\.weight', is: [2048, 2048] } }
+
+  # Allocate pruned-size scratch tensors (same dtype, shape taken from a slice of the source).
+  - fill:
+      from: 'model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight::[:1920]'
+      to: 'tmp.\1.\2'
+      mode: constant
+      value: 0
+  - fill:
+      from: 'model\.layers\.(\d+)\.self_attn\.o_proj\.weight::[:, :1920]'
+      to: 'tmp.\1.o'
+      mode: constant
+      value: 0
+  - assert: { count: { of: 'tmp\..*', is: 64 } }
+
+  # q/k/v: rows 0..639 -> 0..639, rows 768..2047 -> 640..1919.
+  - assign:
+      from: 'model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight::[:640]'
+      to: 'tmp.\1.\2::[:640]'
+  - assign:
+      from: 'model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight::[768:]'
+      to: 'tmp.\1.\2::[640:]'
+  # o: columns 0..639 -> 0..639, columns 768..2047 -> 640..1919.
+  - assign:
+      from: 'model\.layers\.(\d+)\.self_attn\.o_proj\.weight::[:, :640]'
+      to: 'tmp.\1.o::[:, :640]'
+  - assign:
+      from: 'model\.layers\.(\d+)\.self_attn\.o_proj\.weight::[:, 768:]'
+      to: 'tmp.\1.o::[:, 640:]'
+
+  # Spot-check bit-exactness of the reassembly on layer 0 before swapping names.
+  - assert: { equal: { left: 'model\.layers\.0\.self_attn\.q_proj\.weight::[:640]', right: 'tmp.0.q::[:640]' } }
+  - assert: { equal: { left: 'model\.layers\.0\.self_attn\.q_proj\.weight::[768:]', right: 'tmp.0.q::[640:]' } }
+  - assert: { equal: { left: 'model\.layers\.0\.self_attn\.o_proj\.weight::[:, 768:]', right: 'tmp.0.o::[:, 640:]' } }
+
+  # Replace the originals with the pruned tensors under the original names.
+  - delete: { target: 'model\.layers\.\d+\.self_attn\.[qkvo]_proj\.weight' }
+  - move:
+      from: 'tmp\.(\d+)\.([qkvo])'
+      to: 'model.layers.\1.self_attn.\2_proj.weight'
+
+  # Required checks.
+  - assert: { shape: { of: 'model\.layers\.0\.self_attn\.q_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model\.layers\.0\.self_attn\.k_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model\.layers\.0\.self_attn\.v_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model\.layers\.0\.self_attn\.o_proj\.weight', is: [2048, 1920] } }
+  - assert: { count: { of: '.*', is: 114 } }
+  # Extra: no scratch left, and every layer has the pruned shapes.
+  - assert: { not: { exists: 'tmp\..*' } }
+  - assert: { shape: { of: 'model\.layers\.\d+\.self_attn\.[qkv]_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model\.layers\.\d+\.self_attn\.o_proj\.weight', is: [2048, 1920] } }
+
+output:
+  path: out/T2/model.safetensors
+  format: safetensors

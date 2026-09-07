@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T11:23:34+00:00",
+  "finished_at": "2026-09-06T11:23:59+00:00",
+  "wall_clock_s": 24.8,
+  "tokens_in": 2,
+  "tokens_out": 1376,
+  "cost_usd": 0.27002275,
+  "verdict_text": "NO\n\nThe merge itself is correct: `B @ A` is transposed when `fan_in_fan_out` is true, scaled by alpha over r, added in float32, cast back, and all four required checks are asserted before writing. The failure is Required result clause 4, the sharded export. The script delegates loading and all sharding, index generation, and the 100 MiB per-shard rule to an unshown helper module named `_ckpt`, which is neither part of the artifact nor a package the condition allows, so the artifact is not the standalone script the condition requires. Nothing in the visible code guarantees the index file is named `model.safetensors.index.json`, that `weight_map` covers every tensor, that shard data stays at or under 104,857,600 bytes excluding headers, or that `wte.weight` is placed alone in its own shard. As written, the artifact cannot be judged to satisfy the specification.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T11:22:22+00:00",
+  "finished_at": "2026-09-06T11:22:39+00:00",
+  "wall_clock_s": 17.3,
+  "tokens_in": 2,
+  "tokens_out": 1254,
+  "cost_usd": 0.25633575,
+  "verdict_text": "I'll read the doc pack to check the transform names, assert syntax, and the shard-size semantics used in the plan before judging.\n\n\n<invoke name=\"Grep\">\n<invoke name=\"pattern\">shard</invoke>\n<invoke name=\"path\">/home/rootkidd/Projects/brainsurgery/usability_tests/fable51/gpt-2/high/T3-B-2/docpack</invoke>\n<invoke name=\"output_mode\">content</invoke>\n<invoke name=\"-i\">true</invoke>\n</invoke>\n<invoke name=\"Grep\">\n<invoke name=\"pattern\">^(cast_?|delete|assert|count|dtype)\\b|^\\s*(count|dtype):</invoke>\n<invoke name=\"path\">/home/rootkidd/Projects/brainsurgery/usability_tests/fable51/gpt-2/high/T3-B-2/docpack/help.txt</invoke>\n<invoke name=\"output_mode\">content</invoke>\n<invoke name=\"-n\">true</invoke>\n</invoke>\n</invoke>",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

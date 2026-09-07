@@ -1,0 +1,43 @@
+{
+  "phase": "solve",
+  "driver": "run_claude.py",
+  "model_id": "claude-fable-5-1",
+  "agent": "fable51",
+  "target": "gpt-2",
+  "effort": "high",
+  "test": "T4",
+  "condition": "P",
+  "repeat": 2,
+  "started_at": "2026-09-06T11:21:07+00:00",
+  "finished_at": "2026-09-06T11:22:03+00:00",
+  "wall_clock_s": 56.9,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "max_turns": 40,
+  "timeout_s": 1800,
+  "turns": 5,
+  "tool_calls": 4,
+  "tokens_in": 130,
+  "tokens_out": 3851,
+  "cache_read_tokens": 130223,
+  "cache_write_tokens": 18872,
+  "tokens_in_total": 149225,
+  "cost_usd": 0.6059997500000001,
+  "duration_api_ms": 46089,
+  "session_id": "29da8f6a-5204-40ac-8422-54fdf02cfc4d",
+  "result_subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "executions": 2,
+  "failed_executions": [
+    {
+      "n": 1,
+      "command": "cat > out/T4/solution.py <<'EOF'\n\"\"\"T4: task-vector merge of two frozen-backbone fine-tunes of GPT-2 (124M).\n\nout[X] = base[X] + lam*(ft1[X]-base[X]) + lam*(ft2[X]-base[X])  for the 48 MLP tensors,\neverything else copied from the base unchanged.\n\"\"\"\nimport re\nimport sys\nfrom pathlib import Path\n\nimp",
+      "message": "FileNotFoundError: No such file or directory: \"/home/rootkidd/Projects/brainsurgery/usability_tests/fable51/gpt-2/high/T4-P-2/out/inputs/base/model.safetensors\"",
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Done. The merged checkpoint is written to `out/T4/model.safetensors` and the self-report is in `out/T4/REPORT.md`.\n\n**What the script does** (`out/T4/solution.py`):\n- Loads base, ft1 and ft2, then verifies identical key sets, shapes and dtypes, and bit-equality of all 112 non-MLP tensors before any arithmetic. Any mismatch aborts with a nonzero exit.\n- Computes each task vector against the untouched base and forms the merge in float32 for the 48 MLP tensors matched by an anchored regex over `h.<i>.mlp.{c_fc,c_proj}.{weight,bias}`.\n- Copies every other tensor from the base as a fresh clone, so nothing in the output shares storage.\n- Asserts exactly 48 merged and 160 total, saves, then reloads the file and re-verifies key set, shapes, dtypes, bit-equality of unchanged tensors, and the merged tensors against a float64 recomputation.\n\n**Executions**\n\n| Run | Result |\n|---|---|\n| 1 | Crash: `FileNotFoundError`, sandbox root derived as `parents[1]` of the script, which is `out/` |\n| 2 | Success, max relative Frobenius error 4.0e-08 |\n\nThe one failure was a path bug, not a merge logic issue. Nothing in the task text was unclear."
+}

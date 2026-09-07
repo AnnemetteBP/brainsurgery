@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T07:02:12+00:00",
+  "finished_at": "2026-09-06T07:02:42+00:00",
+  "wall_clock_s": 30.1,
+  "tokens_in": 2,
+  "tokens_out": 2592,
+  "cost_usd": 0.0674148,
+  "verdict_text": "YES\n\nThe script performs the required pre-merge equality check on all non-MLP tensors across base/ft1/ft2 (via `torch.equal` in a loop keyed by the same MLP regex), computes each of the 64 MLP tensors in float32 against the unmodified `base` (avoiding the ordering hazard) and casts back to the base dtype, copies all other tensors unchanged from `base`, and asserts `merged == 64` and `len(out) == 244` before writing `out/T4/model.safetensors`. All three required checks are present as loud failures (`assert`), and the arithmetic and output structure match the spec exactly.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

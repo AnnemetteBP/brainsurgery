@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T3.yaml",
+  "started_at": "2026-09-06T07:59:42+00:00",
+  "finished_at": "2026-09-06T08:00:11+00:00",
+  "wall_clock_s": 29.2,
+  "tokens_in": 2,
+  "tokens_out": 2087,
+  "cost_usd": 0.15875650000000002,
+  "verdict_text": "NO\n\nThe plan does not implement the first required check, \"exactly 64 tensors are bfloat16\" (Required checks, clause 1). Its `assert count` matches the four projection-name patterns and asserts 64, which is a check on *names* and, being placed *before* the `cast_` to bfloat16, says nothing about dtypes; if the cast pattern were over-broad or the cast were a no-op, the plan would still pass and write. The other three required checks (qkv weight bfloat16, `embed_in` float32, 196 tensors) are present and correctly ordered before the output. The rest of the transform pipeline \u2014 delete-then-upcast-all-then-cast-projections \u2014 produces the required contents (196 tensors, 64 bfloat16, remainder float32, names unchanged). One minor note: `shard: 256MB` is written where the spec states 256 MiB, but with ~101 MB per layer the shard boundaries land identically under either unit, so it does not change the output layout here.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

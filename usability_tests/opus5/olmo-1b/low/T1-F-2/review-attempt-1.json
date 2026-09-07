@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T07:17:41+00:00",
+  "finished_at": "2026-09-06T07:17:49+00:00",
+  "wall_clock_s": 7.6,
+  "tokens_in": 2,
+  "tokens_out": 416,
+  "cost_usd": 0.11090950000000001,
+  "verdict_text": "YES\n\nThe script drops blocks {2,6,10,14}, builds the renumber map from the ordered surviving indices (0\u21920, 1\u21921, 3\u21922, \u2026 15\u219211), copies the two non-block tensors untouched, and preserves the remainder of each key plus values/shapes/dtypes. All three required checks (no block \u226512, exactly 12 contiguous blocks, 86 tensors) run before `save_file`, so a failure aborts with a non-zero exit and no output. Only nit, not a spec violation: the checks are `assert`s, which would be stripped under `python -O`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

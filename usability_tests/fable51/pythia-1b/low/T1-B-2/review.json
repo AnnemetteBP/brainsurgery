@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-06T16:36:30+00:00",
+  "finished_at": "2026-09-06T16:36:41+00:00",
+  "wall_clock_s": 11.3,
+  "tokens_in": 2,
+  "tokens_out": 675,
+  "cost_usd": 0.24535575,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan deletes exactly blocks 2, 6, 10, 14 (60 tensors), shifts survivors lowest-first so no destination is occupied when written, preserves names apart from the index via the captured suffix, leaves the 4 non-block tensors untouched, and asserts the three required checks (no blocks 12\u201315, exactly 12 `query_key_value.weight` tensors, 184 tensors total) before writing to `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "68c4b3a21b772a8c15f8c90c8a6572ea4f07880480dcf63858334d19b828b3a8"
+}

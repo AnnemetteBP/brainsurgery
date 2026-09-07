@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "artifact_sha256": "39971c56f8f1ba950debcebf4fb42e1685eb2910891739a543fbb747ba8a390c",
+  "started_at": "2026-09-06T18:15:05+00:00",
+  "finished_at": "2026-09-06T18:15:16+00:00",
+  "wall_clock_s": 10.3,
+  "tokens_in": 2,
+  "tokens_out": 711,
+  "cost_usd": 0.0482248,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 The script verifies name-set equality and bit-exact equality of all non-MLP tensors across base/ft1/ft2 before any output, aborts loudly via `assert` on any check failure (shared-tensor check, `merged == 48`, `len(out) == 114`), computes the merge formula exactly as specified in float32 before casting back, and writes exactly `out/T4/model.safetensors` with 114 tensors, unchanged tensors taken bit-exact from base.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

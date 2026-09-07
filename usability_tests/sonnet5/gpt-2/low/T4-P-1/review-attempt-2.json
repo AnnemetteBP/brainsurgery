@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T4-defective.py",
+  "started_at": "2026-09-06T16:00:35+00:00",
+  "finished_at": "2026-09-06T16:00:41+00:00",
+  "wall_clock_s": 5.8,
+  "tokens_in": 2,
+  "tokens_out": 162,
+  "cost_usd": 0.0414478,
+  "verdict": "no",
+  "verdict_text": "NO: the merge formula computes `out[X] = tmp + \u03bb*(f2 - tmp)` where `tmp = b + \u03bb*(f1-b)`, i.e. `out = (1-\u03bb)\u00b2\u00b7b + \u03bb(1-\u03bb)\u00b7f1 + \u03bb\u00b7f2`, not the required `base + \u03bb(ft1-base) + \u03bb(ft2-base)`. This violates step 2 of \"Required result\" \u2014 the second task vector must be taken against the unmodified base, not against the already-updated `tmp`.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T16:18:56+00:00",
+  "finished_at": "2026-09-06T16:19:31+00:00",
+  "wall_clock_s": 34.4,
+  "tokens_in": 2,
+  "tokens_out": 2530,
+  "cost_usd": 0.1663035,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe merge is correct in every detail the specification calls out: `scale = lora_alpha / r = 2` is read from `adapter_config.json` rather than hard-coded, `delta = B @ A` gives `[2048, 2048]` in the `[out, in]` layout and is not transposed because `fan_in_fan_out` is `false`, the addition is done in float32 and cast back to the base dtype, and the name/shape are preserved. All four required checks are present as loud assertions (32 pairs merged, no `lora_` key, `model.layers.0.self_attn.q_proj.weight` still `[2048, 2048]`, 114 tensors) and they run before the write. Adapter tensors are never inserted into `sd`, so no adapter or intermediate tensor can reach the output, and the write goes to `out/T5` with a 536,870,912-byte shard budget.\n\nOne caveat that is outside the code shown to me: the sharding and index-file behaviour lives in the `_ckpt` helper (`load_checkpoint`, `save_sharded_safetensors`), so I am judging clause 4 only by the correct budget being passed to it, not by inspecting the packing or `weight_map` construction.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

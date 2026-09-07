@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T07:39:23+00:00",
+  "finished_at": "2026-09-06T07:39:37+00:00",
+  "wall_clock_s": 14.1,
+  "tokens_in": 2,
+  "tokens_out": 942,
+  "cost_usd": 0.1216315,
+  "verdict_text": "YES\n\nThe script verifies name-set equality across all three checkpoints and bit-exact equality of every non-MLP tensor before writing anything (step 1), selects exactly the 48 `h.<i>.mlp.{c_fc,c_proj}.{weight,bias}` names via `fullmatch`, and computes each merged tensor from the untouched `base` dict in float32 so both task vectors are taken against the unmodified base (step 2 and the ordering hazard). All other tensors are carried over unchanged from `base` with identical names (step 3), and the required guards \u2014 shared-tensor verification, `merged == 48`, `len(out) == 160` \u2014 are all present as assertions that abort the run, with output written to `out/T4/model.safetensors` (step 4).",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

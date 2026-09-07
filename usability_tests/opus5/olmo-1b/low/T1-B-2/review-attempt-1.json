@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T1.yaml",
+  "started_at": "2026-09-06T07:20:13+00:00",
+  "finished_at": "2026-09-06T07:20:26+00:00",
+  "wall_clock_s": 12.3,
+  "tokens_in": 2,
+  "tokens_out": 810,
+  "cost_usd": 0.12386649999999999,
+  "verdict_text": "YES\n\nThe plan deletes blocks 2, 6, 10, 14 (asserting 28 tensors first), then renumbers survivors in ascending order so each destination index is already vacated before it is written (3\u21922 after 2's deletion, 4\u21923 after 3 moved, \u2026 15\u219211 after 11 moved), avoiding collisions. The three required checks are present as asserts (no layers 12\u201315, exactly 12 q_proj tensors, 86 total), and the output path matches `out/T1/model.safetensors`. The layer-index patterns are dot-delimited, so `model\\.layers\\.3\\.` cannot match `model.layers.13.`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

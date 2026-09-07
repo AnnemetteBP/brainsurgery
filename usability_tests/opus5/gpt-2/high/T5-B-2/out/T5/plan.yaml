@@ -1,0 +1,102 @@
+# T5: LoRA "merge and unload" folded directly into the GPT-2 checkpoint,
+# written out sharded at 100MB.
+#
+#   base h.<i>.attn.c_attn.weight : [768, 2304]  (Conv1D layout [in, out])
+#   lora_A                        : [16, 768]    (nn.Linear convention)
+#   lora_B                        : [2304, 16]
+#
+# fan_in_fan_out = true, so the low-rank product B @ A is [out, in] and has to be
+# transposed before it is added to the Conv1D-layout base weight:
+#
+#   W += (alpha / r) * (B @ A).T   with alpha / r = 32 / 16 = 2
+#
+# All intermediates are created on the `base` alias (so the output alias stays
+# unambiguous) and deleted again before the output is written.
+
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # ---------------------------------------------------------------- preflight
+  # Required check: exactly 12 adapter pairs are present.
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_A\.weight'
+        is: 12
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+        is: 12
+  - assert: { count: { of: 'lora::.*', is: 24 } }
+  - assert: { count: { of: 'base::.*', is: 160 } }
+
+  # Layout assumptions the merge depends on.
+  - assert:
+      shape: { of: 'base::h\.0\.attn\.c_attn\.weight', is: [768, 2304] }
+  - assert:
+      shape:
+        of: 'lora::base_model\.model\.h\.0\.attn\.c_attn\.lora_A\.weight'
+        is: [16, 768]
+  - assert:
+      shape:
+        of: 'lora::base_model\.model\.h\.0\.attn\.c_attn\.lora_B\.weight'
+        is: [2304, 16]
+  - assert: { dtype: { of: 'base::h\.0\.attn\.c_attn\.weight', is: float32 } }
+  - assert:
+      dtype:
+        of: 'lora::base_model\.model\.h\.0\.attn\.c_attn\.lora_A\.weight'
+        is: float32
+
+  # ------------------------------------------------------- delta = B @ A
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'base::h.\1.attn.c_attn.mrgdelta'
+  - assert: { count: { of: 'base::h\.(\d+)\.attn\.c_attn\.mrgdelta', is: 12 } }
+  - assert:
+      shape: { of: 'base::h\.0\.attn\.c_attn\.mrgdelta', is: [2304, 768] }
+
+  # ------------------------------- transpose to the Conv1D layout [768, 2304]
+  - permute:
+      from: 'base::h\.(\d+)\.attn\.c_attn\.mrgdelta'
+      to: 'base::h.\1.attn.c_attn.mrgdeltat'
+      order: [1, 0]
+  - assert:
+      shape: { of: 'base::h\.0\.attn\.c_attn\.mrgdeltat', is: [768, 2304] }
+
+  # ------------------------------------------------- scale by alpha / r == 2
+  - scale:
+      from: 'base::h\.(\d+)\.attn\.c_attn\.mrgdeltat'
+      to: 'base::h.\1.attn.c_attn.mrgdeltas'
+      by: 2.0
+  - assert: { count: { of: 'base::h\.(\d+)\.attn\.c_attn\.mrgdeltas', is: 12 } }
+  - assert:
+      shape: { of: 'base::h\.0\.attn\.c_attn\.mrgdeltas', is: [768, 2304] }
+
+  # --------------------------------------------------------------- W += delta
+  - add_:
+      from: 'base::h\.(\d+)\.attn\.c_attn\.mrgdeltas'
+      to: 'base::h.\1.attn.c_attn.weight'
+
+  # ------------------------------------------------------ drop intermediates
+  - delete: { target: 'base::h\.(\d+)\.attn\.c_attn\.mrgdelta' }
+  - delete: { target: 'base::h\.(\d+)\.attn\.c_attn\.mrgdeltat' }
+  - delete: { target: 'base::h\.(\d+)\.attn\.c_attn\.mrgdeltas' }
+
+  # ----------------------------------------------------------- final checks
+  # Required check: no adapter tensor and no intermediate survives.
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert: { not: { exists: 'base::.*mrgdelta.*' } }
+  # Required check: the merged weight kept its name, shape and dtype.
+  - assert:
+      shape: { of: 'base::h\.0\.attn\.c_attn\.weight', is: [768, 2304] }
+  - assert: { count: { of: 'base::h\.(\d+)\.attn\.c_attn\.weight', is: 12 } }
+  - assert: { dtype: { of: 'base::h\.0\.attn\.c_attn\.weight', is: float32 } }
+  # Required check: the output has exactly 160 tensors.
+  - assert: { count: { of: 'base::.*', is: 160 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T16:26:54+00:00",
+  "finished_at": "2026-09-06T16:27:29+00:00",
+  "wall_clock_s": 34.9,
+  "tokens_in": 2,
+  "tokens_out": 2520,
+  "cost_usd": 0.1703235,
+  "verdict": "no",
+  "verdict_text": "NO.\n\nThe plan never removes the adapter tensors. The `lora::` input is loaded with 32 `lora_A`/`lora_B` tensors, only read by `matmul`, and never deleted; the `output` block names no namespace, so everything still live is serialized \u2014 276 tensors instead of 244, with `...lora_A.weight` / `...lora_B.weight` names present. This violates \"No adapter tensor and no intermediate tensor appears in the output\" (Required result, clause 2) and the exact-key-set / 244-tensor grading criterion.\n\nThe two guards that were supposed to catch exactly this are scoped to the wrong namespace: `assert not exists 'model::.*lora_.*'` and `assert count of 'model::.*' is 244` only inspect the `model` namespace, so both pass while the adapter tensors sit in `lora::`, failing to implement the required checks \"no tensor name containing `lora_` is in the output\" and \"the output has exactly 244 tensors\". Adding `delete: { target: 'lora::.*' }` before the asserts, and scoping the asserts to all namespaces, would fix it; the merge arithmetic itself (scale 2, no transpose, float32 accumulate then float16 cast) is correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

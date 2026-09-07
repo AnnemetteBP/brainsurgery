@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T12:05:25+00:00",
+  "finished_at": "2026-09-06T12:05:39+00:00",
+  "wall_clock_s": 14.7,
+  "tokens_in": 2,
+  "tokens_out": 948,
+  "cost_usd": 0.27073375000000005,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan casts exactly the 112 projection matrices matched by the explicit layer regex to bfloat16, leaves everything else float32 (the initial float32 cast is a no-op on an all-float32 input, so values are unchanged), deletes nothing, and keeps tensor names. The required checks are all present: a count assert that the regex matches 112 tensors, a dtype assert that those are bfloat16, a complement-regex dtype assert that every other tensor is float32 (together implying exactly 112 bfloat16), the q_proj bfloat16 check, the embed_tokens float32 check, and a count of 114 total. Output goes to `out/T3` as safetensors with a 256 MB shard limit, which the tool interprets as 256 MiB, matching the sharding rule.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

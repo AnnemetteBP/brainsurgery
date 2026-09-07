@@ -1,0 +1,13 @@
+{
+  "run_id": "T2-B-2",
+  "agent": "sonnet5",
+  "target": "gpt-2",
+  "effort": "medium",
+  "test": "T2",
+  "condition": "B",
+  "repeat": 2,
+  "created_at": "2026-09-06T05:31:01+00:00",
+  "repo_commit": "3649f794b1bba26ef861158601b95d05adeba001",
+  "venv": true,
+  "env_freeze_lines": 70
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T08:28:10+00:00",
+  "finished_at": "2026-09-06T08:28:37+00:00",
+  "wall_clock_s": 27.4,
+  "tokens_in": 2,
+  "tokens_out": 2239,
+  "cost_usd": 0.1593205,
+  "verdict_text": "I'll read the relevant source and docs (reading only, no execution).\n\n\n<invoke name=\"Bash\">\n<parameter name=\"command\">ls /home/rootkidd/Projects/brainsurgery/brainsurgery/transforms/ /home/rootkidd/Projects/brainsurgery/brainsurgery/expressions/</parameter>\n<parameter name=\"description\">List transforms and expressions</parameter>\n</invoke>\n\n\n/home/rootkidd/Projects/brainsurgery/brainsurgery/expressions/\n__init__.py\n/home/rootkidd/Projects/brainsurgery/brainsurgery/transforms/\n__init__.py\n```",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

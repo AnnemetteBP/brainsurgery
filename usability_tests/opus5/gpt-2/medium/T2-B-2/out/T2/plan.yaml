@@ -1,0 +1,457 @@
+# T2: structured attention-head pruning of GPT-2 (124M): drop head 5 in every layer.
+#
+# GPT-2 uses Conv1D layout ([in, out]), so:
+#   attn.c_attn.weight [768, 2304] = fused [q|k|v]; heads are column blocks of 64
+#     inside each 768-wide segment -> head 5 occupies columns 320:384 (q),
+#     1088:1152 (k), 1856:1920 (v).
+#   attn.c_attn.bias [2304] = same layout along its single axis.
+#   attn.c_proj.weight [768, 768] = output projection; heads are row blocks of 64
+#     -> head 5 occupies rows 320:384.
+#
+# Each pruned tensor is rebuilt with concat over the kept slices (piece order
+# preserved), written to a temporary name, then the original is deleted and the
+# rebuilt tensor is moved back onto the original name.
+
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # Sanity check on the inputs before any edit.
+  - assert:
+      all:
+        - count: { of: '.*', is: 160 }
+        - shape: { of: 'h.0.attn.c_attn.weight', is: [768, 2304] }
+        - shape: { of: 'h.0.attn.c_attn.bias', is: [2304] }
+        - shape: { of: 'h.0.attn.c_proj.weight', is: [768, 768] }
+
+  # ---- layer 0 ----
+  - concat:
+      from:
+        - 'h.0.attn.c_attn.weight::[:, 0:320]'
+        - 'h.0.attn.c_attn.weight::[:, 384:768]'
+        - 'h.0.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.0.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.0.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.0.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.0.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.0.attn.c_attn.bias::[0:320]'
+        - 'h.0.attn.c_attn.bias::[384:768]'
+        - 'h.0.attn.c_attn.bias::[768:1088]'
+        - 'h.0.attn.c_attn.bias::[1152:1536]'
+        - 'h.0.attn.c_attn.bias::[1536:1856]'
+        - 'h.0.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.0.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.0.attn.c_proj.weight::[0:320, :]'
+        - 'h.0.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.0.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.0\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.0\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.0\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.0.c_attn.weight', to: 'h.0.attn.c_attn.weight' }
+  - move: { from: 'pruned.0.c_attn.bias', to: 'h.0.attn.c_attn.bias' }
+  - move: { from: 'pruned.0.c_proj.weight', to: 'h.0.attn.c_proj.weight' }
+
+  # ---- layer 1 ----
+  - concat:
+      from:
+        - 'h.1.attn.c_attn.weight::[:, 0:320]'
+        - 'h.1.attn.c_attn.weight::[:, 384:768]'
+        - 'h.1.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.1.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.1.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.1.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.1.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.1.attn.c_attn.bias::[0:320]'
+        - 'h.1.attn.c_attn.bias::[384:768]'
+        - 'h.1.attn.c_attn.bias::[768:1088]'
+        - 'h.1.attn.c_attn.bias::[1152:1536]'
+        - 'h.1.attn.c_attn.bias::[1536:1856]'
+        - 'h.1.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.1.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.1.attn.c_proj.weight::[0:320, :]'
+        - 'h.1.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.1.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.1\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.1\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.1\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.1.c_attn.weight', to: 'h.1.attn.c_attn.weight' }
+  - move: { from: 'pruned.1.c_attn.bias', to: 'h.1.attn.c_attn.bias' }
+  - move: { from: 'pruned.1.c_proj.weight', to: 'h.1.attn.c_proj.weight' }
+
+  # ---- layer 2 ----
+  - concat:
+      from:
+        - 'h.2.attn.c_attn.weight::[:, 0:320]'
+        - 'h.2.attn.c_attn.weight::[:, 384:768]'
+        - 'h.2.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.2.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.2.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.2.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.2.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.2.attn.c_attn.bias::[0:320]'
+        - 'h.2.attn.c_attn.bias::[384:768]'
+        - 'h.2.attn.c_attn.bias::[768:1088]'
+        - 'h.2.attn.c_attn.bias::[1152:1536]'
+        - 'h.2.attn.c_attn.bias::[1536:1856]'
+        - 'h.2.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.2.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.2.attn.c_proj.weight::[0:320, :]'
+        - 'h.2.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.2.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.2\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.2\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.2\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.2.c_attn.weight', to: 'h.2.attn.c_attn.weight' }
+  - move: { from: 'pruned.2.c_attn.bias', to: 'h.2.attn.c_attn.bias' }
+  - move: { from: 'pruned.2.c_proj.weight', to: 'h.2.attn.c_proj.weight' }
+
+  # ---- layer 3 ----
+  - concat:
+      from:
+        - 'h.3.attn.c_attn.weight::[:, 0:320]'
+        - 'h.3.attn.c_attn.weight::[:, 384:768]'
+        - 'h.3.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.3.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.3.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.3.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.3.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.3.attn.c_attn.bias::[0:320]'
+        - 'h.3.attn.c_attn.bias::[384:768]'
+        - 'h.3.attn.c_attn.bias::[768:1088]'
+        - 'h.3.attn.c_attn.bias::[1152:1536]'
+        - 'h.3.attn.c_attn.bias::[1536:1856]'
+        - 'h.3.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.3.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.3.attn.c_proj.weight::[0:320, :]'
+        - 'h.3.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.3.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.3\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.3\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.3\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.3.c_attn.weight', to: 'h.3.attn.c_attn.weight' }
+  - move: { from: 'pruned.3.c_attn.bias', to: 'h.3.attn.c_attn.bias' }
+  - move: { from: 'pruned.3.c_proj.weight', to: 'h.3.attn.c_proj.weight' }
+
+  # ---- layer 4 ----
+  - concat:
+      from:
+        - 'h.4.attn.c_attn.weight::[:, 0:320]'
+        - 'h.4.attn.c_attn.weight::[:, 384:768]'
+        - 'h.4.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.4.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.4.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.4.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.4.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.4.attn.c_attn.bias::[0:320]'
+        - 'h.4.attn.c_attn.bias::[384:768]'
+        - 'h.4.attn.c_attn.bias::[768:1088]'
+        - 'h.4.attn.c_attn.bias::[1152:1536]'
+        - 'h.4.attn.c_attn.bias::[1536:1856]'
+        - 'h.4.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.4.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.4.attn.c_proj.weight::[0:320, :]'
+        - 'h.4.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.4.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.4\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.4\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.4\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.4.c_attn.weight', to: 'h.4.attn.c_attn.weight' }
+  - move: { from: 'pruned.4.c_attn.bias', to: 'h.4.attn.c_attn.bias' }
+  - move: { from: 'pruned.4.c_proj.weight', to: 'h.4.attn.c_proj.weight' }
+
+  # ---- layer 5 ----
+  - concat:
+      from:
+        - 'h.5.attn.c_attn.weight::[:, 0:320]'
+        - 'h.5.attn.c_attn.weight::[:, 384:768]'
+        - 'h.5.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.5.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.5.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.5.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.5.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.5.attn.c_attn.bias::[0:320]'
+        - 'h.5.attn.c_attn.bias::[384:768]'
+        - 'h.5.attn.c_attn.bias::[768:1088]'
+        - 'h.5.attn.c_attn.bias::[1152:1536]'
+        - 'h.5.attn.c_attn.bias::[1536:1856]'
+        - 'h.5.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.5.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.5.attn.c_proj.weight::[0:320, :]'
+        - 'h.5.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.5.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.5\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.5\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.5\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.5.c_attn.weight', to: 'h.5.attn.c_attn.weight' }
+  - move: { from: 'pruned.5.c_attn.bias', to: 'h.5.attn.c_attn.bias' }
+  - move: { from: 'pruned.5.c_proj.weight', to: 'h.5.attn.c_proj.weight' }
+
+  # ---- layer 6 ----
+  - concat:
+      from:
+        - 'h.6.attn.c_attn.weight::[:, 0:320]'
+        - 'h.6.attn.c_attn.weight::[:, 384:768]'
+        - 'h.6.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.6.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.6.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.6.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.6.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.6.attn.c_attn.bias::[0:320]'
+        - 'h.6.attn.c_attn.bias::[384:768]'
+        - 'h.6.attn.c_attn.bias::[768:1088]'
+        - 'h.6.attn.c_attn.bias::[1152:1536]'
+        - 'h.6.attn.c_attn.bias::[1536:1856]'
+        - 'h.6.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.6.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.6.attn.c_proj.weight::[0:320, :]'
+        - 'h.6.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.6.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.6\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.6\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.6\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.6.c_attn.weight', to: 'h.6.attn.c_attn.weight' }
+  - move: { from: 'pruned.6.c_attn.bias', to: 'h.6.attn.c_attn.bias' }
+  - move: { from: 'pruned.6.c_proj.weight', to: 'h.6.attn.c_proj.weight' }
+
+  # ---- layer 7 ----
+  - concat:
+      from:
+        - 'h.7.attn.c_attn.weight::[:, 0:320]'
+        - 'h.7.attn.c_attn.weight::[:, 384:768]'
+        - 'h.7.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.7.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.7.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.7.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.7.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.7.attn.c_attn.bias::[0:320]'
+        - 'h.7.attn.c_attn.bias::[384:768]'
+        - 'h.7.attn.c_attn.bias::[768:1088]'
+        - 'h.7.attn.c_attn.bias::[1152:1536]'
+        - 'h.7.attn.c_attn.bias::[1536:1856]'
+        - 'h.7.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.7.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.7.attn.c_proj.weight::[0:320, :]'
+        - 'h.7.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.7.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.7\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.7\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.7\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.7.c_attn.weight', to: 'h.7.attn.c_attn.weight' }
+  - move: { from: 'pruned.7.c_attn.bias', to: 'h.7.attn.c_attn.bias' }
+  - move: { from: 'pruned.7.c_proj.weight', to: 'h.7.attn.c_proj.weight' }
+
+  # ---- layer 8 ----
+  - concat:
+      from:
+        - 'h.8.attn.c_attn.weight::[:, 0:320]'
+        - 'h.8.attn.c_attn.weight::[:, 384:768]'
+        - 'h.8.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.8.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.8.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.8.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.8.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.8.attn.c_attn.bias::[0:320]'
+        - 'h.8.attn.c_attn.bias::[384:768]'
+        - 'h.8.attn.c_attn.bias::[768:1088]'
+        - 'h.8.attn.c_attn.bias::[1152:1536]'
+        - 'h.8.attn.c_attn.bias::[1536:1856]'
+        - 'h.8.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.8.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.8.attn.c_proj.weight::[0:320, :]'
+        - 'h.8.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.8.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.8\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.8\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.8\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.8.c_attn.weight', to: 'h.8.attn.c_attn.weight' }
+  - move: { from: 'pruned.8.c_attn.bias', to: 'h.8.attn.c_attn.bias' }
+  - move: { from: 'pruned.8.c_proj.weight', to: 'h.8.attn.c_proj.weight' }
+
+  # ---- layer 9 ----
+  - concat:
+      from:
+        - 'h.9.attn.c_attn.weight::[:, 0:320]'
+        - 'h.9.attn.c_attn.weight::[:, 384:768]'
+        - 'h.9.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.9.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.9.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.9.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.9.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.9.attn.c_attn.bias::[0:320]'
+        - 'h.9.attn.c_attn.bias::[384:768]'
+        - 'h.9.attn.c_attn.bias::[768:1088]'
+        - 'h.9.attn.c_attn.bias::[1152:1536]'
+        - 'h.9.attn.c_attn.bias::[1536:1856]'
+        - 'h.9.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.9.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.9.attn.c_proj.weight::[0:320, :]'
+        - 'h.9.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.9.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.9\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.9\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.9\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.9.c_attn.weight', to: 'h.9.attn.c_attn.weight' }
+  - move: { from: 'pruned.9.c_attn.bias', to: 'h.9.attn.c_attn.bias' }
+  - move: { from: 'pruned.9.c_proj.weight', to: 'h.9.attn.c_proj.weight' }
+
+  # ---- layer 10 ----
+  - concat:
+      from:
+        - 'h.10.attn.c_attn.weight::[:, 0:320]'
+        - 'h.10.attn.c_attn.weight::[:, 384:768]'
+        - 'h.10.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.10.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.10.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.10.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.10.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.10.attn.c_attn.bias::[0:320]'
+        - 'h.10.attn.c_attn.bias::[384:768]'
+        - 'h.10.attn.c_attn.bias::[768:1088]'
+        - 'h.10.attn.c_attn.bias::[1152:1536]'
+        - 'h.10.attn.c_attn.bias::[1536:1856]'
+        - 'h.10.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.10.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.10.attn.c_proj.weight::[0:320, :]'
+        - 'h.10.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.10.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.10\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.10\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.10\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.10.c_attn.weight', to: 'h.10.attn.c_attn.weight' }
+  - move: { from: 'pruned.10.c_attn.bias', to: 'h.10.attn.c_attn.bias' }
+  - move: { from: 'pruned.10.c_proj.weight', to: 'h.10.attn.c_proj.weight' }
+
+  # ---- layer 11 ----
+  - concat:
+      from:
+        - 'h.11.attn.c_attn.weight::[:, 0:320]'
+        - 'h.11.attn.c_attn.weight::[:, 384:768]'
+        - 'h.11.attn.c_attn.weight::[:, 768:1088]'
+        - 'h.11.attn.c_attn.weight::[:, 1152:1536]'
+        - 'h.11.attn.c_attn.weight::[:, 1536:1856]'
+        - 'h.11.attn.c_attn.weight::[:, 1920:2304]'
+      to: 'pruned.11.c_attn.weight'
+      dim: 1
+  - concat:
+      from:
+        - 'h.11.attn.c_attn.bias::[0:320]'
+        - 'h.11.attn.c_attn.bias::[384:768]'
+        - 'h.11.attn.c_attn.bias::[768:1088]'
+        - 'h.11.attn.c_attn.bias::[1152:1536]'
+        - 'h.11.attn.c_attn.bias::[1536:1856]'
+        - 'h.11.attn.c_attn.bias::[1920:2304]'
+      to: 'pruned.11.c_attn.bias'
+      dim: 0
+  - concat:
+      from:
+        - 'h.11.attn.c_proj.weight::[0:320, :]'
+        - 'h.11.attn.c_proj.weight::[384:768, :]'
+      to: 'pruned.11.c_proj.weight'
+      dim: 0
+  - delete: { target: 'h\.11\.attn\.c_attn\.weight' }
+  - delete: { target: 'h\.11\.attn\.c_attn\.bias' }
+  - delete: { target: 'h\.11\.attn\.c_proj\.weight' }
+  - move: { from: 'pruned.11.c_attn.weight', to: 'h.11.attn.c_attn.weight' }
+  - move: { from: 'pruned.11.c_attn.bias', to: 'h.11.attn.c_attn.bias' }
+  - move: { from: 'pruned.11.c_proj.weight', to: 'h.11.attn.c_proj.weight' }
+
+  # Required checks: shapes of the pruned projections and the total tensor count.
+  - assert:
+      all:
+        - shape: { of: 'h.0.attn.c_attn.weight', is: [768, 2112] }
+        - shape: { of: 'h.0.attn.c_attn.bias', is: [2112] }
+        - shape: { of: 'h.0.attn.c_proj.weight', is: [704, 768] }
+        - count: { of: '.*', is: 160 }
+  # No leftover scratch tensors, and every layer got the same treatment.
+  - assert:
+      not: { exists: 'pruned\..*' }
+  - assert:
+      all:
+        - count: { of: 'h\.\d+\.attn\.c_attn\.weight', is: 12 }
+        - count: { of: 'h\.\d+\.attn\.c_proj\.bias', is: 12 }
+        - shape: { of: 'h.11.attn.c_attn.weight', is: [768, 2112] }
+        - shape: { of: 'h.11.attn.c_attn.bias', is: [2112] }
+        - shape: { of: 'h.11.attn.c_proj.weight', is: [704, 768] }
+        - shape: { of: 'h.11.attn.c_proj.bias', is: [768] }
+        - dtype: { of: 'h.0.attn.c_attn.weight', is: float32 }
+
+output:
+  path: out/T2/model.safetensors
+  format: safetensors

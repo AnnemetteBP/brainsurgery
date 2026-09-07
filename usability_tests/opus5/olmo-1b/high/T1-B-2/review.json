@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T1.yaml",
+  "started_at": "2026-09-06T16:16:45+00:00",
+  "finished_at": "2026-09-06T16:17:23+00:00",
+  "wall_clock_s": 37.4,
+  "tokens_in": 2,
+  "tokens_out": 2816,
+  "cost_usd": 0.1722975,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan deletes exactly the 28 tensors of blocks 2, 6, 10, 14 (guarded by a count assert), then renames the survivors in ascending destination order (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211), so every destination index is already vacated by a prior delete or move and no block overwrites a surviving one; the mapping matches clause 2 exactly, and only the block index changes since the rest of the name is carried through the capture group. The two non-block tensors are never touched, and the three required checks are present as asserts (no blocks 12\u201315 remain, exactly 12 q_proj tensors, 86 tensors total), placed after the renumbering so a failure aborts before the output is written. The literal `model\\.layers\\.` prefix in each pattern prevents the single-digit patterns from matching two-digit indices such as `model.layers.13.`. Output goes to the required single file `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "ac8d878c4268e6d53726e6c963cc5e9aa04c9af2a392ccb8fb6c4f5d6719b099"
+}

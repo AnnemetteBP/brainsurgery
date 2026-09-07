@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T3-defective.py",
+  "started_at": "2026-09-06T16:03:03+00:00",
+  "finished_at": "2026-09-06T16:03:13+00:00",
+  "wall_clock_s": 9.3,
+  "tokens_in": 2,
+  "tokens_out": 542,
+  "cost_usd": 0.0474578,
+  "verdict": "no",
+  "verdict_text": "NO. The `matrix_re` pattern omits `self_attn.o_proj.weight` from the six projection types it matches, so only 96 of the 112 required projection matrices (missing all 16 `o_proj.weight` tensors) are cast to bfloat16, violating Required Result clause 1. The script's own assertion is hardcoded to `== 96` instead of the spec's 112, so it \"passes\" its self-check while actually violating the Required Checks clause \"exactly 112 tensors are bfloat16\" \u2014 it doesn't fail loudly on the real requirement, it just re-encodes the bug.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "One projection family is missing from the bfloat16 cast pattern (the attention output projection stays float32); the artifact's own count check was adjusted to the wrong number.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

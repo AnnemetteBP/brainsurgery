@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-06T11:09:41+00:00",
+  "finished_at": "2026-09-06T11:09:53+00:00",
+  "wall_clock_s": 11.6,
+  "tokens_in": 2,
+  "tokens_out": 624,
+  "cost_usd": 0.24604974999999998,
+  "verdict_text": "YES\n\nThe plan deletes exactly blocks 2, 6, 10, 14, then shifts the survivors in ascending order so each destination index is already free when its move runs, producing the mapping the specification requires. The three required checks are expressed as `assert` transforms, and the output path matches the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

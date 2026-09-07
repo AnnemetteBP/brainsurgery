@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T16:14:35+00:00",
+  "finished_at": "2026-09-06T16:14:44+00:00",
+  "wall_clock_s": 9.1,
+  "tokens_in": 2,
+  "tokens_out": 477,
+  "cost_usd": 0.1081415,
+  "verdict": "no",
+  "verdict_text": "NO. The artifact does not itself implement the output requirement: clause 5 (shard files plus `model.safetensors.index.json`, 64 MiB cap, oversized `wte.weight` alone in its own shard) is entirely delegated to `save_sharded_safetensors` from an undisclosed `_ckpt` module, so nothing in the submitted script shows the index is written or the shard-packing rule is honored. The transform logic itself is correct \u2014 the two regexes match exactly the 48 projection matrices and the 12 `h.<i>.attn.bias` buffers, casts and passthroughs are right, and all four required checks are asserted before writing. But as presented, the artifact is not a standalone script and clause 5 cannot be judged as satisfied.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

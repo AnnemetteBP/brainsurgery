@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T08:58:13+00:00",
+  "finished_at": "2026-09-06T08:58:25+00:00",
+  "wall_clock_s": 12.9,
+  "tokens_in": 2,
+  "tokens_out": 696,
+  "cost_usd": 0.23754275,
+  "verdict_text": "YES\n\nThe visible logic matches every clause: adapter names map to `h.<i>.attn.c_attn.weight`, `scale = lora_alpha / r = 2` is read from the config, the product `B @ A` (`[2304, 768]`) is transposed because `fan_in_fan_out` is true, the sum is computed in float32 and cast back to the base dtype (float32), no adapter or intermediate tensor is inserted into the state dict, and all four required checks are asserted before writing. Sharding (100 MiB tensor-data limit, index file with `weight_map`, oversized `wte.weight` alone) is delegated to `save_sharded_safetensors` in the unseen `_ckpt` helper with the correct byte limit, so that clause cannot be confirmed from this file alone.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

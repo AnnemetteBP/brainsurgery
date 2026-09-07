@@ -46,7 +46,9 @@ allowed package list, B: BrainSurgery plan) by several coding-agent models.
 #   ... run the agent with <sandbox>/PROMPT.md as its prompt and <sandbox> as cwd ...
 .venv/bin/python usability_tests/grade.py T2 --target gpt-2 --out <sandbox>/out/T2 --json --write <sandbox>/grade.json
 
-# after any number of runs
+# after any number of runs: derive doc-consultation time from the transcripts
+# (do this before any machine cleanup, transcripts are not committed), then analyse
+.venv/bin/python usability_tests/doc_time.py
 .venv/bin/python usability_tests/analyze.py
 
 # one complete Codex repeat on Linux (all targets, efforts, tests and conditions)
@@ -121,8 +123,10 @@ Everything below must hold, or the two vendors' numbers are not comparable:
 5. Same phases and records: `run_codex.py` mirrors `run_claude.py` (solve,
    grade, review with the same review prompt and the same odd/even artifact
    rule, cleanup) and writes `harness.json`, `grade.json`, `review.json` with
-   the same fields. A hand-written driver must do the same; `analyze.py`
-   reads nothing else.
+   the same fields, and keeps `transcript.jsonl`. A hand-written driver must do
+   the same; `analyze.py` reads nothing else. Doc-consultation time is the one
+   measure not yet portable: `doc_time.py` reads Claude Code transcripts only,
+   so a Codex column for it needs the reader extended first.
 6. Same caps: 30 minutes per cell (`--timeout 1800`). Claude Code also has a
    40-turn cap; Codex has no turn cap, so a Codex cell that would have been
    turn-capped runs to the time cap instead. `cap_hit` records which one
@@ -149,8 +153,18 @@ review confirmations that still need experimenter judgment.
 | `harness.json` | driver | turns, tool calls, tokens in/out (+cache), cost, wall clock, executions, failed executions with error class, first-execution success, executions until first success, cap hit |
 | `grade.json` | `grade.py` | PASS/FAIL, findings, metrics |
 | `review.json` | driver | bug-detection phase: artifact kind (defective/correct), verdict text, heuristic reading, `detected` (experimenter-confirmed), tokens and cost |
+| `doctime.json` | `doc_time.py` | doc-consultation time derived from the transcript: seconds (upper and lower bound), reads, bytes read |
 | `out/<test>/REPORT.md` | participant | self-report (attempts, pitfalls, unclear points) |
-| `transcript.jsonl` | driver | the full stream-json transcript |
+| `transcript.jsonl` | driver | the full stream-json transcript, **not committed** |
+
+`transcript.jsonl` is gitignored and is the only copy of the raw session, so
+anything derived from it must be extracted on the machine that ran the cell.
+`doc_time.py` does that for doc-consultation time; it skips runs that already
+have a `doctime.json` unless `--force` is given. Run it after each batch. It
+reads the Claude Code stream-json transcript only: a `run_codex.py` transcript
+is the raw `codex exec --json` event stream, which it reports as unsupported
+and skips rather than recording a zero. Adding Codex means checking one real
+Codex transcript for timestamps and command text and adding a reader.
 
 After each run: open `harness.json`, classify every failed execution with
 one of the error classes in `record-template.md`, and set `detected` in

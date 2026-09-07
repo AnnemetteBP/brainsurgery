@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T16:32:29+00:00",
+  "finished_at": "2026-09-06T16:32:45+00:00",
+  "wall_clock_s": 16.4,
+  "tokens_in": 2,
+  "tokens_out": 1102,
+  "cost_usd": 0.25857274999999996,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe merge is correct: for each of the 16 layers and both target modules, it computes `B @ A` (shape [2048, 2048]), scales by `lora_alpha / r = 2`, honors `fan_in_fan_out` (false here, so no transpose), adds in float32, and keeps name, shape and dtype. No adapter or intermediate tensor is inserted into the state dict, so the other 82 tensors are untouched. All four required checks are asserted before writing: 32 merged pairs, no `lora_` name, the q_proj shape, and exactly 114 tensors. Sharding with the 536,870,912-byte limit and index file is delegated to `save_sharded_safetensors` from the `_ckpt` helper, whose implementation is not shown here, so the shard-size and index behavior rests on that helper being correct.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

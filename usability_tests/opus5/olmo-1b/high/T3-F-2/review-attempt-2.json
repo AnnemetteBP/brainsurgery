@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:17:43+00:00",
+  "finished_at": "2026-09-06T16:18:01+00:00",
+  "wall_clock_s": 18.1,
+  "tokens_in": 2,
+  "tokens_out": 1323,
+  "cost_usd": 0.13416250000000002,
+  "verdict": "yes",
+  "verdict_text": "YES. The regex `matrix_re` full-matches exactly the seven projection weights per layer across 16 layers (112 tensors) and casts them with `tensor.to(torch.bfloat16)` semantics; everything else passes through as float32 with unchanged values, names are untouched, and nothing is dropped \u2014 `buffer_re`'s `(?!)` is an always-failing lookahead, so the deletion branch is dead code, which matches clause 3 (\"do not delete anything\") for this checkpoint. All four required checks are asserted before the write, and the shard budget constant is the specified 268,435,456 bytes, with the layout produced by the provided `save_sharded_safetensors` helper.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

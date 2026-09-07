@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T15:43:14+00:00",
+  "finished_at": "2026-09-06T15:43:36+00:00",
+  "wall_clock_s": 21.8,
+  "tokens_in": 2,
+  "tokens_out": 1994,
+  "cost_usd": 0.062132799999999995,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan deletes exactly the 12 `attn.bias` buffers, upcasts everything to float32 as a baseline, then casts exactly the 48 named projection matrices to bfloat16, and includes assert checks matching all four required checks (count of 48 bf16, `h.0.attn.c_attn.weight` bf16, `wte.weight` float32, total count 148) plus an extra dtype assert covering the complement set. No tensor is renamed, no parameter is deleted, and the output uses `shard: 64MB` to satisfy the sharding/index requirement. The logic and regex patterns correctly target only the specified projection matrices and buffers.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "93394a22ec30786239ce4e8f33732f68fd4b4b76310b64169ddce745c2a0924e"
+}

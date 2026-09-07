@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "artifact_sha256": "ac8af64e711652c405ff809a29f0354d71b5d7443fe49c8dc6ee86e8572e3109",
+  "started_at": "2026-09-06T18:16:03+00:00",
+  "finished_at": "2026-09-06T18:16:07+00:00",
+  "wall_clock_s": 3.9,
+  "tokens_in": 2,
+  "tokens_out": 117,
+  "cost_usd": 0.045309800000000004,
+  "verdict": "yes",
+  "verdict_text": "YES: keep_index(1,2048,128) with DROP_HEAD=5 produces indices 0..639 then 768..2047 (skipping the 5th 128-block), matching rows/columns kept for q/k/v (dim 0) and o_proj (dim 1); shapes and count assertions match required checks, and all other tensors pass through unchanged.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

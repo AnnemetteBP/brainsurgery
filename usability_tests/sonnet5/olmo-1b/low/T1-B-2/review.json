@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T1.yaml",
+  "started_at": "2026-09-06T16:04:24+00:00",
+  "finished_at": "2026-09-06T16:04:33+00:00",
+  "wall_clock_s": 8.9,
+  "tokens_in": 2,
+  "tokens_out": 542,
+  "cost_usd": 0.0479168,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the plan deletes blocks 2/6/10/14, shifts surviving blocks in an order where each destination index is vacated before being written to (verified: 3\u21922,4\u21923,5\u21924,7\u21925,8\u21926,9\u21927,11\u21928,12\u21929,13\u219210,15\u219211 has no overwrite collisions), and includes the three required assert checks (no blocks 12-15 remain, exactly 12 q_proj tensors, exactly 86 total tensors) before writing output.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "ac8d878c4268e6d53726e6c963cc5e9aa04c9af2a392ccb8fb6c4f5d6719b099"
+}

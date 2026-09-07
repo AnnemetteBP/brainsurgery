@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T11:26:50+00:00",
+  "finished_at": "2026-09-06T11:27:08+00:00",
+  "wall_clock_s": 17.7,
+  "tokens_in": 2,
+  "tokens_out": 1251,
+  "cost_usd": 0.25918874999999997,
+  "verdict_text": "YES\n\nThe script matches the specification:\n\n- **Drop set and renumbering** match clause 1 and 2: blocks 2, 6, 10, 14 are skipped, and the surviving blocks are renumbered by enumerating the kept indices in original order, which yields exactly the mapping the spec lists.\n- **No collision hazard**: renamed tensors go into a fresh dict, so no block can overwrite a surviving one. Only the index segment of the name changes; tensor objects are passed through untouched, so values, shapes and dtypes are preserved.\n- **Non-block tensors** fall through the regex miss and are copied unchanged, satisfying clause 3.\n- **Required checks** are enforced before writing: the assertion that the surviving indices equal exactly 0..11 guarantees no block 12 to 15 remains and that exactly 12 blocks exist, and the count assertion guarantees 86 tensors. A failed assert exits non-zero and the save is never reached, so no output is written.\n- **Output** is a single file at the required path, `out/T1/model.safetensors`.\n\nOne minor caveat that does not change the verdict: the checks rely on `assert`, which Python skips under `-O`. Run normally, they fail loudly as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

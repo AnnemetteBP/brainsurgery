@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T16:04:00+00:00",
+  "finished_at": "2026-09-06T16:04:10+00:00",
+  "wall_clock_s": 10.3,
+  "tokens_in": 2,
+  "tokens_out": 708,
+  "cost_usd": 0.0504718,
+  "verdict": "yes",
+  "verdict_text": "YES. The script correctly locates each LoRA pair by prefix, computes `scale * B @ A` with `scale = lora_alpha/r`, respects `fan_in_fan_out` (no transpose here, matching the spec), computes the update in float32 and casts back to the original dtype, and adds it to the correct base key without introducing new tensor names. It also runs all four required checks (32 merged pairs, no `lora_` names, base shape unchanged, exactly 114 tensors) as asserts before calling `save_sharded_safetensors` with the 512 MiB limit into `out/T5`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

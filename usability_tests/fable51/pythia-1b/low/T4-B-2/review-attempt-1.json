@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-06T09:12:54+00:00",
+  "finished_at": "2026-09-06T09:13:14+00:00",
+  "wall_clock_s": 19.9,
+  "tokens_in": 2,
+  "tokens_out": 1347,
+  "cost_usd": 0.29718475,
+  "verdict_text": "NO\n\nThe plan never asserts that exactly 64 tensors were merged, which \"Required checks\" lists as a must-fail-loudly condition. The only count assertions are ft1/ft2 at 244 and the final base at 244, and the final one passes even if the copy from ft1/ft2 matched zero MLP tensors, since the temporary `.tv1`/`.tv2` tensors are deleted before counting. Relatedly, step 1's \"same tensor names\" verification is only partial: the equality asserts cover the 180 non-MLP names, but nothing checks that ft1 and ft2 actually contain the 64 MLP names, so a fine-tune with misnamed MLP tensors would produce an unmerged but 244-tensor output without error. The arithmetic itself (both task vectors taken against the unmodified float32 base, scaled by 0.4, added, cast back to float16) matches step 2, and untouched tensors come from base as step 3 requires.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

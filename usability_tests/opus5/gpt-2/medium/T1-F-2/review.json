@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "artifact_sha256": "86c4df1bf481a3ef792ee9229bb90618bb7950a8c1fe8610059fe3411ee71f43",
+  "started_at": "2026-09-06T18:19:38+00:00",
+  "finished_at": "2026-09-06T18:19:50+00:00",
+  "wall_clock_s": 12.7,
+  "tokens_in": 2,
+  "tokens_out": 784,
+  "cost_usd": 0.11989150000000001,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops blocks 2, 5, 8, maps the survivors in original order to 0..8 via `renumber` (3\u21922, 4\u21923, 6\u21924, 7\u21925, 9\u21926, 10\u21927, 11\u21928), rebuilds into a fresh dict so no rename can overwrite a survivor, and copies the four non-block tensors untouched with their values, shapes and dtypes. The two asserts (layer index set exactly `{0..8}`, total count exactly 121) run before `save_file`, so a violation exits non-zero with no output written, satisfying all three required checks. The regex `h\\.(\\d+)\\.(.+)` with `fullmatch` matches exactly the block tensors named in the spec and never the four globals, and the output is the single file `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

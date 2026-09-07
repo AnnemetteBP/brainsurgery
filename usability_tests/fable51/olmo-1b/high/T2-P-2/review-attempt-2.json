@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T16:31:35+00:00",
+  "finished_at": "2026-09-06T16:31:47+00:00",
+  "wall_clock_s": 11.4,
+  "tokens_in": 2,
+  "tokens_out": 689,
+  "cost_usd": 0.23528475,
+  "verdict": "yes",
+  "verdict_text": "YES. The keep index for one segment of 2048 with 128-wide blocks, dropping head 5, is exactly indices 0..639 followed by 768..2047 in order. It is applied on dim 0 for q, k and v and on dim 1 for o_proj in all 16 layers, yielding [1920, 2048] and [2048, 1920] with values and dtype preserved. All other tensors and names are untouched, the five required checks are asserted before writing, and the result is saved as a single `out/T2/model.safetensors`. This assumes the imported `_ckpt.load_checkpoint` returns the merged 114-tensor state dict from both shards, which the script cannot verify beyond the tensor-count assert.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

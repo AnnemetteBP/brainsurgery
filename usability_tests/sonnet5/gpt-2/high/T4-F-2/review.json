@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "artifact_sha256": "bf1aaff64bce9adc7af3eb4f382f30b5f5cb81a9425f65767ce23de6c1f8a7b6",
+  "started_at": "2026-09-06T18:13:31+00:00",
+  "finished_at": "2026-09-06T18:13:44+00:00",
+  "wall_clock_s": 13.5,
+  "tokens_in": 2,
+  "tokens_out": 1081,
+  "cost_usd": 0.05172879999999999,
+  "verdict": "yes",
+  "verdict_text": "YES. The script verifies name-set equality and bit-exact equality of all non-MLP tensors across base/ft1/ft2 (aborting via assertion on mismatch), computes each of the 48 MLP tensors in float32 exactly as `base + \u03bb(ft1-base) + \u03bb(ft2-base)` with \u03bb=0.4, copies all other 112 tensors unchanged from base, and asserts `merged == 48` and `len(out) == 160` before saving to `out/T4/model.safetensors`. All three required checks are enforced and the arithmetic ordering (task vectors taken against the unmodified base) matches the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

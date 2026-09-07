@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T07:42:02+00:00",
+  "finished_at": "2026-09-06T07:42:17+00:00",
+  "wall_clock_s": 14.9,
+  "tokens_in": 2,
+  "tokens_out": 1049,
+  "cost_usd": 0.1255695,
+  "verdict_text": "YES\n\nThe script drops blocks {2, 6, 10, 14}, builds `renumber` from the ordered surviving list (0\u21920, 1\u21921, 3\u21922, \u2026 15\u219211, matching the spec's mapping exactly), and rewrites only the index portion of each key while keeping the tensor object, so values, shapes and dtypes are untouched. Non-block tensors (`model.embed_tokens.weight`, `lm_head.weight`) fall through the `fullmatch is None` branch unchanged. Writing into a fresh dict under new names avoids the collision hazard entirely. Both assertions \u2014 layer index set equals `{0..11}` (which also establishes that no block 12\u201315 remains) and total tensor count equals 86 \u2014 run before `save_file`, so a failure exits non-zero with no output written.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

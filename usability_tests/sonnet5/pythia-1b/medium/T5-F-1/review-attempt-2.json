@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T5-defective.py",
+  "started_at": "2026-09-06T16:11:20+00:00",
+  "finished_at": "2026-09-06T16:11:24+00:00",
+  "wall_clock_s": 4.2,
+  "tokens_in": 2,
+  "tokens_out": 146,
+  "cost_usd": 0.044851800000000004,
+  "verdict": "no",
+  "verdict_text": "NO: The script sets `scale = 1.0` instead of `lora_alpha / r = 2`, so the merged weights are computed as `B @ A` without the required scaling factor, violating Required Result clause 1 (`weight += scale * B @ A` with `scale = 2`). This will produce merged weights with roughly half the required delta magnitude, almost certainly failing the 1e-3 relative Frobenius error tolerance in Grading.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The adapter scaling factor alpha / r is missing: the raw low-rank product is added.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

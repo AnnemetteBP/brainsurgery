@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:29:18+00:00",
+  "finished_at": "2026-09-06T16:29:28+00:00",
+  "wall_clock_s": 10.0,
+  "tokens_in": 2,
+  "tokens_out": 525,
+  "cost_usd": 0.21990175,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script builds the keep index exactly as specified: for each 768-wide segment it keeps head blocks 0..4 and 6..11, giving columns `0..319, 384..767` per segment (six ranges in order for the fused q|k|v weight and bias), and rows `0..319, 384..767` for the output projection. It applies this to all 12 layers, leaves every other tensor and all names untouched, asserts the four required checks before writing, and saves a single file with 160 tensors to `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

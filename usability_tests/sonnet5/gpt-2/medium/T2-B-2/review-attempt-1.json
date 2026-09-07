@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T05:33:30+00:00",
+  "finished_at": "2026-09-06T05:33:32+00:00",
+  "wall_clock_s": 1.6,
+  "tokens_in": 0,
+  "tokens_out": 0,
+  "cost_usd": 0,
+  "verdict_text": "You've hit your session limit \u00b7 resets 7:50am (Europe/Copenhagen)",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

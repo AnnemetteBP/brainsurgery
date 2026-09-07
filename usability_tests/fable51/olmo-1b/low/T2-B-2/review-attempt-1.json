@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T2.yaml",
+  "started_at": "2026-09-06T09:03:19+00:00",
+  "finished_at": "2026-09-06T09:03:28+00:00",
+  "wall_clock_s": 8.6,
+  "tokens_in": 2,
+  "tokens_out": 463,
+  "cost_usd": 0.35905175000000006,
+  "verdict_text": "YES\n\nThe plan slices each q/k/v projection into row blocks 0..639 and 768..2047 and each o_proj into the same column blocks, deletes the originals, reassembles each of the 16 layers with concat on dim 0 (q/k/v) and dim 1 (o_proj) in the correct piece order under the original names, removes the temporaries, asserts the four layer-0 shapes and the 114-tensor count, and writes a single `out/T2/model.safetensors`. All other tensors are untouched and dtype is preserved by copy/concat.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

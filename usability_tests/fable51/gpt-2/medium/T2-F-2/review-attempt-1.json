@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T11:55:37+00:00",
+  "finished_at": "2026-09-06T11:55:45+00:00",
+  "wall_clock_s": 8.6,
+  "tokens_in": 2,
+  "tokens_out": 536,
+  "cost_usd": 0.22680575,
+  "verdict_text": "YES\n\nThe script removes head 5 from every layer exactly as specified. For `c_attn.weight` and `c_attn.bias` it keeps head blocks 0..4 and 6..11 within each of the three 768-wide q/k/v segments, yielding column ranges 0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303 in order and shape [768, 2112] and [2112]. For `c_proj.weight` it keeps rows 0..319 and 384..767 on axis 0, giving [704, 768]. All other tensors are left untouched with unchanged names, the four required shape and count assertions run before `save_file`, and the output lands at `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

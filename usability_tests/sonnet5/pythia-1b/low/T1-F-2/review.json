@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "artifact_sha256": "445483f5b51837497d7a08eb024b2a58686278532f4e520bfcee7541bc7697c1",
+  "started_at": "2026-09-06T18:17:21+00:00",
+  "finished_at": "2026-09-06T18:17:26+00:00",
+  "wall_clock_s": 5.3,
+  "tokens_in": 2,
+  "tokens_out": 283,
+  "cost_usd": 0.0470158,
+  "verdict": "no",
+  "verdict_text": "NO \u2014 The renumbering logic is wrong: it uses `enumerate(kept)` which assigns new indices purely by position in the sorted kept list, giving old 3\u21922, old 4\u21923, old 5\u21924, old 7\u21925, etc. This actually matches the spec's mapping by coincidence since `kept` is sorted ascending and DROP removes exactly the required blocks, so mapping is correct. However, the required checks clause is violated: the script asserts against `len(kept)` (12) rather than checking specifically that blocks 12\u201315's original identity is gone and doesn't verify \"no tensor of blocks 12,13,14,15 remains\" as an explicit pre-save fail-loud check \u2014 it only checks the final layer index range 0..11, which would also pass if unrelated blocks were dropped instead of 2,6,10,14, so the required check is not implemented as specified.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

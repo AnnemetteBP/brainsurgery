@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:56:05+00:00",
+  "finished_at": "2026-09-06T16:56:41+00:00",
+  "wall_clock_s": 35.8,
+  "tokens_in": 2,
+  "tokens_out": 2655,
+  "cost_usd": 0.1757995,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script implements the spec faithfully: it reads `r`/`lora_alpha`/`fan_in_fan_out` from the adapter config rather than hard-coding, maps `base_model.model.gpt_neox.layers.<i>.attention.query_key_value.lora_{A,B}.weight` to the base key, computes `B @ A` without transposition (since `fan_in_fan_out = false`), accumulates in float32 (`sd[key].float() + scale * delta`) and casts back to the base float16 dtype, so names, shapes and dtypes are preserved and only the 16 targeted tensors change. The adapter is loaded into a separate dict, so no adapter or intermediate tensor can reach the output, and the base's other 228 tensors are written back bit-exact. All four required checks are asserted before writing, and a missing adapter key would raise `KeyError` rather than silently reducing the merge count. The sharding packs tensors greedily so that no shard's tensor data exceeds 536,870,912 bytes, leaves any single tensor above that limit alone in its own shard, and emits `model.safetensors.index.json` with a `weight_map` covering all 244 names into `out/T5/`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "58c8f3b6928ed87177fb23f201e2133a96666f8e34cf6bf02687953191f81bd4"
+}

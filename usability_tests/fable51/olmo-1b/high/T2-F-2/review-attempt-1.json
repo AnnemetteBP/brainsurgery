@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T11:29:29+00:00",
+  "finished_at": "2026-09-06T11:29:39+00:00",
+  "wall_clock_s": 10.5,
+  "tokens_in": 2,
+  "tokens_out": 683,
+  "cost_usd": 0.24051375,
+  "verdict_text": "YES\n\nThe script builds the keep index as blocks 0..4 and 6..15 of width 128, which is exactly rows/columns 0..639 and 768..2047 in order. It applies it on axis 0 for q, k and v and on axis 1 for o_proj, matching the required shapes, leaves all other tensors and names untouched, asserts the five required checks before writing, and writes a single file at `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

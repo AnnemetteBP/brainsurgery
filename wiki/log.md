@@ -7,6 +7,25 @@ confidence: high
 
 # Wiki Log
 
+## [2026-09-07] usability study | doc-consultation time is derivable from the run transcripts
+
+- Question: how much of a condition-B solve is the agent reading the BrainSurgery
+  doc pack? Answer: it is measurable per run and did not need new instrumentation.
+  Every message in `transcript.jsonl` carries a millisecond timestamp, and doc reads
+  are identifiable by path (`docpack/...`), so the span from a doc tool call to the
+  first assistant message after its result is fetch plus digest.
+- Result over both repeats (810 runs): 200 of 670 minutes of condition-B solve wall
+  clock, 30%; median 35 s per run, rising with the effort tier for every agent.
+  Conditions P and F have no comparable cost (P consulted nothing in 270 runs, F
+  inspected a package in 32), so this is the price of a tool the models have not
+  memorised, not a doc-quality comparison. Tables in `usability_tests/README.md`.
+- Attribution is tight: no assistant message mixed a doc read with other tool calls,
+  and only 41 of 1968 doc reads are followed by an acting message, so the upper and
+  lower bounds differ by 1%. Confidence: high.
+- Uses: `usability_tests/doc_time.py` writes `doctime.json` per cell, `analyze.py`
+  reports it. Depends-on: `transcript.jsonl`, which is gitignored, so the extraction
+  must run on the machine that ran the cells and before any cleanup.
+
 ## [2026-09-05] docs | three documentation gaps found by the usability pilot (fixed)
 
 - Found-by: the usability-study pilot (`usability_tests/`, Sonnet 5, condition B). Plan

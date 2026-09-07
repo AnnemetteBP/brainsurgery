@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-06T08:35:14+00:00",
+  "finished_at": "2026-09-06T08:36:09+00:00",
+  "wall_clock_s": 55.0,
+  "tokens_in": 2,
+  "tokens_out": 4278,
+  "cost_usd": 0.21407249999999997,
+  "verdict_text": "NO\n\nThe plan never implements the required check \"exactly 48 tensors were merged\": its only counts are `ft1`/`ft2` = 114 and the final `base` = 114, and the latter cannot detect an under- or over-merge because the `tv1`/`tv2` scratch tensors are deleted by pattern immediately before it, so the count returns to 114 no matter how many MLP tensors the `copy` actually matched. This violates the \"Required checks\" clause (second bullet) and the condition rule that each required check be expressed as an `assert` transform. Relatedly, step 1's \"verify that the three checkpoints have the same tensor names\" is only partially covered: the two `equal` asserts pin the 66 non-MLP names, and the counts pin the totals, but nothing asserts that the 48 MLP names in `ft1`/`ft2` match the base's, so a renamed or missing MLP tensor would silently produce a partial merge that still passes every assert and still writes 114 tensors. The arithmetic itself is correct \u2014 both task vectors are formed against the unmodified base before either `add_` is applied, each scaled by 0.4 in float32 \u2014 so the defect is in the verification, not the merge.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

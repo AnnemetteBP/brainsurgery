@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T11:07:54+00:00",
+  "finished_at": "2026-09-06T11:08:32+00:00",
+  "wall_clock_s": 38.9,
+  "tokens_in": 2,
+  "tokens_out": 3208,
+  "cost_usd": 0.36925575,
+  "verdict_text": "Tool output is not returning here, so I'm judging from the plan text alone as instructed.\n\n**NO**\n\nThe plan's only pair check is `count: { of: 'lora::.*lora_A\\.weight', is: 32 }`, which counts lora_A tensors but never verifies that 32 lora_B partners exist or that 32 merges actually happened. The `matmul` uses a regex on the lora_B side and a back-referenced template on the lora_A side, so a missing or misnamed partner would simply produce fewer deltas, and the later regex-driven `scale_`, `add_` and `delete` would silently operate on whatever subset exists. This violates the Required checks clause \"exactly 32 adapter pairs were found and merged\", which demands the run fail loudly if fewer merges occurred. A robust plan would assert the delta count is 32 after the `matmul` and before `delete`, or assert lora_B count as well.\n\nTwo secondary concerns: the output size is written as `shard: 512MB`, whereas the spec requires a 512 MiB cap (536,870,912 bytes), so if the tool reads MB as 10^6 bytes the shard layout can diverge from the reference. Also, the `lora::` namespace is loaded as an input, and the \"no lora_\" assert only inspects the `model::` namespace, so if the tool writes all input namespaces the adapter tensors would reach the output unchecked, contrary to Required result item 2.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

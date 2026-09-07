@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T16:57:02+00:00",
+  "finished_at": "2026-09-06T16:57:16+00:00",
+  "wall_clock_s": 14.0,
+  "tokens_in": 2,
+  "tokens_out": 955,
+  "cost_usd": 0.24147575,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script drops every tensor whose block index is 2, 5 or 8, then renumbers the survivors by enumerating the kept indices in ascending order, which yields exactly the mapping in clause 2 (3\u21922, 4\u21923, 6\u21924, 7\u21925, 9\u21926, 10\u21927, 11\u21928) with the tensor object, shape and dtype untouched. Non-block names do not match the block regex and are passed through unchanged (clause 3). Before saving, it asserts that the set of block indices in the output is exactly {0..8}, which simultaneously proves no block 9, 10 or 11 remains and that exactly 9 blocks remain, and asserts the tensor count is 121. Both assertions run before `save_file`, so a failure exits non-zero with no output written, and the output lands at `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "86c4df1bf481a3ef792ee9229bb90618bb7950a8c1fe8610059fe3411ee71f43"
+}

@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T2.yaml",
+  "started_at": "2026-09-06T12:05:09+00:00",
+  "finished_at": "2026-09-06T12:05:25+00:00",
+  "wall_clock_s": 15.8,
+  "tokens_in": 2,
+  "tokens_out": 1042,
+  "cost_usd": 0.40136075000000004,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan slices rows 0..639 and 768..2047 from q, k and v and columns 0..639 and 768..2047 from o_proj in every layer 0..15, reassembles them in that order with concat on the correct axis under the original names, removes the temporaries, leaves all other tensors untouched, asserts the four layer-0 shapes and the 114-tensor count, and writes a single file at out/T2/model.safetensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

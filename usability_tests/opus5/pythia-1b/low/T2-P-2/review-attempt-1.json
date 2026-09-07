@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T07:26:03+00:00",
+  "finished_at": "2026-09-06T07:26:13+00:00",
+  "wall_clock_s": 9.5,
+  "tokens_in": 2,
+  "tokens_out": 575,
+  "cost_usd": 0.1183595,
+  "verdict_text": "YES\n\nThe slicing is correct: for the fused `query_key_value` tensors `keep_index(1, 6144, 768)` yields rows `0..3839` then `4608..6143` in ascending order, and for `attention.dense.weight` `index_select` on dim 1 with `keep_index(1, 2048, 256)` keeps columns `0..1279`, `1536..2047`. All 16 layers are covered, no other tensors are touched, names are preserved, the four required checks are asserted before writing, and the output is a single `out/T2/model.safetensors`. The one thing I cannot verify from reading alone is the unshown `_ckpt.load_checkpoint` helper, which must preserve the float16 dtype and all 244 keys for the bit-exact grade to pass.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

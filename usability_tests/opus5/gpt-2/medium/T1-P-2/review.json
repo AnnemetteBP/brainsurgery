@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T16:53:32+00:00",
+  "finished_at": "2026-09-06T16:53:45+00:00",
+  "wall_clock_s": 12.9,
+  "tokens_in": 2,
+  "tokens_out": 842,
+  "cost_usd": 0.12021150000000001,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script matches the specification. It drops blocks 2, 5, and 8, renumbers the survivors in original order via `renumber = {old: new for new, old in enumerate(kept)}` (0\u21920, 1\u21921, 3\u21922, \u2026 11\u21928), builds a fresh dict so no rename can overwrite a surviving block, and passes non-block tensors (`wte.weight`, `wpe.weight`, `ln_f.*`) through untouched with values, shapes and dtypes unchanged. Both required checks are asserted before any write: `layers == set(range(9))` rules out any residual block 9/10/11 and confirms exactly 9 contiguous blocks, and `len(out) == 121` fixes the tensor count; an AssertionError exits non-zero and `save_file` is never reached, so no output is written on failure. The `sys.argv[1]` override and the sharded-index branch in `load_checkpoint` are unused dead paths here and do not change behaviour, since the default is `out/T1` and the input is a single file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "86c4df1bf481a3ef792ee9229bb90618bb7950a8c1fe8610059fe3411ee71f43"
+}

@@ -1,0 +1,105 @@
+# T4: task-vector merge of two fine-tunes of OLMo-1B-0724-hf.
+#
+# out[X] = base[X] + 0.4*(ft1[X]-base[X]) + 0.4*(ft2[X]-base[X])   for the 48 MLP tensors
+# out[X] = base[X]                                                 for every other tensor
+#
+# Ordering hazard: both task vectors must be computed against the *unmodified*
+# base, so both subtractions run before base is touched at all; base is only
+# mutated by the two final add_ steps.
+#
+# Scratch space: ft1/ft2's own MLP tensor slots are reused in place to hold
+# the (scaled) task vectors, since brainsurgery destinations for
+# subtract/add_/scale_ must be existing tensors on an already-declared alias
+# (there is no way to spawn a brand-new alias mid-plan). This is safe because
+# only the 'base' alias is ever saved.
+
+inputs:
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # --- Step 1: precondition checks. Abort loudly if they don't hold. ---
+
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  - assert: { count: { of: 'ft1::.*', is: 114 } }
+  - assert: { count: { of: 'ft2::.*', is: 114 } }
+
+  # Every tensor outside the 48 MLP tensors must be bit-identical across all
+  # three checkpoints. `equal` also fails if a `left` match has no
+  # corresponding tensor on `right`, so this doubles as a same-names check
+  # for the non-MLP tensors.
+  - assert:
+      equal:
+        left: 'base::(?!model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight).+'
+        right: 'ft1::\g<0>'
+  - assert:
+      equal:
+        left: 'base::(?!model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight).+'
+        right: 'ft2::\g<0>'
+
+  # Exactly 48 MLP tensors on each of the three checkpoints (together with the
+  # counts and non-MLP equality checks above, this pins down that the three
+  # checkpoints share the same 114 tensor names).
+  - assert: { count: { of: 'base::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft1::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft2::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+
+  # --- Step 2: compute both task vectors against the untouched base first. ---
+
+  # tv1 = ft1 - base, scaled by lambda, held in ft1's own tensor slots.
+  - subtract:
+      from_a: 'ft1::model\.layers\.(\d+)\.mlp\.gate_proj\.weight'
+      from_b: 'base::model.layers.\1.mlp.gate_proj.weight'
+      to: 'ft1::model.layers.\1.mlp.gate_proj.weight'
+  - subtract:
+      from_a: 'ft1::model\.layers\.(\d+)\.mlp\.up_proj\.weight'
+      from_b: 'base::model.layers.\1.mlp.up_proj.weight'
+      to: 'ft1::model.layers.\1.mlp.up_proj.weight'
+  - subtract:
+      from_a: 'ft1::model\.layers\.(\d+)\.mlp\.down_proj\.weight'
+      from_b: 'base::model.layers.\1.mlp.down_proj.weight'
+      to: 'ft1::model.layers.\1.mlp.down_proj.weight'
+  - scale_: { target: 'ft1::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', by: 0.4 }
+
+  # tv2 = ft2 - base, scaled by lambda, held in ft2's own tensor slots.
+  - subtract:
+      from_a: 'ft2::model\.layers\.(\d+)\.mlp\.gate_proj\.weight'
+      from_b: 'base::model.layers.\1.mlp.gate_proj.weight'
+      to: 'ft2::model.layers.\1.mlp.gate_proj.weight'
+  - subtract:
+      from_a: 'ft2::model\.layers\.(\d+)\.mlp\.up_proj\.weight'
+      from_b: 'base::model.layers.\1.mlp.up_proj.weight'
+      to: 'ft2::model.layers.\1.mlp.up_proj.weight'
+  - subtract:
+      from_a: 'ft2::model\.layers\.(\d+)\.mlp\.down_proj\.weight'
+      from_b: 'base::model.layers.\1.mlp.down_proj.weight'
+      to: 'ft2::model.layers.\1.mlp.down_proj.weight'
+  - scale_: { target: 'ft2::model\.layers\.\d+\.mlp\.(gate_proj|up_proj|down_proj)\.weight', by: 0.4 }
+
+  # --- Step 3: apply both scaled task vectors onto base in place. ---
+  # Only now is base touched, and only for the 48 MLP tensors.
+
+  - add_:
+      from: 'ft1::model\.layers\.(\d+)\.mlp\.gate_proj\.weight'
+      to: 'base::model.layers.\1.mlp.gate_proj.weight'
+  - add_:
+      from: 'ft1::model\.layers\.(\d+)\.mlp\.up_proj\.weight'
+      to: 'base::model.layers.\1.mlp.up_proj.weight'
+  - add_:
+      from: 'ft1::model\.layers\.(\d+)\.mlp\.down_proj\.weight'
+      to: 'base::model.layers.\1.mlp.down_proj.weight'
+  - add_:
+      from: 'ft2::model\.layers\.(\d+)\.mlp\.gate_proj\.weight'
+      to: 'base::model.layers.\1.mlp.gate_proj.weight'
+  - add_:
+      from: 'ft2::model\.layers\.(\d+)\.mlp\.up_proj\.weight'
+      to: 'base::model.layers.\1.mlp.up_proj.weight'
+  - add_:
+      from: 'ft2::model\.layers\.(\d+)\.mlp\.down_proj\.weight'
+      to: 'base::model.layers.\1.mlp.down_proj.weight'
+
+  # --- Step 4: final sanity check on the alias we are about to save. ---
+  - assert: { count: { of: 'base::.*', is: 114 } }
+
+  - save: { path: out/T4/model.safetensors, alias: base, format: safetensors }

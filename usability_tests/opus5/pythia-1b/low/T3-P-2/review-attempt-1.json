@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T07:28:01+00:00",
+  "finished_at": "2026-09-06T07:28:07+00:00",
+  "wall_clock_s": 6.4,
+  "tokens_in": 2,
+  "tokens_out": 321,
+  "cost_usd": 0.1135375,
+  "verdict_text": "YES\n\nThe script drops exactly the 48 buffers via `fullmatch`, casts exactly the 64 listed projection matrices to bfloat16 (`.float().to(torch.bfloat16)`, equivalent to the specified direct cast), upcasts every remaining tensor to float32, preserves names, asserts all four required checks before writing, and writes to `out/T3` with a 268,435,456-byte shard limit. The sharding/index behavior itself lives in the unshown `_ckpt.save_sharded_safetensors`, so that clause is not verifiable from this file alone.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

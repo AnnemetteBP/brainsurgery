@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T16:07:08+00:00",
+  "finished_at": "2026-09-06T16:07:30+00:00",
+  "wall_clock_s": 22.4,
+  "tokens_in": 2,
+  "tokens_out": 1953,
+  "cost_usd": 0.08713380000000001,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the plan slices `query_key_value.weight`/`bias` rows `[0:3840]` and `[4608:6144]` (excluding head 5's 768-row block at 3840:4608) and concatenates them in that order along dim 0, and slices `dense.weight` columns `[0:1280]` and `[1536:2048]` (excluding head 5's 256-column block) concatenated along dim 1, exactly matching the required row/column ranges. Original tensors are deleted then rebuilt under the same names via concat, temp tensors are cleaned up, all other tensors are left untouched, and the required shape/count asserts are present before the single `out/T2/model.safetensors` output. Since these are pure copy/concat operations with no arithmetic, values remain bit-exact, satisfying the grading requirement.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "ce3d418dfa996b948706d0c8bc5f3178e62e5967e85257dfd660f25ad2aa75e9"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-06T08:39:39+00:00",
+  "finished_at": "2026-09-06T08:40:24+00:00",
+  "wall_clock_s": 44.8,
+  "tokens_in": 2,
+  "tokens_out": 3471,
+  "cost_usd": 0.19666550000000002,
+  "verdict_text": "I'll check the plan's syntax against the doc pack in this sandbox before judging.\n\nAh, let me look at the docpack.\n\n\n<invoke name=\"Bash\">\n<parameter name=\"command\">ls -R docpack 2>/dev/null | head -50; echo ---; ls</parameter>\n<parameter name=\"description\">List docpack contents</parameter>\n</invoke>\n\n\ndocpack:\nREADME.md\nexamples\nhelp.txt\ninterfaces-reference.md\n\ndocpack/examples:\n--------\ngpt2.yaml\nphlora-1b/read-2the-2docs.md\nout\nplan.yaml\nTASK.md\nrecord-template.md\nCLAUDE.md\ngrade.py\ninputs/\n```",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

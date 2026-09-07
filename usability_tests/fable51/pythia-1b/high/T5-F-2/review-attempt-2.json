@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T12:07:06+00:00",
+  "finished_at": "2026-09-06T12:07:32+00:00",
+  "wall_clock_s": 25.5,
+  "tokens_in": 2,
+  "tokens_out": 1810,
+  "cost_usd": 0.30959175,
+  "verdict": "yes",
+  "verdict_text": "YES. The merge is computed correctly: scale is read from the config as alpha over r (2), `B @ A` is formed in float32 from the float32 adapter factors, added to the upcast base weight, and cast back to the base dtype, with the transpose applied only when `fan_in_fan_out` is true (it is false here). All four required checks are asserted on the in-memory state dict before any write, so a violation aborts before output exists, and the output is written under `out/T5` with the 512 MiB limit passed to the sharded writer. The one thing not visible in the artifact is the imported `_ckpt.save_sharded_safetensors` helper, so the index file, header-excluded size accounting, and lone placement of the two oversized embedding tensors rest on that helper behaving as its name and arguments indicate.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

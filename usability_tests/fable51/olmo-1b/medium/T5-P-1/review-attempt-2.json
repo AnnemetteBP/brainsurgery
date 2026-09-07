@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T5-defective.py",
+  "started_at": "2026-09-06T16:34:44+00:00",
+  "finished_at": "2026-09-06T16:34:49+00:00",
+  "wall_clock_s": 5.3,
+  "tokens_in": 2,
+  "tokens_out": 192,
+  "cost_usd": 0.21089874999999997,
+  "verdict": "no",
+  "verdict_text": "NO. The script sets `scale = 1.0` instead of `lora_alpha / r = 2`, so each adapted weight receives `B @ A` rather than `2 * B @ A`, violating Required result clause 1 and failing the 1e-5 relative Frobenius tolerance in Grading for all 32 merged weights. The script also ignores the adapter config's `r` and `lora_alpha` values entirely. Everything else (name mapping, no transposition for `fan_in_fan_out = false`, the four required checks, sharded export with 512 MiB limit) matches the specification.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The adapter scaling factor alpha / r is missing: the raw low-rank product is added.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

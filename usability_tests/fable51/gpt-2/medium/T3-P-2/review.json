@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T16:57:57+00:00",
+  "finished_at": "2026-09-06T16:58:09+00:00",
+  "wall_clock_s": 11.8,
+  "tokens_in": 2,
+  "tokens_out": 735,
+  "cost_usd": 0.23794574999999998,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script removes exactly the 12 `h.<i>.attn.bias` buffers via a full-match regex that cannot hit `attn.c_proj.bias`, casts exactly the 48 projection matrices with `tensor.to(torch.bfloat16)` round-to-nearest-even, and leaves every other float32 tensor unchanged (the `.float()` call is a no-op on float32 input). All four required checks are asserted before any file is written. The greedy packer keeps each shard at or under 67,108,864 bytes of tensor data, places an oversized tensor such as `wte.weight` alone in its own shard, preserves tensor names, and writes `model.safetensors.index.json` with a `weight_map` covering every tensor into `out/T3/`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "2fd5493f92201b4bd4eeafbe2f09248e3e2ad15df2598636a1af3d3e677a1a02"
+}

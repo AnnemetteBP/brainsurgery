@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T11:09:16+00:00",
+  "finished_at": "2026-09-06T11:09:25+00:00",
+  "wall_clock_s": 9.2,
+  "tokens_in": 2,
+  "tokens_out": 488,
+  "cost_usd": 0.22957875,
+  "verdict_text": "YES\n\nThe script slices exactly as specified. For the fused query_key_value weight and bias it keeps 768-row blocks for heads 0..4 and 6..7, which yields rows 0..3839 then 4608..6143 in order. For dense.weight it keeps 256-wide column blocks for the same heads, yielding columns 0..1279 then 1536..2047. Index selection preserves float16 and leaves every other tensor untouched, tensor names are unchanged, and all four required shape and count assertions run before the single save to out/T2/model.safetensors. The only unverifiable element is the imported load_checkpoint helper, which the script assumes returns a plain name-to-tensor dict.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

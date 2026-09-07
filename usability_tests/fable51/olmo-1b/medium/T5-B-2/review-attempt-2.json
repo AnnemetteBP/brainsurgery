@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T12:06:09+00:00",
+  "finished_at": "2026-09-06T12:06:30+00:00",
+  "wall_clock_s": 21.5,
+  "tokens_in": 2,
+  "tokens_out": 1445,
+  "cost_usd": 0.29636675,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan matches the specification: it asserts 32 `lora_A` factors, computes `B @ A` (shape `[2048, 2048]`) per layer for `q_proj` and `v_proj` without transposition, scales by `alpha / r = 2`, asserts 32 deltas were produced, adds each delta in place to the matching base weight in float32, deletes the intermediates, and asserts no `lora_` name remains, that `model.layers.0.self_attn.q_proj.weight` is `[2048, 2048]`, and that exactly 114 tensors remain before writing a sharded safetensors checkpoint to `out/T5` with a 512 MiB shard limit. The unused `(_t)?` alternative in the delete pattern is harmless since the required `.delta` tensors are still matched and removed.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

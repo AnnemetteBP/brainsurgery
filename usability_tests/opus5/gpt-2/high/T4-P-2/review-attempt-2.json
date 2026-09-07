@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T16:13:13+00:00",
+  "finished_at": "2026-09-06T16:13:47+00:00",
+  "wall_clock_s": 33.7,
+  "tokens_in": 2,
+  "tokens_out": 2537,
+  "cost_usd": 0.1588975,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script verifies name-set equality across all three checkpoints and bit-exact equality of every non-MLP tensor before any merging (step 1), computes each task vector against the unmodified `base` \u2014 `out` is a separate dict and `base[name]` is never reassigned, so the ordering hazard is avoided (step 2) \u2014 carries the remaining 112 tensors over from the base unchanged under identical names (step 3), and writes exactly one file to `out/T4/model.safetensors` (step 4). The arithmetic is done in float32 and cast back to the input dtype, which is float32, so it is within the 1e-5 tolerance. All three required checks are present as loud assertions: the shared-tensor verification, `merged == 48`, and `len(out) == 160`. The `sys.argv[1]` override does not change the default output location required by the spec.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

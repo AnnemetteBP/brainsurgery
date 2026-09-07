@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T16:01:54+00:00",
+  "finished_at": "2026-09-06T16:02:24+00:00",
+  "wall_clock_s": 30.2,
+  "tokens_in": 2,
+  "tokens_out": 2633,
+  "cost_usd": 0.06990779999999999,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 The plan correctly computes B@A via matmul (yielding [2304,768]), transposes it via permute (order [1,0]) to match the Conv1D [768,2304] layout, scales by alpha/r=2, adds in place to the base weight, and deletes both intermediate tensors (delta and delta_t) so no adapter or intermediate tensors remain. All four required checks are present as asserts (12 lora_A pairs found, 12 deltas merged, no `lora_` names, correct shape, exactly 160 total tensors), and the output config (path `out/T5`, safetensors, 100MB/binary shard size) matches the sharding and location requirements.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

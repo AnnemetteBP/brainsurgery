@@ -1,0 +1,114 @@
+# T5: merge a PEFT LoRA adapter into Pythia-1B base weights, sharded export.
+#
+#   W <- W + (lora_alpha / r) * B @ A            (fan_in_fan_out = false)
+#   r = 16, lora_alpha = 32  =>  scale = 2
+#
+# The delta is computed in float32 (the adapter dtype), the base weight is
+# lifted to float32 for the accumulation and cast back to float16 afterwards.
+# Every edit lands on the `base` alias so the output alias is unambiguous.
+
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # --- preflight: the adapter has exactly 16 A/B pairs -----------------------
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_A\.weight'
+        is: 16
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_B\.weight'
+        is: 16
+  - assert:
+      count:
+        of: 'lora::.*'
+        is: 32
+  - assert:
+      shape:
+        of: 'lora::base_model\.model\.gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_A\.weight'
+        is: [16, 2048]
+  - assert:
+      shape:
+        of: 'lora::base_model\.model\.gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_B\.weight'
+        is: [6144, 16]
+  - assert:
+      count:
+        of: 'base::gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.weight'
+        is: 16
+  - assert:
+      shape:
+        of: 'base::gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.weight'
+        is: [6144, 2048]
+  - assert:
+      count:
+        of: 'base::.*'
+        is: 244
+
+  # --- delta_i = B_i @ A_i  (float32, [6144, 2048]) -------------------------
+  - matmul:
+      from_a: 'lora::base_model\.model\.gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_B\.weight'
+      from_b: 'lora::base_model.model.gpt_neox.layers.\1.attention.query_key_value.lora_A.weight'
+      to: 'base::bs_tmp.delta.\1.weight'
+
+  # exactly 16 pairs were found and merged
+  - assert:
+      count:
+        of: 'base::bs_tmp\.delta\.(\d+)\.weight'
+        is: 16
+  - assert:
+      shape:
+        of: 'base::bs_tmp\.delta\.(\d+)\.weight'
+        is: [6144, 2048]
+  - assert:
+      dtype:
+        of: 'base::bs_tmp\.delta\.(\d+)\.weight'
+        is: float32
+
+  # --- scale = lora_alpha / r = 2 -------------------------------------------
+  - scale_:
+      target: 'base::bs_tmp\.delta\.(\d+)\.weight'
+      by: 2.0
+
+  # --- W += delta, accumulated in float32, then back to float16 -------------
+  - cast_:
+      target: 'base::gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.weight'
+      to: float32
+  - add_:
+      from: 'base::bs_tmp\.delta\.(\d+)\.weight'
+      to: 'base::gpt_neox.layers.\1.attention.query_key_value.weight'
+  - cast_:
+      target: 'base::gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.weight'
+      to: float16
+
+  # --- drop the intermediates ------------------------------------------------
+  - delete: { target: 'base::bs_tmp\..*' }
+
+  # --- required checks before writing ---------------------------------------
+  # no adapter tensor and no intermediate survives in the output alias
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert: { not: { exists: 'base::bs_tmp\..*' } }
+  # merged weights keep name, shape and dtype
+  - assert:
+      shape:
+        of: 'base::gpt_neox\.layers\.0\.attention\.query_key_value\.weight'
+        is: [6144, 2048]
+  - assert:
+      shape:
+        of: 'base::gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.weight'
+        is: [6144, 2048]
+  - assert:
+      dtype:
+        of: 'base::gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.weight'
+        is: float16
+  # the output has exactly 244 tensors
+  - assert:
+      count:
+        of: 'base::.*'
+        is: 244
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T2-defective.py",
+  "started_at": "2026-09-06T16:31:35+00:00",
+  "finished_at": "2026-09-06T16:31:43+00:00",
+  "wall_clock_s": 7.3,
+  "tokens_in": 2,
+  "tokens_out": 351,
+  "cost_usd": 0.21837474999999998,
+  "verdict": "no",
+  "verdict_text": "NO. The script sets `DROP_HEAD = 6`, so it removes rows/columns 768..895 and keeps 0..767 plus 896..2047, whereas the specification's Required result items 1 through 4 require removing head 5, keeping rows (or columns for `o_proj`) 0..639 and 768..2047. The output shapes match, so the required checks pass, but the retained values are wrong for every q, k, v and o projection in all 16 layers, and grading compares bit-exact values against the reference. Separately, the script depends on a helper module `_ckpt` not shown in the artifact, so the loading path cannot be verified from the artifact alone.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The removed head is off by one (head N+1 instead of head N). All shapes are still correct, so the artifact's own shape checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

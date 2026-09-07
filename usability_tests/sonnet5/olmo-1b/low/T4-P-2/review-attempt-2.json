@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T16:05:16+00:00",
+  "finished_at": "2026-09-06T16:05:21+00:00",
+  "wall_clock_s": 5.3,
+  "tokens_in": 2,
+  "tokens_out": 250,
+  "cost_usd": 0.042380799999999996,
+  "verdict": "no",
+  "verdict_text": "NO. The script writes `out/T4/model.safetensors` only when invoked with no CLI argument (default `sys.argv[1]`), but per the task instructions the script must be run as `python out/T4/solution.py` with no arguments \u2014 that part is fine; however, it does not fail loudly if the assert on shared-tensor verification fails other than raising AssertionError (which is acceptable), and it doesn't write a REPORT.md as required by the harness instructions in TASK.md. The spec's Required checks are satisfied by asserts, but the participant-level requirement to produce `out/<task>/REPORT.md` with the self-report fields is missing from the artifact entirely, violating the top-level task instructions (\"When you are done, write out/<task>/REPORT.md\").",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

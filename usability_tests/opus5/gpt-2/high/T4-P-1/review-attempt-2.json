@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T4-defective.py",
+  "started_at": "2026-09-06T16:13:06+00:00",
+  "finished_at": "2026-09-06T16:13:17+00:00",
+  "wall_clock_s": 10.5,
+  "tokens_in": 2,
+  "tokens_out": 751,
+  "cost_usd": 0.11436249999999999,
+  "verdict": "no",
+  "verdict_text": "NO. The merge composes the two task vectors sequentially instead of taking both against the unmodified base: `tmp = b + \u03bb(f1 - b)` and then `out = tmp + \u03bb(f2 - tmp)`, which yields `0.36\u00b7b + 0.24\u00b7f1 + 0.4\u00b7f2` rather than the required `b + \u03bb(f1 - b) + \u03bb(f2 - b) = 0.2\u00b7b + 0.4\u00b7f1 + 0.4\u00b7f2` at \u03bb = 0.4. This violates the formula in \"Required result\" step 2 and is precisely the ordering hazard the specification calls out (\"each task vector must be taken against the unmodified base, not against a base that the first merge already changed\"). The error is far larger than the 1e-5 relative Frobenius tolerance, so all 48 merged tensors would fail grading. The rest of the script \u2014 name-set equality, the shared-tensor bit-exact check, the merged==48 and len==160 assertions, and the output path \u2014 matches the specification.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

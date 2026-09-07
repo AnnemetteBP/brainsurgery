@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:01:12+00:00",
+  "finished_at": "2026-09-06T16:01:23+00:00",
+  "wall_clock_s": 10.9,
+  "tokens_in": 2,
+  "tokens_out": 761,
+  "cost_usd": 0.0490508,
+  "verdict": "yes",
+  "verdict_text": "YES. The slicing logic correctly reproduces the required column/row ranges (segments of 768 split into 12 heads of 64, dropping head 5, keeping heads 0-4 then 6-11 contiguously) for `c_attn.weight`, `c_attn.bias`, and `c_proj.weight`, matching the exact keep ranges in clauses 1-3. Only the three specified per-layer tensors are modified, satisfying clause 4, and the required shape/count assertions match clauses in \"Required checks\" before writing to `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-06T09:06:18+00:00",
+  "finished_at": "2026-09-06T09:06:40+00:00",
+  "wall_clock_s": 22.1,
+  "tokens_in": 2,
+  "tokens_out": 1474,
+  "cost_usd": 0.28238175000000004,
+  "verdict_text": "NO\n\nThe plan has no assert that exactly 48 tensors were merged, which \"Required checks\" explicitly demands; the only counts asserted are 114 tensors in ft1, ft2 and the final base, and a copy that matched fewer than 48 MLP tensors would leave the final count at 114 anyway. Step 1's name verification is also incomplete: the equal asserts only cover the 66 non-MLP names, so a fine-tune with 114 tensors whose MLP names differ from the base would pass every assert and the merge would silently skip those tensors. The arithmetic itself (tv1 and tv2 both taken against the unmodified base, scaled by 0.4, then added, temporaries deleted) matches step 2, and the output path and count match step 4. The plan additionally depends on a `\\g<0>` back-reference on the right-hand side of the equal assert, which is not a documented tensor-reference form and may not resolve as intended.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

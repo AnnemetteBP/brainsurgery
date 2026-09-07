@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T09:00:11+00:00",
+  "finished_at": "2026-09-06T09:00:21+00:00",
+  "wall_clock_s": 9.2,
+  "tokens_in": 2,
+  "tokens_out": 486,
+  "cost_usd": 0.22786875,
+  "verdict_text": "YES\n\nThe kept indices resolve to rows 0..639 and 768..2047 for q/k/v on dim 0 and the same columns for o_proj on dim 1, all 16 layers, other tensors untouched, names preserved, all five required checks asserted before writing, single file output. The only unverifiable point is the external `_ckpt.load_checkpoint` helper, which is assumed to merge both shards into a plain tensor dict without altering dtypes.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T1-defective.py",
+  "started_at": "2026-09-06T16:13:58+00:00",
+  "finished_at": "2026-09-06T16:14:04+00:00",
+  "wall_clock_s": 5.6,
+  "tokens_in": 2,
+  "tokens_out": 231,
+  "cost_usd": 0.1041665,
+  "verdict": "no",
+  "verdict_text": "NO. The script drops blocks {2, 5, 9} instead of the required {2, 5, 8}, violating Required result clause 1, and consequently the renumbering map is wrong for every block from old 8 onward (old 8 becomes 6, old 10 becomes 7, old 11 becomes 8), violating clause 2. The tensor count and contiguity assertions still pass, so the output loads and runs but is silently the wrong model \u2014 exactly the failure mode the task warns about. The required checks are otherwise implemented (contiguous-block assertion and the 121-tensor assertion), though the output is written after the assertions rather than the assertions failing before any write \u2014 that part is fine since assertions precede `save_file`.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

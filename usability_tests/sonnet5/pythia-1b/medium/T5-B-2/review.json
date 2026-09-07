@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "artifact_sha256": "ead4a3730e294c1ca26fd37fb820749a51f66ac0bb4eadf5d4411870d220e3d4",
+  "started_at": "2026-09-06T18:18:06+00:00",
+  "finished_at": "2026-09-06T18:18:23+00:00",
+  "wall_clock_s": 16.7,
+  "tokens_in": 2,
+  "tokens_out": 1379,
+  "cost_usd": 0.058748800000000004,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan computes delta = B @ A (correct nn.Linear layout, no transpose) via matmul, scales by 2 (alpha/r) in float32, casts the target weight to float32, adds the delta, casts back to float16 \u2014 matching the required computation and precision. It deletes the delta and adapter (`lora::`) namespaces before writing, and includes all four required assertions (16 pairs, no `lora_` names, shape [6144,2048] on layer 0, 244 total tensors) prior to output, with sharding set to 512MB as specified.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

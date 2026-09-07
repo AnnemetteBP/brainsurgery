@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:56:39+00:00",
+  "finished_at": "2026-09-06T16:56:50+00:00",
+  "wall_clock_s": 10.8,
+  "tokens_in": 2,
+  "tokens_out": 637,
+  "cost_usd": 0.1253495,
+  "verdict": "yes",
+  "verdict_text": "YES. The script scales by `lora_alpha / r = 2`, adds `B @ A` untransposed (since `fan_in_fan_out` is false), accumulates in float32 and casts back to the base float16 dtype, keeps only the 244 base names, enforces all four required checks before writing, and emits greedy \u2264512 MiB shards with a complete `weight_map` index under `out/T5/`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "58c8f3b6928ed87177fb23f201e2133a96666f8e34cf6bf02687953191f81bd4"
+}

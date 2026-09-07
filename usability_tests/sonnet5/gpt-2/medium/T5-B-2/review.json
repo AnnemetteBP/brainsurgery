@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "artifact_sha256": "97c9ec6048c2b6d15d287cbb28b36e82c31d7b3254598c605116286cd1cc8a42",
+  "started_at": "2026-09-06T18:14:36+00:00",
+  "finished_at": "2026-09-06T18:15:03+00:00",
+  "wall_clock_s": 27.2,
+  "tokens_in": 2,
+  "tokens_out": 2372,
+  "cost_usd": 0.0675398,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan matmuls lora_B @ lora_A (producing the [2304,768] outer-product shape), permutes it with order [1,0] to transpose to [768,2304] matching the Conv1D layout, scales by alpha/r=2, adds it into the base weight, and deletes both the intermediate delta/delta_t tensors and the entire lora:: namespace before writing \u2014 satisfying \"no adapter or intermediate tensor in the output.\" It includes literal asserts for exactly 12 adapter pairs/deltas, no `lora_` names, `h.0.attn.c_attn.weight` shape `[768, 2304]`, and total count 160, matching all four required checks. Output is sharded safetensors at `out/T5` with a 100MB shard size, consistent with the spec's 100 MiB threshold and the single-tensor-per-shard rule for oversized tensors like `wte.weight`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

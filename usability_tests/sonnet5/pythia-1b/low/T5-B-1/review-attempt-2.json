@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/B/T5-defective.yaml",
+  "started_at": "2026-09-06T16:10:06+00:00",
+  "finished_at": "2026-09-06T16:10:10+00:00",
+  "wall_clock_s": 4.1,
+  "tokens_in": 2,
+  "tokens_out": 105,
+  "cost_usd": 0.0456578,
+  "verdict": "no",
+  "verdict_text": "NO: the plan's own comment admits \"the alpha / r scale is missing\" \u2014 it computes delta = B @ A without multiplying by scale=2, violating Required Result clause 1 (`weight += scale * B @ A`), which will produce merged weights failing the \u22641e-3 relative Frobenius error grading check.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The adapter scaling factor alpha / r is missing: the raw low-rank product is added.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

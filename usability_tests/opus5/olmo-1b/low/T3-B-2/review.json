@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T16:19:38+00:00",
+  "finished_at": "2026-09-06T16:19:50+00:00",
+  "wall_clock_s": 12.2,
+  "tokens_in": 2,
+  "tokens_out": 714,
+  "cost_usd": 0.1236615,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the plan casts exactly the 112 attention/MLP projection matrices to bfloat16, leaves everything else (including `model.embed_tokens.weight` and `lm_head.weight`) float32 with unchanged values, deletes nothing, renames nothing, and writes `out/T3` as sharded safetensors with a 256 MiB shard limit, which forces each 412 MB embedding tensor into its own shard and produces the index file. All four required checks are present as `assert` transforms before the write: the 112-tensor bfloat16 condition (expressed as the projections being bfloat16 plus a negative-lookahead assert that every other tensor is float32, which together pin the bfloat16 count at exactly 112), the `q_proj` dtype, the `embed_tokens` dtype, and the 114-tensor total.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "3b3c623b5d02a5e2d373b5578feacdf78c13a7a575f3759de43c39aa564e7c8f"
+}

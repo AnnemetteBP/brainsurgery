@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "artifact_sha256": "2e3d85542db24c3ba5659fcde0db87634ab4438d0de4e40d4df970a213244889",
+  "started_at": "2026-09-06T18:14:45+00:00",
+  "finished_at": "2026-09-06T18:15:10+00:00",
+  "wall_clock_s": 24.9,
+  "tokens_in": 2,
+  "tokens_out": 1885,
+  "cost_usd": 0.060869799999999995,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script correctly loads the sharded input, drops blocks {2,6,10,14}, and its `renumber` mapping (built via `enumerate(kept)`) produces exactly the mapping specified (0\u21920,1\u21921,3\u21922,4\u21923,5\u21924,7\u21925,8\u21926,9\u21927,11\u21928,12\u21929,13\u219210,15\u219211). It preserves the two non-layer tensors unchanged, asserts the surviving layer indices are exactly 0..11 and that the tensor count is 86 before writing, and raises (no file written) if either check fails, satisfying the \"fail loudly\" requirement.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

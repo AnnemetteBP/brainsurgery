@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T12:14:13+00:00",
+  "finished_at": "2026-09-06T12:15:37+00:00",
+  "wall_clock_s": 84.5,
+  "tokens_in": 2,
+  "tokens_out": 5883,
+  "cost_usd": 0.2612315,
+  "verdict": "no",
+  "verdict_text": "NO.\n\nThe required check \"no tensor name containing `lora_` is in the output\" is implemented as `assert: { not: { exists: 'model::.*lora_.*' } }`, which is scoped to the base namespace only \u2014 every `lora_` tensor lives in the `lora::` namespace, so this assertion is vacuously true and can never fire, violating the \"Required checks\" clause that the run must fail loudly if the condition does not hold. The same scoping problem affects `assert: { count: { of: 'model::.*', is: 244 } }`: it counts only the base namespace rather than the tensors actually destined for the output, so it cannot detect the 32 adapter tensors still resident in the state, which bears on requirement 2 (\"No adapter tensor ... appears in the output\"). The plan never deletes `lora::.*`, so if the output is written from the full working state the result would contain 276 tensors including the adapter factors; the two mis-scoped asserts are precisely what should have caught that. The merge arithmetic itself is correct: `B @ A` untransposed, scaled by `alpha/r = 2`, accumulated in float32 and cast back to float16, with the intermediate `delta` tensors deleted before writing. Fixing this requires unscoped patterns (or an explicit `delete` of the `lora::` namespace) so the checks test the output rather than one input namespace.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

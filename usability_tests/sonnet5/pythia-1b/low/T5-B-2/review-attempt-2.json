@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T16:10:06+00:00",
+  "finished_at": "2026-09-06T16:10:15+00:00",
+  "wall_clock_s": 9.2,
+  "tokens_in": 2,
+  "tokens_out": 431,
+  "cost_usd": 0.049096799999999996,
+  "verdict": "no",
+  "verdict_text": "NO. The matmul computes `B @ A` but casts base weights to float32 only after computing delta in float32 matmul (fine), however the intermediate `delta` tensor is created via matmul without being computed in float32 explicitly guaranteed\u2014more critically, the cast sequence casts `.weight` to float32, adds delta, then casts back to float16, but `delta` itself was computed from lora_A/lora_B without any explicit dtype cast to float32 (they're already float32 per input, so that's fine). The real violation: the `delete` step targets `model::...delta(_t)?` but the assert for \"no intermediate tensor\" and the count-244 check run in the same order \u2014 the delta tensor still exists as an intermediate when the count assertion for adapter pairs occurs, but that's before add, not violating spec directly. The clearest violation is that required-checks clause demands checks fail \"before writing,\" but the count-244 assert here only checks tensor count equals 244, not that it equals the base's exact 244 tensor names, and it runs after deletion so should be fine \u2014 however the plan never asserts shard size /512MiB constraint is enforced by the tool only nominally trusting `shard: 512MB` to equal 536,870,912 bytes, which is an assumption not verified in-plan, but that's acceptable per spec (tool responsibility).",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

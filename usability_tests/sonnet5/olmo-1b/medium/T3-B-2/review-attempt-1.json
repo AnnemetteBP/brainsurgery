@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T06:07:52+00:00",
+  "finished_at": "2026-09-06T06:08:09+00:00",
+  "wall_clock_s": 16.4,
+  "tokens_in": 2,
+  "tokens_out": 1434,
+  "cost_usd": 0.057200799999999996,
+  "verdict_text": "NO\n\nThe plan writes `output: { shard: 256MB }`, but the spec's shard-size requirement is stated precisely as \"at most 256 MiB (268,435,456 bytes)\" \u2014 i.e. binary mebibytes, not decimal megabytes. If the tool's `256MB` shard option is interpreted as 256\u00d710\u2076 bytes (250,000 KiB) rather than 268,435,456 bytes, the resulting shard boundaries and tensor-to-shard assignment will not match the required threshold, which grading checks exactly against the hidden reference's \"sharding rules.\" This violates clause 5 of \"Required result,\" which spells out the byte-exact limit precisely to avoid this unit ambiguity. Everything else (the float32 upcast no-op, the 112-count assert before/after the bfloat16 cast, the dtype asserts, and the final 114-tensor count assert) correctly implements requirements 1\u20134 and the \"Required checks.\"",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

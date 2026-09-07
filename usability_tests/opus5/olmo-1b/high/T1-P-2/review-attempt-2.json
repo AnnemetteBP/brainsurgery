@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T16:17:02+00:00",
+  "finished_at": "2026-09-06T16:17:21+00:00",
+  "wall_clock_s": 19.5,
+  "tokens_in": 2,
+  "tokens_out": 1366,
+  "cost_usd": 0.1320705,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script keeps the 12 surviving blocks in original order, maps them to contiguous indices 0..11 exactly as the spec's table prescribes, writes into a fresh dict so no rename can overwrite a survivor, passes the two non-block tensors through untouched, and asserts contiguous 0..11 layer indices and 86 total tensors before creating the output directory or writing anything. One caveat outside the shown code: correctness of the sharded read depends on the unshown `_ckpt.load_checkpoint` helper.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

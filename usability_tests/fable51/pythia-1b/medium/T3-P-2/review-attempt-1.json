@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T11:09:41+00:00",
+  "finished_at": "2026-09-06T11:09:55+00:00",
+  "wall_clock_s": 14.3,
+  "tokens_in": 2,
+  "tokens_out": 854,
+  "cost_usd": 0.24861675,
+  "verdict_text": "NO\n\nThe transform logic (dropping the 48 buffers, casting exactly the 64 projection matrices via float32 to bfloat16, upcasting everything else to float32, and running the four required checks before writing) is correct as written. However, the entire sharded output, which clause 5 of \"Required result\" specifies in detail (index file named `model.safetensors.index.json` with a complete `weight_map`, at most 268,435,456 bytes of tensor data per shard, and oversized tensors such as the two embeddings stored alone in their own shard), is delegated to `save_sharded_safetensors` from an unseen helper module `_ckpt`, whose behaviour cannot be verified from the artifact. Condition P also requires a standalone script using only PyTorch and `safetensors`, and this script is not standalone. Because the sharding and index requirements are not demonstrably implemented, the artifact cannot be confirmed to meet clause 5.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

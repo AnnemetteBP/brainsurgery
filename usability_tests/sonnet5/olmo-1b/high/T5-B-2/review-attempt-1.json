@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T06:56:23+00:00",
+  "finished_at": "2026-09-06T06:58:24+00:00",
+  "wall_clock_s": 121.1,
+  "tokens_in": 2,
+  "tokens_out": 10872,
+  "cost_usd": 0.1531858,
+  "verdict_text": "NO\n\nThe artifact's required checks satisfy three of the four bullets literally, but the first \u2014 \"exactly 32 adapter pairs were found and merged\" \u2014 is only half-implemented: the plan asserts `count: { of: 'lora::.*lora_A\\.weight', is: 32 }`, which merely confirms the adapter *file* contains 32 A-matrices, not that 32 merges actually happened. None of the four asserts (32-count on the raw input, no `lora_` in output, shape of one weight, total-114 count) would fail if the `matmul`/`scale_`/`add_` chain silently matched zero or fewer than 32 layer/module pairs (e.g. due to a regex mismatch): the delta tensors simply wouldn't be created, `add_` would have nothing to do, the tensor count would remain 114, and the named weight's shape would be untouched \u2014 every assert still passes even though no merging occurred. This violates the \"Required checks\" clause, which demands the plan \"fail loudly\" specifically when the 32 pairs are not *merged*, not just when they are absent from the adapter file. A correct plan needs an additional assertion on the number of `delta` tensors actually produced (or added) before they are deleted, to close this silent-failure gap.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

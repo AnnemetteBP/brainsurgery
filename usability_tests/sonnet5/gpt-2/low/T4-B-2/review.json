@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T16:00:27+00:00",
+  "finished_at": "2026-09-06T16:00:41+00:00",
+  "wall_clock_s": 14.2,
+  "tokens_in": 2,
+  "tokens_out": 945,
+  "cost_usd": 0.0547418,
+  "verdict": "no",
+  "verdict_text": "NO. Step 1 requires verifying all three checkpoints have the same tensor names and are consistent before any edits, but the plan only asserts `ft1::.*` and `ft2::.*` each have count 160 \u2014 it never asserts `base::.*` has count 160, so a base checkpoint with extra/missing/renamed tensors would silently pass the equality checks (which only compare tensors present under the regex) rather than aborting as required.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "8adafa570c1e0368dca8be6f08d2fd86ce3b24b61e44ee0c9d0892ee32f0ab0f"
+}

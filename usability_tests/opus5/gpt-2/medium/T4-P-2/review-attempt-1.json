@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T07:38:56+00:00",
+  "finished_at": "2026-09-06T07:39:09+00:00",
+  "wall_clock_s": 12.7,
+  "tokens_in": 2,
+  "tokens_out": 814,
+  "cost_usd": 0.1173515,
+  "verdict_text": "YES\n\nThe script verifies identical key sets and bit-equality of all non-MLP tensors before any writing, computes each task vector against the untouched `base` dict (`out` is a separate copy, so no ordering hazard), applies `base + 0.4*(ft1-base) + 0.4*(ft2-base)` in float32, and asserts `merged == 48` and `len(out) == 160` before saving to `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

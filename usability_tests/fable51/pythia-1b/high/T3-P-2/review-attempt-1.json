@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T11:39:53+00:00",
+  "finished_at": "2026-09-06T11:40:08+00:00",
+  "wall_clock_s": 15.7,
+  "tokens_in": 2,
+  "tokens_out": 1021,
+  "cost_usd": 0.25698675000000004,
+  "verdict_text": "NO\n\nThe visible transform logic satisfies clauses 1 through 4 and all four required checks: the two regexes use `fullmatch` and name exactly the 64 projection matrices and 48 buffers, the cast is `float().to(bfloat16)` as specified, every other tensor is upcast to float32, names are unchanged, and the asserts run before writing. Clause 5 (the sharded layout) is not implemented in the artifact at all; it is delegated to `save_sharded_safetensors` from an unseen `_ckpt` module, so nothing in the script guarantees an index file named `model.safetensors.index.json` with a complete `weight_map`, a per-shard data total of at most 268,435,456 bytes, or that `embed_in.weight` and `embed_out.weight` each occupy their own shard. The same module supplies `load_checkpoint`, so even the safetensors read path is unverified. As presented, the artifact cannot be confirmed to meet clause 5 of \"Required result\".",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

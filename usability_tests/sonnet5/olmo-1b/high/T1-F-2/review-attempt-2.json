@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T16:02:24+00:00",
+  "finished_at": "2026-09-06T16:02:45+00:00",
+  "wall_clock_s": 20.8,
+  "tokens_in": 2,
+  "tokens_out": 1702,
+  "cost_usd": 0.058220799999999996,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops blocks {2,6,10,14}, computes `kept` in ascending order and uses `enumerate(kept)` to renumber, which reproduces exactly the mapping given in the spec (old 0\u21920, 1\u21921, 3\u21922, \u2026, 15\u219211) since the surviving indices are already sorted. Non-block tensors are copied unchanged, the layer-set and count assertions correctly gate against the required checks (12 contiguous blocks 0..11, 86 total tensors), and both asserts run before `mkdir`/`save_file`, so any failure raises a non-zero exit with no output written.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

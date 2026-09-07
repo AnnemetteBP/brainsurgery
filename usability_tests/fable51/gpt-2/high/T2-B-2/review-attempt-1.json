@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T11:20:48+00:00",
+  "finished_at": "2026-09-06T11:21:02+00:00",
+  "wall_clock_s": 13.4,
+  "tokens_in": 2,
+  "tokens_out": 861,
+  "cost_usd": 0.35735775000000003,
+  "verdict_text": "I'll compare the plan's slices and assertions against the spec, checking the docpack for the `count` assert operator.\n\n\n<invoke name=\"Grep\">\n<invoke_parameter name=\"pattern\">count</invoke_parameter>\n<invoke_parameter name=\"path\">/home/rootkidd/Projects/brainsurgery/usability_tests/fable51/gpt-2/high/T2-B-2/docpack/help.txt</invoke_parameter>\n<invoke_parameter name=\"output_mode\">content</invoke_parameter>\n<invoke_parameter name=\"-n\">true</invoke_parameter>\n</invoke>\n</invoke>",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T11:15:39+00:00",
+  "finished_at": "2026-09-06T11:16:07+00:00",
+  "wall_clock_s": 28.3,
+  "tokens_in": 2,
+  "tokens_out": 1927,
+  "cost_usd": 0.30641075,
+  "verdict_text": "NO\n\nThe output section sets `shard: 512MB`, but the specification (Required result, item 4) fixes the per-shard limit at 512 MiB, exactly 536,870,912 bytes. A decimal-megabyte reading of `512MB` is 512,000,000 bytes, so the shard boundaries can differ from the hidden reference's packing, and the grader checks \"sharding rules\" against that reference. The first required check is also weaker than specified: asserting that 16 `lora_A` tensors exist in the adapter input does not verify that 16 pairs were found and merged, since a missing `lora_B` or a name mismatch in the matmul would not trip that assert. The merge arithmetic itself (float32 delta, scale 2, add, cast back to float16, delete intermediate) matches items 1 to 3.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

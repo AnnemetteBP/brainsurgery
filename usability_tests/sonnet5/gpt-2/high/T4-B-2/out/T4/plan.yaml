@@ -1,0 +1,95 @@
+# T4: task-vector merge of two GPT-2 fine-tunes into the base, MLP tensors only.
+#
+# out[X] = base[X] + lambda*(ft1[X]-base[X]) + lambda*(ft2[X]-base[X])  for the 48 MLP tensors
+# out[X] = base[X]                                                      for every other tensor
+#
+# Everything is done on the single "base" alias so the output alias is unambiguous:
+# ft1/ft2 are only ever read from. Scratch tensors (task-vector deltas) live under
+# "base::_d1.*" / "base::_d2.*" and are deleted before save so the final checkpoint
+# has exactly the original 160 names.
+
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # --- Step 1: verify the precondition before touching anything ---
+
+  # Same tensor count in all three checkpoints.
+  - assert: { count: { of: 'base::.*', is: 160 } }
+  - assert: { count: { of: 'ft1::.*', is: 160 } }
+  - assert: { count: { of: 'ft2::.*', is: 160 } }
+
+  # Exactly the 48 MLP tensors per checkpoint (12 layers x 4 tensors), so the
+  # remaining 112 tensors per checkpoint are the ones required to match exactly.
+  - assert: { count: { of: 'base::h\.\d+\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 48 } }
+  - assert: { count: { of: 'ft1::h\.\d+\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 48 } }
+  - assert: { count: { of: 'ft2::h\.\d+\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 48 } }
+
+  # Every tensor outside the 48 MLP tensors must be bit-identical across the three
+  # checkpoints. Combined with the counts above (112 non-MLP tensors on every side),
+  # this also pins down that the *names* match: each of base's 112 non-MLP tensors
+  # must exist under the same name in ft1/ft2 with equal shape, dtype and values, and
+  # there is no room left in ft1/ft2's own 112 non-MLP tensors for anything else.
+  - assert:
+      equal:
+        left: 'base::(?!h\.\d+\.mlp\.).+'
+        right: 'ft1::\g<0>'
+  - assert:
+      equal:
+        left: 'base::(?!h\.\d+\.mlp\.).+'
+        right: 'ft2::\g<0>'
+
+  # --- Step 2: compute the two task vectors against the *unmodified* base ---
+  # (base's own MLP tensors are not touched until step 3, so both deltas are
+  # taken against the same, unmodified base -- avoids the ordering hazard.)
+
+  # _d1 = ft1[X]  (scratch copy, will become the scaled task vector)
+  - copy:
+      from: 'ft1::(h\.\d+\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::_d1.\1'
+  # _d2 = ft2[X]
+  - copy:
+      from: 'ft2::(h\.\d+\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::_d2.\1'
+
+  # _d1 -= base[X]  =>  _d1 = ft1[X] - base[X]
+  - subtract_:
+      from: 'base::(h\.\d+\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::_d1.\1'
+  # _d2 -= base[X]  =>  _d2 = ft2[X] - base[X]
+  - subtract_:
+      from: 'base::(h\.\d+\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::_d2.\1'
+
+  # Exactly 48 tensors were computed per task vector.
+  - assert: { count: { of: 'base::_d1\..*', is: 48 } }
+  - assert: { count: { of: 'base::_d2\..*', is: 48 } }
+
+  # Scale both task vectors by lambda = 0.4.
+  - scale_: { target: 'base::_d1\..*', by: 0.4 }
+  - scale_: { target: 'base::_d2\..*', by: 0.4 }
+
+  # --- Step 3: apply the merge to base's own MLP tensors in place ---
+  # base[X] += lambda*(ft1[X]-base[X])
+  - add_:
+      from: 'base::_d1\.(h\.\d+\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::\1'
+  # base[X] += lambda*(ft2[X]-base[X])
+  - add_:
+      from: 'base::_d2\.(h\.\d+\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::\1'
+
+  # --- Step 4: drop scratch tensors, leave everything else untouched ---
+  - delete: { target: 'base::_d1\..*' }
+  - delete: { target: 'base::_d2\..*' }
+
+  # Final shape of the checkpoint: exactly the original 160 tensors, no scratch left.
+  - assert: { count: { of: 'base::.*', is: 160 } }
+  - assert: { not: { exists: 'base::_d1\..*' } }
+  - assert: { not: { exists: 'base::_d2\..*' } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

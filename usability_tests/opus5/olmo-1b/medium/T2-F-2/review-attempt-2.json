@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T2.py",
+  "started_at": "2026-09-06T16:20:36+00:00",
+  "finished_at": "2026-09-06T16:20:45+00:00",
+  "wall_clock_s": 9.2,
+  "tokens_in": 2,
+  "tokens_out": 553,
+  "cost_usd": 0.11769049999999999,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the artifact meets the specification. `keep_index(1, 2048, 128)` builds exactly the indices `0..639` followed by `768..2047` in order, applied along dim 0 for q/k/v and dim 1 for o_proj on all 16 layers, leaving every other tensor untouched; the four shape assertions and the 114-tensor count assertion run before `save_file`, and the output goes to `out/T2/model.safetensors` as a single file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

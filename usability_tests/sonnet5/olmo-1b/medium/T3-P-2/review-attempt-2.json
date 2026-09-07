@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:06:04+00:00",
+  "finished_at": "2026-09-06T16:06:13+00:00",
+  "wall_clock_s": 8.4,
+  "tokens_in": 2,
+  "tokens_out": 689,
+  "cost_usd": 0.04856679999999999,
+  "verdict": "yes",
+  "verdict_text": "YES. The script casts exactly the 112 named projection matrices to bfloat16 via round-to-nearest-even `.to(torch.bfloat16)`, leaves all other tensors (including embed_tokens and lm_head) as float32 with unchanged values, keeps all 114 tensor names unmodified (the buffer_re never matches, so nothing is dropped, consistent with there being no buffers in this checkpoint), and writes a sharded output with the required index file respecting the 256 MiB shard limit. The required pre-write assertions (112 bfloat16 tensors, q_proj.weight bfloat16, embed_tokens float32, 114 total tensors) are all present and correctly implemented.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

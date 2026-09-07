@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T05:58:56+00:00",
+  "finished_at": "2026-09-06T05:59:25+00:00",
+  "wall_clock_s": 29.4,
+  "tokens_in": 2,
+  "tokens_out": 2573,
+  "cost_usd": 0.0683598,
+  "verdict_text": "NO\n\nThe plan deletes only the intermediate `model::...delta`/`delta_t` tensors but never deletes the original adapter tensors `lora::base_model.model.h.<i>.attn.c_attn.lora_A.weight` / `lora_B.weight` after the merge. Both `not: exists 'model::.*lora_.*'` and `count: of 'model::.*', is: 160` only inspect the `model::` namespace, so they never detect that the 24 original `lora::` tensors still exist and would (like any loaded-but-not-cleared tensors) be carried into the sharded output. This violates Required result item 2 (\"No adapter tensor... appears in output\") and the \"expected total: 160 tensors\" / \"no tensor name containing lora_\" required checks, since the true output would contain 184 tensors including 24 `lora_`-named ones that the asserts fail to catch. Additionally, `shard: 100MB` is ambiguous versus the spec's explicit \"100 MiB (104,857,600 bytes)\" boundary, risking a different shard layout than the hidden reference if the tool interprets \"MB\" as 100,000,000 bytes.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

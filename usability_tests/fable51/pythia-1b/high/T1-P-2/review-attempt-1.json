@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T11:36:43+00:00",
+  "finished_at": "2026-09-06T11:37:01+00:00",
+  "wall_clock_s": 18.7,
+  "tokens_in": 2,
+  "tokens_out": 1361,
+  "cost_usd": 0.27276575000000003,
+  "verdict_text": "YES\n\nThe script drops every tensor of blocks 2, 6, 10 and 14, and renumbers the survivors by enumeration order, which yields exactly the mapping listed in clause 2 (3 to 2, 4 to 3, 5 to 4, 7 to 5, 8 to 6, 9 to 7, 11 to 8, 12 to 9, 13 to 10, 15 to 11). Only the index segment of each name changes, tensors are passed through by reference, and the four non-block tensors are copied unchanged. The assertions run before any write: the layer-index set must equal 0..11, which rules out any remaining block 12 to 15 and proves exactly 12 blocks, and the tensor count must be 184. A failed assertion exits non-zero with nothing written, and the file lands at `out/T1/model.safetensors`.\n\nOne caveat outside the spec text: the script imports a helper module `_ckpt` for loading, so it is only self-contained if that module ships alongside it.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

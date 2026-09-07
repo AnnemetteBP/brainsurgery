@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T08:33:44+00:00",
+  "finished_at": "2026-09-06T08:34:02+00:00",
+  "wall_clock_s": 18.0,
+  "tokens_in": 2,
+  "tokens_out": 1337,
+  "cost_usd": 0.1394975,
+  "verdict_text": "YES\n\nThe script maps `base_model.model.model.layers.<i>.<module>.lora_{A,B}.weight` to `model.layers.<i>.<module>.weight`, uses `scale = lora_alpha / r = 2` read from the config, computes `delta = B @ A` ([2048,16] @ [16,2048] \u2192 [2048,2048]) with no transpose since `fan_in_fan_out` is false, accumulates in float32 and casts back to the base dtype (float32), leaving name, shape and dtype intact. All four required checks (32 pairs merged, no `lora_` names, `model.layers.0.self_attn.q_proj.weight` shape `[2048, 2048]`, 114 tensors) are asserted before the write, and a missing adapter key would raise a `KeyError` rather than silently skip. No adapter or intermediate tensor is inserted into `sd`, and every other base tensor is left untouched. Sharding is delegated to `save_sharded_safetensors(sd, out_dir, 536870912)` with the specified 512 MiB budget and the output path defaults to `out/T5`; the correctness of that helper's index/shard-packing is outside this file and is assumed to match the baseline kit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

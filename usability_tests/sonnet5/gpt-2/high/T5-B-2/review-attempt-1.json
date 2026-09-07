@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T11:53:12+00:00",
+  "finished_at": "2026-09-06T11:54:11+00:00",
+  "wall_clock_s": 59.2,
+  "tokens_in": 2,
+  "tokens_out": 5670,
+  "cost_usd": 0.107605,
+  "verdict_text": "NO\n\nThe plan computes and merges the LoRA delta correctly (matmul B\u00b7A, permute/transpose, scale by 2, add, delete the `delta`/`delta_t` intermediates), but it never deletes the original adapter tensors `lora::...lora_A.weight` / `lora::...lora_B.weight` from the `lora` input namespace. Since inputs are merged into the final output unless explicitly removed, those 24 adapter tensors would still be written to `out/T5`, leaving tensor names containing `lora_` in the output and a total of 184 tensors instead of 160 \u2014 violating Required Result #2 (\"No adapter tensor... appears in the output\") and #4 (\"Expected total: 160 tensors, the same names as the base\"). Both safety asserts are scoped only to the `model::` namespace (`not: { exists: 'model::.*lora_.*' } }` and `count: { of: 'model::.*', is: 160 }`), so they never inspect the `lora::` namespace and would pass even though the leftover adapter tensors remain, meaning the plan silently fails the \"no lora_ tensor in the output\" and \"exactly 160 tensors\" checks required by the spec's \"Required checks\" section.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

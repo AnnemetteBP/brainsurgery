@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:27:51+00:00",
+  "finished_at": "2026-09-06T16:28:05+00:00",
+  "wall_clock_s": 13.8,
+  "tokens_in": 2,
+  "tokens_out": 920,
+  "cost_usd": 0.24008675000000002,
+  "verdict": "yes",
+  "verdict_text": "YES. The index construction keeps exactly columns 0..319 and 384..767 in each of the three 768-wide segments of `c_attn.weight` (dim 1) and `c_attn.bias` (dim 0), and rows 0..319, 384..767 of `c_proj.weight` (dim 0), in order, for all 12 layers. All other tensors and names are untouched, dtype is preserved by `index_select`, the four required checks run as asserts before `save_file`, and the output is a single file with 160 tensors at `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

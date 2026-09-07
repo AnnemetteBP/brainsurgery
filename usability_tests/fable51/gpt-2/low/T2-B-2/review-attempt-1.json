@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T2.yaml",
+  "started_at": "2026-09-06T08:55:50+00:00",
+  "finished_at": "2026-09-06T08:56:03+00:00",
+  "wall_clock_s": 12.6,
+  "tokens_in": 2,
+  "tokens_out": 674,
+  "cost_usd": 0.34736275000000005,
+  "verdict_text": "YES\n\nThe plan slices each head-bearing tensor into exactly the ranges the specification lists (half-open `0:320` equals inclusive `0..319`, and so on), concatenates them back in the required order along the correct axis (columns for `c_attn.weight`, rows for `c_attn.bias` and `c_proj.weight`), restores the original tensor names, removes the temporaries, and leaves all other tensors untouched. The four required checks are present as `assert` transforms before the output is written, and the tensor count returns to 160 after the delete/concat cycle.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

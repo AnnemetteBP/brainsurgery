@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T08:59:18+00:00",
+  "finished_at": "2026-09-06T08:59:31+00:00",
+  "wall_clock_s": 12.8,
+  "tokens_in": 2,
+  "tokens_out": 643,
+  "cost_usd": 0.22814375,
+  "verdict_text": "YES\n\nThe script drops blocks 2, 6, 10, 14, renumbers the survivors via enumerate over the sorted kept list, which yields exactly the mapping in the specification, and copies non-block tensors through untouched. It writes into a fresh dict, so no rename collision is possible. The assertions run before any output is written and cover all required checks: the block-index set must equal 0..11, which excludes blocks 12 to 15 and forces exactly 12 blocks, and the tensor count must be 86. Output is a single file at `out/T1/model.safetensors`. The only external dependency is the `_ckpt.load_checkpoint` helper, whose correctness is assumed since it is not shown.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

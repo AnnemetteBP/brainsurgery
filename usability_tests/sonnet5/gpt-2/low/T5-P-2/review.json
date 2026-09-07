@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:48:57+00:00",
+  "finished_at": "2026-09-06T16:49:02+00:00",
+  "wall_clock_s": 5.1,
+  "tokens_in": 2,
+  "tokens_out": 143,
+  "cost_usd": 0.046556799999999995,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script correctly maps adapter names to base names, computes `scale * (B @ A).T` in float32 with `fan_in_fan_out` respected, adds it into the base weight while preserving dtype/shape, and excludes adapter tensors. It shards by 100 MiB tensor-data limit (with oversized tensors alone in their own shard), writes a proper index with `weight_map`, and enforces all four required checks before writing.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "52d337326395ce9beac3adc73e35e8c7c2d2892cc99e856b24330c90669f0535"
+}

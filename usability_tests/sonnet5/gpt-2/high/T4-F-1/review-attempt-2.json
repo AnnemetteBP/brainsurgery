@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T4-defective.py",
+  "started_at": "2026-09-06T15:43:37+00:00",
+  "finished_at": "2026-09-06T15:43:46+00:00",
+  "wall_clock_s": 9.0,
+  "tokens_in": 2,
+  "tokens_out": 689,
+  "cost_usd": 0.0473528,
+  "verdict": "no",
+  "verdict_text": "NO. The merge formula is wrong: the code computes `tmp = base + \u03bb(ft1-base)` then `out = tmp + \u03bb(ft2-tmp)`, which expands to `0.36\u00b7base + 0.24\u00b7ft1 + 0.4\u00b7ft2`, not the required `out = base + \u03bb(ft1-base) + \u03bb(ft2-base) = 0.2\u00b7base + 0.4\u00b7ft1 + 0.4\u00b7ft2` from spec step 2. This is a sequential/chained blend rather than two independent task-vector additions against the unmodified base, violating the exact arithmetic given in \"Required result\" step 2 and the ordering hazard described in \"Why it is meaningful\" (each task vector must be taken against the unmodified base, but here the second delta is taken against `tmp`, not `base`). This will produce merged-tensor values with relative Frobenius error far exceeding 1e-5 against the reference, failing grading.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

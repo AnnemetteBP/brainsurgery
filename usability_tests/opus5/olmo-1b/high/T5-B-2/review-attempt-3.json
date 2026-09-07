@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T16:18:36+00:00",
+  "finished_at": "2026-09-06T16:19:10+00:00",
+  "wall_clock_s": 34.1,
+  "tokens_in": 2,
+  "tokens_out": 2486,
+  "cost_usd": 0.1687845,
+  "verdict": "no",
+  "verdict_text": "NO.\n\nThe plan never removes the `lora::` namespace: it deletes only the temporary `model::\u2026delta` tensors, so all 64 adapter tensors (`base_model.model.model.layers.<i>.<module>.lora_A/B.weight`) from the second input remain live when `save_output` runs and are written into `out/T5/`. That violates Required result 2 (\"No adapter tensor \u2026 appears in the output\") and Required result 4's \"Expected total: 114 tensors, the same names as the base\" \u2014 the output would hold 178 tensors, and the grader's exact-key-set comparison fails. The two guards that were supposed to catch this are scoped to the wrong namespace: `assert: not: {exists: 'model::.*lora_.*'}` and `assert: {count: {of: 'model::.*', is: 114}}` only inspect `model::`, so they pass while the adapter tensors sit in `lora::`, meaning the Required checks \"no tensor name containing `lora_` is in the output\" and \"the output has exactly 114 tensors\" are not actually implemented as stated. The merge math itself (`B @ A` untransposed, scaled by 2, added in float32) and the `shard: 512MB` setting are correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

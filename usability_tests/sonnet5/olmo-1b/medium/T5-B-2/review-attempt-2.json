@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T5.yaml",
+  "started_at": "2026-09-06T16:06:26+00:00",
+  "finished_at": "2026-09-06T16:06:58+00:00",
+  "wall_clock_s": 31.2,
+  "tokens_in": 2,
+  "tokens_out": 2441,
+  "cost_usd": 0.0689078,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan correctly identifies each LoRA pair (`lora_B`/`lora_A`), computes `B @ A` via `matmul` (matching the required `[out,in]` order for `fan_in_fan_out=false`), scales by `alpha/r=2`, adds the delta into the base weight, and deletes the intermediate `delta` tensor before output, leaving no adapter or intermediate tensors. All four required checks are implemented as asserts (32 lora_A tensors, 32 merged deltas, no `lora_` names, correct shape, and 114 total tensors), and the output is written sharded at 512MB with format safetensors as specified.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

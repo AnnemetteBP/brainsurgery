@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T16:35:40+00:00",
+  "finished_at": "2026-09-06T16:35:56+00:00",
+  "wall_clock_s": 16.5,
+  "tokens_in": 2,
+  "tokens_out": 1167,
+  "cost_usd": 0.26101775,
+  "verdict": "no",
+  "verdict_text": "NO. The sharding and index-file requirements (Required result 5: shard files, `model.safetensors.index.json` with a complete `weight_map`, the 256 MiB per-shard cap, oversized tensors alone in their own shard) are entirely delegated to `save_sharded_safetensors` from an external module `_ckpt` whose code is not part of the artifact, so the artifact cannot be shown to satisfy clause 5. Likewise, the input loading depends on `_ckpt.load_checkpoint`, so the \"tensor names do not change\" guarantee (clause 4) rests on unverified code. The visible logic is otherwise correct: the two regexes select exactly the 64 projection matrices and the 48 buffers, bfloat16 casting uses `.to(torch.bfloat16)` as required, everything else is upcast to float32, and all four required checks are asserted before writing. Under the condition's rule that the solution be a standalone script using only PyTorch and `safetensors`, the reliance on `_ckpt` also violates the artifact's own submission constraints.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

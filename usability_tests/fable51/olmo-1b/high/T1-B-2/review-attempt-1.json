@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T1.yaml",
+  "started_at": "2026-09-06T11:28:56+00:00",
+  "finished_at": "2026-09-06T11:29:11+00:00",
+  "wall_clock_s": 14.5,
+  "tokens_in": 2,
+  "tokens_out": 989,
+  "cost_usd": 0.25190575,
+  "verdict_text": "YES\n\nThe plan deletes exactly blocks 2, 6, 10, 14 (verified beforehand as 28 tensors), then shifts each surviving block to its required new index in ascending order so every destination index is free when written, producing the mapping 3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211 with only the block index changed. Non-block tensors are untouched, all three required checks are present as `assert` transforms (no blocks 12\u201315, exactly 12 `q_proj` tensors, exactly 86 tensors), and the output is the single file `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

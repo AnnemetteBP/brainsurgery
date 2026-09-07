@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-06T16:12:23+00:00",
+  "finished_at": "2026-09-06T16:13:30+00:00",
+  "wall_clock_s": 66.7,
+  "tokens_in": 2,
+  "tokens_out": 5298,
+  "cost_usd": 0.2332655,
+  "verdict": "yes",
+  "verdict_text": "YES.\n\nThe plan deletes the 12 `h.<i>.attn.bias` buffers first, normalizes everything to float32 (a no-op on an all-float32 input, so values are unchanged), then casts exactly the 48 projection matrices to bfloat16 via a pattern anchored on `h.<i>.` plus the four specific matrix names, so embeddings, norms and biases are untouched \u2014 satisfying clauses 1\u20134. The required checks are all present as `assert` transforms before the output stage: the \"exactly 48 bfloat16\" check is expressed as the pair \"all 48 projection matrices are bfloat16\" plus \"every non-projection tensor is float32\" (the negative-lookahead pattern), which together with the `count \u2026 is: 148` assert is equivalent to, and slightly stronger than, a direct count. `h.0.attn.c_attn.weight` bfloat16, `wte.weight` float32, and the 148-tensor total are each asserted literally. Output is a sharded safetensors directory at `out/T3` with the shard limit set to the binary 64 MiB the specification requires.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "93394a22ec30786239ce4e8f33732f68fd4b4b76310b64169ddce745c2a0924e"
+}

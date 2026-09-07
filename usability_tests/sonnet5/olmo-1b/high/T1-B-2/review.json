@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T1.yaml",
+  "started_at": "2026-09-06T16:02:12+00:00",
+  "finished_at": "2026-09-06T16:02:52+00:00",
+  "wall_clock_s": 40.6,
+  "tokens_in": 2,
+  "tokens_out": 3802,
+  "cost_usd": 0.0805128,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 The plan deletes exactly the 28 tensors of blocks 2/6/10/14, then re-maps survivors with moves ordered so every destination is either an already-deleted slot (2, 6, 10) or a slot just vacated by the previous move (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211), exactly matching the required renumbering with no collisions. It leaves blocks 0 and 1 untouched and never references `embed_tokens`/`lm_head`, satisfying \"only the block index changes\" and \"non-block tensors unchanged.\" All three required checks are present as literal asserts: no blocks 12/13/14/15 remain, exactly 12 `q_proj` matches, and exactly 86 total tensors, all placed after the transforms they verify, and 114 \u2212 28 = 86 arithmetic checks out for a single-file safetensors output.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "ac8d878c4268e6d53726e6c963cc5e9aa04c9af2a392ccb8fb6c4f5d6719b099"
+}

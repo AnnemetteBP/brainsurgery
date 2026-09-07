@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "artifact_sha256": "1403be5a301448a3be36cef9201cdc2800acea2b4cfbb5c8de76cd3a94e33689",
+  "started_at": "2026-09-06T18:20:45+00:00",
+  "finished_at": "2026-09-06T18:21:32+00:00",
+  "wall_clock_s": 47.2,
+  "tokens_in": 2,
+  "tokens_out": 3522,
+  "cost_usd": 0.19864350000000003,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe merge math matches the spec: `delta = B @ A` gives `[2048, 2048]`, `scale = lora_alpha / r = 2`, and `fan_in_fan_out = false` correctly skips the transpose; the arithmetic is in float32 and the result is cast back to the base dtype (float32), keeping name and shape. The adapter is loaded into a separate dict, so no `lora_` or intermediate tensor can reach the output, and all other base tensors are passed through untouched. All four required checks are asserted before `save_sharded_safetensors` is called. The greedy packer flushes whenever adding a tensor would exceed 536,870,912 bytes of tensor data, and an oversized tensor is necessarily flushed alone on the next iteration, with `model.safetensors.index.json` recording a `weight_map` for every tensor.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

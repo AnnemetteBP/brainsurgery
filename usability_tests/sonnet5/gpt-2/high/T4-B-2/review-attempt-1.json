@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T06:38:53+00:00",
+  "finished_at": "2026-09-06T06:39:40+00:00",
+  "wall_clock_s": 46.6,
+  "tokens_in": 2,
+  "tokens_out": 4515,
+  "cost_usd": 0.0897608,
+  "verdict_text": "NO\n\nThe plan omits a required check: nothing in the plan asserts that exactly 48 tensors were merged (e.g., counting the `tv1`/`tv2` auxiliary tensors or the MLP-matching set before deletion). \"Required checks\" explicitly demands the run \"fail loudly\" if the merged-tensor count isn't 48, but only two of the three required checks are implemented (the shared-tensor verification and the final 160-tensor count). Everything else \u2014 the shared-tensor `equal`/`count` asserts, the ordering of tv1/tv2 against the unmodified base, the `lambda=0.4` arithmetic, and the final tensor set \u2014 is correct and matches the spec.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

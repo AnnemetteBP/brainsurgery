@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T06:58:37+00:00",
+  "finished_at": "2026-09-06T07:00:34+00:00",
+  "wall_clock_s": 117.2,
+  "tokens_in": 2,
+  "tokens_out": 10689,
+  "cost_usd": 0.15061280000000002,
+  "verdict_text": "NO\n\nThe script delegates the entire I/O and sharding implementation (`load_checkpoint`, `save_sharded_safetensors`) to an imported module `_ckpt`, which is not shown and is not one of the packages listed in `requirements-P.txt` (only `torch`/`safetensors` are permitted, per the condition's instruction to write \"a standalone Python script\"). Because clause 5 of the spec \u2014 the 256 MiB shard cap, the rule that oversized tensors get their own shard, and the correctness of `model.safetensors.index.json`'s `weight_map` \u2014 is entirely implemented inside that unseen helper, it cannot be verified from the artifact whether the sharding requirement is actually met. The dtype-casting and buffer-dropping logic in the visible code (clauses 1\u20134) is correct: the regexes precisely target the 64 named projection matrices and the 48 named buffers without overmatching biases, norms, or embeddings, and the required checks are asserted before writing. However, relying on an unaudited, non-standalone helper module for the core file-format guarantee of the task is a violation of the condition's \"standalone script using only PyTorch and safetensors\" requirement, and leaves the sharding half of the spec unverifiable from this artifact alone.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

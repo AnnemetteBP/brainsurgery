@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T07:47:59+00:00",
+  "finished_at": "2026-09-06T07:48:12+00:00",
+  "wall_clock_s": 12.5,
+  "tokens_in": 2,
+  "tokens_out": 793,
+  "cost_usd": 0.12260149999999997,
+  "verdict_text": "YES\n\nThe regex matches exactly the seven per-layer projection names (112 tensors) via `fullmatch`, casts them with `.to(torch.bfloat16)` (round-to-nearest-even) from float32, leaves every other tensor as float32 with unchanged values, changes no names, and deletes nothing \u2014 `buffer_re` contains `(?!)`, a lookahead that can never succeed, so the `continue` branch is dead code, which is harmless here since the checkpoint has no buffers. All four required checks are asserted before the write, and the sharded write is delegated to `save_sharded_safetensors` with the specified 268,435,456-byte limit and output directory. The only part I cannot verify from this file alone is the helper's shard-packing and index-emission behavior in `_ckpt`, which is not part of the artifact shown.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

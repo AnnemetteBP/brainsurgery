@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T08:28:59+00:00",
+  "finished_at": "2026-09-06T08:29:29+00:00",
+  "wall_clock_s": 30.3,
+  "tokens_in": 2,
+  "tokens_out": 2166,
+  "cost_usd": 0.15178049999999998,
+  "verdict_text": "YES\n\nThe script performs the step-1 verification first (identical key sets across all three checkpoints, and `torch.equal` between base and each fine-tune for every non-MLP tensor), matches exactly the 48 MLP tensors with a `fullmatch` regex over `gate_proj`/`up_proj`/`down_proj`, and computes `base + 0.4*(ft1-base) + 0.4*(ft2-base)` in float32 from the unmodified base \u2014 `out = dict(base)` is a shallow copy and `base` is never mutated, so the second task vector is still taken against the original base. All other tensors are carried over from base unchanged, the required `merged == 48` and `len(out) == 114` checks are present and abort loudly, and the result is written to a single `out/T4/model.safetensors` with the original dtype.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

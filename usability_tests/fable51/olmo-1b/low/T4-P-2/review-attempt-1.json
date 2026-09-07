@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-06T09:02:50+00:00",
+  "finished_at": "2026-09-06T09:03:02+00:00",
+  "wall_clock_s": 11.7,
+  "tokens_in": 2,
+  "tokens_out": 520,
+  "cost_usd": 0.21600975,
+  "verdict_text": "YES\n\nThe script matches the specification: it checks the key sets of all three checkpoints and bit-exact equality of every non-MLP tensor before any modification, computes each merged tensor from the unmodified base (the output dict is a separate mapping, so the base tensors are never overwritten) in float32 with lambda 0.4, asserts exactly 48 merged tensors and 114 output tensors, and writes a single `out/T4/model.safetensors`. The only unverifiable point from reading is the `_ckpt.load_checkpoint` helper, which is a loading utility and does not affect the merge semantics.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

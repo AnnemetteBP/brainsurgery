@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T16:08:43+00:00",
+  "finished_at": "2026-09-06T16:09:07+00:00",
+  "wall_clock_s": 24.0,
+  "tokens_in": 2,
+  "tokens_out": 1518,
+  "cost_usd": 0.055752800000000005,
+  "verdict": "yes",
+  "verdict_text": "YES. The script verifies name-set equality among all three checkpoints and bit-exact equality of every non-MLP tensor before any modification (step 1), computes the merge in float32 with the exact formula and lambda=0.4 then casts back to the base dtype (step 2), leaves unmerged tensors as the original base tensor objects (step 3), and asserts both `merged == 64` and `len(out) == 244` before writing a single `out/T4/model.safetensors` (step 4 and the required checks). This matches the specification.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

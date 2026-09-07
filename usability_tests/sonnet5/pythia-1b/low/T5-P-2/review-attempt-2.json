@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:10:14+00:00",
+  "finished_at": "2026-09-06T16:10:20+00:00",
+  "wall_clock_s": 5.6,
+  "tokens_in": 2,
+  "tokens_out": 309,
+  "cost_usd": 0.0460308,
+  "verdict": "no",
+  "verdict_text": "NO. The task says LoRA delta is `B @ A` with no transposition when `fan_in_fan_out = false`, but the artifact computes `delta = b @ a` then conditionally transposes when `transpose` (i.e., `fan_in_fan_out`) is true \u2014 this is backwards from PEFT's actual convention but happens to match spec's stated formula only when `fan_in_fan_out` is false, which it is here, so the merge math itself is actually correct for this input. However, the script relies on `_ckpt.load_checkpoint`/`save_sharded_safetensors` helpers not shown or verifiable, and critically does not assert/check the 512 MiB shard-size rule or the single-oversized-tensor-per-shard rule anywhere in its own logic \u2014 it blindly delegates sharding correctness to an unverified external helper, violating the requirement that the solution itself implement and enforce the required checks (Required checks / Required result item 4).",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

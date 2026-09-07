@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:01:09+00:00",
+  "finished_at": "2026-09-06T16:01:17+00:00",
+  "wall_clock_s": 8.3,
+  "tokens_in": 2,
+  "tokens_out": 530,
+  "cost_usd": 0.047169800000000005,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 The keep_index logic correctly builds a per-segment (q/k/v or single-segment) index that skips head 5's 64-column/row block within each 768-wide segment, matching the required column/row ranges exactly. The four required-checks assertions run before the file is written, and all 160 keys are preserved with only the three per-layer head-bearing tensors modified.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "artifact_sha256": "c853a23e2b6879d190c754b8ad01ba13b9e6b628b241b1be72b6e7567bc9060f",
+  "started_at": "2026-09-06T18:18:02+00:00",
+  "finished_at": "2026-09-06T18:18:08+00:00",
+  "wall_clock_s": 5.7,
+  "tokens_in": 2,
+  "tokens_out": 288,
+  "cost_usd": 0.044661799999999995,
+  "verdict": "no",
+  "verdict_text": "NO. The script uses bare `assert` statements for verification, which are stripped out when Python runs with optimizations (`python -O`), meaning the \"fail loudly\" requirement in \"Required checks\" is not durably enforced. Additionally, the assert messages/failures are Python's generic AssertionError rather than a controlled abort with a clear error report, which is a weaker but acceptable form as long as `-O` isn't used\u2014however more critically, `dict(base)` in `out = dict(base)` shares tensor references with `base` rather than copying independently, which is fine since tensors aren't mutated in place, so this is not itself a bug. The real violation is reliance on `assert` for required checks (step 1 verification, \"exactly 64 tensors merged\", \"output has exactly 244 tensors\"), which silently vanish under `-O`, violating the \"must fail loudly\" clause in Required Checks.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

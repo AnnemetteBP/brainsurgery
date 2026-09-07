@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "artifact_sha256": "2fd5493f92201b4bd4eeafbe2f09248e3e2ad15df2598636a1af3d3e677a1a02",
+  "started_at": "2026-09-06T18:18:27+00:00",
+  "finished_at": "2026-09-06T18:19:26+00:00",
+  "wall_clock_s": 59.5,
+  "tokens_in": 2,
+  "tokens_out": 4758,
+  "cost_usd": 0.2230365,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script deletes exactly the 12 `h.<i>.attn.bias` buffers via a `fullmatch` on that exact name, casts exactly the 48 listed projection matrices with `.to(torch.bfloat16)` (RNE) and leaves every other tensor as unchanged float32, keeping names identical. All four required checks run before any file is written. The greedy packer flushes before adding whenever the running total would exceed 67,108,864 bytes, so no shard exceeds 64 MiB and the single oversized tensor (`wte.weight`, last in safetensors' name-ordered key list) necessarily lands alone in its own shard; the index file records a `weight_map` covering all 148 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

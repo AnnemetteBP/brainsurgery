@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T09:19:38+00:00",
+  "finished_at": "2026-09-06T09:19:50+00:00",
+  "wall_clock_s": 11.9,
+  "tokens_in": 2,
+  "tokens_out": 706,
+  "cost_usd": 0.23236575,
+  "verdict_text": "YES\n\nThe head-index construction keeps blocks 0..4 and 6..11 of each 64-wide head within every 768-wide segment, which yields exactly columns `0..319, 384..767` per segment for c_attn (weight on axis 1, bias on axis 0, three segments in q|k|v order) and rows `0..319, 384..767` for c_proj (axis 0, one segment), in the required order. Only the three head-bearing tensors per layer are touched, names are preserved, dtype is preserved by index_select, and the four required checks run before the file is written to `out/T2/model.safetensors`. The only unverifiable point is the imported `_ckpt.load_checkpoint` helper, which is assumed to return the full 160-entry state dict unchanged.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

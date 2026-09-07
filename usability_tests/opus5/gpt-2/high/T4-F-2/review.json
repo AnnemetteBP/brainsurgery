@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "artifact_sha256": "bf1aaff64bce9adc7af3eb4f382f30b5f5cb81a9425f65767ce23de6c1f8a7b6",
+  "started_at": "2026-09-06T18:18:34+00:00",
+  "finished_at": "2026-09-06T18:19:00+00:00",
+  "wall_clock_s": 26.5,
+  "tokens_in": 2,
+  "tokens_out": 2059,
+  "cost_usd": 0.14965050000000002,
+  "verdict": "yes",
+  "verdict_text": "YES. The script loads the three checkpoints, asserts identical key sets, and verifies with `torch.equal` that every non-MLP tensor matches the base in both fine-tunes before writing anything; the regex `h\\.(\\d+)\\.(mlp\\.c_fc\\.weight|mlp\\.c_fc\\.bias|mlp\\.c_proj\\.weight|mlp\\.c_proj\\.bias)` under `fullmatch` selects exactly the 48 MLP tensors and nothing else. The merge reads from the untouched `base` dict and writes into a separate `out` dict, so both task vectors are taken against the original base, with \u03bb = 0.4 in float32 and the dtype preserved. The `merged == 48` and `len(out) == 160` assertions cover the two remaining required checks, and unchanged tensors are carried over by reference so they stay bit-exact. Output goes to `out/T4/model.safetensors` as a single file with 160 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

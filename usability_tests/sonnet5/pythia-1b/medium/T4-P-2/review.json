@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T16:52:16+00:00",
+  "finished_at": "2026-09-06T16:52:24+00:00",
+  "wall_clock_s": 8.2,
+  "tokens_in": 2,
+  "tokens_out": 397,
+  "cost_usd": 0.0453438,
+  "verdict": "no",
+  "verdict_text": "NO. The script does not write `out/T4/model.safetensors` per the task's fixed output path; it accepts a CLI arg defaulting to `out/T4`, but if invoked without exactly matching that default (or as documented in TASK.md, run via `python out/<task>/solution.py` with no args) it still works, so this itself is not the violation. The real violation: it uses bare `assert` statements for all required checks (shared-tensor verification, tensor-name matching outside MLP set, merged count, output count), which are stripped out when Python is run with `-O`, silently disabling every one of the \"Required checks\" the spec mandates must \"fail loudly\" \u2014 this is not a robust, loud failure mechanism as required. Additionally, the shared-tensor check only verifies non-MLP tensors are equal but never checks that the *set of MLP tensor names* matches the spec's expected 64 (it relies on regex matching against `base`'s keys only, trusting `ft1`/`ft2` have the same keys via the earlier `set` equality, which is fine) \u2014 so this part is actually acceptable. The dispositive flaw is the reliance on `assert` for all required-check failures, violating the \"fail loudly\" requirement in Required checks.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "c853a23e2b6879d190c754b8ad01ba13b9e6b628b241b1be72b6e7567bc9060f"
+}

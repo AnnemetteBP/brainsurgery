@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T11:31:30+00:00",
+  "finished_at": "2026-09-06T11:31:48+00:00",
+  "wall_clock_s": 17.6,
+  "tokens_in": 2,
+  "tokens_out": 1274,
+  "cost_usd": 0.26479575,
+  "verdict_text": "YES\n\nThe regex with `fullmatch` selects exactly the 7 projection weights per layer for all 16 layers (112 tensors), casts them via `.to(torch.bfloat16)` (round-to-nearest-even), and leaves every other tensor as float32 with `.float()` on already-float32 data, which is a no-op on values. The buffer pattern `(?!)` can never match, so nothing is deleted, and names pass through unchanged. All four required checks are asserted before the write call, so the run fails loudly if they do not hold.\n\nThe one thing not verifiable from this file is the sharding layout: the 256 MiB limit, single-tensor-per-shard for the two 412 MB embeddings, and the index filename are delegated to `save_sharded_safetensors` in the unshown `_ckpt` helper. The verdict assumes that helper honours the byte limit it is passed and writes `model.safetensors.index.json` with a complete `weight_map`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

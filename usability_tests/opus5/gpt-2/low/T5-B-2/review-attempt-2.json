@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T16:14:58+00:00",
+  "finished_at": "2026-09-06T16:15:17+00:00",
+  "wall_clock_s": 18.6,
+  "tokens_in": 2,
+  "tokens_out": 1219,
+  "cost_usd": 0.1349095,
+  "verdict": "no",
+  "verdict_text": "NO. The plan never removes the adapter tensors: `inputs/lora/adapter_model.safetensors` is loaded as the `lora` namespace and its 24 `lora_A`/`lora_B` tensors are never deleted, so they remain in the state dict that is written to `out/T5`, violating Required result clause 2 (\"No adapter tensor ... appears in the output\") and the expected 160-name key set. The two guard asserts are also scoped so they cannot catch this: `assert not exists 'model::.*lora_.*'` only searches the `model` namespace (where no adapter tensor ever existed, so it passes vacuously), and `assert count 'model::.*' is 160` likewise counts only the base namespace rather than the tensors actually being exported \u2014 so the required checks \"no tensor name containing `lora_` is in the output\" and \"the output has exactly 160 tensors\" are not implemented as specified. Adding `- delete: { target: 'lora::.*' }` before the asserts, and widening the asserts to `.*` across namespaces, would fix both problems. The merge arithmetic itself (B@A, transpose via `permute [1,0]`, scale 2, in-place add) and the 100 MiB sharded output are correct.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

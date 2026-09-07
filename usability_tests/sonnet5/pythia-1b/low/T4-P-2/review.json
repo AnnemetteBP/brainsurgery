@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T16:51:54+00:00",
+  "finished_at": "2026-09-06T16:51:58+00:00",
+  "wall_clock_s": 3.6,
+  "tokens_in": 2,
+  "tokens_out": 100,
+  "cost_usd": 0.0423408,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script verifies shared tensors, checks names/shapes implicitly via dict equality assertions, computes the merge in float32 against the unmodified base for each fine-tune, casts back to the base dtype, asserts exactly 64 merged and 244 total tensors, and writes a single output file as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "c853a23e2b6879d190c754b8ad01ba13b9e6b628b241b1be72b6e7567bc9060f"
+}

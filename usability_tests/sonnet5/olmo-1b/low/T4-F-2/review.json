@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "artifact_sha256": "39971c56f8f1ba950debcebf4fb42e1685eb2910891739a543fbb747ba8a390c",
+  "started_at": "2026-09-06T18:15:48+00:00",
+  "finished_at": "2026-09-06T18:15:52+00:00",
+  "wall_clock_s": 4.6,
+  "tokens_in": 2,
+  "tokens_out": 166,
+  "cost_usd": 0.042759799999999994,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the script verifies name-set equality and bit-exact equality of all non-MLP tensors across base/ft1/ft2 before merging, applies `out[X] = base + \u03bb(ft1-base) + \u03bb(ft2-base)` with \u03bb=0.4 in float32 to exactly the 48 MLP tensors identified by the correct regex, leaves all other tensors as unmodified base copies, and asserts merged==48 and len(out)==114 before writing a single `model.safetensors` to the output directory.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

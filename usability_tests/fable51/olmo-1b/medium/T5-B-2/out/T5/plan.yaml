@@ -1,0 +1,47 @@
+# T5: merge PEFT LoRA adapter (r=16, alpha=32 -> scale 2, fan_in_fan_out=false)
+# into OLMo-1B-0724-hf base weights and write a 512 MiB-sharded checkpoint.
+inputs:
+  - model::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Preflight: adapter has exactly 32 A/B pairs for q_proj/v_proj.
+  - assert: { count: { of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.[qv]_proj\.lora_A\.weight', is: 32 } }
+  - assert: { count: { of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.[qv]_proj\.lora_B\.weight', is: 32 } }
+  - assert: { count: { of: 'lora::.*', is: 64 } }
+  - assert: { shape: { of: 'lora::base_model\.model\.model\.layers\.0\.self_attn\.q_proj\.lora_A\.weight', is: [16, 2048] } }
+  - assert: { shape: { of: 'lora::base_model\.model\.model\.layers\.0\.self_attn\.q_proj\.lora_B\.weight', is: [2048, 16] } }
+  - assert: { count: { of: 'model::.*', is: 114 } }
+
+  # delta = B @ A  (shape [out, in] = [2048, 2048]), as a temporary on the base alias.
+  - matmul:
+      from_a: 'lora::base_model\.model\.(model\.layers\.\d+\.self_attn\.[qv]_proj)\.lora_B\.weight'
+      from_b: 'lora::base_model.model.\1.lora_A.weight'
+      to: 'model::\1.lora_delta'
+
+  # Exactly 32 deltas were produced (= 32 adapter pairs found).
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.[qv]_proj\.lora_delta', is: 32 } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.q_proj\.lora_delta', is: [2048, 2048] } }
+  - assert: { dtype: { of: 'model::model\.layers\.0\.self_attn\.q_proj\.lora_delta', is: float32 } }
+
+  # scale = lora_alpha / r = 32 / 16 = 2
+  - scale_: { target: 'model::model\.layers\.\d+\.self_attn\.[qv]_proj\.lora_delta', by: 2.0 }
+
+  # W += scale * B @ A  (fan_in_fan_out = false: no transpose)
+  - add_:
+      from: 'model::(model\.layers\.\d+\.self_attn\.[qv]_proj)\.lora_delta'
+      to: 'model::\1.weight'
+
+  # Remove the intermediates.
+  - delete: { target: 'model::model\.layers\.\d+\.self_attn\.[qv]_proj\.lora_delta' }
+
+  # Required checks before writing.
+  - assert: { not: { exists: 'model::.*lora_.*' } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.q_proj\.weight', is: [2048, 2048] } }
+  - assert: { dtype: { of: 'model::model\.layers\.0\.self_attn\.q_proj\.weight', is: float32 } }
+  - assert: { count: { of: 'model::.*', is: 114 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

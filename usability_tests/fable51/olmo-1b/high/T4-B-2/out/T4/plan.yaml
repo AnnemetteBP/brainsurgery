@@ -1,0 +1,85 @@
+# T4: task-vector merge of two fine-tunes into the OLMo-1B-0724-hf base.
+#
+#   out[X] = base[X] + 0.4 * (ft1[X] - base[X]) + 0.4 * (ft2[X] - base[X])
+#
+# for the 48 MLP tensors X; every other tensor comes from `base` unchanged.
+# Both task vectors are computed (into scratch names on the `base` alias)
+# BEFORE either is added to the base, so each is taken against the
+# unmodified base. Scratch tensors are deleted before the output is written.
+#
+# MLP tensor regex (full match): layers 0..15, gate/up/down projections.
+#   model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight
+# Non-MLP regex (full match): everything not under model.layers.<i>.mlp.
+#   (?!model\.layers\.\d+\.mlp\.).+
+
+inputs:
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # ---------------------------------------------------------------- step 1
+  # Same tensor names in all three checkpoints.
+  # 114 tensors each; exactly 48 MLP tensors each; the 66 non-MLP tensors
+  # of `base` all exist (and are identical) in ft1 and ft2. Since
+  # 66 + 48 = 114 in every alias, the name sets are identical.
+  - assert: { count: { of: 'base::.+', is: 114 } }
+  - assert: { count: { of: 'ft1::.+', is: 114 } }
+  - assert: { count: { of: 'ft2::.+', is: 114 } }
+  - assert: { count: { of: 'base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft1::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft2::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'base::(?!model\.layers\.\d+\.mlp\.).+', is: 66 } }
+
+  # Every tensor outside the 48 MLP tensors is bit-identical (same shape,
+  # dtype, values) in base, ft1 and ft2. `right` must exist for every
+  # `left` match, so this also proves the 66 names are present in ft1/ft2.
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' } }
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft2::\g<0>' } }
+
+  # MLP tensors: expected shapes and float32 dtype in all three checkpoints.
+  - assert: { shape: { of: 'base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj)\.weight', is: [8192, 2048] } }
+  - assert: { shape: { of: 'ft1::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj)\.weight', is: [8192, 2048] } }
+  - assert: { shape: { of: 'ft2::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj)\.weight', is: [8192, 2048] } }
+  - assert: { shape: { of: 'base::model\.layers\.([0-9]|1[0-5])\.mlp\.down_proj\.weight', is: [2048, 8192] } }
+  - assert: { shape: { of: 'ft1::model\.layers\.([0-9]|1[0-5])\.mlp\.down_proj\.weight', is: [2048, 8192] } }
+  - assert: { shape: { of: 'ft2::model\.layers\.([0-9]|1[0-5])\.mlp\.down_proj\.weight', is: [2048, 8192] } }
+  - assert: { dtype: { of: 'base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: float32 } }
+  - assert: { dtype: { of: 'ft1::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: float32 } }
+  - assert: { dtype: { of: 'ft2::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: float32 } }
+
+  # ---------------------------------------------------------------- step 2
+  # Task vector 1, against the unmodified base:  tv1.X = 0.4 * (ft1[X] - base[X])
+  - copy:      { from: 'ft1::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', to: 'base::tv1.\g<0>' }
+  - subtract_: { from: 'base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', to: 'base::tv1.\g<0>' }
+  - scale_:    { target: 'base::tv1\.model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', by: 0.4 }
+
+  # Task vector 2, also against the unmodified base:  tv2.X = 0.4 * (ft2[X] - base[X])
+  - copy:      { from: 'ft2::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', to: 'base::tv2.\g<0>' }
+  - subtract_: { from: 'base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', to: 'base::tv2.\g<0>' }
+  - scale_:    { target: 'base::tv2\.model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', by: 0.4 }
+
+  # Exactly 48 task-vector tensors per fine-tune, float32, before merging.
+  - assert: { count: { of: 'base::tv1\.model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'base::tv2\.model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'base::tv[12]\..+', is: 96 } }
+  - assert: { dtype: { of: 'base::tv[12]\..+', is: float32 } }
+
+  # Merge: base[X] += tv1.X ; base[X] += tv2.X   (both deltas already fixed)
+  - add_: { from: 'base::tv1\.(model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight)', to: 'base::\1' }
+  - add_: { from: 'base::tv2\.(model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight)', to: 'base::\1' }
+
+  # Drop the scratch task vectors.
+  - delete: { target: 'base::tv[12]\..+' }
+
+  # ---------------------------------------------------------------- checks
+  - assert: { not: { exists: 'base::tv[12]\..+' } }
+  - assert: { count: { of: 'base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { dtype: { of: 'base::model\.layers\.([0-9]|1[0-5])\.mlp\.(gate_proj|up_proj|down_proj)\.weight', is: float32 } }
+  - assert: { count: { of: 'base::.+', is: 114 } }
+  # Non-MLP tensors still bit-identical to the (unchanged) fine-tune copies.
+  - assert: { equal: { left: 'base::(?!model\.layers\.\d+\.mlp\.).+', right: 'ft1::\g<0>' } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T1.py",
+  "started_at": "2026-09-06T07:17:09+00:00",
+  "finished_at": "2026-09-06T07:17:18+00:00",
+  "wall_clock_s": 9.5,
+  "tokens_in": 2,
+  "tokens_out": 506,
+  "cost_usd": 0.11208450000000002,
+  "verdict_text": "YES\n\nThe mapping is correct: `kept = [0,1,3,4,5,7,8,9,11,12,13,15]` with `renumber[old] = index`, which reproduces the specified 0,1,2,\u2026,11 assignment exactly, and building a fresh `out` dict makes collisions impossible. Non-block tensors pass through untouched, tensors are moved by reference so values/shapes/dtypes are preserved, and the two assertions (contiguous layer set 0..11, total 86 tensors) run before `save_file`, so a failure exits non-zero with nothing written to `out/T1/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

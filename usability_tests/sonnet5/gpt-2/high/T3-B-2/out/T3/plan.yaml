@@ -1,0 +1,68 @@
+# T3: mixed-precision export with sharding (GPT-2, 124M)
+#
+# - cast the 48 large projection matrices (attn.c_attn/c_proj, mlp.c_fc/c_proj
+#   weights, per layer) to bfloat16 in place
+# - leave every other tensor (embeddings, positional embeddings, layer norms,
+#   all biases) untouched as float32
+# - drop the 12 non-parameter causal-mask buffers h.<i>.attn.bias
+# - assert the required invariants before writing
+# - write a sharded safetensors checkpoint, <=64MiB of tensor data per shard
+
+inputs:
+  - inputs/base/model.safetensors
+
+transforms:
+  # 1) Cast exactly the 48 projection matrices to bfloat16, in place so names
+  #    are unchanged. The pattern only matches ".weight" on these four
+  #    projections per layer, so it cannot catch biases, embeddings or norms.
+  - cast_:
+      target: 'h\.\d+\.(attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight'
+      to: bfloat16
+
+  # 2) Drop the 12 causal-mask buffers. They are not parameters.
+  - delete:
+      target: 'h\.\d+\.attn\.bias'
+
+  # --- Required checks (fail loudly before writing) ---
+
+  # Exactly 48 tensors are bfloat16: the projection pattern matches exactly
+  # 48 tensors, all of them bfloat16, and (see below) nothing else is.
+  - assert:
+      count:
+        of: 'h\.\d+\.(attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight'
+        is: 48
+  - assert:
+      dtype:
+        of: 'h\.\d+\.(attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight'
+        is: bfloat16
+
+  # Nothing outside that pattern is bfloat16 (embeddings, norms, all biases
+  # stay float32), which together with the two checks above pins the
+  # bfloat16 count at exactly 48 tensors.
+  - assert:
+      dtype:
+        of: '(?!h\.\d+\.(attn\.c_attn|attn\.c_proj|mlp\.c_fc|mlp\.c_proj)\.weight$).*'
+        is: float32
+
+  # h.0.attn.c_attn.weight is bfloat16.
+  - assert:
+      dtype:
+        of: h.0.attn.c_attn.weight
+        is: bfloat16
+
+  # wte.weight is float32.
+  - assert:
+      dtype:
+        of: wte.weight
+        is: float32
+
+  # Output has exactly 148 tensors (160 input - 12 deleted buffers).
+  - assert:
+      count:
+        of: '.*'
+        is: 148
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 64MB   # binary MiB per this tool's units: 64 * 1024 * 1024 bytes

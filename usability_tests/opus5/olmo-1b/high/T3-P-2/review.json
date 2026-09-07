@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:54:13+00:00",
+  "finished_at": "2026-09-06T16:55:08+00:00",
+  "wall_clock_s": 55.3,
+  "tokens_in": 2,
+  "tokens_out": 4229,
+  "cost_usd": 0.2123625,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script casts exactly the 112 named projection matrices to bfloat16 via `.to(torch.bfloat16)` and leaves all other tensors (`lm_head.weight`, `model.embed_tokens.weight`) as float32 with unchanged values; `.float()` on already-float32 input is a no-op, and the dead `buffer_re` (`(?!)` never matches) deletes nothing, as clause 3 requires. Names are untouched, all four required checks are asserted before writing, and the greedy packer flushes before exceeding 268,435,456 bytes of tensor data while letting each 412 MB embedding land alone in its own shard, with a `model.safetensors.index.json` whose `weight_map` covers all 114 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "290fb5d27c5146e7ca4ba58700f2848f1be69af03d5dfc0f099fe8daed8118df"
+}

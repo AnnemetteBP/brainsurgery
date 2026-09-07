@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T16:55:47+00:00",
+  "finished_at": "2026-09-06T16:56:01+00:00",
+  "wall_clock_s": 14.1,
+  "tokens_in": 2,
+  "tokens_out": 944,
+  "cost_usd": 0.12754549999999998,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script keeps exactly rows `0..3839` and `4608..6143` of both `query_key_value.weight` (dim 0) and `.bias`, and columns `0..1279` and `1536..2047` of `attention.dense.weight` (dim 1), for all 16 layers, in ascending order, leaving every other tensor and all names untouched. `index_select` preserves the float16 dtype, all four required checks are asserted before writing, and the result is saved as a single `out/T2/model.safetensors` with 244 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "19811be17039bc4fdfc951cd8a9d0a6007411fc2e97a4a7c5b907b17b5612d65"
+}

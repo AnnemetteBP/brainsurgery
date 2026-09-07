@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T08:00:13+00:00",
+  "finished_at": "2026-09-06T08:00:27+00:00",
+  "wall_clock_s": 14.4,
+  "tokens_in": 2,
+  "tokens_out": 943,
+  "cost_usd": 0.1281635,
+  "verdict_text": "YES\n\nThe merge uses the correct scale (`lora_alpha / r` = 2), the correct orientation (`B @ A`, transposed only if `fan_in_fan_out`, which is false here), accumulates in float32 and casts back to the base float16 dtype, touches only the 16 targeted `query_key_value` weights, and all four required checks are asserted before writing. The one thing I cannot verify from reading is the sharding itself, which is delegated to `save_sharded_safetensors` in the unseen `_ckpt` helper; the 512 MiB budget is passed in correctly, but whether the index file, `weight_map`, and the solo-shard handling for the two 206 MB embedding tensors are produced correctly depends on that helper.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

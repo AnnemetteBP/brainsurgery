@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T11:39:37+00:00",
+  "finished_at": "2026-09-06T11:39:51+00:00",
+  "wall_clock_s": 14.0,
+  "tokens_in": 2,
+  "tokens_out": 939,
+  "cost_usd": 0.25214875,
+  "verdict_text": "YES\n\nThe script removes exactly head 5 per layer and matches every clause of the specification:\n\n- **Fused qkv weight and bias:** axis 0, block 768 over 8 heads, dropping head 5 keeps rows 0..3839 and 4608..6143 in order, giving 5376 rows.\n- **Dense weight:** axis 1, block 256 over 8 heads, dropping head 5 keeps columns 0..1279 and 1536..2047 in order, giving 1792 columns.\n- **Other tensors:** untouched, names unchanged, so the count stays at 244. Values are copied by index selection so float16 is preserved bit-exactly.\n- **Required checks:** all four shape and count assertions run before the file is written, and the output lands at `out/T2/model.safetensors`.\n\nThe only external dependency is the `_ckpt.load_checkpoint` helper, which I cannot inspect here. Assuming it returns a plain name-to-tensor dict from the safetensors file, the artifact is correct.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

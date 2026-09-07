@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T5.yaml",
+  "started_at": "2026-09-06T16:13:25+00:00",
+  "finished_at": "2026-09-06T16:15:25+00:00",
+  "wall_clock_s": 119.9,
+  "tokens_in": 2,
+  "tokens_out": 8668,
+  "cost_usd": 0.3215345,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan computes `B @ A` ([2304,16]\u00d7[16,768] \u2192 [2304,768]) via `matmul`, transposes it with `permute [1,0]` to [768,2304] matching the Conv1D `[in, out]` layout that `fan_in_fan_out = true` calls for, scales by `alpha/r = 2`, and adds it in place to `h.<i>.attn.c_attn.weight`, all in float32. Both intermediates (`delta_t`, `delta`) are deleted before the write, so no adapter or scratch tensor survives. All four required checks are present as `assert` transforms \u2014 pair count (12 `lora_A` matches, and 12 deltas produced), absence of any `lora_` name, the [768, 2304] shape of `h.0.attn.c_attn.weight`, and the 160-tensor total (which also catches any misdirected `add_` target) \u2014 and the output is a sharded safetensors directory at `out/T5` with a 100 MiB shard budget.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

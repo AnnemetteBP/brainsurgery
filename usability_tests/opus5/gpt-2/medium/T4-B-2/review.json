@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-06T16:16:01+00:00",
+  "finished_at": "2026-09-06T16:16:51+00:00",
+  "wall_clock_s": 50.2,
+  "tokens_in": 2,
+  "tokens_out": 3886,
+  "cost_usd": 0.2047285,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan verifies the three checkpoints against each other before any mutation (160-tensor counts on `ft1`/`ft2`, plus element-wise `equal` of every non-MLP tensor of `base` against `ft1` and `ft2` via the negative-lookahead pattern), which together with the later 48-count asserts also pins the name sets to be identical. Both task vectors are materialized as temporary `.tv1`/`.tv2` tensors and scaled by 0.4 *before* either is added back, so each is taken against the unmodified base as clause 2 requires, and the two `add_` steps produce `base + 0.4*(ft1-base) + 0.4*(ft2-base)` in float32. The three required checks are present as `assert` transforms (shared-tensor equality, 48 merged tensors per task vector, 160 tensors in the output), the temporaries are deleted before the final count, non-MLP tensors are never written, and the output path matches `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "8adafa570c1e0368dca8be6f08d2fd86ce3b24b61e44ee0c9d0892ee32f0ab0f"
+}

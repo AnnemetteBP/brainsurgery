@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T16:35:18+00:00",
+  "finished_at": "2026-09-06T16:35:30+00:00",
+  "wall_clock_s": 12.6,
+  "tokens_in": 2,
+  "tokens_out": 724,
+  "cost_usd": 0.23600975000000002,
+  "verdict": "yes",
+  "verdict_text": "YES. The keep index for the fused projection selects rows 0..3839 and 4608..6143 in order, the bias uses the same index, and the dense weight keeps columns 0..1279 and 1536..2047, all matching Required result clauses 1 through 3. Other tensors and names are untouched, dtype is preserved by index_select, the four required checks run as asserts before save, and a single 244-tensor file is written to out/T2/model.safetensors. The only unverifiable point is the imported `_ckpt.load_checkpoint` helper, which is not in the artifact and is assumed to load the safetensors file into a plain dict without altering values.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

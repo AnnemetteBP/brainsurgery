@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T08:53:27+00:00",
+  "finished_at": "2026-09-06T08:53:36+00:00",
+  "wall_clock_s": 9.7,
+  "tokens_in": 2,
+  "tokens_out": 523,
+  "cost_usd": 0.22258074999999997,
+  "verdict_text": "YES\n\nThe script keeps, per 768-wide segment, the 64-column blocks for heads 0..4 and 6..11, which yields exactly the column ranges 0..319 and 384..767 offset by segment, in order, for both fused c_attn tensors. For c_proj.weight it applies the same selection on axis 0 with one segment, giving rows 0..319 and 384..767. All other tensors are left untouched, names are preserved, and the four required checks are asserted before writing a single safetensors file. The only external dependency is the local `_ckpt.load_checkpoint` helper, which I cannot inspect here, so the judgment assumes it returns the state dict with original dtypes intact.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

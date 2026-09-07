@@ -1,0 +1,17 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-06T12:12:46+00:00",
+  "finished_at": "2026-09-06T12:13:29+00:00",
+  "wall_clock_s": 43.0,
+  "tokens_in": 2,
+  "tokens_out": 3320,
+  "cost_usd": 0.1981245,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe plan deletes exactly the 60 tensors of blocks 2, 6, 10, 14 (the anchored `gpt_neox\\.layers\\.` prefix prevents `10`/`14` patterns from mis-matching `1`-prefixed indices such as 12 or 13), then shifts survivors lowest-destination-first (3\u21922, 4\u21923, 5\u21924, 7\u21925, 8\u21926, 9\u21927, 11\u21928, 12\u21929, 13\u219210, 15\u219211), so every destination index is either a deleted slot or one vacated by the immediately preceding move \u2014 no collisions, and the mapping matches clause 2 exactly. The `(.*)` capture carries the whole tensor suffix, so all 15 per-block tensors including the `attention.bias`, `masked_bias` and `rotary_emb.inv_freq` buffers are renamed with values, shapes and dtypes untouched, and the 4 non-block tensors are never targeted (clause 3). All three required checks are present as `assert` transforms before the write: absence of blocks 12\u201315, exactly 12 `query_key_value.weight` matches, and a total count of 184, which equals 244 \u2212 60 as clause 4 requires. Output goes to `out/T1/model.safetensors` as specified.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates."
+}

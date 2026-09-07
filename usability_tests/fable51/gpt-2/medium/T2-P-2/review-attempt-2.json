@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:30:22+00:00",
+  "finished_at": "2026-09-06T16:30:33+00:00",
+  "wall_clock_s": 10.8,
+  "tokens_in": 2,
+  "tokens_out": 688,
+  "cost_usd": 0.22766675000000003,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script builds the keep index per head-bearing tensor exactly as required: for the fused `c_attn.weight` and `c_attn.bias` it keeps the 64-wide blocks of heads 0..4 and 6..11 within each of the three 768-wide segments, producing columns/rows 0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303 in order (clauses 1 and 2). For `c_proj.weight` it keeps rows 0..319 and 384..767 (clause 3). All other tensors are left untouched with unchanged names (clause 4), and the output is a single file with 160 tensors (clause 5). All four required checks are asserted before `save_file`, so the script fails loudly before writing if any does not hold. The only external dependency is a `_ckpt.load_checkpoint` helper, assumed to load the safetensors file into a plain state dict.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

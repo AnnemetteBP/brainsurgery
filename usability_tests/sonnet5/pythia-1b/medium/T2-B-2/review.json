@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T16:10:30+00:00",
+  "finished_at": "2026-09-06T16:10:36+00:00",
+  "wall_clock_s": 6.2,
+  "tokens_in": 2,
+  "tokens_out": 119,
+  "cost_usd": 0.06879679999999999,
+  "verdict": "yes",
+  "verdict_text": "YES \u2014 the plan slices query_key_value.weight rows [0:3840]+[4608:6144], bias identically, dense.weight columns [0:1280]+[1536:2048] via dim:1 concat, deletes the originals and temporaries, and asserts the required shapes and final tensor count of 244, matching all clauses of the Required result and Required checks sections.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "ce3d418dfa996b948706d0c8bc5f3178e62e5967e85257dfd660f25ad2aa75e9"
+}

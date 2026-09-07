@@ -1,0 +1,41 @@
+# T1: depth pruning Pythia-1B 16 -> 12 layers, removing blocks 2, 6, 10, 14.
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # Sanity: 16 blocks, 244 tensors on input.
+  - assert: { count: { of: 'gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight', is: 16 } }
+  - assert: { count: { of: '.*', is: 244 } }
+
+  # 1. Delete every tensor of the pruned blocks.
+  - delete: { target: 'gpt_neox\.layers\.(2|6|10|14)\..*' }
+  - assert: { count: { of: '.*', is: 184 } }
+
+  # 2. Renumber survivors in ascending order. `move` refuses an existing
+  #    destination, so any collision aborts the run.
+  - move: { from: [gpt_neox, layers, "3", "*rest"],  to: [gpt_neox, layers, "2", "*rest"] }
+  - move: { from: [gpt_neox, layers, "4", "*rest"],  to: [gpt_neox, layers, "3", "*rest"] }
+  - move: { from: [gpt_neox, layers, "5", "*rest"],  to: [gpt_neox, layers, "4", "*rest"] }
+  - move: { from: [gpt_neox, layers, "7", "*rest"],  to: [gpt_neox, layers, "5", "*rest"] }
+  - move: { from: [gpt_neox, layers, "8", "*rest"],  to: [gpt_neox, layers, "6", "*rest"] }
+  - move: { from: [gpt_neox, layers, "9", "*rest"],  to: [gpt_neox, layers, "7", "*rest"] }
+  - move: { from: [gpt_neox, layers, "11", "*rest"], to: [gpt_neox, layers, "8", "*rest"] }
+  - move: { from: [gpt_neox, layers, "12", "*rest"], to: [gpt_neox, layers, "9", "*rest"] }
+  - move: { from: [gpt_neox, layers, "13", "*rest"], to: [gpt_neox, layers, "10", "*rest"] }
+  - move: { from: [gpt_neox, layers, "15", "*rest"], to: [gpt_neox, layers, "11", "*rest"] }
+
+  # Required checks.
+  - assert: { not: { exists: 'gpt_neox\.layers\.(12|13|14|15)\..*' } }
+  - assert: { count: { of: 'gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight', is: 12 } }
+  - assert: { count: { of: 'gpt_neox\.layers\.\d+\..*', is: 180 } }
+  - assert: { count: { of: '.*', is: 184 } }
+  # Every surviving block is complete (15 tensors each).
+  - assert: { count: { of: 'gpt_neox\.layers\.(0|1|2|3|4|5|6|7|8|9|10|11)\.attention\.bias', is: 12 } }
+  - assert: { exists: 'gpt_neox\.embed_in\.weight' }
+  - assert: { exists: 'embed_out\.weight' }
+  - assert: { exists: 'gpt_neox\.final_layer_norm\.weight' }
+  - assert: { exists: 'gpt_neox\.final_layer_norm\.bias' }
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors

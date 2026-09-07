@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T11:43:52+00:00",
+  "finished_at": "2026-09-06T11:44:09+00:00",
+  "wall_clock_s": 17.7,
+  "tokens_in": 2,
+  "tokens_out": 1160,
+  "cost_usd": 0.26246775,
+  "verdict_text": "NO\n\nThe merge arithmetic is correct: scale is 2, `B @ A` is computed in float32 without transposition, added to the float16 base, cast back, and the four required checks are present. However, the entire sharded export required by clause 4 of \"Required result\" (shard files, a `model.safetensors.index.json` with a full `weight_map`, the 512 MiB tensor-data limit, and oversized tensors stored alone) is delegated to `save_sharded_safetensors` from an external `_ckpt` module that is not part of the artifact. Loading is likewise delegated to `load_checkpoint` from that module, so the \"every other base tensor is unchanged\" guarantee of clause 3 cannot be confirmed either. The condition also requires a standalone script using only PyTorch and `safetensors`, which a hidden helper module does not satisfy. On the artifact as shown, compliance with the sharding and index requirements cannot be established.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

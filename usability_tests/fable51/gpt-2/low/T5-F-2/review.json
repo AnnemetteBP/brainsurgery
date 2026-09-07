@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:29:52+00:00",
+  "finished_at": "2026-09-06T16:30:04+00:00",
+  "wall_clock_s": 11.6,
+  "tokens_in": 2,
+  "tokens_out": 690,
+  "cost_usd": 0.23379374999999997,
+  "verdict": "no",
+  "verdict_text": "NO. The artifact delegates the entire sharded export to `save_sharded_safetensors` from an unshown `_ckpt` module, so nothing in the artifact demonstrates that clause 4 of \"Required result\" holds: that an index file named `model.safetensors.index.json` with a complete `weight_map` is written, that each shard's tensor data totals at most 104,857,600 bytes excluding headers, and that the oversized `wte.weight` is placed alone in its own shard. The merge logic itself (B @ A, transpose under `fan_in_fan_out`, scale 2, float32) and the four required pre-write assertions are correct, but the specification requires the sharding rules to be met and they cannot be confirmed from the artifact as given.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,612 @@
+# T2: structured attention-head pruning of GPT-2 (124M).
+#
+# Remove head 5 (0-indexed) from every layer. GPT-2 uses Conv1D layout
+# ([in, out]), so:
+#   * h.<i>.attn.c_attn.weight [768, 2304] is the fused [q | k | v] input
+#     projection; heads are 64-wide COLUMN blocks inside each 768-wide
+#     q/k/v segment. Head 5 is columns 320:384 of each segment, i.e.
+#     320:384, 1088:1152 and 1856:1920 of the full tensor.
+#   * h.<i>.attn.c_attn.bias [2304] has the same layout along dim 0.
+#   * h.<i>.attn.c_proj.weight [768, 768] is the output projection; heads
+#     are 64-wide ROW blocks, so head 5 is rows 320:384.
+#
+# Each tensor is rebuilt by concatenating the surviving blocks, in order,
+# into a temporary name; the original is then deleted and the temporary
+# moved back onto the original name (names must not change).
+
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+
+  # ---- layer 0 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.0\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.0\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.0\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.0\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.0\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.0\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.0.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.0\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.0\.attn\.c_attn\.weight'
+      to: 'model::h.0.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.0\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.0\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.0\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.0\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.0\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.0\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.0.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.0\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.0\.attn\.c_attn\.bias'
+      to: 'model::h.0.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.0\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.0\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.0.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.0\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.0\.attn\.c_proj\.weight'
+      to: 'model::h.0.attn.c_proj.weight'
+
+  # ---- layer 1 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.1\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.1\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.1\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.1\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.1\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.1\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.1.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.1\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.1\.attn\.c_attn\.weight'
+      to: 'model::h.1.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.1\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.1\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.1\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.1\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.1\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.1\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.1.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.1\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.1\.attn\.c_attn\.bias'
+      to: 'model::h.1.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.1\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.1\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.1.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.1\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.1\.attn\.c_proj\.weight'
+      to: 'model::h.1.attn.c_proj.weight'
+
+  # ---- layer 2 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.2\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.2\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.2\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.2\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.2\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.2\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.2.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.2\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.2\.attn\.c_attn\.weight'
+      to: 'model::h.2.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.2\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.2\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.2\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.2\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.2\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.2\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.2.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.2\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.2\.attn\.c_attn\.bias'
+      to: 'model::h.2.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.2\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.2\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.2.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.2\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.2\.attn\.c_proj\.weight'
+      to: 'model::h.2.attn.c_proj.weight'
+
+  # ---- layer 3 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.3\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.3\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.3\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.3\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.3\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.3\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.3.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.3\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.3\.attn\.c_attn\.weight'
+      to: 'model::h.3.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.3\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.3\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.3\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.3\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.3\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.3\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.3.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.3\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.3\.attn\.c_attn\.bias'
+      to: 'model::h.3.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.3\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.3\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.3.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.3\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.3\.attn\.c_proj\.weight'
+      to: 'model::h.3.attn.c_proj.weight'
+
+  # ---- layer 4 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.4\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.4\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.4\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.4\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.4\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.4\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.4.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.4\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.4\.attn\.c_attn\.weight'
+      to: 'model::h.4.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.4\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.4\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.4\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.4\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.4\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.4\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.4.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.4\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.4\.attn\.c_attn\.bias'
+      to: 'model::h.4.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.4\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.4\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.4.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.4\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.4\.attn\.c_proj\.weight'
+      to: 'model::h.4.attn.c_proj.weight'
+
+  # ---- layer 5 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.5\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.5\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.5\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.5\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.5\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.5\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.5.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.5\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.5\.attn\.c_attn\.weight'
+      to: 'model::h.5.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.5\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.5\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.5\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.5\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.5\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.5\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.5.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.5\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.5\.attn\.c_attn\.bias'
+      to: 'model::h.5.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.5\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.5\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.5.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.5\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.5\.attn\.c_proj\.weight'
+      to: 'model::h.5.attn.c_proj.weight'
+
+  # ---- layer 6 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.6\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.6\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.6\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.6\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.6\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.6\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.6.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.6\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.6\.attn\.c_attn\.weight'
+      to: 'model::h.6.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.6\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.6\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.6\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.6\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.6\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.6\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.6.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.6\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.6\.attn\.c_attn\.bias'
+      to: 'model::h.6.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.6\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.6\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.6.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.6\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.6\.attn\.c_proj\.weight'
+      to: 'model::h.6.attn.c_proj.weight'
+
+  # ---- layer 7 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.7\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.7\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.7\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.7\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.7\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.7\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.7.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.7\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.7\.attn\.c_attn\.weight'
+      to: 'model::h.7.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.7\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.7\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.7\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.7\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.7\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.7\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.7.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.7\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.7\.attn\.c_attn\.bias'
+      to: 'model::h.7.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.7\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.7\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.7.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.7\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.7\.attn\.c_proj\.weight'
+      to: 'model::h.7.attn.c_proj.weight'
+
+  # ---- layer 8 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.8\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.8\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.8\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.8\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.8\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.8\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.8.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.8\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.8\.attn\.c_attn\.weight'
+      to: 'model::h.8.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.8\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.8\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.8\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.8\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.8\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.8\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.8.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.8\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.8\.attn\.c_attn\.bias'
+      to: 'model::h.8.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.8\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.8\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.8.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.8\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.8\.attn\.c_proj\.weight'
+      to: 'model::h.8.attn.c_proj.weight'
+
+  # ---- layer 9 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.9\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.9\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.9\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.9\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.9\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.9\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.9.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.9\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.9\.attn\.c_attn\.weight'
+      to: 'model::h.9.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.9\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.9\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.9\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.9\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.9\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.9\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.9.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.9\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.9\.attn\.c_attn\.bias'
+      to: 'model::h.9.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.9\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.9\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.9.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.9\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.9\.attn\.c_proj\.weight'
+      to: 'model::h.9.attn.c_proj.weight'
+
+  # ---- layer 10 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.10\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.10\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.10\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.10\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.10\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.10\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.10.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.10\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.10\.attn\.c_attn\.weight'
+      to: 'model::h.10.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.10\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.10\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.10\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.10\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.10\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.10\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.10.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.10\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.10\.attn\.c_attn\.bias'
+      to: 'model::h.10.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.10\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.10\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.10.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.10\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.10\.attn\.c_proj\.weight'
+      to: 'model::h.10.attn.c_proj.weight'
+
+  # ---- layer 11 ----
+  # c_attn.weight: keep columns 0:320, 384:768, 768:1088, 1152:1536, 1536:1856, 1920:2304
+  - concat:
+      from:
+        - 'model::h\.11\.attn\.c_attn\.weight::[:, 0:320]'
+        - 'model::h\.11\.attn\.c_attn\.weight::[:, 384:768]'
+        - 'model::h\.11\.attn\.c_attn\.weight::[:, 768:1088]'
+        - 'model::h\.11\.attn\.c_attn\.weight::[:, 1152:1536]'
+        - 'model::h\.11\.attn\.c_attn\.weight::[:, 1536:1856]'
+        - 'model::h\.11\.attn\.c_attn\.weight::[:, 1920:2304]'
+      to: 'model::pruned.h.11.attn.c_attn.weight'
+      dim: 1
+  - delete: { target: 'model::h\.11\.attn\.c_attn\.weight' }
+  - move:
+      from: 'model::pruned\.h\.11\.attn\.c_attn\.weight'
+      to: 'model::h.11.attn.c_attn.weight'
+
+  # c_attn.bias: same block layout along dim 0
+  - concat:
+      from:
+        - 'model::h\.11\.attn\.c_attn\.bias::[0:320]'
+        - 'model::h\.11\.attn\.c_attn\.bias::[384:768]'
+        - 'model::h\.11\.attn\.c_attn\.bias::[768:1088]'
+        - 'model::h\.11\.attn\.c_attn\.bias::[1152:1536]'
+        - 'model::h\.11\.attn\.c_attn\.bias::[1536:1856]'
+        - 'model::h\.11\.attn\.c_attn\.bias::[1920:2304]'
+      to: 'model::pruned.h.11.attn.c_attn.bias'
+      dim: 0
+  - delete: { target: 'model::h\.11\.attn\.c_attn\.bias' }
+  - move:
+      from: 'model::pruned\.h\.11\.attn\.c_attn\.bias'
+      to: 'model::h.11.attn.c_attn.bias'
+
+  # c_proj.weight: keep rows 0:320, 384:768
+  - concat:
+      from:
+        - 'model::h\.11\.attn\.c_proj\.weight::[0:320, :]'
+        - 'model::h\.11\.attn\.c_proj\.weight::[384:768, :]'
+      to: 'model::pruned.h.11.attn.c_proj.weight'
+      dim: 0
+  - delete: { target: 'model::h\.11\.attn\.c_proj\.weight' }
+  - move:
+      from: 'model::pruned\.h\.11\.attn\.c_proj\.weight'
+      to: 'model::h.11.attn.c_proj.weight'
+
+  # ---- required checks (run before the output is written) ----
+  - assert: { shape: { of: 'model::h\.0\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.0\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.0\.attn\.c_proj\.weight', is: [704, 768] } }
+  - assert: { count: { of: 'model::.*', is: 160 } }
+
+  # ---- same three shape checks for every remaining layer ----
+  - assert: { shape: { of: 'model::h\.1\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.1\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.1\.attn\.c_proj\.weight', is: [704, 768] } }
+  - assert: { shape: { of: 'model::h\.2\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.2\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.2\.attn\.c_proj\.weight', is: [704, 768] } }
+  - assert: { shape: { of: 'model::h\.3\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.3\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.3\.attn\.c_proj\.weight', is: [704, 768] } }
+  - assert: { shape: { of: 'model::h\.4\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.4\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.4\.attn\.c_proj\.weight', is: [704, 768] } }
+  - assert: { shape: { of: 'model::h\.5\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.5\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.5\.attn\.c_proj\.weight', is: [704, 768] } }
+  - assert: { shape: { of: 'model::h\.6\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.6\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.6\.attn\.c_proj\.weight', is: [704, 768] } }
+  - assert: { shape: { of: 'model::h\.7\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.7\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.7\.attn\.c_proj\.weight', is: [704, 768] } }
+  - assert: { shape: { of: 'model::h\.8\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.8\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.8\.attn\.c_proj\.weight', is: [704, 768] } }
+  - assert: { shape: { of: 'model::h\.9\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.9\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.9\.attn\.c_proj\.weight', is: [704, 768] } }
+  - assert: { shape: { of: 'model::h\.10\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.10\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.10\.attn\.c_proj\.weight', is: [704, 768] } }
+  - assert: { shape: { of: 'model::h\.11\.attn\.c_attn\.weight', is: [768, 2112] } }
+  - assert: { shape: { of: 'model::h\.11\.attn\.c_attn\.bias', is: [2112] } }
+  - assert: { shape: { of: 'model::h\.11\.attn\.c_proj\.weight', is: [704, 768] } }
+
+  # ---- untouched tensors keep their original shapes ----
+  - assert: { shape: { of: 'model::h\.0\.attn\.c_proj\.bias', is: [768] } }
+  - assert: { shape: { of: 'model::h\.0\.attn\.bias', is: [1, 1, 1024, 1024] } }
+  - assert: { shape: { of: 'model::wte\.weight', is: [50257, 768] } }
+  # no temporaries left behind
+  - assert: { not: { exists: 'model::pruned\..*' } }
+
+output:
+  path: out/T2/model.safetensors
+  format: safetensors

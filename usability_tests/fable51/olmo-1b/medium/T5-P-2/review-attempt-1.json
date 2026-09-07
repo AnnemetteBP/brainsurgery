@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T11:05:49+00:00",
+  "finished_at": "2026-09-06T11:06:03+00:00",
+  "wall_clock_s": 14.4,
+  "tokens_in": 2,
+  "tokens_out": 908,
+  "cost_usd": 0.25029675,
+  "verdict_text": "YES\n\nThe merge logic matches the specification: for each of the 16 layers and both target modules it looks up `lora_A` ([16, 2048]) and `lora_B` ([2048, 16]) under the `base_model.model.` prefix, forms `B @ A` ([2048, 2048]), scales by `lora_alpha / r = 2` read from the config, honors `fan_in_fan_out` (false, so no transpose), adds in float32, and casts back to the original float32 dtype under the same name. No adapter keys are ever inserted into the state dict, so no `lora_` or intermediate tensor can reach the output, and the untouched 82 tensors pass through unchanged. All four required checks are present as assertions before the write. The one thing not visible in the artifact is `_ckpt.save_sharded_safetensors`, which is trusted to write `model.safetensors.index.json` with a full `weight_map` and to respect the 512 MiB per-shard limit passed as `MAX_SHARD`; the script itself is correct given that helper behaves as named.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

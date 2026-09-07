@@ -1,0 +1,114 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # --- Step 1: verify the three checkpoints agree everywhere except the MLP tensors ---
+  - assert: { count: { of: 'base::.*', is: 244 } }
+  - assert: { count: { of: 'ft1::.*', is: 244 } }
+  - assert: { count: { of: 'ft2::.*', is: 244 } }
+
+  - assert:
+      count:
+        of: 'base::gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)'
+        is: 64
+  - assert:
+      count:
+        of: 'ft1::gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)'
+        is: 64
+  - assert:
+      count:
+        of: 'ft2::gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)'
+        is: 64
+
+  - assert:
+      equal:
+        left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)$).+'
+        right: 'ft1::\g<0>'
+  - assert:
+      equal:
+        left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)$).+'
+        right: 'ft2::\g<0>'
+
+  # --- Step 2/3: the output starts as the base itself (all 244 tensors);
+  # only the 64 MLP tensors below get overwritten in place. ---
+
+  # --- Compute the task-vector merge for the 64 MLP tensors, in float32 ---
+  - cast:
+      from: 'base::(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      to: 'base::_base32_\1'
+      dtype: float32
+  - cast:
+      from: 'ft1::(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      to: 'base::_ft1_32_\1'
+      dtype: float32
+  - cast:
+      from: 'ft2::(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      to: 'base::_ft2_32_\1'
+      dtype: float32
+
+  - copy:
+      from: 'base::_base32_(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      to: 'base::_delta1_\1'
+  - copy:
+      from: 'base::_base32_(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      to: 'base::_delta2_\1'
+
+  # delta1 = ft1 - base, delta2 = ft2 - base (both against the unmodified base)
+  - subtract:
+      from_a: 'base::_ft1_32_(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      from_b: 'base::_base32_\1'
+      to: 'base::_delta1_\1'
+  - subtract:
+      from_a: 'base::_ft2_32_(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      from_b: 'base::_base32_\1'
+      to: 'base::_delta2_\1'
+
+  # scale each task vector by lambda = 0.4
+  - scale_:
+      target: 'base::_delta1_(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      by: 0.4
+  - scale_:
+      target: 'base::_delta2_(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      by: 0.4
+
+  # base32 += lambda*delta1 + lambda*delta2
+  - add_:
+      from: 'base::_delta1_(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      to: 'base::_base32_\1'
+  - add_:
+      from: 'base::_delta2_(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      to: 'base::_base32_\1'
+
+  # cast merged result back to float16
+  - cast:
+      from: 'base::_base32_(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      to: 'base::_merged16_\1'
+      dtype: float16
+
+  # --- Required check: exactly 64 tensors were merged ---
+  - assert:
+      count:
+        of: 'base::_merged16_gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias)'
+        is: 64
+
+  # write the merged values into the final tensor names (overwriting the base copy)
+  - assign:
+      from: 'base::_merged16_(gpt_neox\.layers\.\d+\.mlp\.(dense_h_to_4h|dense_4h_to_h)\.(weight|bias))'
+      to: 'base::\1'
+
+  # drop scratch tensors
+  - delete: { target: 'base::_base32_.*' }
+  - delete: { target: 'base::_ft1_32_.*' }
+  - delete: { target: 'base::_ft2_32_.*' }
+  - delete: { target: 'base::_delta1_.*' }
+  - delete: { target: 'base::_delta2_.*' }
+  - delete: { target: 'base::_merged16_.*' }
+
+  # --- Required check: output has exactly 244 tensors ---
+  - assert: { count: { of: 'base::.*', is: 244 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T1.py",
+  "started_at": "2026-09-06T09:19:59+00:00",
+  "finished_at": "2026-09-06T09:20:13+00:00",
+  "wall_clock_s": 14.3,
+  "tokens_in": 2,
+  "tokens_out": 974,
+  "cost_usd": 0.24407975,
+  "verdict_text": "YES\n\nThe script drops every tensor whose block index is 2, 5 or 8, renumbers the surviving blocks in original order into a fresh dict (so no collision is possible), passes the four non-block tensors through untouched, and preserves values, shapes and dtypes since tensors are never modified. Before writing, it asserts the remaining block indices are exactly {0..8}, which simultaneously enforces \"no tensor of blocks 9, 10, 11 remains\" and \"exactly 9 blocks remain\", and it asserts the tensor count is 121. Both asserts run before `save_file`, so a failure exits non-zero with no output written, and the output path is `out/T1/model.safetensors` as required.\n\nTwo minor caveats that do not change the verdict: the checks rely on `assert`, which `python -O` would disable, and correctness assumes the unshown `_ckpt.load_checkpoint` helper returns a plain name-to-tensor dict with the original keys.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

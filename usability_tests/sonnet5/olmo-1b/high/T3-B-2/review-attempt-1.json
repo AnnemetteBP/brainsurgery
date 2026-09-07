@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T3.yaml",
+  "started_at": "2026-09-06T06:47:46+00:00",
+  "finished_at": "2026-09-06T06:49:31+00:00",
+  "wall_clock_s": 105.7,
+  "tokens_in": 2,
+  "tokens_out": 9777,
+  "cost_usd": 0.14060479999999997,
+  "verdict_text": "NO\n\nThe plan's assertion meant to satisfy \"exactly 112 tensors are bfloat16\" (`assert: { count: { of: '<projection-regex>', is: 112 } }`) runs *before* the `cast_ ... to: bfloat16` step and only counts tensors whose **name** matches the projection regex \u2014 it never checks the resulting **dtype**. It therefore does not actually verify the Required Checks clause \"exactly 112 tensors are bfloat16\" in the output; it only confirms the naming pattern selects 112 tensors prior to casting. The other three required checks (`q_proj.weight` bfloat16, `embed_tokens.weight` float32, total count 114) are correctly implemented as post-transform dtype/count asserts. Because the first required check is not implemented as a genuine post-cast dtype-count assertion, the plan does not fail loudly if the cast step were to mis-apply (e.g., cast too few/many tensors to bfloat16), violating the literal Required Checks requirement.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

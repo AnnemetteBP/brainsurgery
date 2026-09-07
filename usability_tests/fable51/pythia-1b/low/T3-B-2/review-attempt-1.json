@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T3.yaml",
+  "started_at": "2026-09-06T09:10:45+00:00",
+  "finished_at": "2026-09-06T09:11:04+00:00",
+  "wall_clock_s": 19.1,
+  "tokens_in": 2,
+  "tokens_out": 1311,
+  "cost_usd": 0.27437575,
+  "verdict_text": "NO\n\nThe \"exactly 64 tensors are bfloat16\" required check is not implemented: the plan asserts that 64 tensor *names* match the projection regex (and does so before the bfloat16 cast), not that 64 tensors have dtype bfloat16 after casting, so a mis-cast would not fail loudly as clause \"Required checks\" demands. The shard limit is written as `shard: 256MB`, while the specification requires 256 MiB (268,435,456 bytes); if the tool follows the common HuggingFace convention where `MB` means 10^6 bytes, shards would be capped at 256,000,000 bytes and the shard boundaries could differ from the reference, violating clause 5 on sharding rules. The delete, float32 upcast, bfloat16 cast of the 64 projection matrices, the two dtype asserts, and the 196-tensor count assert otherwise match clauses 1 through 4.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

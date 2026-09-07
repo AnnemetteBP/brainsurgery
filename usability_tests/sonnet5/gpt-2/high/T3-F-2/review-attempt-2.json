@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T15:43:24+00:00",
+  "finished_at": "2026-09-06T15:43:37+00:00",
+  "wall_clock_s": 13.5,
+  "tokens_in": 2,
+  "tokens_out": 1074,
+  "cost_usd": 0.051576800000000006,
+  "verdict": "yes",
+  "verdict_text": "YES. The script casts exactly the 48 specified projection matrices to bfloat16 via a precise regex, upcasts everything else (embeddings, norms, biases, projection biases) to float32 unchanged, drops exactly the 12 `h.<i>.attn.bias` buffers via a separate regex while preserving all parameters, keeps tensor names identical, and asserts the four required checks (48 bfloat16 tensors, `h.0.attn.c_attn.weight` bfloat16, `wte.weight` float32, 148 total tensors) before calling the shared sharded-safetensors writer with the 64 MiB cap. This matches Required result items 1\u20135 and all four Required checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

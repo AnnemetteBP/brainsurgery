@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T16:48:55+00:00",
+  "finished_at": "2026-09-06T16:49:02+00:00",
+  "wall_clock_s": 6.4,
+  "tokens_in": 2,
+  "tokens_out": 289,
+  "cost_usd": 0.0433848,
+  "verdict": "no",
+  "verdict_text": "NO \u2014 the script hardcodes input paths to `inputs/...` instead of accepting them as arguments/using the sandbox's designated inputs path structure consistently, but more critically it writes only to `out_dir/model.safetensors` where `out_dir` defaults to `out/T4` only if no CLI arg given; this is a minor robustness issue, not a spec violation per se. The real violation: the script does not write a REPORT.md as required by the outer condition instructions, and it does not fail loudly with a clear message on assertion failures (bare `assert` without descriptive text in several places, e.g., `assert set(base) == set(ft1) == set(ft2)`), which is acceptable but weak. However, checking the core spec (Required result/checks/Grading) \u2014 the merge formula, MLP tensor set, verification logic, and output tensor count are all correctly implemented and match the spec exactly.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "bf1aaff64bce9adc7af3eb4f382f30b5f5cb81a9425f65767ce23de6c1f8a7b6"
+}

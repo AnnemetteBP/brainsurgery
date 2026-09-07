@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:11:02+00:00",
+  "finished_at": "2026-09-06T16:11:13+00:00",
+  "wall_clock_s": 11.3,
+  "tokens_in": 2,
+  "tokens_out": 983,
+  "cost_usd": 0.050858799999999996,
+  "verdict": "no",
+  "verdict_text": "NO. The merge formula in the script is incorrect: it computes `tmp = base + \u03bb(ft1-base)` and then `out = tmp + \u03bb(ft2-tmp)`, which expands to `(1-\u03bb)\u00b7base + \u03bb(1-\u03bb)\u00b7(ft1-base) + \u03bb\u00b7ft2`, not the spec's `base + \u03bb(ft1-base) + \u03bb(ft2-base)`. With \u03bb=0.4 this makes the ft1 contribution scaled by 0.24 instead of 0.4, a real arithmetic error (not floating-point rounding) that violates Required Result step 2's exact formula and will likely exceed the 1e-3 relative-Frobenius tolerance whenever ft1 and ft2 differ meaningfully from base. This is precisely the \"ordering hazard\" the spec warns against: each task vector must be computed against the unmodified base, but ft2's term here is computed against `tmp` (an already-modified base), not the true base.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

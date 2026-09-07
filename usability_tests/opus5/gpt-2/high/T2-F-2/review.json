@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "artifact_sha256": "92365477d5a2b031d04772e00c37605dd514b7028b7484314cd0975b48bb00f5",
+  "started_at": "2026-09-06T18:18:23+00:00",
+  "finished_at": "2026-09-06T18:18:35+00:00",
+  "wall_clock_s": 12.2,
+  "tokens_in": 2,
+  "tokens_out": 838,
+  "cost_usd": 0.1232225,
+  "verdict": "yes",
+  "verdict_text": "YES. The keep index enumerates, for each of the three 768-wide q/k/v segments, all heads except head 5 in ascending order, producing exactly columns `0..319, 384..767, 768..1087, 1152..1535, 1536..1855, 1920..2303` for `c_attn.weight` (dim 1) and `c_attn.bias` (dim 0), and with one segment it yields rows `0..319, 384..767` for `c_proj.weight` (dim 0). All other tensors are left untouched, names are preserved, dtypes are unchanged by `index_select`, and the four required checks (three shapes plus the 160-tensor count) are asserted before `save_file` writes the single `out/T2/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

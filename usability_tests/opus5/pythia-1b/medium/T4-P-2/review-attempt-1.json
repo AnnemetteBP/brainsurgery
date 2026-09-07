@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-06T07:58:22+00:00",
+  "finished_at": "2026-09-06T07:58:38+00:00",
+  "wall_clock_s": 16.1,
+  "tokens_in": 2,
+  "tokens_out": 1044,
+  "cost_usd": 0.12508049999999998,
+  "verdict_text": "YES\n\nThe script matches the spec on every point I can check from reading: it loads all three checkpoints, asserts identical key sets, and bit-exact equality (`torch.equal`) of every non-MLP tensor against the base before writing anything; the regex `fullmatch` selects exactly the four MLP tensor names per layer; both task vectors are taken against the unmodified `base` (`out` is a separate dict, and `b` is re-read from `base` each iteration), so there is no ordering hazard; arithmetic is done in float32 and cast back to `base[name].dtype` (float16); all other entries come from `dict(base)` unchanged with unchanged names; and it asserts `merged == 64` and `len(out) == 244` before saving to `out/T4/model.safetensors`.\n\nTwo things I could not verify from the artifact alone: the behaviour of the imported `_ckpt.load_checkpoint` helper (not shown here), and that `assert` is used for the \"fail loudly\" checks, which would be silently skipped if the script were ever run under `python -O` \u2014 under the prescribed `python out/T4/solution.py` invocation this is not an issue.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

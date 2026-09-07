@@ -4,14 +4,16 @@
     .venv/bin/python usability_tests/analyze.py [--root DIR] [--json]
 
 Walks <root>/<agent>/<target>/<effort>/<test>-<condition>-<repeat>/ and reads
-run.json, harness.json, grade.json and review.json. Prints, per
+run.json, harness.json, grade.json, review.json and doctime.json. Prints, per
 (agent, target, effort, condition), per (agent, effort, condition) pooled over
 targets, and pooled over everything per (effort, condition) and per condition:
 
     runs, success rate (final grade PASS), first-execution success rate,
     median retries (executions - 1), failed executions per run,
     median tokens in (uncached + cache reads + cache writes) and out, cost, median time to solution (wall clock of
-    the solve phase for passing runs), bug-detection rate and false-alarm rate.
+    the solve phase for passing runs), median doc-consultation time and its
+    median share of the solve wall clock (`doc_time.py`, near-zero outside
+    condition B), bug-detection rate and false-alarm rate.
 
 Missing files are counted, not fatal, so partial studies can be inspected.
 """
@@ -22,8 +24,10 @@ import argparse
 import json
 import statistics
 from collections import defaultdict
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 HERE = Path(__file__).resolve().parent
 
 
@@ -51,9 +55,15 @@ def collect(root: Path) -> list[dict]:
         harness = read(sandbox / "harness.json") or {}
         grade = read(sandbox / "grade.json") or {}
         review = read(sandbox / "review.json") or {}
+        doctime = read(sandbox / "doctime.json") or {}
         detected = review.get("detected")
+        verdict = review.get("verdict")
+        if review.get("verdict_text") is not None:
+            from run_claude import parse_verdict
+            verdict = parse_verdict(review.get("verdict_text"))
         if detected is None:
-            detected = review.get("auto_says_defective")
+            # only a real YES/NO verdict counts; "none" (the reviewer did not answer) is excluded
+            detected = None if verdict in (None, "none") else (verdict == "no")
         runs.append({
             "agent": run.get("agent", sandbox.parts[-4]),
             "target": run.get("target", sandbox.parts[-3]),
@@ -70,9 +80,12 @@ def collect(root: Path) -> list[dict]:
             "tokens_out": harness.get("tokens_out"),
             "cost_usd": harness.get("cost_usd"),
             "wall_s": harness.get("wall_clock_s"),
+            "doc_s": doctime.get("doc_time_s"),
+            "doc_calls": doctime.get("doc_calls"),
             "cap_hit": harness.get("cap_hit"),
             "review_kind": review.get("artifact_kind"),
             "review_detected": detected,
+            "review_no_verdict": verdict == "none",
         })
     return runs
 
@@ -95,8 +108,13 @@ def summarize(rows: list[dict]) -> dict:
         "median_tokens_out": median([r["tokens_out"] for r in rows]),
         "median_cost_usd": median([r["cost_usd"] for r in rows]),
         "median_time_to_solution_s": median([r["wall_s"] for r in passed]),
+        "median_doc_time_s": median([r["doc_s"] for r in rows]),
+        "median_doc_share": median([
+            100 * r["doc_s"] / r["wall_s"] for r in rows if r["doc_s"] is not None and r["wall_s"]
+        ]),
         "bug_detected": rate(sum(1 for r in defective if r["review_detected"]), len(defective)),
         "false_alarms": rate(sum(1 for r in correct if r["review_detected"]), len(correct)),
+        "no_verdict": sum(1 for r in rows if r.get("review_no_verdict")),
     }
 
 

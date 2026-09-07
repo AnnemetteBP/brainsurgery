@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T1-defective.py",
+  "started_at": "2026-09-06T16:20:17+00:00",
+  "finished_at": "2026-09-06T16:20:24+00:00",
+  "wall_clock_s": 7.1,
+  "tokens_in": 2,
+  "tokens_out": 396,
+  "cost_usd": 0.1088305,
+  "verdict": "no",
+  "verdict_text": "NO. The script sets `DROP = {2, 6, 10, 15}` instead of `{2, 6, 10, 14}`, so it deletes block 15 and keeps block 14 (renumbered to 11), violating required-result clause 1 (\"Remove every tensor of blocks 2, 6, 10, 14\") and the renumbering map in clause 2 (old 15 must become 11). The tensor count (86) and contiguous-index assertions still pass, so the error is silent \u2014 exactly the failure mode the specification warns about \u2014 and grading against the hidden reference would fail on values for the last block. Also, the docstring restates the wrong drop set, so the intent itself is mis-specified rather than being a stray typo.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

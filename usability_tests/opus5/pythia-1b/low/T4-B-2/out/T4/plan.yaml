@@ -1,0 +1,52 @@
+# T4: task-vector merge of two fine-tunes (lambda = 0.4), computed in float32.
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # --- Step 1: preconditions -------------------------------------------------
+  # Same number of tensors in all three checkpoints.
+  - assert: { count: { of: 'base::.+', is: 244 } }
+  - assert: { count: { of: 'ft1::.+', is: 244 } }
+  - assert: { count: { of: 'ft2::.+', is: 244 } }
+  # The 64 MLP tensors exist under the same names in all three.
+  - assert: { count: { of: 'base::gpt_neox\.layers\.\d+\.mlp\.dense_(h_to_4h|4h_to_h)\.(weight|bias)', is: 64 } }
+  - assert: { count: { of: 'ft1::gpt_neox\.layers\.\d+\.mlp\.dense_(h_to_4h|4h_to_h)\.(weight|bias)', is: 64 } }
+  - assert: { count: { of: 'ft2::gpt_neox\.layers\.\d+\.mlp\.dense_(h_to_4h|4h_to_h)\.(weight|bias)', is: 64 } }
+  # Every tensor outside those 64 is present and bit-identical in all three.
+  # (244 total + 64 MLP + these name-resolving equalities => identical name sets.)
+  - assert: { equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)$).+', right: 'ft1::\g<0>' } }
+  - assert: { equal: { left: 'base::(?!gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)$).+', right: 'ft2::\g<0>' } }
+
+  # --- Step 2: float32 working copies of the 64 MLP tensors ------------------
+  - cast: { from: 'base::(gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))', to: 'base::acc.\1', dtype: float32 }
+  - cast: { from: 'ft1::(gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))', to: 'base::tv1.\1', dtype: float32 }
+  - cast: { from: 'ft2::(gpt_neox\.layers\.\d+\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))', to: 'base::tv2.\1', dtype: float32 }
+  - assert: { count: { of: 'base::acc\..+', is: 64 } }
+  - assert: { count: { of: 'base::tv1\..+', is: 64 } }
+  - assert: { count: { of: 'base::tv2\..+', is: 64 } }
+
+  # Task vectors against the *unmodified* base copy (acc is still pure base here).
+  - subtract_: { from: 'base::acc\.(.+)', to: 'base::tv1.\1' }
+  - subtract_: { from: 'base::acc\.(.+)', to: 'base::tv2.\1' }
+  - scale_: { target: 'base::tv1\..+', by: 0.4 }
+  - scale_: { target: 'base::tv2\..+', by: 0.4 }
+
+  # acc = base + 0.4*(ft1-base) + 0.4*(ft2-base)
+  - add_: { from: 'base::tv1\.(.+)', to: 'base::acc.\1' }
+  - add_: { from: 'base::tv2\.(.+)', to: 'base::acc.\1' }
+
+  # --- Step 3: back to float16 and into place --------------------------------
+  - cast_: { target: 'base::acc\..+', to: float16 }
+  - assign: { from: 'base::acc\.(.+)', to: 'base::\1' }
+
+  # --- Step 4: drop scratch tensors ------------------------------------------
+  - delete: { target: 'base::acc\..+' }
+  - delete: { target: 'base::tv1\..+' }
+  - delete: { target: 'base::tv2\..+' }
+  - assert: { count: { of: 'base::.+', is: 244 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

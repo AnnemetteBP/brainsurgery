@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T10:58:35+00:00",
+  "finished_at": "2026-09-06T10:58:49+00:00",
+  "wall_clock_s": 13.4,
+  "tokens_in": 2,
+  "tokens_out": 800,
+  "cost_usd": 0.24312275,
+  "verdict_text": "YES\n\nThe merge logic is correct: `scale` is 2, `B @ A` gives `[2304, 768]`, the transpose driven by `fan_in_fan_out` yields `[768, 2304]`, and the sum is computed in float32 and stored under the original name. All four required checks are asserted before `save_sharded_safetensors` is called, and no adapter or intermediate tensor is inserted into the state dict. The one thing I cannot verify from this file is the sharding itself, since shard sizing, the `model.safetensors.index.json` name, and the isolated `wte.weight` shard are all delegated to `_ckpt.save_sharded_safetensors` with the 104,857,600 byte limit, whose implementation is not shown.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

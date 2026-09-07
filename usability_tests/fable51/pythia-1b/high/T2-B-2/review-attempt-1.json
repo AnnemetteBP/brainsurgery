@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-06T11:41:44+00:00",
+  "finished_at": "2026-09-06T11:41:57+00:00",
+  "wall_clock_s": 12.9,
+  "tokens_in": 2,
+  "tokens_out": 718,
+  "cost_usd": 0.34733175,
+  "verdict_text": "YES\n\nThe plan slices exactly the required regions and reassembles them in order: fused query_key_value rows 0..3839 and 4608..6143 concatenated on dim 0 for both weight and bias, and dense.weight columns 0..1279 and 1536..2047 concatenated on dim 1. All 16 layers are covered by the regex copies and by the explicitly enumerated concats. Originals are deleted before being rebuilt under the same names, temporaries are removed, and no other tensor is touched, so the count returns to 244 with unchanged names. The four required checks are present as assert transforms before the single output write to out/T2/model.safetensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,12 +1,26 @@
 """T2 baseline for OLMo-1B-0724-hf: remove attention head 6 from every layer."""
 
+import json
 import sys
 from pathlib import Path
 
 import torch
-from safetensors.torch import save_file
+from safetensors.torch import load_file, save_file
 
-from _ckpt import load_checkpoint
+
+def load_checkpoint(path):
+    """Load a single .safetensors file or a sharded directory with model.safetensors.index.json."""
+    path = Path(path)
+    if path.is_file():
+        return load_file(str(path))
+    index = path / "model.safetensors.index.json"
+    if index.exists():
+        weight_map = json.loads(index.read_text())["weight_map"]
+        sd = {}
+        for shard in sorted(set(weight_map.values())):
+            sd.update(load_file(str(path / shard)))
+        return sd
+    return load_file(str(path / "model.safetensors"))
 
 out_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "out/T2")
 N_LAYERS = 16

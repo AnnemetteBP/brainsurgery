@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "artifact_sha256": "c853a23e2b6879d190c754b8ad01ba13b9e6b628b241b1be72b6e7567bc9060f",
+  "started_at": "2026-09-06T18:22:13+00:00",
+  "finished_at": "2026-09-06T18:22:36+00:00",
+  "wall_clock_s": 23.1,
+  "tokens_in": 2,
+  "tokens_out": 1660,
+  "cost_usd": 0.1417045,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script verifies key-set equality across all three checkpoints and bit-exact equality of every non-MLP tensor before any writing (step 1), selects exactly the 64 MLP tensors by a `fullmatch` regex over the four names per layer, and computes each task vector against the untouched `base` dict \u2014 `out = dict(base)` is a fresh mapping, so no merged value ever feeds back into a later subtraction (step 2, ordering hazard avoided). Arithmetic is done in float32 via `.float()` and cast back to the base dtype, all other tensors are carried over from the base unchanged with unchanged names (steps 2\u20133), and the output goes to `out/T4/model.safetensors` by default (step 4). The three required checks are all present and failing: the shared-tensor asserts, `assert merged == 64`, and `assert len(out) == 244`. The duplicate `import json` and the unused capture group in the regex are cosmetic and change nothing.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2"
+}

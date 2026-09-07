@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:08:25+00:00",
+  "finished_at": "2026-09-06T16:08:36+00:00",
+  "wall_clock_s": 10.6,
+  "tokens_in": 2,
+  "tokens_out": 1078,
+  "cost_usd": 0.0518008,
+  "verdict": "no",
+  "verdict_text": "NO. The merge formula is computed sequentially, applying ft2's delta against the already-ft1-modified tensor (`tmp`) rather than against the unmodified base, i.e. `out = tmp + \u03bb(f2 - tmp)` where `tmp = base + \u03bb(f1-base)`. This algebraically simplifies to `(1-\u03bb)\u00b2\u00b7base + \u03bb(1-\u03bb)\u00b7ft1 + \u03bb\u00b7ft2`, not the required `base + \u03bb(ft1-base) + \u03bb(ft2-base) = (1-2\u03bb)\u00b7base + \u03bb\u00b7ft1 + \u03bb\u00b7ft2` \u2014 for \u03bb=0.4 these differ substantially (e.g. base=0, ft1=ft2=1 gives 0.64 instead of 0.8). This violates Required Result step 2's exact formula, and is precisely the ordering hazard the spec warns against (\"each task vector must be taken against the unmodified base, not against a base that the first merge already changed\"). This numerical error would fail the grader's relative Frobenius error tolerance of 1e-3 on the 64 merged tensors.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T2-defective.py",
+  "started_at": "2026-09-06T16:17:18+00:00",
+  "finished_at": "2026-09-06T16:17:25+00:00",
+  "wall_clock_s": 6.9,
+  "tokens_in": 2,
+  "tokens_out": 331,
+  "cost_usd": 0.1121455,
+  "verdict": "no",
+  "verdict_text": "NO. The script sets `DROP_HEAD = 6`, so it removes rows/columns `768..895` instead of head 5's `640..767`; the kept rows are `0..767, 896..2047` rather than the required `0..639, 768..2047`. This violates Required result clauses 1\u20134 for every one of the 16 layers, and the output will fail the hidden reference's bit-exact value comparison. The shape assertions and the 114-tensor count still pass, so the wrong-head error is not caught by any of the required checks \u2014 the run completes silently with a garbage-attention checkpoint. The docstring likewise states head 6, confirming this is a consistent misreading of the specification rather than a typo in one place.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The removed head is off by one (head N+1 instead of head N). All shapes are still correct, so the artifact's own shape checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}
