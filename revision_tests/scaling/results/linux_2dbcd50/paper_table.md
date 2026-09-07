@@ -5,7 +5,7 @@ Run: `eacl2027_scaling_linux_2dbcd50`
 Commit: `2dbcd505115100f892e906413076ae93b3fcaa16`  
 Status: **USE — audited Linux CPU/I/O evidence within the stated claim boundary**
 
-| Model | Method | Correct | Wall median (s) | Peak RSS (GiB) | Effective GiB/s | Output shards |
+| **Model** | **Method** | **Correct ↑** | **Wall median (s) ↓** | **Peak RSS (GiB) ↓** | **Effective GiB/s ↑** | **Output shards** |
 |---|---|---:|---:|---:|---:|---:|
 | Pythia 70M | python_pytorch | 5/5 | 1.169 | 0.768 | 0.265 | 1 |
 | Pythia 70M | brainsurgery_inmemory | 5/5 | 4.335 | 0.815 | 0.071 | 1 |
