@@ -124,6 +124,25 @@ must not use the lossless pass rule.
 The old 50 prompts remain under `validation/` for historical compatibility but
 are excluded from this protocol.
 
+### Relationship to the previous 50-prompt evaluation
+
+| Endpoint | Previous 50-prompt scripts | New 70-prompt, ten-model matrix |
+|---|---|---|
+| Prompt provenance | Local prompt file without the required paper-facing source and sampling record | Versioned Belebele, MMLU, and HumanEval manifest with source hashes, licenses, strata, and deterministic selection |
+| Model coverage | Two reported original/transformed pairs | Ten pinned checkpoints across four families, 70M--12B |
+| Tensor equality before inference | Not part of the behavioral result | 3,243/3,243 tensors byte-exact under an independent oracle |
+| Final-token logits | Cosine similarity and absolute differences | Complete logit vector byte-exact for 700/700 prompt pairs; cosine is therefore not used as the primary endpoint |
+| Full-sequence per-position logits | Cosine and absolute differences along the generated sequence | Not measured |
+| Perplexity | Measured by the separate regression script | Not measured |
+| Top-1 prediction | Agreement rate | Exact agreement for 700/700 pairs |
+| Generated output | Exact and approximate text/token similarity | All 32 greedy token IDs exact for 700/700 pairs |
+| Multiple-choice behavior | Not a structured endpoint | Prediction agreement for 600/600 applicable pairs |
+
+The new matrix replaces the old result as the primary sourced, cross-model
+lossless-regression evidence, but it does not silently claim the old
+perplexity or full-sequence-cosine endpoints. Retain those old results only as
+separately labelled preliminary evidence if the manuscript needs them.
+
 ## Ten-checkpoint CUDA extension
 
 The versioned `eacl2027_behavioral_matrix_v2` extension applies the same

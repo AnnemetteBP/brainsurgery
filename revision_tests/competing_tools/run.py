@@ -710,7 +710,7 @@ def render_table(summary: dict[str, Any]) -> str:
 
 def latex_tool_name(tool: str) -> str:
     names = {
-        "brainsurgery": r"\textsc{BrainSurgery}",
+        "brainsurgery": "BrainSurgery",
         "mergekit": r"\textsc{MergeKit}",
         "torch_state_bridge": r"\texttt{torch-state-bridge}",
     }
@@ -737,7 +737,7 @@ def render_latex(summary: dict[str, Any]) -> str:
             "Controlled checkpoint-operation comparison. Runtime and peak RSS are "
             "medians over correctness-validated measured runs."
         )
-        warning = "% All automated reporting gates passed; complete human audit before use."
+        warning = "% Reportable paper evidence; all automated evaluation gates passed."
     else:
         caption = (
             "Non-reportable integration preflight. Timing and memory are suppressed; "

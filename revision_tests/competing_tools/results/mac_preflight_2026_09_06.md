@@ -1,5 +1,9 @@
 # Competing-tool preflight interpretation
 
+**SUPERSEDED FOR PAPER USE:** this is the non-reportable Mac integration
+preflight. The populated canonical Linux result is in
+`results/paper_table.{md,tex}` and `results/linux_2dbcd50/`.
+
 The actual-package macOS preflight produced correct outputs in all 6/6 measured
 tool/case attempts after all six warm-ups passed. The rename case preserved the
 160 GPT-2 source tensors and one synthetic nonmatching marker byte-exactly for
