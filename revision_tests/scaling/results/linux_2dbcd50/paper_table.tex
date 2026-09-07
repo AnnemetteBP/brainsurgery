@@ -1,0 +1,43 @@
+% Audited Linux CPU/I/O result. Do not combine with Mac preflight timings.
+\begin{table*}[t]
+\centering
+\small
+\begin{tabular}{lllrrr}
+\toprule
+\textbf{Model} & \textbf{Method} & \textbf{Correct $\uparrow$} & \textbf{Wall (s) $\downarrow$} & \textbf{Peak RSS (GiB) $\downarrow$} & \textbf{Effective GiB/s $\uparrow$} \\
+\midrule
+Pythia 70M & Python/PyTorch & 5/5 & \textbf{1.17} & \textbf{0.77} & \textbf{0.26} \\
+Pythia 70M & BrainSurgery (memory) & 5/5 & 4.34 & 0.82 & 0.07 \\
+Pythia 70M & BrainSurgery (arena) & 5/5 & 4.38 & 0.88 & 0.07 \\
+Pythia 410M & Python/PyTorch & 5/5 & \textbf{1.62} & 2.10 & \textbf{1.05} \\
+Pythia 410M & BrainSurgery (memory) & 5/5 & 5.23 & \textbf{1.52} & 0.32 \\
+Pythia 410M & BrainSurgery (arena) & 5/5 & 5.09 & 2.32 & 0.33 \\
+Pythia 2.8B & Python/PyTorch & 5/5 & \textbf{4.30} & 10.96 & \textbf{2.46} \\
+Pythia 2.8B & BrainSurgery (memory) & 5/5 & 9.06 & \textbf{5.97} & 1.17 \\
+Pythia 2.8B & BrainSurgery (arena) & 5/5 & 9.26 & 11.21 & 1.14 \\
+Pythia 12B & Python/PyTorch & 5/5 & \textbf{15.50} & 44.77 & \textbf{2.86} \\
+Pythia 12B & BrainSurgery (memory) & 5/5 & 24.59 & \textbf{22.88} & 1.81 \\
+Pythia 12B & BrainSurgery (arena) & 5/5 & 26.54 & 28.18 & 1.67 \\
+GPT-2 124M & Python/PyTorch & 5/5 & \textbf{1.42} & 1.47 & \textbf{0.72} \\
+GPT-2 124M & BrainSurgery (memory) & 5/5 & 5.07 & \textbf{1.18} & 0.20 \\
+GPT-2 124M & BrainSurgery (arena) & 5/5 & 5.05 & 1.61 & 0.20 \\
+GPT-2 XL 1.5B & Python/PyTorch & 5/5 & \textbf{5.02} & 12.29 & \textbf{2.38} \\
+GPT-2 XL 1.5B & BrainSurgery (memory) & 5/5 & 9.94 & \textbf{6.66} & 1.21 \\
+GPT-2 XL 1.5B & BrainSurgery (arena) & 5/5 & 10.77 & 12.50 & 1.11 \\
+OLMo 1B (sharded) & Python/PyTorch & 5/5 & \textbf{4.51} & 9.65 & \textbf{2.11} \\
+OLMo 1B (sharded) & BrainSurgery (memory) & 5/5 & 9.70 & \textbf{5.44} & 0.98 \\
+OLMo 1B (sharded) & BrainSurgery (arena) & 5/5 & 9.35 & 9.37 & 1.02 \\
+OLMo 7B (sharded, FP32) & Python/PyTorch & 5/5 & \textbf{18.40} & 30.81 & \textbf{2.79} \\
+OLMo 7B (sharded, FP32) & BrainSurgery (memory) & 5/5 & 24.98 & \textbf{26.33} & 2.05 \\
+OLMo 7B (sharded, FP32) & BrainSurgery (arena) & 5/5 & 30.23 & 29.02 & 1.70 \\
+Qwen2.5 0.5B & Python/PyTorch & 5/5 & \textbf{1.79} & 2.34 & \textbf{1.03} \\
+Qwen2.5 0.5B & BrainSurgery (memory) & 5/5 & 5.39 & \textbf{1.59} & 0.34 \\
+Qwen2.5 0.5B & BrainSurgery (arena) & 5/5 & 5.36 & 2.35 & 0.34 \\
+Qwen2.5 7B (sharded, BF16) & Python/PyTorch & 5/5 & \textbf{10.79} & 28.87 & \textbf{2.63} \\
+Qwen2.5 7B (sharded, BF16) & BrainSurgery (memory) & 5/5 & 16.09 & \textbf{14.86} & 1.76 \\
+Qwen2.5 7B (sharded, BF16) & BrainSurgery (arena) & 5/5 & 17.96 & 18.04 & 1.58 \\
+\bottomrule
+\end{tabular}
+\caption{Controlled Linux CPU checkpoint rewrite ($\uparrow$/$\downarrow$ indicate better; bold marks the best time, memory, and throughput within each model). Medians are over five correctness-validated repetitions; all methods were correct in every run. The Pythia points form the within-family scaling curve; GPT-2, OLMo, and Qwen are separate architecture/storage checks.}
+\label{tab:checkpoint-scaling}
+\end{table*}

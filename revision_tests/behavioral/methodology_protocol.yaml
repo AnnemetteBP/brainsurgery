@@ -1,0 +1,66 @@
+protocol_id: eacl2027_behavioral_methodology_v5
+purpose: Separate structural losslessness from the Pythia arithmetic precision ablation.
+source_matrix: revision_tests/scaling/cases.yaml
+expected_model_ids: [P01, P02, P03, P04, G01, G02, O01, O02, Q01, Q02]
+structural_losslessness:
+  model_ids: [P01, P02, P03, P04, G01, G02, O01, O02, Q01, Q02]
+  dtype: native_checkpoint_dtype
+  temporary_namespace: __structural_roundtrip
+  transforms:
+    - move_selected_namespace
+    - restore_original_names
+  arithmetic_allowed: false
+  independent_reference: direct_pytorch_identical_rename_restore
+pythia_precision_ablation:
+  model_ids: [P01, P02, P03, P04]
+  operation:
+    target_regex: .*\.weight
+    forward_factor: 0.5
+    backward_factor: 2.0
+  arms:
+    - id: native_fp16
+      storage_dtype: float16
+      inference_dtype: float16
+    - id: fp32_throughout
+      storage_dtype: float32
+      inference_dtype: float32
+      cast_back_to_float16: false
+inference:
+  prompt_manifest: revision_tests/behavioral/prompt_manifest.jsonl
+  prompts_per_model: 70
+  max_new_tokens: 32
+  device: cuda:0
+  do_sample: false
+  seed: 0
+thresholds:
+  minimum_mean_last_token_logit_cosine: 0.9999
+  maximum_mean_perplexity_ratio: 1.01
+metrics:
+  - exact_tensor_equality
+  - reference_perplexity
+  - transformed_perplexity
+  - perplexity_ratio
+  - last_token_logit_cosine
+  - last_token_mean_absolute_difference
+  - last_token_max_absolute_difference
+  - full_sequence_positions_compared
+  - full_sequence_mean_logit_cosine
+  - full_sequence_min_logit_cosine
+  - full_sequence_mean_abs_logit_diff
+  - full_sequence_max_abs_logit_diff
+  - top1_match
+  - output_exact_match
+  - output_char_similarity
+  - output_token_sequence_similarity
+  - output_token_bag_cosine
+  - mcq_prediction_match
+  - nan_count
+  - inf_count
+reporting:
+  group_by: [source, task_category, language_code]
+  preserve_per_prompt_metrics: true
+  preserve_per_model_aggregates: true
+  generate_tables_on_negative_results: true
+  required_artifacts: [summary.json, evidence.json, table.md, table.tex, paper_text.md, paper_text.tex]
+output_shard_size: 256MB
+output_shard_size_bytes: 268435456

@@ -1,0 +1,50 @@
+protocol_id: eacl2027_behavioral_paper_v4
+purpose: Expand the original paper behavioral analysis without replacing any original metric.
+source_matrix: revision_tests/scaling/cases.yaml
+expected_model_ids: [P01, P02, P03, P04, G01, G02, O01, O02, Q01, Q02]
+operation:
+  description: Compare a meaningful scale rewrite with an independent PyTorch implementation, then test a forward-backward scale and namespace round trip against the original.
+  target_regex: '.*\.weight'
+  forward_factor: 0.5
+  backward_factor: 2.0
+  temporary_namespace: __behavioral_roundtrip
+  output_shard_size: 256MB
+  output_shard_size_bytes: 268435456
+inference:
+  prompt_manifest: revision_tests/behavioral/prompt_manifest.jsonl
+  prompts_per_model: 70
+  max_new_tokens: 32
+  device: cuda:0
+  dtype: source_checkpoint_weight_dtype
+  do_sample: false
+  seed: 0
+thresholds:
+  minimum_mean_last_token_logit_cosine: 0.9999
+  maximum_mean_perplexity_ratio: 1.01
+required_old_paper_metrics:
+  - reference_perplexity
+  - transformed_perplexity
+  - perplexity_ratio
+  - last_token_logit_cosine
+  - last_token_mean_absolute_difference
+  - last_token_max_absolute_difference
+  - full_sequence_positions_compared
+  - full_sequence_mean_logit_cosine
+  - full_sequence_min_logit_cosine
+  - full_sequence_mean_abs_logit_diff
+  - full_sequence_max_abs_logit_diff
+  - top1_match
+  - output_exact_match
+  - output_char_similarity
+  - output_token_sequence_similarity
+  - output_token_bag_cosine
+additional_metrics:
+  - mcq_prediction_match
+reporting:
+  required_comparisons: [imperative_equivalence, regression_preservation]
+  restored_tensor_reference: independent_pytorch_forward_backward
+  preserve_per_prompt_metrics: true
+  preserve_per_model_aggregates: true
+  group_by: [source, task_category, language_code]
+  forbid_placeholder_tables: true
+  forbid_nonfinite_metrics: true

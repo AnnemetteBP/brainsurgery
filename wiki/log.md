@@ -405,3 +405,20 @@ All 8 spot-checked models pass on GPU/bf16 with `masked_top1_eq=True`:
 
 - 27 PASS, 2 pre-existing FAIL (SmolLM2-135M, granite-3.1-2b), 0 ERROR, 0 regressions
 - Updated `wiki/vllm-backend-debug.md` with full B200 backend status table
+
+
+## [2026-09-06] Revision comparison | transient Linux `/proc` I/O denial
+
+- The first Linux comparison run at commit `6dd84b5c` produced 30/30 correct measured outputs but was non-reportable because every attempt set the degraded process-tree sampling flag. Raw evidence: `log/revision_tests/eacl2027_competing_linux_6dd84b5/competing_tools/`.
+- Caused-by: while importing Torch in this container, `psutil.Process.io_counters()` intermittently raises `AccessDenied` for the live root PID even though later samples succeed; a minimal probe observed successful RSS/I/O samples around the transient denials.
+- Fixed-by: the comparison and scaling monitors treat `NoSuchProcess` as a normal exit race and resolve transient access failures per PID. Sampling remains degraded if a PID with a permission/counter failure never produces both an RSS and I/O sample.
+- Validated-by: focused negative controls cover vanished processes, transient denial, and persistent denial; `linux_sampling_fix_smoke_v2_6dd84b5` completed 6/6 correct measured attempts with no sampling degradation.
+
+## [2026-09-07] Behavioral paper matrix | invalid v3 lossless round-trip oracle
+
+- The v3 paper-matrix preflight stopped before inference on Pythia 70M: both direct-PyTorch and BrainSurgery scale-by-0.5 outputs passed 94/94 exact tensor checks, but only 62/94 tensors passed when the BrainSurgery `0.5` then `2.0` output was incorrectly compared byte-for-byte with the original. Raw evidence: `log/revision_tests/eacl2027_behavioral_paper_cuda_81169eeb/behavioral_paper/`.
+- Caused-by: FP16 subnormal values can underflow during multiply-by-0.5 and cannot be recovered by multiply-by-2; the v3 `.*` oracle also selected non-floating attention buffers as arithmetic targets.
+- Superseded-by: `eacl2027_behavioral_paper_v4` retains the paper's factors but compares BrainSurgery's forward--backward tensor output with an independent direct-PyTorch forward--backward output. Original-versus-restored behavior remains a separate measured comparison.
+- Validated-by: the corrected Pythia oracle matched 94/94 tensors exactly, all four Pythia checkpoints (70M through 12B) produced finite endpoint loss/logits and downstream metrics in native FP16 on a one-prompt CUDA diagnostic, and 27 focused behavioral runner tests passed before evidence preservation.
+- Preflight result: Pythia 70M remained finite but failed regression preservation across all 70 prompts (mean perplexity ratio 1.01559670 versus the 1.01 criterion). The orchestrator therefore retains complete threshold failures and continues the architecture matrix while still suppressing passed-paper artifacts.
+- Full v4 result: `eacl2027_behavioral_paper_cuda_4cb30d71` completed 10 models, 20 comparisons, and 1,400 finite prompt rows on NVIDIA B200. All tensor oracles and all imperative-equivalence comparisons passed. Both comparisons passed for FP32 GPT-2/OLMo and BF16 Qwen; all four native-FP16 Pythia regression-preservation comparisons failed at least one frozen threshold. The result is preserved as complete non-reportable evidence without paper tables/prose.

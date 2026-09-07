@@ -1,0 +1,20 @@
+% Populated canonical table from eacl2027_competing_linux_2dbcd50.
+% Audited narrow Linux comparison. Do not combine with Mac preflight timings.
+\begin{table*}[t]
+\centering
+\small
+\begin{tabular}{llrrrr}
+\toprule
+\textbf{Case} & \textbf{Tool} & \textbf{Correct $\uparrow$} & \textbf{Wall (s) $\downarrow$} & \textbf{Peak RSS (MiB) $\downarrow$} & \textbf{Output (MiB)} \\
+\midrule
+R01 & BrainSurgery & \textbf{5/5} & 5.042 & 1785.7 & 522.7 \\
+R01 & \texttt{torch-state-bridge} & \textbf{5/5} & \textbf{1.478} & \textbf{1571.9} & 522.7 \\
+M01 & BrainSurgery & \textbf{5/5} & 5.292 & \textbf{2166.7} & 474.7 \\
+M01 & MergeKit & \textbf{5/5} & \textbf{4.887} & 2890.4 & 474.7 \\
+M02 & BrainSurgery & \textbf{5/5} & 5.480 & \textbf{3115.1} & 474.7 \\
+M02 & MergeKit & \textbf{5/5} & \textbf{5.289} & 3895.3 & 474.7 \\
+\bottomrule
+\end{tabular}
+\caption{Controlled checkpoint-operation comparison on Linux ($\uparrow$/$\downarrow$ indicate better; bold marks the best value within each case, with correctness ties). Runtime and peak RSS are medians over five correctness-validated runs per tool and case; all 30 measured outputs passed the independent oracle. End-to-end time includes process startup, checkpoint loading, transformation, and output saving.}
+\label{tab:competing-tools}
+\end{table*}
