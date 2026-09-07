@@ -287,8 +287,11 @@ paste-ready result prose.
       OLMo, and Qwen2.5 pairs separately rather than pooling architectures.
 - [x] Use the same hardware, filesystem, warm-cache policy, inputs, operation,
       and one-worker setting for every point in the reported comparison.
-- [ ] Require all automated reportability gates plus human artifact/anonymity
-      review before copying compact summaries into `scaling/results/`.
+- [x] Run all automated reportability gates and copy compact summaries into
+      `scaling/results/`.
+- [ ] Complete the final provenance/artifact review: the summaries record
+      execution commit `2dbcd505115100f892e906413076ae93b3fcaa16`, which must
+      be reachable in the repository before final citation.
 
 Small smoke cases may run on any CUDA-capable Linux host. Use the larger GPU
 backend for 7B+ execution and downstream evaluation when the smaller GPU cannot
@@ -297,7 +300,10 @@ as CPU/I/O work rather than attributed to the GPU.
 
 ## Phase 4: return results and integrate on macOS
 
-- [ ] Copy or merge only completed, audited result summaries.
+- [x] Copy the completed correctness, robustness, scaling, and competing-tool
+      compact summaries.
+- [ ] Close the shared Linux provenance gate before treating robustness,
+      scaling, or competing-tool measurements as final-citation-ready.
 - [x] Keep raw artifacts under `log/revision_tests/<run_id>/` or in the external
       archival location; do not add large outputs to Git.
 - [x] Re-run analysis from the imported raw records.

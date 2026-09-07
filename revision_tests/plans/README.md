@@ -14,6 +14,11 @@
   claims.
 - [`paper_evidence_map.md`](paper_evidence_map.md) states which results are
   usable and their exact claim boundaries.
+- [`submission_readiness.md`](submission_readiness.md) audits all 15 revision
+  items and separates completed executions from final-citation-ready evidence.
+- `../validate_submission_evidence.py` enforces the corresponding artifact,
+  count, protocol, and reachable-execution-revision gates without running any
+  experiment.
 - [`paper_integration_guide.md`](paper_integration_guide.md) gives the literal
   main-paper and appendix structure, exact table/prose files, and rules for
   combining Mac and Linux results.

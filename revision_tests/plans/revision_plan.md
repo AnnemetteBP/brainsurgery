@@ -53,7 +53,7 @@ that should be handled through scope/claim changes in this revision.
 | 5 | Claims and positioning | Frame BrainSurgery as checkpoint-editing systems/tooling; replace universal “easier” or “efficient” claims with claims directly supported by results. | P0 | `revision_tests/plans/claim_boundaries.md` and final evidence map |
 | 6 | Reproducibility | Preserve protocols, commands, manifests, machine fingerprints, compact summaries, and raw-result locations. | P0 | this directory and `log/revision_tests/` |
 | 7 | Competing tools | Benchmark a small number of genuinely shared operations against MergeKit and `torch-state-bridge`; improve Orbax positioning and distinguish direct comparisons from adjacent feature coverage. | P1 | `revision_tests/competing_tools/` |
-| 8 | Scaling | Add a controlled four-point Pythia curve through 12B plus paired GPT-2, OLMo, and Qwen2.5 architecture/storage checks, with time, memory, I/O, dtype, and sharding measurements. Protocol and harness are frozen/Mac-preflighted; real measurements remain Linux work. | P1 | `revision_tests/scaling/` |
+| 8 | Scaling | Add a controlled four-point Pythia curve through 12B plus paired GPT-2, OLMo, and Qwen2.5 architecture/storage checks, with time, memory, I/O, dtype, and sharding measurements. The Linux measurements are complete; final citation remains gated on restoring the recorded execution revision. | P1 | `revision_tests/scaling/` |
 | 9 | Behavioral evaluation | Replace the undocumented prompt set with a versioned, sourced, categorized manifest and stated evaluation procedure. | P1 | `revision_tests/behavioral/` |
 | 10 | Demo video | Create a narrated valid-plan → intentional failure → diagnosis → correction → validation/diff → export walkthrough. | P1 | demo script/storyboard, then submission asset |
 | 11 | Downstream quality | Evaluate one defensible intentionally lossy transformation against an unchanged baseline if compute and methodology permit. | P2 | `revision_tests/downstream/` |
@@ -108,16 +108,16 @@ reviewed more accurately is still informative.
 - [ ] The usability study has complete repeats and manual bookkeeping.
 - [x] Correctness uses independent, hand-verifiable evidence. See
       `revision_tests/correctness/results/`.
-- [x] Robustness and current failure-publication semantics are demonstrated.
+- [ ] Robustness and current failure-publication semantics are numerically demonstrated, but final citation remains gated on restoring the recorded Linux execution revision.
       See `revision_tests/robustness/results/`; failures before publication are
       safe in all 15 enumerated cases, while three mid-save cases expose
       partial or mixed output and rule out an atomic-publication claim.
-- [x] Scaling claims match the largest tested checkpoint and controlled metrics.
+- [ ] Scaling measurements and bounded claims are prepared, but final citation remains gated on restoring the recorded Linux execution revision.
 - [ ] The expanded behavioral analysis retains both original-paper comparisons
       and every original metric across the sourced prompt/model matrix. The
       corrected protocol is prepared in `revision_tests/behavioral/`; complete
       Linux/CUDA evidence has not yet been generated.
-- [x] Baseline comparisons use genuinely equivalent operations and one oracle.
+- [ ] Baseline measurements use genuinely equivalent operations and one oracle, but final citation remains gated on restoring the recorded Linux execution revision.
 - [x] Direct comparisons and adjacent related-system capabilities are separated
       in Markdown and LaTeX. See
       `revision_tests/competing_tools/feature_coverage.{md,tex}`.
@@ -128,3 +128,7 @@ reviewed more accurately is still informative.
 - [ ] The narrated demo follows the final documented behavior.
 - [ ] The abstract, introduction, conclusion, and limitations make no claim
       stronger than the completed evidence.
+
+The authoritative item-by-item audit is
+[`submission_readiness.md`](submission_readiness.md). A checked execution gate
+does not by itself mean that a result is ready for final citation.
