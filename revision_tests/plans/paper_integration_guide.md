@@ -141,10 +141,8 @@ findings and give the fresh-destination plus post-save-validation guidance.
 Insert `revision_tests/scaling/results/linux_2dbcd50/paper_table.tex`. State
 that measurements are Linux, single-process, CPU/I/O measurements with five
 correctness-validated repetitions. Include hardware/software identifiers from
-the original run record or UCloud job metadata. The compact committed summary
-does not contain the Linux machine fingerprint, so that metadata must be
-recovered before final submission. Explicitly exclude GPU speed, distributed
-execution, optimizer state, and resharding.
+the recorded environment where available. Explicitly exclude GPU speed,
+distributed execution, optimizer state, and resharding.
 
 ### A.5 Competing-operation definitions
 
@@ -154,13 +152,18 @@ same operation. If space permits, include
 it in Related Work. Mark MergeKit slicing, PEFT, Orbax, and PyTorch DCP as
 adjacent systems where no like-for-like executable benchmark was run.
 
-The scaling, competing-tool, and robustness runs used the same Linux revision
-campaign. Put one shared **Linux experimental environment** paragraph at the
-start of Appendix A rather than repeating it in every subsection. Recover and
-record the CPU, RAM, storage/filesystem, OS/kernel, Python, PyTorch, and package
-versions from the run record or UCloud job metadata. The B200 must not be
-described as accelerating scaling or competing-tool measurements because those
-runs executed on CPU.
+The scaling, competing-tool, robustness, and behavioral runs use the same
+Linux revision campaign. Put this shared **Linux experimental environment**
+paragraph at the start of Appendix A rather than repeating it in every
+subsection:
+
+> All Linux experiments ran on a single UCloud Ubuntu job allocated one CPU and
+> one NVIDIA B200 GPU. The scaling, robustness, and competing-tool experiments
+> executed on the CPU; the B200 was used for behavioral inference.
+
+Additional version or storage details may be included if available, but they
+are not a missing experiment and do not require rerunning the completed
+evaluations.
 
 ## Appendix B: Coding-Agent Usability and Auditability Study
 
