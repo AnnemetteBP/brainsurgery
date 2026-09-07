@@ -141,8 +141,12 @@ findings and give the fresh-destination plus post-save-validation guidance.
 Insert `revision_tests/scaling/results/linux_2dbcd50/paper_table.tex`. State
 that measurements are Linux, single-process, CPU/I/O measurements with five
 correctness-validated repetitions. Include hardware/software identifiers from
-the recorded environment where available. Explicitly exclude GPU speed,
-distributed execution, optimizer state, and resharding.
+the environment record captured automatically by the scaling runner at
+`log/revision_tests/eacl2027_scaling_linux_2dbcd50/scaling/environment.json`.
+It contains the platform/kernel string, CPU counts and affinity, RAM, disk and
+filesystem information, Python and package versions, GPU inventory, Git
+commit, worker count, sampling interval, and workload note. Explicitly exclude
+GPU speed, distributed execution, optimizer state, and resharding.
 
 ### A.5 Competing-operation definitions
 
@@ -152,18 +156,24 @@ same operation. If space permits, include
 it in Related Work. Mark MergeKit slicing, PEFT, Orbax, and PyTorch DCP as
 adjacent systems where no like-for-like executable benchmark was run.
 
-The scaling, competing-tool, robustness, and behavioral runs use the same
-Linux revision campaign. Put this shared **Linux experimental environment**
-paragraph at the start of Appendix A rather than repeating it in every
-subsection:
+The competing-tool runner separately captured its full environment before any
+measurement at
+`log/revision_tests/eacl2027_competing_linux_2dbcd50/competing_tools/environment.json`.
+That record includes platform/kernel, CPU counts and affinity, RAM, disk and
+filesystem, Git state, workload controls, and complete package snapshots for
+the isolated BrainSurgery, MergeKit, and torch-state-bridge environments.
 
-> All Linux experiments ran on a single UCloud Ubuntu job allocated one CPU and
-> one NVIDIA B200 GPU. The scaling, robustness, and competing-tool experiments
-> executed on the CPU; the B200 was used for behavioral inference.
+These records—not UCloud job-page metadata—are the authoritative source for
+the shared **Linux experimental environment** paragraph at the start of
+Appendix A. They are private raw records because they contain a hostname and
+absolute paths; copy only non-identifying hardware, software-version, and
+filesystem fields into the anonymous paper. No completed evaluation must be
+rerun to obtain this information.
 
-Additional version or storage details may be included if available, but they
-are not a missing experiment and do not require rerunning the completed
-evaluations.
+The robustness runner also captured its Linux environment at
+`log/revision_tests/eacl2027_robustness_linux_2dbcd50/robustness/environment.json`.
+The two macOS correctness environment records are already committed inside
+their respective `revision_tests/correctness/results/` directories.
 
 ## Appendix B: Coding-Agent Usability and Auditability Study
 
