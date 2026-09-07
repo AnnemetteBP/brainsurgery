@@ -1,4 +1,4 @@
-protocol_id: eacl2027_behavioral_paper_v3
+protocol_id: eacl2027_behavioral_paper_v4
 purpose: Expand the original paper behavioral analysis without replacing any original metric.
 source_matrix: revision_tests/scaling/cases.yaml
 expected_model_ids: [P01, P02, P03, P04, G01, G02, O01, O02, Q01, Q02]
@@ -42,7 +42,9 @@ additional_metrics:
   - mcq_prediction_match
 reporting:
   required_comparisons: [imperative_equivalence, regression_preservation]
+  restored_tensor_reference: independent_pytorch_forward_backward
   preserve_per_prompt_metrics: true
   preserve_per_model_aggregates: true
   group_by: [source, task_category, language_code]
   forbid_placeholder_tables: true
+  forbid_nonfinite_metrics: true

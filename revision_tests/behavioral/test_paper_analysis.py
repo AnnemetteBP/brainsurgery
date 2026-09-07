@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import pytest
+import torch
 
 from revision_tests.behavioral.run_paper_analysis import (
     REQUIRED_PROMPT_METRICS,
+    prompt_forward,
     require_complete_rows,
     summarize_rows,
 )
@@ -57,3 +59,33 @@ def test_completeness_gate_rejects_every_missing_metric(missing):
 def test_completeness_gate_rejects_nonfinite_metric():
     with pytest.raises(ValueError, match="not finite"):
         require_complete_rows([complete_row(reference_perplexity=float("nan"))], 1)
+
+
+class NonfiniteModel(torch.nn.Module):
+    def __init__(self, *, loss: float, logit: float):
+        super().__init__()
+        self.loss = loss
+        self.logit = logit
+
+    def forward(self, **_kwargs):
+        return type(
+            "Output",
+            (),
+            {
+                "loss": torch.tensor(self.loss),
+                "logits": torch.tensor([[[self.logit, 0.0]]]),
+            },
+        )()
+
+
+@pytest.mark.parametrize(
+    ("loss", "logit", "message"),
+    [(float("nan"), 0.0, "loss"), (0.0, float("inf"), "logits")],
+)
+def test_prompt_forward_rejects_nonfinite_model_outputs(loss, logit, message):
+    with pytest.raises(FloatingPointError, match=message):
+        prompt_forward(
+            NonfiniteModel(loss=loss, logit=logit),
+            torch.tensor([[1]]),
+            torch.tensor([[1]]),
+        )

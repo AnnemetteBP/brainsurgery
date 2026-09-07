@@ -38,7 +38,7 @@ from validation.test_inference import (
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 DEFAULT_MANIFEST = HERE / "prompt_manifest.jsonl"
-PROTOCOL_ID = "eacl2027_behavioral_paper_v3"
+PROTOCOL_ID = "eacl2027_behavioral_paper_v4"
 REQUIRED_PROMPT_METRICS = {
     "reference_perplexity",
     "transformed_perplexity",
@@ -186,7 +186,12 @@ def prompt_forward(
             labels=input_ids,
             use_cache=False,
         )
-    perplexity = math.exp(float(output.loss.item()))
+    loss = float(output.loss.item())
+    if not math.isfinite(loss):
+        raise FloatingPointError("model produced a non-finite loss")
+    if not bool(torch.isfinite(output.logits).all().item()):
+        raise FloatingPointError("model produced non-finite logits")
+    perplexity = math.exp(loss)
     last_index = int(attention_mask[0].sum().item()) - 1
     logits = output.logits[0, last_index].detach().float().cpu().contiguous()
     return perplexity, logits

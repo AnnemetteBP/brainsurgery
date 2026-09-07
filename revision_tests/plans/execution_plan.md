@@ -248,8 +248,9 @@ disabled.
 The earlier `eacl2027_behavioral_matrix_v2` run used a multiply-by-one rewrite.
 It is retained only as an auxiliary serialization check and must not be used as
 the expanded behavioral result. The corrected protocol is
-`revision_tests/behavioral/paper_protocol.yaml`; no complete v3 result exists
-yet.
+`revision_tests/behavioral/paper_protocol.yaml`; no complete v4 result exists
+yet. A v3 preflight correctly stopped when its oracle treated the numerically
+lossy FP16 `0.5` then `2.0` round trip as byte-identical to the original.
 
 ### 11. Downstream quality
 

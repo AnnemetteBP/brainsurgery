@@ -43,7 +43,7 @@ def result_fixture():
         "mcq_prediction_matches": 1,
     }
     return {
-        "protocol_id": "eacl2027_behavioral_paper_v3",
+        "protocol_id": "eacl2027_behavioral_paper_v4",
         "thresholds_passed": True,
         "reported_eligible": False,
         "aggregate": aggregate,
@@ -53,7 +53,11 @@ def result_fixture():
 
 
 def test_protocol_retains_all_original_metrics():
-    load_protocol()
+    protocol = load_protocol()
+    assert protocol["reporting"]["forbid_nonfinite_metrics"] is True
+    assert protocol["reporting"]["restored_tensor_reference"] == (
+        "independent_pytorch_forward_backward"
+    )
 
 
 def test_result_gate_accepts_complete_result():
@@ -91,6 +95,7 @@ def test_tables_are_generated_only_from_complete_evidence():
     assert "1.00000000" in render_latex(evidence)
     assert paper_totals(evidence)["prompts"] == 1
     assert "1/1 top-1 agreement" in render_paper_text(evidence)
+    assert "independent direct-PyTorch forward--backward outputs" in render_paper_text(evidence)
     assert "\\paragraph{Behavioral" in render_paper_text(evidence, latex=True)
 
 

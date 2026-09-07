@@ -142,11 +142,11 @@ The historical command was:
 .venv/bin/python revision_tests/behavioral/run_cuda_matrix.py
 ```
 
-Do not rerun this protocol for paper evidence. Use the v3 protocol below.
+Do not rerun this protocol for paper evidence. Use the v4 protocol below.
 
 ## Expanded paper analysis
 
-`paper_protocol.yaml` and `run_cuda_paper_matrix.py` implement the actual
+`paper_protocol.yaml` and `run_cuda_paper_matrix.py` implement the v4
 revision of the paper's behavioral analysis. They retain every original
 measurement: reference/transformed perplexity and ratio, final-token cosine
 and absolute differences, full-sequence cosine and absolute differences,
@@ -165,5 +165,9 @@ sanitized `evidence.json`, Markdown/LaTeX tables, and Markdown/LaTeX
 paste-ready result prose below
 `revision_tests/behavioral/results/<run_id>/`. It refuses to create those paper
 artifacts for a partial matrix, a smoke run, a failed threshold, or any missing
-required measurement. The earlier `eacl2027_behavioral_matrix_v2`
-multiply-by-one run is auxiliary and is not a substitute for this analysis.
+required measurement or any non-finite loss, logit, or derived metric. The independent tensor gate compares BrainSurgery's
+forward--backward result with the same two-step operation implemented by direct
+PyTorch. This preserves the original factor while accounting correctly for
+dtype rounding; behavioral preservation is still measured against the original
+checkpoint. The earlier `eacl2027_behavioral_matrix_v2` multiply-by-one run is
+auxiliary and is not a substitute for this analysis.

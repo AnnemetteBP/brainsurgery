@@ -29,7 +29,7 @@ from revision_tests.scaling.validate_protocol import EXPECTED_IDS, load_cases
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 PROTOCOL_PATH = HERE / "paper_protocol.yaml"
-PROTOCOL_ID = "eacl2027_behavioral_paper_v3"
+PROTOCOL_ID = "eacl2027_behavioral_paper_v4"
 COMPARISONS = ("imperative_equivalence", "regression_preservation")
 REQUIRED_AGGREGATES = {
     "reference_mean_perplexity",
@@ -80,7 +80,9 @@ def load_protocol() -> dict[str, Any]:
     reporting = value.get("reporting", {})
     if reporting.get("required_comparisons") != list(COMPARISONS):
         raise ValueError("both original paper comparisons are required")
-    if not all(reporting.get(key) is True for key in ("preserve_per_prompt_metrics", "preserve_per_model_aggregates", "forbid_placeholder_tables")):
+    if reporting.get("restored_tensor_reference") != "independent_pytorch_forward_backward":
+        raise ValueError("the restored tensor oracle must use the independent PyTorch round trip")
+    if not all(reporting.get(key) is True for key in ("preserve_per_prompt_metrics", "preserve_per_model_aggregates", "forbid_placeholder_tables", "forbid_nonfinite_metrics")):
         raise ValueError("evidence preservation gates must remain enabled")
     return value
 
@@ -239,8 +241,8 @@ def render_paper_text(evidence: dict[str, Any], *, latex: bool = False) -> str:
         "An independent tensor oracle first matched all "
         f"{values['scaled_tensors']} tensors in the BrainSurgery scaling outputs to "
         "the direct-PyTorch outputs and all "
-        f"{values['restored_tensors']} tensors in the forward--backward outputs to "
-        "their original checkpoints. "
+        f"{values['restored_tensors']} tensors in the BrainSurgery forward--backward "
+        "outputs to independent direct-PyTorch forward--backward outputs. "
         "For the meaningful weight-scaling operation, BrainSurgery and a separate "
         "direct-PyTorch implementation had per-model mean perplexity ratios in "
         f"[{values['equivalence_ppl_ratio_min']:.8f}, {values['equivalence_ppl_ratio_max']:.8f}], "
@@ -266,8 +268,11 @@ def run_case(args: argparse.Namespace, case: dict[str, Any], protocol: dict[str,
     if not source.exists() or not verify_huggingface_revision(source, case["revision"])["passed"]:
         raise RuntimeError(f"{case['id']}: source or pinned revision invalid")
     case_root = run_root / case["id"].lower()
-    generated = REPO / "models" / "behavioral_paper_v3" / case["id"].lower()
-    python_scaled, bs_scaled, restored = generated / "python_scaled", generated / "brainsurgery_scaled", generated / "brainsurgery_restored"
+    generated = REPO / "models" / "behavioral_paper_v4" / case["id"].lower()
+    python_scaled = generated / "python_scaled"
+    python_restored = generated / "python_restored"
+    bs_scaled = generated / "brainsurgery_scaled"
+    restored = generated / "brainsurgery_restored"
     if case_root.exists() or generated.exists():
         raise RuntimeError(f"{case['id']}: refusing to overwrite prior artifacts")
     case_root.mkdir(parents=True)
@@ -280,14 +285,24 @@ def run_case(args: argparse.Namespace, case: dict[str, Any], protocol: dict[str,
     run([str(REPO / ".venv/bin/brainsurgery"), str(restored_plan), *common])
     operation = protocol["operation"]
     run([str(REPO / ".venv/bin/python"), str(REPO / "revision_tests/scaling/baseline.py"), "--input", str(source), "--output", str(python_scaled), "--target-regex", operation["target_regex"], "--factor", str(operation["forward_factor"]), "--shard-size-bytes", str(operation["output_shard_size_bytes"])])
-    for output in (python_scaled, bs_scaled, restored):
+    run([str(REPO / ".venv/bin/python"), str(REPO / "revision_tests/scaling/baseline.py"), "--input", str(python_scaled), "--output", str(python_restored), "--target-regex", operation["target_regex"], "--factor", str(operation["backward_factor"]), "--shard-size-bytes", str(operation["output_shard_size_bytes"])])
+    for output in (python_scaled, python_restored, bs_scaled, restored):
         copy_model_sidecars(source, output)
     oracle_specs = {
         "python_scaled": (python_scaled, operation["target_regex"], operation["forward_factor"]),
         "brainsurgery_scaled": (bs_scaled, operation["target_regex"], operation["forward_factor"]),
-        "brainsurgery_restored": (restored, r".*", 1.0),
+        "brainsurgery_restored": (restored, operation["target_regex"], 1.0),
     }
-    oracles = {name: compare_output(source, output, target_regex=regex, factor=factor, shard_size_bytes=operation["output_shard_size_bytes"]) for name, (output, regex, factor) in oracle_specs.items()}
+    oracles = {
+        name: compare_output(
+            python_restored if name == "brainsurgery_restored" else source,
+            output,
+            target_regex=regex,
+            factor=factor,
+            shard_size_bytes=operation["output_shard_size_bytes"],
+        )
+        for name, (output, regex, factor) in oracle_specs.items()
+    }
     if not all(value["passed"] for value in oracles.values()) or checkpoint_hashes(source) != source_before:
         raise RuntimeError(f"{case['id']}: independent tensor oracle failed")
     comparisons = {
@@ -297,7 +312,18 @@ def run_case(args: argparse.Namespace, case: dict[str, Any], protocol: dict[str,
     result = {
         key: case[key] for key in ("id", "display", "family", "nominal_parameter_count", "model_id", "revision")
     }
-    result.update({"dtype": case["expected_weight_dtype"], "tensor_oracle": {name: {key: value[key] for key in ("passed", "tensors_checked", "tensors_passed")} for name, value in oracles.items()}, "comparisons": comparisons})
+    tensor_oracle = {
+        name: {
+            **{key: value[key] for key in ("passed", "tensors_checked", "tensors_passed")},
+            "reference": (
+                "independent_pytorch_forward_backward"
+                if name == "brainsurgery_restored"
+                else "original_checkpoint"
+            ),
+        }
+        for name, value in oracles.items()
+    }
+    result.update({"dtype": case["expected_weight_dtype"], "tensor_oracle": tensor_oracle, "comparisons": comparisons})
     if not args.keep_transformed:
         shutil.rmtree(generated)
     return result

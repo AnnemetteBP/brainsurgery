@@ -143,12 +143,16 @@ retain both:
    output agreement, character similarity, token-sequence similarity, and
    token-bag cosine.
 
-The corrected protocol is `revision_tests/behavioral/paper_protocol.yaml`; the
+The corrected v4 protocol is `revision_tests/behavioral/paper_protocol.yaml`; the
 runner is `revision_tests/behavioral/run_cuda_paper_matrix.py`. It expands both
 comparisons to the documented 70-prompt suite and ten-model matrix, records all
 metrics per prompt, aggregates by model/source/task/language, and produces no
 paper table if any measurement is absent. Do not write behavioral result prose
 until this run has generated and preserved `evidence.json`.
+
+The v4 tensor gate compares the BrainSurgery forward--backward output with an
+independent direct-PyTorch forward--backward output. Comparing either rounded
+FP16 result byte-for-byte with the original would be an invalid lossless claim.
 
 ## Placement in the paper
 
