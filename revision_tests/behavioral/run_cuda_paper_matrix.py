@@ -8,6 +8,7 @@ import hashlib
 import json
 import platform
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -11,6 +13,7 @@ from revision_tests.behavioral.run_cuda_paper_matrix import (
     render_latex,
     render_markdown,
     render_paper_text,
+    run_pair,
     validate_result,
     write_plan,
 )
@@ -69,6 +72,41 @@ def test_result_gate_rejects_missing_aggregate():
     del result["aggregate"]["mean_perplexity_ratio"]
     with pytest.raises(ValueError, match="aggregate evidence is incomplete"):
         validate_result(result, 1)
+
+
+def test_run_pair_retains_complete_threshold_failure(tmp_path: Path, monkeypatch):
+    output = tmp_path / "result.json"
+    payload = result_fixture()
+    payload.update(
+        {
+            "thresholds_passed": False,
+            "manifest_sha256": "abc",
+            "revision": "rev",
+            "tokenizer_fingerprint": {},
+            "config_fingerprint": {},
+            "dtype": "float16",
+            "device": "cuda:0",
+            "gpu": "synthetic",
+            "max_new_tokens": 1,
+            "thresholds": {},
+        }
+    )
+    output.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess([], 1),
+    )
+    result = run_pair(
+        tmp_path / "reference",
+        tmp_path / "transformed",
+        tmp_path / "source",
+        {"revision": "rev", "expected_weight_dtype": "float16"},
+        load_protocol(),
+        output,
+        1,
+    )
+    assert result["thresholds_passed"] is False
 
 
 def test_tables_are_generated_only_from_complete_evidence():
