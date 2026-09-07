@@ -6,6 +6,8 @@ Last audited: 2026-09-07 against the previous submission and
 This file is the authority for deciding which revision results may be used in
 the paper. A script-level `passed` or `reported_eligible` flag is necessary but
 is not, by itself, evidence that a result answers a reviewer concern.
+For exact main-paper and appendix placement, use
+`revision_tests/plans/paper_integration_guide.md`.
 
 ## Status summary
 

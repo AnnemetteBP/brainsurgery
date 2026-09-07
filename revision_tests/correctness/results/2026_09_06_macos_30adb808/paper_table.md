@@ -4,7 +4,7 @@ Protocol: `eacl2027_correctness_v1`
 Run: `2026_09_06_correctness_macos_30adb808`
 Commit: `30adb808fff539374dd567ebee67d385decd8b7a`
 
-| Case | Operation | Class | Oracle exact | Untouched exact | Input unchanged | Result |
+| **Case** | **Operation** | **Class** | **Oracle exact ↑** | **Untouched exact ↑** | **Input unchanged ↑** | **Result** |
 |---|---|---|---:|---:|---:|---|
 | C01 | identity serialization | lossless | 16/16 | 15/15 | yes | PASS |
 | C02 | rename inverse | lossless metamorphic | 16/16 | 15/15 | yes | PASS |

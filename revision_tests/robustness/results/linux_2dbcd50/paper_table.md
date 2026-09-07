@@ -4,7 +4,7 @@ Protocol: `eacl2027_robustness_v1`
 Run: `eacl2027_robustness_linux_2dbcd50`
 Commit: `2dbcd505115100f892e906413076ae93b3fcaa16`
 
-| Case | Failure class | Process | Diagnostic | Input unchanged | Artifact | Safe | Evaluation |
+| **Case** | **Failure class** | **Expected process outcome ↑** | **Diagnostic ↑** | **Input unchanged ↑** | **Artifact** | **Safe destination ↑** | **Evaluation** |
 |---|---|---|---:|---:|---|---:|---|
 | R01 | plan validation | failure | yes | yes | absent | yes | PASS |
 | R02 | plan validation | failure | yes | yes | absent | yes | PASS |

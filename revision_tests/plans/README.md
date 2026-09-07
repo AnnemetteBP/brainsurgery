@@ -12,6 +12,13 @@
 - [`claim_boundaries.md`](claim_boundaries.md) is the manuscript-level gate for
   sharding, distributed systems, performance, usability, and failure-semantics
   claims.
+- [`paper_evidence_map.md`](paper_evidence_map.md) states which results are
+  usable and their exact claim boundaries.
+- [`paper_integration_guide.md`](paper_integration_guide.md) gives the literal
+  main-paper and appendix structure, exact table/prose files, and rules for
+  combining Mac and Linux results.
+- [`paper_evidence_text.tex`](paper_evidence_text.tex) contains paste-ready
+  LaTeX prose for the completed automated evaluations.
 
 These tracked copies are canonical. Update them here so every machine receives
 the same plan through Git; do not maintain divergent copies under `private/`.

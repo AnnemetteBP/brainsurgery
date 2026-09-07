@@ -4,7 +4,7 @@ Protocol: `eacl2027_real_preservation_v1`
 Run: `2026_09_06_real_preservation_macos_c5e464b9`
 Commit: `c5e464b9a06c50c7549ccae26d6f098f7b25822b`
 
-| Target | Revision | Tensors exact | Untouched exact | Sources unchanged | Result |
+| **Target** | **Revision** | **Tensors exact ↑** | **Untouched exact ↑** | **Sources unchanged ↑** | **Result** |
 |---|---|---:|---:|---:|---|
 | gpt_2_124m | `607a30d783df` | 160/160 | 159/159 | yes | PASS |
 | olmo_1b_0724_hf | `d7cbab742d80` | 114/114 | 113/113 | yes | PASS |

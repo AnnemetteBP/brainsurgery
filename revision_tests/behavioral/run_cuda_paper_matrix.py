@@ -180,7 +180,7 @@ def render_markdown(evidence: dict[str, Any]) -> str:
         "# Expanded behavioral analysis", "",
         f"Protocol: `{evidence['protocol_id']}`  ", f"Run: `{evidence['run_id']}`  ",
         f"Commit: `{evidence['git_commit']}`  ", f"GPU: {evidence['gpu']}", "",
-        "| Model | BS/PyTorch PPL ratio | BS/PyTorch cosine | BS/PyTorch top-1 | Original/restored sequence cosine | Original/restored exact output |",
+        "| **Model** | **BS/PyTorch PPL ratio ↓** | **BS/PyTorch cosine ↑** | **BS/PyTorch top-1 ↑** | **Original/restored sequence cosine ↑** | **Original/restored exact output ↑** |",
         "|---|---:|---:|---:|---:|---:|",
     ]
     for case in evidence["results"]:
@@ -201,9 +201,9 @@ def render_latex(evidence: dict[str, Any]) -> str:
         rows.append(f"{case['display']} & {eq['mean_perplexity_ratio']:.8f} & {eq['mean_last_token_logit_cosine']:.8f} & {eq['top1_matches']}/{n} & {reg['mean_full_sequence_logit_cosine']:.8f} & {reg['output_exact_matches']}/{n} \\\\ ")
     return "\n".join([
         r"\begin{table*}[t]", r"\centering", r"\small", r"\begin{tabular}{lrrrrr}",
-        r"\toprule", r"Model & PPL ratio & Final cosine & Top-1 & Sequence cosine & Exact output \\",
+        r"\toprule", r"\textbf{Model} & \textbf{PPL ratio $\downarrow$} & \textbf{Final cosine $\uparrow$} & \textbf{Top-1 $\uparrow$} & \textbf{Sequence cosine $\uparrow$} & \textbf{Exact output $\uparrow$} \\",
         r"\midrule", *rows, r"\bottomrule", r"\end{tabular}",
-        r"\caption{Expanded behavioral analysis on 70 sourced prompts per checkpoint. PPL ratio, final-token cosine, and top-1 compare BrainSurgery with an independent imperative implementation; sequence cosine and exact output compare the original checkpoint with its forward--backward restored checkpoint.}",
+        r"\caption{Expanded behavioral analysis on 70 sourced prompts per checkpoint ($\uparrow$/$\downarrow$ indicate better). PPL ratio has an optimum of 1.0; final-token cosine and top-1 compare BrainSurgery with a separate imperative implementation. Sequence cosine and exact output compare the original checkpoint with its forward--backward restored checkpoint.}",
         r"\label{tab:expanded-behavioral}", r"\end{table*}", "",
     ])
 
@@ -244,7 +244,13 @@ def paper_totals(evidence: dict[str, Any]) -> dict[str, Any]:
 
 def render_paper_text(evidence: dict[str, Any], *, latex: bool = False) -> str:
     values = paper_totals(evidence)
-    prefix = "\\paragraph{Behavioral equivalence and preservation.}\n" if latex else "# Behavioral equivalence and preservation\n\n"
+    prefix = (
+        "\\paragraph{Behavioral equivalence and preservation.}\n"
+        "Table~\\ref{tab:expanded-behavioral} reports both comparisons from the "
+        "previous behavioral evaluation at expanded scale. "
+        if latex
+        else "# Behavioral equivalence and preservation\n\n"
+    )
     models = values["models"]
     prompts = values["prompts"]
     text = (
