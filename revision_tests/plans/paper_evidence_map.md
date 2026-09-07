@@ -131,7 +131,7 @@ Required limitation: this is not a general ranking, usability result, or proof
 of superiority. Orbax remains adjacent related work because its JAX PyTree
 restore/resharding abstraction was not a like-for-like executable case.
 
-## 5. Expanded behavioral analysis — PENDING
+## 5. Expanded behavioral analysis — COMPLETE, NON-REPORTABLE
 
 The prior paper contained two behavioral comparisons and the revision must
 retain both:
@@ -149,6 +149,13 @@ comparisons to the documented 70-prompt suite and ten-model matrix, records all
 metrics per prompt, aggregates by model/source/task/language, and produces no
 paper table if any measurement is absent. Do not write behavioral result prose
 until this run has generated and preserved `evidence.json`.
+
+Run `eacl2027_behavioral_paper_cuda_4cb30d71` completed the full matrix with
+finite metrics and exact independent tensor oracles. Every imperative
+equivalence comparison passed. The FP32 GPT-2/OLMo and BF16 Qwen round trips
+passed, while all four native-FP16 Pythia round trips missed at least one frozen
+threshold. The complete sanitized evidence is preserved, but no paper table or
+result prose is emitted from this run.
 
 The v4 tensor gate compares the BrainSurgery forward--backward output with an
 independent direct-PyTorch forward--backward output. Comparing either rounded

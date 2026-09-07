@@ -395,11 +395,22 @@ def main() -> int:
         "results": results,
     }
     write_json(run_root / "summary.json", evidence)
-    if not reportable:
-        print("NON-REPORTABLE: no paper artifacts generated", flush=True)
-        return 0
     evidence_root.mkdir(parents=True)
     write_json(evidence_root / "evidence.json", evidence)
+    if not reportable:
+        (evidence_root / "STATUS.md").write_text(
+            "# Non-reportable behavioral evidence\n\n"
+            "The complete sanitized evidence is preserved in `evidence.json`, but "
+            "one or more preregistered thresholds failed. No paper table or "
+            "paste-ready result prose was generated.\n",
+            encoding="utf-8",
+        )
+        print(
+            f"NON-REPORTABLE: complete evidence preserved at {evidence_root}; "
+            "no paper table or prose generated",
+            flush=True,
+        )
+        return 0
     (evidence_root / "table.md").write_text(render_markdown(evidence), encoding="utf-8")
     (evidence_root / "table.tex").write_text(render_latex(evidence), encoding="utf-8")
     (evidence_root / "paper_text.md").write_text(

@@ -232,25 +232,33 @@ disabled.
 
 ### 10. Behavioral regression suite
 
-- [ ] Run `revision_tests/behavioral/run_cuda_paper_matrix.py` from a clean
+- [x] Run `revision_tests/behavioral/run_cuda_paper_matrix.py` from a clean
       Linux/CUDA checkout on all ten pinned models.
-- [ ] Compare BrainSurgery's meaningful scale rewrite with the independent
+- [x] Compare BrainSurgery's meaningful scale rewrite with the independent
       Python/PyTorch implementation using the original paper's PPL,
       final-token cosine/difference, and top-1 measurements.
-- [ ] Compare each original checkpoint with its BrainSurgery forward--backward
+- [x] Compare each original checkpoint with its BrainSurgery forward--backward
       restored checkpoint using the original full-sequence cosine/difference
       and generation-similarity measurements.
-- [ ] Preserve every per-prompt value, every per-model aggregate, and
+- [x] Preserve every per-prompt value, every per-model aggregate, and
       source/task/language breakdowns in the committed sanitized evidence.
-- [ ] Confirm that no paper table is created if either comparison, any model,
+- [x] Confirm that no paper table is created if either comparison, any model,
       any prompt, or any required measurement is missing.
 
 The earlier `eacl2027_behavioral_matrix_v2` run used a multiply-by-one rewrite.
 It is retained only as an auxiliary serialization check and must not be used as
 the expanded behavioral result. The corrected protocol is
-`revision_tests/behavioral/paper_protocol.yaml`; no complete v4 result exists
-yet. A v3 preflight correctly stopped when its oracle treated the numerically
+`revision_tests/behavioral/paper_protocol.yaml`; the completed v4 result is
+described below. A v3 preflight correctly stopped when its oracle treated the numerically
 lossy FP16 `0.5` then `2.0` round trip as byte-identical to the original.
+
+The v4 run `eacl2027_behavioral_paper_cuda_4cb30d71` completed all 1,400
+per-prompt comparison rows with finite metrics and exact independent tensor
+oracles. It is non-reportable under the frozen thresholds: all imperative
+equivalence comparisons passed, as did both comparisons for GPT-2, OLMo, and
+Qwen, but every native-FP16 Pythia round trip missed at least one preservation
+threshold. Complete sanitized evidence is committed without a paper table or
+paste-ready result prose.
 
 ### 11. Downstream quality
 
