@@ -4,6 +4,11 @@ This is the insertion plan for the EACL 2027 BrainSurgery demo paper. It
 distinguishes main-paper evidence from appendix detail and names the exact
 repository artifact to use. Do not create one appendix per experiment.
 
+The Linux robustness, scaling, and competing-tool tables are prepared but must
+not be treated as final-citation-ready until their recorded execution commit is
+reachable. See `submission_readiness.md`. The instructions below describe
+their placement after that shared provenance gate closes.
+
 ## Recommended structure
 
 Use one main-paper section titled **Evaluation** and two appendices:
@@ -61,7 +66,7 @@ claim; it is only an older multiply-by-one engineering record.
 
 ### 3. Comparison with overlapping tools
 
-Use in the main paper:
+After the shared Linux provenance gate closes, use in the main paper:
 
 - Table: `revision_tests/competing_tools/results/paper_table.tex`
 - Prose: the `Comparison with overlapping tools` paragraph in
@@ -74,7 +79,7 @@ advantage.
 
 ### 4. Scaling and systems behavior
 
-In the main paper, use the concise scaling paragraph from
+After the shared Linux provenance gate closes, use the concise scaling paragraph from
 `revision_tests/plans/paper_evidence_text.tex`. Put the full 30-row table in
 Appendix A:
 
@@ -90,7 +95,7 @@ Pythia scaling curve.
 
 ### 5. Robustness and failure semantics
 
-In the main paper, use the robustness paragraph from
+After the shared Linux provenance gate closes, use the robustness paragraph from
 `revision_tests/plans/paper_evidence_text.tex`, including the negative result
 that three mid-save cases left partial or mixed destinations. Put the compact
 table and protocol detail in Appendix A:
