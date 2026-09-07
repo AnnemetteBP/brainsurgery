@@ -1,0 +1,26 @@
+{
+  "cpu_affinity": null,
+  "cpu_count_logical": 384,
+  "cpu_count_physical": null,
+  "disk_total_bytes": null,
+  "evaluation": "robustness",
+  "filesystem_type": null,
+  "git_commit": "2dbcd505115100f892e906413076ae93b3fcaa16",
+  "machine": "x86_64",
+  "memory_bytes": null,
+  "packages": {
+    "brainsurgery": "0.2.12",
+    "pyyaml": "6.0.3",
+    "safetensors": "0.8.0",
+    "torch": "2.11.0+cu130"
+  },
+  "platform": "6.12.0-211.40.1.el10_2.x86_64",
+  "processor": "x86_64",
+  "python": "3.13.3",
+  "raw_record_sha256": "5b47b986fd53e2856b464b94875d0e378c69cedc3a1723297259ae3f60de2363",
+  "subprocess_environment": {
+    "OMP_NUM_THREADS": "1",
+    "PYTHONHASHSEED": "0"
+  },
+  "system": "Linux"
+}

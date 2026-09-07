@@ -4,11 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 LINUX_COMMIT = "2dbcd505115100f892e906413076ae93b3fcaa16"
@@ -23,6 +26,10 @@ class Check:
 
 def load(path: str) -> dict[str, Any]:
     return json.loads((REPO / path).read_text(encoding="utf-8"))
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def reachable(commit: str) -> bool:
@@ -117,11 +124,69 @@ def environment_records() -> Check:
 
 
 def behavioral() -> Check:
+    protocol_path = REPO / "revision_tests/behavioral/paper_protocol.yaml"
+    protocol = yaml.safe_load(protocol_path.read_text(encoding="utf-8"))
+    protocol_id = protocol["protocol_id"]
+    expected_ids = protocol["expected_model_ids"]
+    prompts_per_model = protocol["inference"]["prompts_per_model"]
+    required_comparisons = set(protocol["reporting"]["required_comparisons"])
+    required_metrics = set(protocol["required_old_paper_metrics"]) | set(protocol.get("additional_metrics", []))
+    aggregate_fields = {
+        "prompt_count", "reference_mean_perplexity", "transformed_mean_perplexity",
+        "mean_perplexity_ratio", "maximum_perplexity_ratio",
+        "mean_last_token_logit_cosine", "minimum_last_token_logit_cosine",
+        "mean_last_token_absolute_difference", "maximum_last_token_absolute_difference",
+        "mean_full_sequence_logit_cosine", "minimum_full_sequence_logit_cosine",
+        "full_sequence_positions_compared", "mean_full_sequence_absolute_difference",
+        "maximum_full_sequence_absolute_difference", "top1_matches",
+        "output_exact_matches", "mean_output_char_similarity",
+        "mean_output_token_sequence_similarity", "mean_output_token_bag_cosine",
+        "mcq_count", "mcq_prediction_matches",
+    }
+    group_by = set(protocol["reporting"]["group_by"])
+
+    def valid_comparison(comparison: dict[str, Any]) -> bool:
+        rows = comparison.get("prompts", [])
+        aggregate = comparison.get("aggregate", {})
+        breakdowns = comparison.get("by_manifest_dimension", {})
+        return (
+            len(rows) == prompts_per_model
+            and all(required_metrics <= row.keys() for row in rows)
+            and aggregate_fields <= aggregate.keys()
+            and aggregate.get("prompt_count") == prompts_per_model
+            and set(breakdowns) == group_by
+            and all(
+                sum(group.get("prompt_count", 0) for group in breakdowns[field].values())
+                == prompts_per_model
+                and all(aggregate_fields <= group.keys() for group in breakdowns[field].values())
+                for field in group_by
+            )
+        )
+
+    def valid_result(result: dict[str, Any]) -> bool:
+        comparisons = result.get("comparisons", {})
+        oracles = result.get("tensor_oracle", {})
+        return (
+            set(comparisons) == required_comparisons
+            and all(valid_comparison(comparisons[name]) for name in required_comparisons)
+            and set(oracles) == {
+                "brainsurgery_scaled", "python_scaled", "brainsurgery_restored"
+            }
+            and all(
+                oracle.get("passed") is True
+                and oracle.get("tensors_checked", 0) > 0
+                and oracle.get("tensors_passed") == oracle.get("tensors_checked")
+                for oracle in oracles.values()
+            )
+            and oracles["brainsurgery_restored"].get("reference")
+            == protocol["reporting"]["restored_tensor_reference"]
+        )
+
     root = REPO / "revision_tests/behavioral/results"
     candidates = []
     for evidence_path in root.glob("*/evidence.json"):
         evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
-        if evidence.get("protocol_id") == "eacl2027_behavioral_paper_v3":
+        if evidence.get("protocol_id") == protocol_id:
             candidates.append((evidence_path.parent, evidence))
     for directory, evidence in candidates:
         prompt_total = sum(
@@ -130,15 +195,23 @@ def behavioral() -> Check:
         )
         required = ["evidence.json", "table.md", "table.tex", "paper_text.md", "paper_text.tex"]
         complete = (
-            evidence.get("reported_eligible") is True
-            and len(evidence.get("results", [])) == 10
-            and prompt_total == 700
+            evidence.get("protocol_sha256") == sha256(protocol_path)
+            and [row.get("id") for row in evidence.get("results", [])] == expected_ids
+            and prompt_total == len(expected_ids) * prompts_per_model
+            and all(valid_result(row) for row in evidence.get("results", []))
             and all((directory / name).is_file() for name in required)
             and reachable(evidence.get("git_commit", ""))
         )
         if complete:
             return Check("Expanded behavioral analysis", "PASS", f"{directory.relative_to(REPO)}: 10 models and 700 prompt-model comparisons")
-    return Check("Expanded behavioral analysis", "PENDING", "no complete reportable v3 evidence bundle is present; v2 is excluded")
+        missing = [name for name in required if not (directory / name).is_file()]
+        return Check(
+            "Expanded behavioral analysis",
+            "BLOCKED",
+            f"{directory.relative_to(REPO)} matches {protocol_id}, but is incomplete"
+            + (": missing " + ", ".join(missing) if missing else ""),
+        )
+    return Check("Expanded behavioral analysis", "PENDING", f"no evidence bundle matches canonical protocol {protocol_id}")
 
 
 def usability() -> Check:
