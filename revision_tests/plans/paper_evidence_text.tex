@@ -1,0 +1,53 @@
+% Audited 2026-09-07. This fragment contains only completed evidence.
+% Do not add behavioral or usability results until their completeness gates pass.
+
+\paragraph{Independent correctness and preservation.}
+We evaluated correctness with two independent protocols. Ten hand-verifiable
+cases covered identity serialization, structural edits, metamorphic rename and
+split/concatenate inversions, arithmetic, dtype conversion, and sharded
+save/reload. All 161 tensor--case comparisons matched the independent PyTorch
+oracle exactly, and all 149 tensors outside the declared write-sets remained
+byte-identical. Across pinned GPT-2 124M, OLMo 1B, and Pythia 1B checkpoints,
+all 518 output tensors matched independently computed expected values,
+including all 515 tensors outside the three one-tensor write-sets.
+Deliberately corrupted value, dtype, and key-set controls were detected.
+Custom safetensors header metadata and arbitrary sidecar files were not
+preserved, so our claim is limited to tensor state for the enumerated cases.
+The oracle follows a separate direct-PyTorch implementation but is
+author-written rather than an independent third-party implementation.
+
+\paragraph{Robustness and failure semantics.}
+We evaluated 19 failure-semantics cases through the public CLI on Linux. All 18
+expected non-success outcomes occurred, all 17 applicable diagnostics matched,
+and all 19 source inputs remained byte-identical. All 15 failures before
+publication withheld a new destination or preserved an existing one. Three
+mid-save cases exposed negative behavior: interruption or an injected save
+exception left a partial shard directory, and a fault targeting an existing
+checkpoint produced a mixed directory. Thus 16/19 cases met the
+destination-safety criterion; BrainSurgery does not currently provide atomic
+checkpoint publication. Outputs should be written to a fresh destination and
+accepted only after successful exit and independent index/loading validation.
+
+\paragraph{Scaling and systems.}
+We measured a common weight-scaling and sharded-export operation on ten
+checkpoints spanning 70M--12B parameters, four model families, three dtypes,
+and single-file and sharded inputs. All 150/150 measured outputs passed the
+independent tensor oracle. On the primary within-family Pythia curve, the
+direct Python/PyTorch implementation was faster at every size. At 12B it
+required 15.50~s and 44.77~GiB peak RSS, compared with 24.59~s and 22.88~GiB
+for BrainSurgery in memory and 26.54~s and 28.18~GiB for its arena provider.
+These results show a time--memory trade-off rather than a universal speed
+advantage. This is a single-process CPU/I/O experiment and supplies no GPU,
+multi-rank, optimizer-state, or resharding evidence.
+
+\paragraph{Comparison with overlapping tools.}
+We compared three genuinely overlapping checkpoint operations on the same
+Linux host, with five measured repetitions per tool and operation. All 30/30
+outputs passed a common independent oracle. For regex key rewriting,
+BrainSurgery required 5.042~s and 1785.7~MiB peak RSS versus 1.478~s and
+1571.9~MiB for \texttt{torch-state-bridge}. For two MergeKit arithmetic cases,
+BrainSurgery/competitor median wall-time ratios were 1.083 and 1.036, while
+BrainSurgery used 2166.7 versus 2890.4~MiB and 3115.1 versus 3895.3~MiB peak
+RSS, respectively. These operation-matched results are not a general tool
+ranking or a usability comparison; Orbax remains adjacent related work rather
+than a like-for-like executable baseline.

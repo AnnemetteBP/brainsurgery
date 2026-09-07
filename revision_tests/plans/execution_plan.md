@@ -99,20 +99,20 @@ semantic failure matrix can be established here.
       operation-matched methods, independent exact oracle, resource metrics,
       cache policy, repetition schedule, and reporting gates.
 
-Behavioral evidence: `revision_tests/behavioral/`. The committed 70-prompt
+Behavioral protocol: `revision_tests/behavioral/`. The committed 70-prompt
 manifest contains 30 parallel Belebele prompts, 30 stratified MMLU prompts, and
 10 HumanEval regression prompts. Its validator reports 70/70 and the analyzer's
-five synthetic controls pass. A one-prompt GPT-2 CPU smoke run exercised both
-model roles and the analyzer; it is stored only under `log/revision_tests/` and
-is explicitly non-reportable. The full model comparison remains a Linux/CUDA
-task in Phase 3.
+five synthetic controls pass. The corrected paired evaluator has been exercised
+locally on one GPT-2 prompt with every required field present; that smoke run is
+explicitly non-reportable. The complete v3 comparison remains a Linux/CUDA task
+in Phase 3.
 
 Competing-tool protocol: `revision_tests/competing_tools/`. The frozen cases
 compare regex key rewriting with `torch-state-bridge` and two checkpoint
 arithmetic operations with MergeKit using an independent oracle. Actual-package
 macOS preflights pass all six pairings on tiny and pinned GPT-2-derived inputs;
-the runner labels those timings non-reportable. The controlled Linux run in
-Phase 2 remains required for paper performance evidence.
+the runner labels those timings non-reportable. The controlled Linux run is
+complete and is the only performance evidence used in the paper map.
 
 Feature-coverage evidence:
 `revision_tests/competing_tools/feature_coverage.{md,tex}`. It freezes the
@@ -232,18 +232,24 @@ disabled.
 
 ### 10. Behavioral regression suite
 
-- [x] Run `revision_tests/behavioral/run_cuda.sh` on the pinned GPT-2 reference
-      and frozen byte-exact, sharded lossless transformation.
-- [x] Confirm the independent pre-inference tensor gate reports 160/160 exact.
-- [x] Run the frozen, versioned prompt suite on the unmodified reference model.
-- [x] Run it on each transformed model under identical inference settings.
-- [x] Record tensor-level validation separately from behavioral agreement.
-- [x] Report task and language coverage, exclusions, failures, and uncertainty.
+- [ ] Run `revision_tests/behavioral/run_cuda_paper_matrix.py` from a clean
+      Linux/CUDA checkout on all ten pinned models.
+- [ ] Compare BrainSurgery's meaningful scale rewrite with the independent
+      Python/PyTorch implementation using the original paper's PPL,
+      final-token cosine/difference, and top-1 measurements.
+- [ ] Compare each original checkpoint with its BrainSurgery forward--backward
+      restored checkpoint using the original full-sequence cosine/difference
+      and generation-similarity measurements.
+- [ ] Preserve every per-prompt value, every per-model aggregate, and
+      source/task/language breakdowns in the committed sanitized evidence.
+- [ ] Confirm that no paper table is created if either comparison, any model,
+      any prompt, or any required measurement is missing.
 
-Evidence: the primary GPT-2 CUDA case passed 160/160 tensors and 70/70 prompt
-comparisons. The supplementary ten-checkpoint matrix passed 3,243/3,243 tensors
-and 700/700 prompt comparisons; see
-`revision_tests/behavioral/results/linux_99693f2/`.
+The earlier `eacl2027_behavioral_matrix_v2` run used a multiply-by-one rewrite.
+It is retained only as an auxiliary serialization check and must not be used as
+the expanded behavioral result. The corrected protocol is
+`revision_tests/behavioral/paper_protocol.yaml`; no complete v3 result exists
+yet.
 
 ### 11. Downstream quality
 
@@ -295,8 +301,8 @@ as CPU/I/O work rather than attributed to the GPU.
 
 ## Submission gate
 
-- [x] Every reported result has a commit, command, environment, manifest, and
-      raw-record location.
+- [ ] Every final reported result has a commit, command, environment, manifest,
+      and raw-record location. Behavioral and usability remain pending.
 - [ ] All usability failures and reviews have completed manual bookkeeping.
 - [x] Correctness references are independent of the tested BrainSurgery path.
 - [x] Lossless and lossy claims use appropriate comparison rules.

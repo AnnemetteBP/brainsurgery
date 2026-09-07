@@ -1,8 +1,10 @@
-# Behavioral regression protocol
+# Legacy exact-regression protocol
 
 Protocol identifier: `eacl2027_behavioral_v1`
 
-Status: frozen before the first reported model run
+Status: completed auxiliary engineering protocol; not the expanded version of
+the previous paper analysis. The paper-facing replacement is
+`paper_protocol.yaml`.
 
 Frozen model case: GPT-2 124M (`openai-community/gpt2`) at revision
 `607a30d783dfa663caf39e06633721c8d4cfcd7e`, transformed by
@@ -12,8 +14,8 @@ tensors byte-for-byte and use an indexed 256 MiB safetensors shard layout.
 The supplementary `eacl2027_behavioral_matrix_v2` protocol freezes the ten
 checkpoint matrix in `matrix_protocol.yaml`. It repeats a model-neutral,
 multiply-by-one sharded rewrite and this same 70-prompt comparison at each
-checkpoint's native stored dtype. This extension supplements rather than
-redefines the primary GPT-2 result.
+checkpoint's native stored dtype. This extension is retained for engineering
+history only and must not be used to resolve the behavioral reviewer concern.
 
 ## Research question and scope
 

@@ -54,9 +54,9 @@ Each model run creates `metadata.json`, `predictions.jsonl`, and
 manifest and tokenizer fingerprints, architecture, software, hardware, dtype,
 and decoding settings. It refuses to compare incompatible bundles.
 
-## Frozen reported CUDA case
+## Legacy GPT-2 CUDA engineering protocol
 
-The reported case uses the pinned GPT-2 124M checkpoint at revision
+The historical v1 case uses the pinned GPT-2 124M checkpoint at revision
 `607a30d783dfa663caf39e06633721c8d4cfcd7e`. The frozen BrainSurgery plan
 performs a copy/assert/delete round trip, moves all transformer-block keys to a
 temporary namespace and back, applies an exact multiply-by-one operation, and
@@ -64,20 +64,21 @@ exports the final 160 tensors as indexed 256 MiB safetensors shards. Before
 inference, `validate_lossless.py` independently requires every final tensor to
 be byte-exact and validates the shard index and budget.
 
-On the clean Linux/CUDA checkout, run:
+Its historical Linux/CUDA command is:
 
 ```bash
 revision_tests/behavioral/run_cuda.sh
 ```
 
-This single command validates CUDA and the prompt manifest, creates and checks
+This command validates CUDA and the prompt manifest, creates and checks
 the transformed checkpoint, copies the pinned configuration sidecars, runs all
 70 prompts on the reference and
 transformed models sequentially on `cuda:0`, and writes the comparison below
 `log/revision_tests/eacl2027_behavioral_cuda_<commit>/behavioral/`. It refuses
-to overwrite an existing transformed checkpoint or result bundle.
+to overwrite an existing transformed checkpoint or result bundle. Do not use
+this v1 result as the paper-facing expansion; use the v3 protocol below.
 
-## Component model-execution commands
+## Legacy component model-execution commands
 
 Internally, the behavioral comparison is deliberately split into three commands so
 the reference and transformed models need not coexist in GPU memory:
@@ -101,7 +102,7 @@ the reference and transformed models need not coexist in GPU memory:
   --output log/revision_tests/<run_id>/behavioral/comparison.json
 ```
 
-The reported Linux/CUDA runs must use the same GPU, dtype, tokenizer, prompt
+These legacy Linux/CUDA runs must use the same GPU, dtype, tokenizer, prompt
 manifest, decoding settings, and software environment for both roles. Mac
 smoke runs validate the pipeline but are not mixed with Linux results. A run is
 stamped `reported_eligible=true` only when it covers all 70 prompts on CUDA
@@ -121,43 +122,48 @@ broad downstream quality, language competence, HumanEval pass rates, or safety.
 Intentionally lossy transformations require a separate downstream protocol and
 must not use the lossless pass rule.
 
-The old 50 prompts remain under `validation/` for historical compatibility but
-are excluded from this protocol.
+The old 50 prompts remain under `validation/` for historical compatibility.
+The paper-facing expansion retains their measurement definitions while using
+the sourced manifest below.
 
-### Relationship to the previous 50-prompt evaluation
-
-| Endpoint | Previous 50-prompt scripts | New 70-prompt, ten-model matrix |
-|---|---|---|
-| Prompt provenance | Local prompt file without the required paper-facing source and sampling record | Versioned Belebele, MMLU, and HumanEval manifest with source hashes, licenses, strata, and deterministic selection |
-| Model coverage | Two reported original/transformed pairs | Ten pinned checkpoints across four families, 70M--12B |
-| Tensor equality before inference | Not part of the behavioral result | 3,243/3,243 tensors byte-exact under an independent oracle |
-| Final-token logits | Cosine similarity and absolute differences | Complete logit vector byte-exact for 700/700 prompt pairs; cosine is therefore not used as the primary endpoint |
-| Full-sequence per-position logits | Cosine and absolute differences along the generated sequence | Not measured |
-| Perplexity | Measured by the separate regression script | Not measured |
-| Top-1 prediction | Agreement rate | Exact agreement for 700/700 pairs |
-| Generated output | Exact and approximate text/token similarity | All 32 greedy token IDs exact for 700/700 pairs |
-| Multiple-choice behavior | Not a structured endpoint | Prediction agreement for 600/600 applicable pairs |
-
-The new matrix replaces the old result as the primary sourced, cross-model
-lossless-regression evidence, but it does not silently claim the old
-perplexity or full-sequence-cosine endpoints. Retain those old results only as
-separately labelled preliminary evidence if the manuscript needs them.
-
-## Ten-checkpoint CUDA extension
+## Legacy ten-checkpoint CUDA engineering check
 
 The versioned `eacl2027_behavioral_matrix_v2` extension applies the same
 multiply-by-one, 256 MiB sharded rewrite to all ten checkpoints pinned by the
 scaling protocol, independently requires every output tensor to be byte-exact,
 and then runs the full 70-prompt comparison on `cuda:0` at each checkpoint's
 native stored dtype. It covers four Pythia scales and paired GPT-2, OLMo, and
-Qwen2.5 checkpoints without changing the primary GPT-2 case above.
+Qwen2.5 checkpoints, but it is an auxiliary no-op serialization check rather
+than the expanded version of the previous paper analysis.
 
-Run the complete extension from a clean checkout with:
+The historical command was:
 
 ```bash
 .venv/bin/python revision_tests/behavioral/run_cuda_matrix.py
 ```
 
-Use `--smoke-limit 1 --model P01` only for a non-reportable pipeline check.
-Successful generated checkpoints are removed after their evidence bundles are
-complete unless `--keep-transformed` is supplied.
+Do not rerun this protocol for paper evidence. Use the v3 protocol below.
+
+## Expanded paper analysis
+
+`paper_protocol.yaml` and `run_cuda_paper_matrix.py` implement the actual
+revision of the paper's behavioral analysis. They retain every original
+measurement: reference/transformed perplexity and ratio, final-token cosine
+and absolute differences, full-sequence cosine and absolute differences,
+top-1 agreement, exact output agreement, character similarity, token-sequence
+similarity, and token-bag cosine. MCQ agreement and source/task/language
+breakdowns are additional measurements.
+
+Run the complete Linux/CUDA matrix from a clean checkout with:
+
+```bash
+.venv/bin/python revision_tests/behavioral/run_cuda_paper_matrix.py
+```
+
+The runner writes raw execution material below `log/revision_tests/` and a
+sanitized `evidence.json`, Markdown/LaTeX tables, and Markdown/LaTeX
+paste-ready result prose below
+`revision_tests/behavioral/results/<run_id>/`. It refuses to create those paper
+artifacts for a partial matrix, a smoke run, a failed threshold, or any missing
+required measurement. The earlier `eacl2027_behavioral_matrix_v2`
+multiply-by-one run is auxiliary and is not a substitute for this analysis.

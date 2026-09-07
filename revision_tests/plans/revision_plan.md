@@ -113,13 +113,16 @@ reviewed more accurately is still informative.
       safe in all 15 enumerated cases, while three mid-save cases expose
       partial or mixed output and rule out an atomic-publication claim.
 - [x] Scaling claims match the largest tested checkpoint and controlled metrics.
-- [x] Behavioral prompts have documented provenance and coverage. See
-      `revision_tests/behavioral/`.
+- [ ] The expanded behavioral analysis retains both original-paper comparisons
+      and every original metric across the sourced prompt/model matrix. The
+      corrected protocol is prepared in `revision_tests/behavioral/`; complete
+      Linux/CUDA evidence has not yet been generated.
 - [x] Baseline comparisons use genuinely equivalent operations and one oracle.
 - [x] Direct comparisons and adjacent related-system capabilities are separated
       in Markdown and LaTeX. See
       `revision_tests/competing_tools/feature_coverage.{md,tex}`.
-- [x] Every table is reproducible from a named commit, command, and run ID.
+- [ ] Every final table is reproducible from a named commit, command, and run
+      ID. Behavioral and usability tables remain pending.
 - [x] Distributed claim boundaries and safe manuscript wording are prepared.
       Applying them to the final paper remains part of manuscript integration.
 - [ ] The narrated demo follows the final documented behavior.

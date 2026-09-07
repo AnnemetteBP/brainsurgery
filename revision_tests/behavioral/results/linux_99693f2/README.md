@@ -1,3 +1,8 @@
-# Linux/CUDA ten-checkpoint behavioral result
+# Auxiliary Linux/CUDA multiply-by-one result
 
-Compact, paper-facing evidence from `eacl2027_behavioral_matrix_cuda_99693f2`. All automated evaluation and reportability gates passed. The private raw bundle remains under `log/revision_tests/`. The files here contain no predictions, logits, absolute paths, hostnames, usernames, or checkpoint files. No human scoring of model outputs is required; only the ordinary final submission check for anonymity and accurate wording remains.
+This is a completed engineering check from
+`eacl2027_behavioral_matrix_cuda_99693f2`, but it applied only a
+multiply-by-one rewrite. The raw `summary.json` is retained for provenance.
+Its paper-text and table fragments were removed so they cannot be mistaken for
+the expanded behavioral analysis. The required PPL and full-sequence
+measurements must come from `eacl2027_behavioral_paper_v3`.

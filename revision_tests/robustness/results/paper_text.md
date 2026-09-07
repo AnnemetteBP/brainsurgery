@@ -39,6 +39,7 @@ and writes the index after the shards. A save exception, termination, power
 loss, or storage failure can therefore expose a partial or mixed directory.
 Until staging and atomic publication are implemented, outputs should be written
 to a fresh destination and accepted only after a successful exit and independent
-index/loading validation. The reported filesystem behavior was observed on
-macOS and should be confirmed on Linux; reproducible out-of-space testing
-requires a bounded disposable filesystem and was not included.
+index/loading validation. The filesystem behavior was reproduced on macOS and
+Linux. The Linux run is the primary reported result; the duplicate macOS cases
+are not added to its counts. Reproducible out-of-space testing requires a
+bounded disposable filesystem and was not included.

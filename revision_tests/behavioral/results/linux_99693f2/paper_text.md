@@ -1,5 +1,0 @@
-# Paper-ready interpretation
-
-Across ten pinned checkpoints spanning four model families, 70M--12B parameters, single-file and sharded inputs, and FP16, BF16, and FP32 storage, all 3,243 transformed tensors were byte-exact. The reference and transformed checkpoints then produced identical final-token logits, top-1 predictions, greedy continuations, and multiple-choice predictions on all 700 paired prompt evaluations. This supports lossless preservation for the enumerated rewrite/export path and architectures; it does not establish general model quality or cover intentionally lossy transformations.
-
-Here, exact logits means byte equality of the complete final-prompt-position vocabulary-logit vector after a float32 CPU copy, and greedy agreement means equality of all 32 generated token IDs. Byte-identical nonzero vectors have mathematical cosine 1.0, but the compact matrix retained the stronger exact-logit endpoint rather than a separately aggregated measured cosine value. This run did not measure perplexity or full-sequence per-position logit cosine.

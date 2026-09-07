@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the frozen ten-checkpoint CUDA behavioral extension."""
+"""Run the legacy multiply-by-one CUDA engineering check."""
 
 from __future__ import annotations
 

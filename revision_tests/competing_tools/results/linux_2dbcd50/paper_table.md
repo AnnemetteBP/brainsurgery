@@ -1,6 +1,6 @@
-# Competing-tool run (reported-size candidate)
+# Competing-tool run (audited narrow Linux comparison)
 
-**REPORTABLE CANDIDATE: all automated eligibility gates passed.**
+**USE WITH A NARROW CLAIM: audited Linux evidence for these three operations.**
 
 | Case | Tool | Correct runs | Median wall (s) | Median peak RSS (MiB) | Output (MiB) | Spec lines |
 |---|---|---:|---:|---:|---:|---:|

@@ -3,7 +3,7 @@
 Protocol: `eacl2027_scaling_v1`  
 Run: `eacl2027_scaling_linux_2dbcd50`  
 Commit: `2dbcd505115100f892e906413076ae93b3fcaa16`  
-Status: **REPORTABLE CANDIDATE**
+Status: **USE — audited Linux CPU/I/O evidence within the stated claim boundary**
 
 | Model | Method | Correct | Wall median (s) | Peak RSS (GiB) | Effective GiB/s | Output shards |
 |---|---|---:|---:|---:|---:|---:|
