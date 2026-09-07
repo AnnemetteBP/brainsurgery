@@ -141,9 +141,20 @@ def run_pair(reference: Path, transformed: Path, source: Path, case: dict[str, A
     ]
     if smoke_limit is not None:
         command.extend(["--smoke-limit", str(smoke_limit)])
-    run(command)
+    print("+ " + " ".join(command), flush=True)
+    completed = subprocess.run(command, cwd=REPO, check=False)
+    if not output.is_file():
+        raise subprocess.CalledProcessError(completed.returncode, command)
     result = json.loads(output.read_text(encoding="utf-8"))
     validate_result(result, smoke_limit or 70)
+    expected_returncode = 0 if result["thresholds_passed"] else 1
+    if completed.returncode != expected_returncode:
+        raise RuntimeError(
+            "analysis return code "
+            + str(completed.returncode)
+            + " disagrees with threshold result "
+            + str(result["thresholds_passed"])
+        )
     retained = (
         "manifest_sha256",
         "revision",

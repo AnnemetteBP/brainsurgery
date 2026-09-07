@@ -165,7 +165,9 @@ sanitized `evidence.json`, Markdown/LaTeX tables, and Markdown/LaTeX
 paste-ready result prose below
 `revision_tests/behavioral/results/<run_id>/`. It refuses to create those paper
 artifacts for a partial matrix, a smoke run, a failed threshold, or any missing
-required measurement or any non-finite loss, logit, or derived metric. The independent tensor gate compares BrainSurgery's
+required measurement or any non-finite loss, logit, or derived metric. Complete
+threshold misses remain in the raw run summary so the matrix continues across
+architectures instead of hiding later results. The independent tensor gate compares BrainSurgery's
 forward--backward result with the same two-step operation implemented by direct
 PyTorch. This preserves the original factor while accounting correctly for
 dtype rounding; behavioral preservation is still measured against the original
