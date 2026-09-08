@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/plan.yaml`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The exact bfloat16-count invariant was expressed by asserting 48 exact projection-name matches are bfloat16 and every complementary tensor is float32.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: About 5 minutes.

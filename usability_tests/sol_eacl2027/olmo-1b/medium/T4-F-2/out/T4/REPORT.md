@@ -1,0 +1,8 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The base was sharded while both fine-tunes and the required output were single files, so the base index had to be resolved explicitly.
+- Pitfalls or surprises you hit (one line each): Keeping all output tensors for a single-file safetensors save used substantial RAM (about 23 GiB peak RSS).
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for float32 tensor comparison and task-vector arithmetic; `safetensors` 0.5.3 for memory-mapped checkpoint reads and the required single-file output.
+- Approximate time spent, if you can tell: About 4 minutes.

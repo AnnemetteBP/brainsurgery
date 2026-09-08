@@ -1,0 +1,9 @@
+- Final artifact path: `out/T5/`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each):
+  - The LoRA product is `[out, in]` and had to be permuted to GPT-2 Conv1D `[in, out]` before the in-place add.
+  - Temporary tensors had to be created on the base alias and deleted so output-alias inference remained unambiguous and the final key set stayed unchanged.
+- Anything in the task text or documentation that was unclear: Nothing material.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: About 5 minutes.

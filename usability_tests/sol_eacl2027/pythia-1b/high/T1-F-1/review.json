@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T1-defective.py",
+  "started_at": "2026-09-07T16:44:14+00:00",
+  "finished_at": "2026-09-07T16:44:20+00:00",
+  "wall_clock_s": 6.1,
+  "tokens_in": 21368,
+  "tokens_out": 69,
+  "cost_usd": 0.058798,
+  "verdict_text": "NO. The script drops block 15 instead of block 14, violating Required result 1. Consequently, old block 14 is renumbered to output block 11 instead of old block 15, violating the required mapping in result 2; the tensor-count and contiguous-index assertions do not detect this incorrect provenance.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

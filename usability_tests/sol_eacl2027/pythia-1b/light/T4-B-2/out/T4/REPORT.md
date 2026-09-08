@@ -1,0 +1,10 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 4
+- Which executions failed, and why (one line each): Execution 1 failed plan validation because `output.alias` is unsupported by this installed BrainSurgery version.
+- Which executions failed, and why (one line each): Execution 2 failed before arithmetic because an in-place binary mapping used a capture in `to` instead of `from`.
+- Which executions failed, and why (one line each): Execution 3 failed before arithmetic because in-place subtraction requires matching dtypes and the base source was still float16.
+- Pitfalls or surprises you hit (one line each): Multi-input output inference requires all mutating transforms to target only the intended output alias.
+- Pitfalls or surprises you hit (one line each): In-place arithmetic is strict about source/destination dtype equality and mapping captures originate from `from`.
+- Anything in the task text or documentation that was unclear: The output mapping documentation did not explicitly list its allowed keys, and it was initially unclear whether an output alias could be selected explicitly.
+- Tools used (condition F): N/A (condition B; BrainSurgery only).
+- Approximate time spent, if you can tell: About 8 minutes.

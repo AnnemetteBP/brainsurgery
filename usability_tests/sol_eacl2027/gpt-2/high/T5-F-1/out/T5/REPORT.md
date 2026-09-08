@@ -1,0 +1,8 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` and the five `out/T5/model-0000*-of-00005.safetensors` shards; reproducible with `out/T5/solution.py`.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The PEFT adapter prefix had to be removed when mapping each factor pair to its base key, and `fan_in_fan_out=true` required transposing `B @ A` before addition.
+- Pitfalls or surprises you hit (one line each): The 154,389,504-byte `wte.weight` tensor exceeds the shard cap and therefore had to be emitted as a singleton shard.
+- Anything in the task text or documentation that was unclear: Nothing material.
+- Tools used (condition F): `torch` 2.14.0 for float32 matrix multiplication and tensor validation; `safetensors` 0.5.3 for direct checkpoint inspection and shard writing; Python standard library for configuration and index JSON handling. This direct route avoided instantiating the GPT-2 model.
+- Approximate time spent, if you can tell: About 5 minutes.

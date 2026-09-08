@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/B/T2-defective.yaml",
+  "started_at": "2026-09-07T15:50:45+00:00",
+  "finished_at": "2026-09-07T15:50:52+00:00",
+  "wall_clock_s": 7.3,
+  "tokens_in": 24904,
+  "tokens_out": 81,
+  "cost_usd": 0.076838,
+  "verdict_text": "NO. The plan removes rows/columns `768..895`, which is head 6, while the specification requires removing head 5 (`640..767`) and keeping `0..639` followed by `768..2047`. This violates Required result clauses 1\u20134 for every layer; the resulting shapes and tensor count may be correct, but the retained values are not.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The removed head is off by one (head N+1 instead of head N). All shapes are still correct, so the artifact's own shape checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

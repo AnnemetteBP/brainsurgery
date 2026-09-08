@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/solution.py`; checkpoint at `out/T3/model.safetensors.index.json` and `out/T3/model-*.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The task-local sandbox does not contain `grade.py`, so the documented grading command could not be run here; I instead independently validated tensor count, BF16 count, index mapping, and per-shard tensor-data sizes.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): PyTorch 2.14.0 for exact float32-to-bfloat16 conversion; safetensors 0.5.3 for memory-mapped input access and sharded output; Python standard library for exact-name selection, size-bounded packing, and index JSON.
+- Approximate time spent, if you can tell: 5 minutes.

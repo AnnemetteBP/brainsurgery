@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/model.safetensors.index.json` (with nine shard files in `out/T3/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The two float32 embedding matrices exceed the 256 MiB shard budget and were correctly emitted alone; the remaining seven shards are within the budget.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: About 3 minutes.

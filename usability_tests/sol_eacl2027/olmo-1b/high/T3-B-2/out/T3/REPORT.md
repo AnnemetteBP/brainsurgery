@@ -1,0 +1,8 @@
+- Final artifact path: `out/T3/`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The projection regex needed to exclude both embedding tensors while covering exactly seven projection families in each of 16 layers.
+- Pitfalls or surprises you hit (one line each): I used complementary count and dtype assertions so the plan proves that no tensor outside the 112 projections became bfloat16.
+- Anything in the task text or documentation that was unclear: Nothing material; the documentation clearly states that shard sizes use binary units and oversized tensors are stored alone.
+- Tools used (condition F): Not applicable (condition B); BrainSurgery was the required tool.
+- Approximate time spent, if you can tell: About 6 minutes.

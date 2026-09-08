@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T1-defective.py",
+  "started_at": "2026-09-07T15:44:28+00:00",
+  "finished_at": "2026-09-07T15:44:34+00:00",
+  "wall_clock_s": 6.4,
+  "tokens_in": 20947,
+  "tokens_out": 84,
+  "cost_usd": 0.057143,
+  "verdict_text": "NO. The script drops block 15 instead of block 14, violating Required result 1. Consequently, new block 11 contains old block 14 rather than old block 15, violating the required renumbering and bit-exact values in Required result 2. Its checks also do not explicitly verify that no blocks 12\u201315 remain, though the contiguous-index assertion implies that condition.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,78 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Preflight: prove all three key sets are exactly the expected shared 112
+  # tensors plus the expected 48 MLP tensors. These assertions precede every
+  # mutating transform.
+  - assert:
+      all:
+        - count: { of: 'base::.+', is: 160 }
+        - count: { of: 'ft1::.+', is: 160 }
+        - count: { of: 'ft2::.+', is: 160 }
+        - count: { of: 'base::(?!h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)$).+', is: 112 }
+        - count: { of: 'ft1::(?!h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)$).+', is: 112 }
+        - count: { of: 'ft2::(?!h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)$).+', is: 112 }
+        - count: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.c_fc\.weight', is: 12 }
+        - count: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.c_fc\.bias', is: 12 }
+        - count: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.c_proj\.weight', is: 12 }
+        - count: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.c_proj\.bias', is: 12 }
+        - count: { of: 'ft1::h\.(?:[0-9]|1[01])\.mlp\.c_fc\.weight', is: 12 }
+        - count: { of: 'ft1::h\.(?:[0-9]|1[01])\.mlp\.c_fc\.bias', is: 12 }
+        - count: { of: 'ft1::h\.(?:[0-9]|1[01])\.mlp\.c_proj\.weight', is: 12 }
+        - count: { of: 'ft1::h\.(?:[0-9]|1[01])\.mlp\.c_proj\.bias', is: 12 }
+        - count: { of: 'ft2::h\.(?:[0-9]|1[01])\.mlp\.c_fc\.weight', is: 12 }
+        - count: { of: 'ft2::h\.(?:[0-9]|1[01])\.mlp\.c_fc\.bias', is: 12 }
+        - count: { of: 'ft2::h\.(?:[0-9]|1[01])\.mlp\.c_proj\.weight', is: 12 }
+        - count: { of: 'ft2::h\.(?:[0-9]|1[01])\.mlp\.c_proj\.bias', is: 12 }
+        - equal:
+            left: 'base::((?!h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)$).+)'
+            right: 'ft1::\1'
+        - equal:
+            left: 'base::((?!h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)$).+)'
+            right: 'ft2::\1'
+        - dtype: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: float32 }
+        - dtype: { of: 'ft1::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: float32 }
+        - dtype: { of: 'ft2::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: float32 }
+
+  # Materialize both task vectors against the still-unmodified base.
+  - copy:
+      from: 'ft1::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::__t4_ft1.\1'
+  - subtract:
+      from_a: 'ft1::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      from_b: 'base::\1'
+      to: 'base::__t4_ft1.\1'
+  - scale_: { target: 'base::__t4_ft1\..+', by: 0.4 }
+
+  - copy:
+      from: 'ft2::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::__t4_ft2.\1'
+  - subtract:
+      from_a: 'ft2::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      from_b: 'base::\1'
+      to: 'base::__t4_ft2.\1'
+  - scale_: { target: 'base::__t4_ft2\..+', by: 0.4 }
+
+  # Merge the two independently computed task vectors into the base alias.
+  - add_:
+      from: 'base::__t4_ft1\.(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::\1'
+  - add_:
+      from: 'base::__t4_ft2\.(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::\1'
+
+  - delete: { target: 'base::__t4_ft1\..+' }
+  - delete: { target: 'base::__t4_ft2\..+' }
+
+  # Final cardinality checks: 48 merged targets and exactly 160 output tensors.
+  - assert:
+      all:
+        - count: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 48 }
+        - count: { of: 'base::.+', is: 160 }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

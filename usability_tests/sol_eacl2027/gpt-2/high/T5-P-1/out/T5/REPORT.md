@@ -1,0 +1,9 @@
+- Final artifact path: `out/T5/solution.py` (checkpoint shards and index in `out/T5/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): PEFT adapter names require stripping `base_model.model.` and replacing the LoRA suffix with `.weight`.
+- Pitfalls or surprises you hit (one line each): GPT-2 Conv1D weights require transposing `B @ A` before addition because `fan_in_fan_out` is true.
+- Pitfalls or surprises you hit (one line each): The oversized `wte.weight` tensor must occupy a singleton shard even though it exceeds the shard byte limit.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 5 minutes.

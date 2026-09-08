@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/model.safetensors.index.json` (with nine shard files in `out/T3/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The bfloat16-count check is expressed as an exact 64-name projection match plus dtype checks for that set and its float32 complement.
+- Anything in the task text or documentation that was unclear: Nothing material.
+- Tools used (condition F): Not applicable (Condition B).
+- Approximate time spent, if you can tell: About 3 minutes.

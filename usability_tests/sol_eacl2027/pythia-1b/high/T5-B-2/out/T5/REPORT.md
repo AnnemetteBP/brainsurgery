@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` (with 12 shard files in `out/T5/`)
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 completed, but post-run index verification showed `gpt_neox.embed_in.weight` shared its 200 MiB-target shard with two small tensors, contrary to the required singleton placement.
+- Pitfalls or surprises you hit (one line each): A 200 MiB shard target exceeds the embedding tensor's approximately 196.5 MiB binary payload, so a 190 MiB target was needed to make both embedding tensors oversized and therefore singleton shards.
+- Anything in the task text or documentation that was unclear: The statement that the approximately 206 MB embedding tensors are larger than the 512 MiB limit is dimensionally inconsistent; I interpreted the intended requirements as a 512 MiB maximum plus singleton placement and used a smaller valid shard target.
+- Tools used (condition F): N/A (condition B).
+- Approximate time spent, if you can tell: About 5 minutes.

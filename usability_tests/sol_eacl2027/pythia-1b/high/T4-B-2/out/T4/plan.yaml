@@ -1,0 +1,90 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Preflight: each input has the full checkpoint and the exact 64-name MLP set.
+  - assert: { count: { of: 'base::.+', is: 244 } }
+  - assert: { count: { of: 'ft1::.+', is: 244 } }
+  - assert: { count: { of: 'ft2::.+', is: 244 } }
+  - assert:
+      count:
+        of: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias)'
+        is: 64
+  - assert:
+      count:
+        of: 'ft1::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias)'
+        is: 64
+  - assert:
+      count:
+        of: 'ft2::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias)'
+        is: 64
+
+  # This checks all 180 frozen tensors by name, shape, dtype, and exact value.
+  # Together with the counts above, it also proves the complete key sets match.
+  - assert:
+      equal:
+        left: 'base::(?!gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias)$)(.+)'
+        right: 'ft1::\1'
+  - assert:
+      equal:
+        left: 'base::(?!gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias)$)(.+)'
+        right: 'ft2::\1'
+
+  # Preserve an unmodified float32 base for both task-vector subtractions.
+  - cast:
+      from: 'base::(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias))'
+      to: 'base::__merge_original.\1'
+      dtype: float32
+  - assert: { count: { of: 'base::__merge_original\..+', is: 64 } }
+  - cast_:
+      target: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias)'
+      to: float32
+
+  # First task vector: 0.4 * (ft1 - original_base), accumulated into base.
+  - cast:
+      from: 'ft1::(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias))'
+      to: 'base::__merge_delta1.\1'
+      dtype: float32
+  - subtract_:
+      from: 'base::__merge_original\.(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias))'
+      to: 'base::__merge_delta1.\1'
+  - scale_: { target: 'base::__merge_delta1\..+', by: 0.4 }
+  - add_:
+      from: 'base::__merge_delta1\.(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias))'
+      to: 'base::\1'
+  - delete: { target: 'base::__merge_delta1\..+' }
+
+  # Second task vector uses the same preserved, still-unmodified base.
+  - cast:
+      from: 'ft2::(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias))'
+      to: 'base::__merge_delta2.\1'
+      dtype: float32
+  - subtract_:
+      from: 'base::__merge_original\.(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias))'
+      to: 'base::__merge_delta2.\1'
+  - scale_: { target: 'base::__merge_delta2\..+', by: 0.4 }
+  - add_:
+      from: 'base::__merge_delta2\.(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias))'
+      to: 'base::\1'
+  - delete: { target: 'base::__merge_delta2\..+' }
+  - delete: { target: 'base::__merge_original\..+' }
+
+  # Restore the checkpoint dtype and validate the final output state dict.
+  - cast_:
+      target: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias)'
+      to: float16
+  - assert:
+      count:
+        of: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias)'
+        is: 64
+  - assert:
+      dtype:
+        of: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:dense_h_to_4h|dense_4h_to_h)\.(?:weight|bias)'
+        is: float16
+  - assert: { count: { of: 'base::.+', is: 244 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

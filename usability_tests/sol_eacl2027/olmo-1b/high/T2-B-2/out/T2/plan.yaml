@@ -1,0 +1,253 @@
+inputs:
+  - model::inputs/base
+
+transforms:
+  # Preflight checks: validate the complete input and every tensor that will be edited.
+  - assert: { count: { of: 'model::.*', is: 114 } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.q_proj\.weight', is: 16 } }
+  - assert: { shape: { of: 'model::model\.layers\.\d+\.self_attn\.q_proj\.weight', is: [2048, 2048] } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.k_proj\.weight', is: 16 } }
+  - assert: { shape: { of: 'model::model\.layers\.\d+\.self_attn\.k_proj\.weight', is: [2048, 2048] } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.v_proj\.weight', is: 16 } }
+  - assert: { shape: { of: 'model::model\.layers\.\d+\.self_attn\.v_proj\.weight', is: [2048, 2048] } }
+  - assert: { count: { of: 'model::model\.layers\.\d+\.self_attn\.o_proj\.weight', is: 16 } }
+  - assert: { shape: { of: 'model::model\.layers\.\d+\.self_attn\.o_proj\.weight', is: [2048, 2048] } }
+
+  # For each projection, move the original aside, rebuild it from the two
+  # retained slices, then remove the temporary source.
+
+  # Layer 0
+  - move: { from: 'model::model.layers.0.self_attn.q_proj.weight', to: 'model::__source__.model.layers.0.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.0.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.0.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.0.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.0.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.0.self_attn.k_proj.weight', to: 'model::__source__.model.layers.0.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.0.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.0.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.0.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.0.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.0.self_attn.v_proj.weight', to: 'model::__source__.model.layers.0.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.0.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.0.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.0.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.0.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.0.self_attn.o_proj.weight', to: 'model::__source__.model.layers.0.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.0.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.0.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.0.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.0.self_attn.o_proj.weight' }
+
+  # Layer 1
+  - move: { from: 'model::model.layers.1.self_attn.q_proj.weight', to: 'model::__source__.model.layers.1.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.1.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.1.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.1.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.1.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.1.self_attn.k_proj.weight', to: 'model::__source__.model.layers.1.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.1.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.1.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.1.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.1.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.1.self_attn.v_proj.weight', to: 'model::__source__.model.layers.1.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.1.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.1.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.1.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.1.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.1.self_attn.o_proj.weight', to: 'model::__source__.model.layers.1.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.1.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.1.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.1.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.1.self_attn.o_proj.weight' }
+
+  # Layer 2
+  - move: { from: 'model::model.layers.2.self_attn.q_proj.weight', to: 'model::__source__.model.layers.2.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.2.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.2.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.2.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.2.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.2.self_attn.k_proj.weight', to: 'model::__source__.model.layers.2.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.2.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.2.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.2.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.2.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.2.self_attn.v_proj.weight', to: 'model::__source__.model.layers.2.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.2.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.2.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.2.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.2.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.2.self_attn.o_proj.weight', to: 'model::__source__.model.layers.2.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.2.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.2.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.2.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.2.self_attn.o_proj.weight' }
+
+  # Layer 3
+  - move: { from: 'model::model.layers.3.self_attn.q_proj.weight', to: 'model::__source__.model.layers.3.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.3.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.3.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.3.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.3.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.3.self_attn.k_proj.weight', to: 'model::__source__.model.layers.3.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.3.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.3.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.3.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.3.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.3.self_attn.v_proj.weight', to: 'model::__source__.model.layers.3.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.3.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.3.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.3.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.3.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.3.self_attn.o_proj.weight', to: 'model::__source__.model.layers.3.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.3.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.3.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.3.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.3.self_attn.o_proj.weight' }
+
+  # Layer 4
+  - move: { from: 'model::model.layers.4.self_attn.q_proj.weight', to: 'model::__source__.model.layers.4.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.4.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.4.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.4.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.4.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.4.self_attn.k_proj.weight', to: 'model::__source__.model.layers.4.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.4.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.4.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.4.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.4.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.4.self_attn.v_proj.weight', to: 'model::__source__.model.layers.4.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.4.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.4.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.4.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.4.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.4.self_attn.o_proj.weight', to: 'model::__source__.model.layers.4.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.4.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.4.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.4.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.4.self_attn.o_proj.weight' }
+
+  # Layer 5
+  - move: { from: 'model::model.layers.5.self_attn.q_proj.weight', to: 'model::__source__.model.layers.5.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.5.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.5.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.5.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.5.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.5.self_attn.k_proj.weight', to: 'model::__source__.model.layers.5.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.5.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.5.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.5.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.5.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.5.self_attn.v_proj.weight', to: 'model::__source__.model.layers.5.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.5.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.5.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.5.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.5.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.5.self_attn.o_proj.weight', to: 'model::__source__.model.layers.5.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.5.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.5.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.5.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.5.self_attn.o_proj.weight' }
+
+  # Layer 6
+  - move: { from: 'model::model.layers.6.self_attn.q_proj.weight', to: 'model::__source__.model.layers.6.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.6.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.6.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.6.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.6.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.6.self_attn.k_proj.weight', to: 'model::__source__.model.layers.6.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.6.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.6.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.6.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.6.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.6.self_attn.v_proj.weight', to: 'model::__source__.model.layers.6.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.6.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.6.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.6.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.6.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.6.self_attn.o_proj.weight', to: 'model::__source__.model.layers.6.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.6.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.6.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.6.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.6.self_attn.o_proj.weight' }
+
+  # Layer 7
+  - move: { from: 'model::model.layers.7.self_attn.q_proj.weight', to: 'model::__source__.model.layers.7.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.7.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.7.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.7.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.7.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.7.self_attn.k_proj.weight', to: 'model::__source__.model.layers.7.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.7.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.7.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.7.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.7.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.7.self_attn.v_proj.weight', to: 'model::__source__.model.layers.7.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.7.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.7.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.7.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.7.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.7.self_attn.o_proj.weight', to: 'model::__source__.model.layers.7.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.7.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.7.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.7.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.7.self_attn.o_proj.weight' }
+
+  # Layer 8
+  - move: { from: 'model::model.layers.8.self_attn.q_proj.weight', to: 'model::__source__.model.layers.8.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.8.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.8.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.8.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.8.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.8.self_attn.k_proj.weight', to: 'model::__source__.model.layers.8.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.8.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.8.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.8.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.8.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.8.self_attn.v_proj.weight', to: 'model::__source__.model.layers.8.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.8.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.8.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.8.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.8.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.8.self_attn.o_proj.weight', to: 'model::__source__.model.layers.8.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.8.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.8.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.8.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.8.self_attn.o_proj.weight' }
+
+  # Layer 9
+  - move: { from: 'model::model.layers.9.self_attn.q_proj.weight', to: 'model::__source__.model.layers.9.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.9.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.9.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.9.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.9.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.9.self_attn.k_proj.weight', to: 'model::__source__.model.layers.9.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.9.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.9.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.9.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.9.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.9.self_attn.v_proj.weight', to: 'model::__source__.model.layers.9.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.9.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.9.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.9.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.9.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.9.self_attn.o_proj.weight', to: 'model::__source__.model.layers.9.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.9.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.9.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.9.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.9.self_attn.o_proj.weight' }
+
+  # Layer 10
+  - move: { from: 'model::model.layers.10.self_attn.q_proj.weight', to: 'model::__source__.model.layers.10.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.10.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.10.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.10.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.10.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.10.self_attn.k_proj.weight', to: 'model::__source__.model.layers.10.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.10.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.10.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.10.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.10.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.10.self_attn.v_proj.weight', to: 'model::__source__.model.layers.10.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.10.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.10.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.10.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.10.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.10.self_attn.o_proj.weight', to: 'model::__source__.model.layers.10.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.10.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.10.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.10.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.10.self_attn.o_proj.weight' }
+
+  # Layer 11
+  - move: { from: 'model::model.layers.11.self_attn.q_proj.weight', to: 'model::__source__.model.layers.11.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.11.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.11.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.11.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.11.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.11.self_attn.k_proj.weight', to: 'model::__source__.model.layers.11.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.11.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.11.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.11.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.11.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.11.self_attn.v_proj.weight', to: 'model::__source__.model.layers.11.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.11.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.11.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.11.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.11.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.11.self_attn.o_proj.weight', to: 'model::__source__.model.layers.11.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.11.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.11.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.11.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.11.self_attn.o_proj.weight' }
+
+  # Layer 12
+  - move: { from: 'model::model.layers.12.self_attn.q_proj.weight', to: 'model::__source__.model.layers.12.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.12.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.12.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.12.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.12.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.12.self_attn.k_proj.weight', to: 'model::__source__.model.layers.12.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.12.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.12.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.12.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.12.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.12.self_attn.v_proj.weight', to: 'model::__source__.model.layers.12.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.12.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.12.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.12.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.12.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.12.self_attn.o_proj.weight', to: 'model::__source__.model.layers.12.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.12.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.12.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.12.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.12.self_attn.o_proj.weight' }
+
+  # Layer 13
+  - move: { from: 'model::model.layers.13.self_attn.q_proj.weight', to: 'model::__source__.model.layers.13.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.13.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.13.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.13.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.13.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.13.self_attn.k_proj.weight', to: 'model::__source__.model.layers.13.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.13.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.13.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.13.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.13.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.13.self_attn.v_proj.weight', to: 'model::__source__.model.layers.13.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.13.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.13.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.13.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.13.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.13.self_attn.o_proj.weight', to: 'model::__source__.model.layers.13.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.13.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.13.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.13.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.13.self_attn.o_proj.weight' }
+
+  # Layer 14
+  - move: { from: 'model::model.layers.14.self_attn.q_proj.weight', to: 'model::__source__.model.layers.14.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.14.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.14.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.14.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.14.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.14.self_attn.k_proj.weight', to: 'model::__source__.model.layers.14.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.14.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.14.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.14.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.14.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.14.self_attn.v_proj.weight', to: 'model::__source__.model.layers.14.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.14.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.14.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.14.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.14.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.14.self_attn.o_proj.weight', to: 'model::__source__.model.layers.14.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.14.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.14.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.14.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.14.self_attn.o_proj.weight' }
+
+  # Layer 15
+  - move: { from: 'model::model.layers.15.self_attn.q_proj.weight', to: 'model::__source__.model.layers.15.self_attn.q_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.15.self_attn.q_proj.weight::[:640, :]', 'model::__source__.model.layers.15.self_attn.q_proj.weight::[768:, :]'], to: 'model::model.layers.15.self_attn.q_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.15.self_attn.q_proj.weight' }
+  - move: { from: 'model::model.layers.15.self_attn.k_proj.weight', to: 'model::__source__.model.layers.15.self_attn.k_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.15.self_attn.k_proj.weight::[:640, :]', 'model::__source__.model.layers.15.self_attn.k_proj.weight::[768:, :]'], to: 'model::model.layers.15.self_attn.k_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.15.self_attn.k_proj.weight' }
+  - move: { from: 'model::model.layers.15.self_attn.v_proj.weight', to: 'model::__source__.model.layers.15.self_attn.v_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.15.self_attn.v_proj.weight::[:640, :]', 'model::__source__.model.layers.15.self_attn.v_proj.weight::[768:, :]'], to: 'model::model.layers.15.self_attn.v_proj.weight', dim: 0 }
+  - delete: { target: 'model::__source__.model.layers.15.self_attn.v_proj.weight' }
+  - move: { from: 'model::model.layers.15.self_attn.o_proj.weight', to: 'model::__source__.model.layers.15.self_attn.o_proj.weight' }
+  - concat: { from: ['model::__source__.model.layers.15.self_attn.o_proj.weight::[:, :640]', 'model::__source__.model.layers.15.self_attn.o_proj.weight::[:, 768:]'], to: 'model::model.layers.15.self_attn.o_proj.weight', dim: 1 }
+  - delete: { target: 'model::__source__.model.layers.15.self_attn.o_proj.weight' }
+
+  # Required post-edit checks. These execute before the output is written.
+  - assert: { shape: { of: 'model::model.layers.0.self_attn.q_proj.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model::model.layers.0.self_attn.k_proj.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model::model.layers.0.self_attn.v_proj.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model::model.layers.0.self_attn.o_proj.weight', is: [2048, 1920] } }
+  - assert: { count: { of: 'model::.*', is: 114 } }
+
+output:
+  path: out/T2/model.safetensors
+  format: safetensors
+

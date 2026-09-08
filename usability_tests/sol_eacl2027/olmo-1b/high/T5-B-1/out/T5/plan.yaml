@@ -1,0 +1,56 @@
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Establish that the adapter contains exactly the 32 expected A/B pairs.
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(?:q_proj|v_proj)\.lora_A\.weight'
+        is: 32
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(?:q_proj|v_proj)\.lora_B\.weight'
+        is: 32
+
+  # fan_in_fan_out=false: each delta has the base [out, in] layout B @ A.
+  - matmul:
+      from_a: 'lora::base_model\.model\.model\.layers\.(\d+)\.(self_attn\.(?:q_proj|v_proj))\.lora_B\.weight'
+      from_b: 'lora::base_model.model.model.layers.\1.\2.lora_A.weight'
+      to: 'base::__merge_delta.\1.\2'
+  - assert:
+      count:
+        of: 'base::__merge_delta\..+'
+        is: 32
+  - scale_:
+      target: 'base::__merge_delta\..+'
+      by: 2.0
+  - add_:
+      from: 'base::__merge_delta\.(\d+)\.(self_attn\.(?:q_proj|v_proj))'
+      to: 'base::model.layers.\1.\2.weight'
+
+  # Remove all working tensors before validating the dense output namespace.
+  - delete:
+      target: 'base::__merge_delta\..+'
+  - assert:
+      not:
+        exists: 'base::.*lora_.*'
+  - assert:
+      not:
+        exists: 'base::__merge_delta\..*'
+  - assert:
+      shape:
+        of: base::model.layers.0.self_attn.q_proj.weight
+        is: [2048, 2048]
+  - assert:
+      count:
+        of: 'base::.*'
+        is: 114
+
+output:
+  path: out/T5
+  format: safetensors
+  # 393 MiB is exactly one [50304, 2048] float32 embedding tensor, so the
+  # two 412,090,368-byte embedding matrices are each emitted alone while
+  # every shard remains below the task's 512 MiB maximum.
+  shard: 393MB

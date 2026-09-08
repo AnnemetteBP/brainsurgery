@@ -1,0 +1,7 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Renaming block keys in place could cause collisions, so the solution constructs a separate output mapping and rejects duplicate destination keys.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `safetensors` 0.5.3 for loading the indexed input shards, writing one output file, and reopening it for validation; Python standard library for key parsing, mapping, and atomic publication.
+- Approximate time spent, if you can tell: About 5 minutes.

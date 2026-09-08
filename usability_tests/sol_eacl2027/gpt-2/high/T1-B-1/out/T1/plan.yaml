@@ -1,0 +1,47 @@
+inputs:
+  - inputs/base/model.safetensors
+
+transforms:
+  # Remove the pruned blocks first, creating holes for collision-free moves.
+  - delete:
+      target: [h, "~(2|5|8)", "*rest"]
+
+  # Compact each surviving run toward the hole immediately below it.
+  - move:
+      from: [h, "3", "*rest"]
+      to: [h, "2", "*rest"]
+  - move:
+      from: [h, "4", "*rest"]
+      to: [h, "3", "*rest"]
+  - move:
+      from: [h, "6", "*rest"]
+      to: [h, "4", "*rest"]
+  - move:
+      from: [h, "7", "*rest"]
+      to: [h, "5", "*rest"]
+  - move:
+      from: [h, "9", "*rest"]
+      to: [h, "6", "*rest"]
+  - move:
+      from: [h, "10", "*rest"]
+      to: [h, "7", "*rest"]
+  - move:
+      from: [h, "11", "*rest"]
+      to: [h, "8", "*rest"]
+
+  # Required post-edit checks. Output is written only after these pass.
+  - assert:
+      not:
+        exists: [h, "~(9|10|11)", "*rest"]
+  - assert:
+      count:
+        of: [h, "~[0-8]", attn, c_attn, weight]
+        is: 9
+  - assert:
+      count:
+        of: ["*all"]
+        is: 121
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors

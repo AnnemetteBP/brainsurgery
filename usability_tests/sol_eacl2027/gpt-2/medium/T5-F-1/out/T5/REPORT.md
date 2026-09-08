@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/solution.py`; generated checkpoint: `out/T5/model.safetensors.index.json` and five `out/T5/model-*.safetensors` shards.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The 154,389,504-byte embedding tensor exceeds the shard limit and therefore had to be isolated in a one-tensor shard.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): PyTorch 2.14.0 for float32 matrix multiplication and tensor validation; safetensors 0.5.3 for direct checkpoint loading and sharded serialization. This avoided model instantiation and preserved unchanged tensors exactly.
+- Approximate time spent, if you can tell: About 5 minutes.

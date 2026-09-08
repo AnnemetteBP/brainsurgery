@@ -1,0 +1,7 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed before output because `assert.count` cannot resolve a pattern with zero matches; the no-high-layer check was changed to `assert.not` + `exists`.
+- Pitfalls or surprises you hit (one line each): A zero-match invariant must use `not: { exists: ... }`, because `count: { is: 0 }` raises a no-match error before comparing the count.
+- Anything in the task text or documentation that was unclear: Nothing in the task text was unclear; the `count` documentation did not mention that zero matches raise instead of satisfying `is: 0`.
+- Tools used (condition F): N/A (condition B).
+- Approximate time spent, if you can tell: About 3 minutes.

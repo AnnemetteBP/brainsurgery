@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/solution.py`; checkpoint at `out/T3/model.safetensors.index.json` and its nine mapped shard files.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Shard sizes must use output dtypes, so the two embeddings become oversized only after their float16-to-float32 upcast and must each occupy a shard alone.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 5 minutes.

@@ -1,0 +1,88 @@
+inputs:
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Preflight: each checkpoint must have exactly the expected key count and
+  # exactly the 48 canonical MLP tensors (16 layers x 3 projections).
+  - assert: { count: { of: 'base::.+', is: 114 } }
+  - assert: { count: { of: 'ft1::.+', is: 114 } }
+  - assert: { count: { of: 'ft2::.+', is: 114 } }
+  - assert:
+      count:
+        of: 'base::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight'
+        is: 48
+  - assert:
+      count:
+        of: 'ft1::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight'
+        is: 48
+  - assert:
+      count:
+        of: 'ft2::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight'
+        is: 48
+
+  # The count checks plus these exhaustive mapped comparisons prove that the
+  # key sets agree, and that all 66 non-MLP tensors are bit-identical.
+  - assert:
+      equal:
+        left: 'base::((?!model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight$).+)'
+        right: 'ft1::\1'
+  - assert:
+      equal:
+        left: 'base::((?!model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight$).+)'
+        right: 'ft2::\1'
+
+  # Arithmetic is float32 because all selected tensors are required to be
+  # float32.  The expression below is algebraically the requested task-vector
+  # merge: base + .4*(ft1-base) + .4*(ft2-base).
+  - assert:
+      dtype:
+        of: 'base::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight'
+        is: float32
+  - assert:
+      dtype:
+        of: 'ft1::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight'
+        is: float32
+  - assert:
+      dtype:
+        of: 'ft2::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight'
+        is: float32
+
+  - scale_:
+      target: 'base::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight'
+      by: 0.2
+
+  - copy:
+      from: 'ft1::(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::__merge_tmp__.\1'
+  - scale_:
+      target: 'base::__merge_tmp__\.(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      by: 0.4
+  - add_:
+      from: 'base::__merge_tmp__\.(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::\1'
+  - delete: { target: 'base::__merge_tmp__\..+' }
+
+  - copy:
+      from: 'ft2::(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::__merge_tmp__.\1'
+  - scale_:
+      target: 'base::__merge_tmp__\.(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      by: 0.4
+  - add_:
+      from: 'base::__merge_tmp__\.(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::\1'
+  - delete: { target: 'base::__merge_tmp__\..+' }
+
+  # Required postconditions: exactly 48 merged targets and 114 output tensors.
+  - assert:
+      count:
+        of: 'base::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight'
+        is: 48
+  - assert: { not: { exists: 'base::__merge_tmp__\..+' } }
+  - assert: { count: { of: 'base::.+', is: 114 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

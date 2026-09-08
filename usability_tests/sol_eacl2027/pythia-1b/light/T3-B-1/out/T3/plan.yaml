@@ -1,0 +1,49 @@
+inputs:
+  - inputs/base/model.safetensors
+
+transforms:
+  # Remove only the three documented non-parameter buffers in each layer.
+  - delete:
+      target: 'gpt_neox\.layers\.\d+\.attention\.(?:bias|masked_bias|rotary_emb\.inv_freq)'
+
+  # All retained tensors are numerically sensitive by default.
+  - cast_:
+      target: '.+'
+      to: float32
+
+  # Narrowly select the four projection-matrix families in every layer.
+  - cast_:
+      target: 'gpt_neox\.layers\.\d+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight'
+      to: bfloat16
+
+  # Required pre-write checks. Together, the first three establish that
+  # exactly 64 tensors (and no others) are bfloat16.
+  - assert:
+      count:
+        of: 'gpt_neox\.layers\.\d+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight'
+        is: 64
+  - assert:
+      dtype:
+        of: 'gpt_neox\.layers\.\d+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight'
+        is: bfloat16
+  - assert:
+      dtype:
+        of: '(?!gpt_neox\.layers\.\d+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight$).+'
+        is: float32
+  - assert:
+      dtype:
+        of: gpt_neox.layers.0.attention.query_key_value.weight
+        is: bfloat16
+  - assert:
+      dtype:
+        of: gpt_neox.embed_in.weight
+        is: float32
+  - assert:
+      count:
+        of: '.+'
+        is: 196
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 256MB

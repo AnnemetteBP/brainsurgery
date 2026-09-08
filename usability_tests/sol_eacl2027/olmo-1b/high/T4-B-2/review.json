@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-07T18:59:36+00:00",
+  "finished_at": "2026-09-07T18:59:58+00:00",
+  "wall_clock_s": 22.8,
+  "tokens_in": 21381,
+  "tokens_out": 585,
+  "cost_usd": 0.074343,
+  "verdict_text": "NO. The plan never verifies the exact tensor-name sets across all three checkpoints. Its counts and broad `\\d+` MLP pattern could accept a missing expected layer-0\u201315 MLP key replaced by an unexpected MLP-like key, violating Required Result 1 and the shared-tensor verification check.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

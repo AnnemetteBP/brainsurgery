@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/solution.py`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The task explicitly requires the two approximately 206 MB embedding tensors to be stored alone even though each is below the stated 512 MiB cap, so the sharding logic handles those names specially.
+- Anything in the task text or documentation that was unclear: The phrase “single tensor larger than that” conflicts with the stated approximately 206 MB sizes and 512 MiB limit; I followed the explicit requirement that both embedding tensors occupy dedicated shards.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 4 minutes.

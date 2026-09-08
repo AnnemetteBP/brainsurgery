@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): None; the explicit 48-name set avoided ambiguous pattern matching, and all frozen tensors passed exact equality checks.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: 4 minutes.

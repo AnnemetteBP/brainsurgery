@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/solution.py`; checkpoint at `out/T5/model.safetensors.index.json` and its 10 shard files.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The two 412,090,368-byte embedding tensors are below the nominal 512 MiB cap but the task explicitly requires each to be a singleton shard, so the shard planner handles them specially.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Python; PyTorch 2.14.0 for float32 `B @ A` and addition; safetensors 0.5.3 for streaming checkpoint reads and sharded writes. A direct script avoided instantiating the model and bounded memory to one output shard.
+- Approximate time spent, if you can tell: About 5 minutes.

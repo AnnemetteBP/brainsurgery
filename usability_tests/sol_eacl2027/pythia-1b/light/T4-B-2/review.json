@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-07T17:51:42+00:00",
+  "finished_at": "2026-09-07T17:52:05+00:00",
+  "wall_clock_s": 23.3,
+  "tokens_in": 22100,
+  "tokens_out": 591,
+  "cost_usd": 0.078118,
+  "verdict_text": "NO. The MLP regex accepts any numeric layer (`\\d+`) rather than restricting layers to `0..15`, so it could merge an incorrect set of 64 tensors while all count assertions pass. This violates the requirement to merge exactly the specified 64 MLP tensors and to verify identicality for every tensor outside that exact set.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

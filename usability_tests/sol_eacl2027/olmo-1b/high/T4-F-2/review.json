@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-07T18:56:57+00:00",
+  "finished_at": "2026-09-07T18:57:14+00:00",
+  "wall_clock_s": 16.9,
+  "tokens_in": 20859,
+  "tokens_out": 411,
+  "cost_usd": 0.066513,
+  "verdict_text": "NO. The regex accepts MLP tensors from any numeric layer, not only layers 0\u201315, so `merged == 48` could pass while merging the wrong tensor set and exempting those tensors from shared-tensor verification, violating Required Result 1\u20132.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

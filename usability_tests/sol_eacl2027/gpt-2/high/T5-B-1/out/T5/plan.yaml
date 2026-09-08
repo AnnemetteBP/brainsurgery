@@ -1,0 +1,66 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Preflight the complete adapter and its corresponding dense targets.
+  - assert:
+      all:
+        - count:
+            of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_A\.weight'
+            is: 12
+        - count:
+            of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_B\.weight'
+            is: 12
+        - count:
+            of: 'base::h\.\d+\.attn\.c_attn\.weight'
+            is: 12
+        - dtype:
+            of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_[AB]\.weight'
+            is: float32
+        - dtype:
+            of: 'base::h\.\d+\.attn\.c_attn\.weight'
+            is: float32
+
+  # Form B @ A for each captured layer, transpose to GPT-2 Conv1D [in, out]
+  # layout, apply alpha/r = 32/16 = 2, and merge into the dense weight.
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'base::__merge.\1.ba'
+  - permute:
+      from: 'base::__merge\.(\d+)\.ba'
+      to: 'base::__merge.\1.delta'
+      order: [1, 0]
+  - scale_:
+      target: 'base::__merge\.\d+\.delta'
+      by: 2.0
+  - add_:
+      from: 'base::__merge\.(\d+)\.delta'
+      to: 'base::h.\1.attn.c_attn.weight'
+
+  # One successfully constructed delta per pair proves all 12 mapped merge
+  # operations ran. Remove all intermediates before the final-state checks.
+  - assert:
+      count:
+        of: 'base::__merge\.\d+\.delta'
+        is: 12
+  - delete:
+      target: 'base::__merge\..+'
+
+  # Required final checks, evaluated before output serialization.
+  - assert:
+      all:
+        - not:
+            exists: 'base::.*lora_.*'
+        - shape:
+            of: base::h.0.attn.c_attn.weight
+            is: [768, 2304]
+        - count:
+            of: 'base::.*'
+            is: 160
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB

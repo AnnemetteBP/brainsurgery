@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T2-defective.py",
+  "started_at": "2026-09-07T16:01:46+00:00",
+  "finished_at": "2026-09-07T16:01:53+00:00",
+  "wall_clock_s": 6.8,
+  "tokens_in": 21295,
+  "tokens_out": 81,
+  "cost_usd": 0.058793,
+  "verdict_text": "NO. The script sets `DROP_HEAD = 6`, so it removes rows `4608..5375` and columns `1536..1791`; the specification requires removing head 5, meaning rows `3840..4607` and columns `1280..1535`. This violates Required result clauses 1\u20133 for every layer, despite producing the required shapes.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The removed head is off by one (head N+1 instead of head N). All shapes are still correct, so the artifact's own shape checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,7 @@
+- Final artifact path: `out/T2/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): `concat` requires each source reference to resolve to exactly one tensor, so each layer/projection was rebuilt explicitly before a regex-based move restored the original names.
+- Anything in the task text or documentation that was unclear: None.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: About 4 minutes.

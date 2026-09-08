@@ -1,0 +1,8 @@
+- Final artifact path: `out/T5/solution.py` (checkpoint at `out/T5/model.safetensors.index.json` and its shard files)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): All required checks had to be completed from safetensors metadata before writing, while tensors were loaded one shard at a time to bound memory use.
+- Pitfalls or surprises you hit (one line each): The two named embedding tensors were explicitly placed in separate shards even though their stated 206 MB sizes are below the stated 512 MiB maximum.
+- Anything in the task text or documentation that was unclear: The claim that each 206 MB embedding tensor is larger than 512 MiB is numerically inconsistent; I followed the explicit instruction that each be stored alone.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 5 minutes.

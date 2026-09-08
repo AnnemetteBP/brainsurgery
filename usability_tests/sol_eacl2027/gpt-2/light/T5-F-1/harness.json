@@ -1,0 +1,47 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "gpt-2",
+  "effort": "light",
+  "reasoning_effort": "low",
+  "test": "T5",
+  "condition": "F",
+  "repeat": 1,
+  "started_at": "2026-09-07T15:04:57+00:00",
+  "finished_at": "2026-09-07T15:07:59+00:00",
+  "wall_clock_s": 181.9,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.404415,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 10,
+  "tokens_in": 29993,
+  "tokens_out": 4343,
+  "cache_read_tokens": 248320,
+  "cache_write_tokens": null,
+  "tokens_in_total": 278313,
+  "reasoning_tokens": 661,
+  "usage_raw": {
+    "input_tokens": 278313,
+    "cached_input_tokens": 248320,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 4343,
+    "reasoning_output_tokens": 661
+  },
+  "executions": 2,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc '.venv/bin/python out/T5/solution.py'",
+      "message": "AssertionError: an adapted base tensor is missing",
+      "n": 1,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Completed the LoRA merge and sharded export.\n\n- Artifact: [solution.py](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/light/T5-F-1/out/T5/solution.py)\n- Report: [REPORT.md](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/light/T5-F-1/out/T5/REPORT.md)\n- Output: 160 tensors across five shards\n- All shard-size, index, key-count, and adapter-removal checks passed\n- The oversized `wte.weight` tensor is isolated in its own shard\n- The sandbox does not contain `grade.py`, so the official grader could not be run here"
+}

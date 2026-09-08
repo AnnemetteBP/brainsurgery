@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/B/T4-defective.yaml",
+  "started_at": "2026-09-07T16:11:20+00:00",
+  "finished_at": "2026-09-07T16:11:30+00:00",
+  "wall_clock_s": 9.4,
+  "tokens_in": 22083,
+  "tokens_out": 181,
+  "cost_usd": 0.065733,
+  "verdict_text": "NO. The second task vector subtracts the already modified base after task vector 1 was added, instead of the original base, violating Required Result 2\u2019s formula and ordering requirement. The plan also checks only `ft1`/`ft2` tensor counts, not that all three checkpoints have exactly the same tensor names, violating Required Result 1.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/B/T1-defective.yaml",
+  "started_at": "2026-09-07T16:00:36+00:00",
+  "finished_at": "2026-09-07T16:00:45+00:00",
+  "wall_clock_s": 8.4,
+  "tokens_in": 21518,
+  "tokens_out": 74,
+  "cost_usd": 0.059698,
+  "verdict_text": "NO. The plan deletes blocks 2, 6, 10, and 15, but the specification requires deleting blocks 2, 6, 10, and 14. Consequently, it incorrectly retains old block 14 as new block 11 and discards old block 15, violating Required result clauses 1 and 2.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

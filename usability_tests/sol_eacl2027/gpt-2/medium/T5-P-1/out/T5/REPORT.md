@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/solution.py` (checkpoint at `out/T5/model.safetensors.index.json` and its shard files)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The oversized embedding tensor needed to be flushed as a one-tensor shard while all ordinary shards remained at or below 100 MiB.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): N/A (condition P).
+- Approximate time spent, if you can tell: About 5 minutes.

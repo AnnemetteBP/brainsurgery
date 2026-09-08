@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors` (producer: `out/T4/solution.py`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): The 4.8 GB checkpoints made it important to read tensors incrementally rather than load all three state dictionaries at once.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for exact comparisons and float32 task-vector arithmetic; `safetensors` 0.5.3 for incremental reads and single-file output; Python standard library for the sharded base index.
+- Approximate time spent, if you can tell: About 4 minutes.

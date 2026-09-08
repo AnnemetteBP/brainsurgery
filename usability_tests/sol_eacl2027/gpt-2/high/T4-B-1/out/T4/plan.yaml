@@ -1,0 +1,62 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Preflight: each input has exactly the expected complete key set. The MLP
+  # regex enumerates 12 layers x 2 projections x 2 parameter kinds = 48.
+  - assert: { count: { of: 'base::.+', is: 160 } }
+  - assert: { count: { of: 'ft1::.+', is: 160 } }
+  - assert: { count: { of: 'ft2::.+', is: 160 } }
+  - assert: { count: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 48 } }
+  - assert: { count: { of: 'ft1::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 48 } }
+  - assert: { count: { of: 'ft2::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 48 } }
+  - assert: { dtype: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: float32 } }
+  - assert: { dtype: { of: 'ft1::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: float32 } }
+  - assert: { dtype: { of: 'ft2::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: float32 } }
+  - assert:
+      equal:
+        left: 'base::((?!h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)$).+)'
+        right: 'ft1::\1'
+  - assert:
+      equal:
+        left: 'base::((?!h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)$).+)'
+        right: 'ft2::\1'
+
+  # Build both task vectors before changing base, preserving the required order.
+  - copy:
+      from: 'ft1::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::__task1.\1'
+  - subtract_:
+      from: 'base::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::__task1.\1'
+  - scale_: { target: 'base::__task1\..+', by: 0.4 }
+  - copy:
+      from: 'ft2::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::__task2.\1'
+  - subtract_:
+      from: 'base::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::__task2.\1'
+  - scale_: { target: 'base::__task2\..+', by: 0.4 }
+  - assert: { count: { of: 'base::__task1\..+', is: 48 } }
+  - assert: { count: { of: 'base::__task2\..+', is: 48 } }
+
+  # Apply each scaled vector to the original base tensors.
+  - add_:
+      from: 'base::__task1\.(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::\1'
+  - add_:
+      from: 'base::__task2\.(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::\1'
+  - delete: { target: 'base::__task1\..+' }
+  - delete: { target: 'base::__task2\..+' }
+
+  # Final output checks after temporary tensors are gone.
+  - assert: { count: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 48 } }
+  - assert: { count: { of: 'base::.+', is: 160 } }
+  - assert: { dtype: { of: 'base::.+', is: float32 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

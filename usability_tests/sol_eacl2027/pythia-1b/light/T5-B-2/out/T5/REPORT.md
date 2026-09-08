@@ -1,0 +1,8 @@
+- Final artifact path: `out/T5/` (`model.safetensors.index.json` and four shard files)
+- Number of times you executed the script or plan: 3
+- Which executions failed, and why (one line each): Execution 1 failed because `from_b` was written as a regex rather than a capture-rewrite template, so the synthesized LoRA A source name retained regex escapes and did not exist.
+- Which executions failed, and why (one line each): Execution 2 failed because the temporary `to` rewrite escaped its dot, creating names that the following regex did not match.
+- Pitfalls or surprises you hit (one line each): In ternary regex mappings, `from_a` is the matching regex while `from_b` and `to` are synthesized rewrite templates and must not escape literal dots.
+- Anything in the task text or documentation that was unclear: The distinction between matching expressions and synthesized rewrite templates was stated generally, but the exact escaping consequence for `from_b` and `to` required experimentation.
+- Tools used (condition F): Not applicable (Condition B); used only the `brainsurgery` CLI and supplied documentation.
+- Approximate time spent, if you can tell: About 4 minutes.

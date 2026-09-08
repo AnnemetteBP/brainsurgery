@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-07T17:24:12+00:00",
+  "finished_at": "2026-09-07T17:24:30+00:00",
+  "wall_clock_s": 18.3,
+  "tokens_in": 21404,
+  "tokens_out": 436,
+  "cost_usd": 0.069988,
+  "verdict_text": "NO. The plan never explicitly verifies that the three checkpoints have identical tensor names: the equality checks deliberately exclude all 48 MLP tensors, while the two 160-count checks establish only cardinality, not name equality. This violates Required result 1, which requires full tensor-name equality to be verified before any editing.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

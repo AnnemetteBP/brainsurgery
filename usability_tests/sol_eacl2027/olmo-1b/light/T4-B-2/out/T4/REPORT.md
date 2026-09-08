@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): In-place binary mappings are driven by captures in the `from` reference, so temporary tensor names had to capture and rewrite back to the corresponding base names.
+- Anything in the task text or documentation that was unclear: Nothing material.
+- Tools used (condition F): Not applicable (condition B); used the `brainsurgery` command-line tool required by the condition.
+- Approximate time spent, if you can tell: About 5 minutes.

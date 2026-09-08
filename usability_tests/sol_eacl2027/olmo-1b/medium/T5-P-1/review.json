@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T5-defective.py",
+  "started_at": "2026-09-07T15:55:10+00:00",
+  "finished_at": "2026-09-07T15:55:18+00:00",
+  "wall_clock_s": 8.1,
+  "tokens_in": 21527,
+  "tokens_out": 65,
+  "cost_usd": 0.059473,
+  "verdict_text": "NO. The script sets `scale = 1.0` instead of `lora_alpha / r = 32 / 16 = 2`, so every adapted weight receives `B @ A` rather than the required `2 * (B @ A)`, violating Required Result clause 1.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The adapter scaling factor alpha / r is missing: the raw low-rank product is added.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

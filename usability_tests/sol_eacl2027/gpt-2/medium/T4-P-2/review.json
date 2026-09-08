@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-07T17:59:39+00:00",
+  "finished_at": "2026-09-07T17:59:59+00:00",
+  "wall_clock_s": 20.4,
+  "tokens_in": 20742,
+  "tokens_out": 499,
+  "cost_usd": 0.068568,
+  "verdict_text": "NO. The MLP regex accepts any numeric layer index, not only layers 0 through 11. Consequently, an out-of-range tensor such as `h.12.mlp.c_fc.weight` would be merged and exempted from shared-tensor verification, violating Required result clauses 1\u20133; checking only that 48 tensors matched does not verify the exact required set.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

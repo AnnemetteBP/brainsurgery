@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/B/T1-defective.yaml",
+  "started_at": "2026-09-07T16:47:03+00:00",
+  "finished_at": "2026-09-07T16:47:10+00:00",
+  "wall_clock_s": 7.4,
+  "tokens_in": 21515,
+  "tokens_out": 101,
+  "cost_usd": 0.060493,
+  "verdict_text": "NO. The plan deletes blocks 2, 6, 10, and 15 instead of the required blocks 2, 6, 10, and 14, violating Required result 1. Consequently, it renames old block 14 to block 11 while discarding old block 15, whereas Required result 2 requires old block 15 to become block 11. The tensor counts and structural assertions can still pass despite these bit-exact contents being wrong.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

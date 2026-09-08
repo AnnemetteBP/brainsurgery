@@ -1,0 +1,7 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed before output because `assert: count` rejects a zero-match reference before comparing it with `is: 0`; changed the absence check to `not: { exists: ... }`.
+- Pitfalls or surprises you hit (one line each): Renaming must proceed in ascending old-layer order after deletion so every destination is vacant; a zero-match `count` assertion cannot express absence.
+- Anything in the task text or documentation that was unclear: The documentation says `count` checks for an exact number of matches, but it does not state that `is: 0` fails during reference resolution; the documented `not` plus `exists` combination works for absence.
+- Tools used (condition F): Not applicable (Condition B; used only the BrainSurgery CLI and shell tools for read-only artifact-header verification).
+- Approximate time spent, if you can tell: About 4 minutes.

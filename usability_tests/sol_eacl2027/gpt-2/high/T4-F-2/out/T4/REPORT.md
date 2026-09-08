@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The two task vectors must both be computed against the original base; the implementation retains that ordering explicitly.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `safetensors` 0.5.3 for lazy tensor reads and checkpoint serialization; `torch` 2.14.0 for exact equality checks and float32 task-vector arithmetic; Python standard library for paths and atomic publication.
+- Approximate time spent, if you can tell: About 3 minutes.

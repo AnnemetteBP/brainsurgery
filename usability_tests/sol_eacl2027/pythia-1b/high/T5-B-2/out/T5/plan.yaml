@@ -1,0 +1,64 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Establish that there are exactly 16 complete adapter pairs.
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_A\.weight'
+        is: 16
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_B\.weight'
+        is: 16
+
+  # Promote only the adapted base weights. The adapter factors are already fp32.
+  - cast_:
+      target: 'base::gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.weight'
+      to: float32
+
+  # fan_in_fan_out=false: delta = B @ A, with no transpose.
+  - matmul:
+      from_a: 'lora::base_model\.model\.gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_B\.weight'
+      from_b: 'lora::base_model.model.gpt_neox.layers.\1.attention.query_key_value.lora_A.weight'
+      to: 'base::__lora_merge.\1.delta'
+  - assert:
+      count:
+        of: 'base::__lora_merge\.(\d+)\.delta'
+        is: 16
+  - scale_:
+      target: 'base::__lora_merge\.(\d+)\.delta'
+      by: 2.0
+  - add_:
+      from: 'base::__lora_merge\.(\d+)\.delta'
+      to: 'base::gpt_neox.layers.\1.attention.query_key_value.weight'
+
+  # Restore the base dtype, then remove all merge intermediates.
+  - cast_:
+      target: 'base::gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.weight'
+      to: float16
+  - delete:
+      target: 'base::__lora_merge\.(\d+)\.delta'
+
+  # Required final checks, evaluated before the output writer runs.
+  - assert:
+      count:
+        of: 'base::gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.weight'
+        is: 16
+  - assert:
+      not:
+        exists: 'base::.*lora_.*'
+  - assert:
+      shape:
+        of: base::gpt_neox.layers.0.attention.query_key_value.weight
+        is: [6144, 2048]
+  - assert:
+      count:
+        of: 'base::.*'
+        is: 244
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 190MB

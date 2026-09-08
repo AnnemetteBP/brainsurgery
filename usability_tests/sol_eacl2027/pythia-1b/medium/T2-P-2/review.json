@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-07T18:20:20+00:00",
+  "finished_at": "2026-09-07T18:20:28+00:00",
+  "wall_clock_s": 8.0,
+  "tokens_in": 21219,
+  "tokens_out": 90,
+  "cost_usd": 0.058683,
+  "verdict_text": "YES. The artifact exactly implements the required pruning and checks.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

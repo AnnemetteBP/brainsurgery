@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/plan.yaml` (checkpoint: `out/T5/model.safetensors.index.json` and four shard files)
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed during plan validation because `cast_` expects its dtype under `to`, not `dtype`.
+- Pitfalls or surprises you hit (one line each): The in-place and out-of-place cast transforms use different dtype field names (`to` versus `dtype`).
+- Anything in the task text or documentation that was unclear: Nothing material; the sharding and tensor-reference mapping behavior were documented.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: About 4 minutes.

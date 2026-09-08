@@ -1,0 +1,7 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Renaming layer keys in place could cause collisions, so the script constructs a fresh key-to-tensor mapping and rejects duplicate destination keys.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Python 3; `safetensors` 0.5.3 for lazy checkpoint reads and safe serialization; standard-library regex/path/file operations for exact key rewriting, validation, temporary-file cleanup, and atomic publication.
+- Approximate time spent, if you can tell: About 4 minutes.

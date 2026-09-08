@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/B/T5-defective.yaml",
+  "started_at": "2026-09-07T15:21:00+00:00",
+  "finished_at": "2026-09-07T15:21:06+00:00",
+  "wall_clock_s": 5.6,
+  "tokens_in": 21388,
+  "tokens_out": 57,
+  "cost_usd": 0.058538,
+  "verdict_text": "NO: The plan computes and adds `B @ A` but omits the required scale factor `lora_alpha / r = 2`. This violates Required result clause 1, which requires each adapted weight to receive `2 * (B @ A)`.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The adapter scaling factor alpha / r is missing: the raw low-rank product is added.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

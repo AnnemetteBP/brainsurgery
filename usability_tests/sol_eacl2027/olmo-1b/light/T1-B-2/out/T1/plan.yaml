@@ -1,0 +1,44 @@
+inputs:
+  - model::inputs/base
+
+transforms:
+  - delete: { target: 'model.layers.(2|6|10|14)\..+' }
+
+  - move:
+      from: [model, layers, '3', '*rest']
+      to: [model, layers, '2', '*rest']
+  - move:
+      from: [model, layers, '4', '*rest']
+      to: [model, layers, '3', '*rest']
+  - move:
+      from: [model, layers, '5', '*rest']
+      to: [model, layers, '4', '*rest']
+  - move:
+      from: [model, layers, '7', '*rest']
+      to: [model, layers, '5', '*rest']
+  - move:
+      from: [model, layers, '8', '*rest']
+      to: [model, layers, '6', '*rest']
+  - move:
+      from: [model, layers, '9', '*rest']
+      to: [model, layers, '7', '*rest']
+  - move:
+      from: [model, layers, '11', '*rest']
+      to: [model, layers, '8', '*rest']
+  - move:
+      from: [model, layers, '12', '*rest']
+      to: [model, layers, '9', '*rest']
+  - move:
+      from: [model, layers, '13', '*rest']
+      to: [model, layers, '10', '*rest']
+  - move:
+      from: [model, layers, '15', '*rest']
+      to: [model, layers, '11', '*rest']
+
+  - assert: { not: { exists: 'model.layers.(12|13|14|15)\..+' } }
+  - assert: { count: { of: 'model.layers.[0-9]+.self_attn.q_proj.weight', is: 12 } }
+  - assert: { count: { of: '.*', is: 86 } }
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors

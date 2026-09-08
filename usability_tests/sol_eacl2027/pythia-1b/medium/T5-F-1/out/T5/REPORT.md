@@ -1,0 +1,8 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` and its six `out/T5/model-0000*-of-00006.safetensors` shards; producer: `out/T5/solution.py`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): `safetensors.safe_open().get_slice().get_dtype()` returns a safetensors dtype code such as `F16`, so shard byte accounting uses an explicit code-to-byte-size map.
+- Pitfalls or surprises you hit (one line each): The task calls the roughly 206 MB embedding tensors larger than the 512 MiB limit even though they are smaller; I followed the explicit requirement that each be stored alone.
+- Anything in the task text or documentation that was unclear: Only the embedding-size wording noted above; the required layout, scaling, checks, and output format were otherwise clear.
+- Tools used (condition F): `torch` 2.14.0 for float32 LoRA matrix multiplication and dtype conversion; `safetensors` 0.5.3 for lazy checkpoint reads and sharded writes; Python standard library for configuration, validation, sharding, and index generation. Direct checkpoint manipulation avoided instantiating the model.
+- Approximate time spent, if you can tell: About 6 minutes.

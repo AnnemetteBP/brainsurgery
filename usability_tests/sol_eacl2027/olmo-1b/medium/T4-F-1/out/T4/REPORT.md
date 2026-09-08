@@ -1,0 +1,8 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): The base was split across two indexed shards while each fine-tune was a single safetensors file, so the script maps every base tensor name to its owning shard.
+- Pitfalls or surprises you hit (one line each): The single-file output is about 5.1 GB; lazy input handles and per-tensor arithmetic kept memory use bounded apart from the required output tensor dictionary.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `safetensors` 0.5.3 for lazy checkpoint reads and single-file serialization; `torch` 2.14.0 for exact comparisons and float32 task-vector arithmetic.
+- Approximate time spent, if you can tell: About 5 minutes.

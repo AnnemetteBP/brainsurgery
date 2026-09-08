@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The two embedding tensors were explicitly placed alone even though each is below the stated 512 MiB byte limit.
+- Anything in the task text or documentation that was unclear: The claim that the roughly 206 MB embedding tensors are individually larger than 512 MiB is inconsistent with their stated sizes; I followed the explicit requirement that each be stored alone.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 5 minutes.

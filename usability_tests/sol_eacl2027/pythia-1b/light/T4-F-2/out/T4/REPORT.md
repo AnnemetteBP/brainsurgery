@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The checkpoints are large, so tensors were read and checked one at a time rather than loading all three state dictionaries at once.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Python 3, torch 2.14.0+cu130 for exact comparisons and float32 task arithmetic, and safetensors 0.5.3 for incremental checkpoint reads and output serialization; a plain script made the required preflight checks explicit.
+- Approximate time spent, if you can tell: About 5 minutes.

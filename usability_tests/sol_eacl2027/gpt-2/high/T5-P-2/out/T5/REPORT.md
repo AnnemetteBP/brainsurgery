@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/solution.py` (checkpoint in `out/T5/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): The 154 MB embedding tensor exceeds the cap and therefore needs a dedicated oversized shard; all other shards must remain at or below 100 MiB of tensor data.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 3 minutes.

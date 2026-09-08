@@ -1,0 +1,47 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "pythia-1b",
+  "effort": "high",
+  "reasoning_effort": "high",
+  "test": "T4",
+  "condition": "P",
+  "repeat": 1,
+  "started_at": "2026-09-07T16:50:54+00:00",
+  "finished_at": "2026-09-07T16:54:17+00:00",
+  "wall_clock_s": 203.2,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.462826,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 9,
+  "tokens_in": 35902,
+  "tokens_out": 4838,
+  "cache_read_tokens": 276352,
+  "cache_write_tokens": null,
+  "tokens_in_total": 312254,
+  "reasoning_tokens": 1928,
+  "usage_raw": {
+    "input_tokens": 312254,
+    "cached_input_tokens": 276352,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 4838,
+    "reasoning_output_tokens": 1928
+  },
+  "executions": 2,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc 'python out/T4/solution.py'",
+      "message": "RuntimeError: Expected float16 tensor gpt_neox.layers.0.attention.bias, got torch.uint8",
+      "n": 1,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Completed T4 successfully.\n\n- [solution.py](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/high/T4-P-1/out/T4/solution.py)\n- [model.safetensors](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/high/T4-P-1/out/T4/model.safetensors) \u2014 244 tensors, 64 merged\n- [REPORT.md](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/high/T4-P-1/out/T4/REPORT.md)\n\nThe successful execution passed all required in-script checks. Two executions were needed; the first exposed non-float16 attention-mask tensors and is documented in the report."
+}

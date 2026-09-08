@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T4-defective.py",
+  "started_at": "2026-09-07T15:38:18+00:00",
+  "finished_at": "2026-09-07T15:38:24+00:00",
+  "wall_clock_s": 6.5,
+  "tokens_in": 20746,
+  "tokens_out": 78,
+  "cost_usd": 0.055958,
+  "verdict_text": "NO. The second update computes `0.4 * (ft2 - tmp)` instead of `0.4 * (ft2 - base)`, so the first task vector is effectively scaled by `0.24` rather than `0.4`. This violates Required result clause 2, which requires both task vectors to be calculated against the unmodified base.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

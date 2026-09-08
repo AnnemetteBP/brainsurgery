@@ -1,0 +1,7 @@
+- Final artifact path: `out/T2/model.safetensors`
+- Number of times you executed the script or plan: 1 producing execution (plus 1 read-only verification execution)
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The fused QKV tensor is interleaved in 768-row per-head blocks, while the dense projection uses 256-column per-head blocks.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `safetensors` 0.5.3 for checkpoint I/O; `torch` 2.14.0 for exact tensor slicing, concatenation, dtype checks, and equality checks. A direct script made the required layout transformation explicit and auditable.
+- Approximate time spent, if you can tell: About 4 minutes.

@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/` (`model.safetensors.index.json` and 10 `model-*.safetensors` shards)
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed its pre-write source-dtype assertion because safetensors 0.5.3 slice metadata reports the string `F32`, while the script initially compared it directly with `torch.float32`; no checkpoint files had been written.
+- Pitfalls or surprises you hit (one line each): `safe_open(...).get_slice(...).get_dtype()` returns safetensors dtype labels rather than `torch.dtype` values, so the labels require explicit normalization.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for the required round-to-nearest-even float32-to-bfloat16 conversion and exact tensor comparisons; `safetensors` 0.5.3 for lazy source reads and sharded safetensors writes; Python standard-library JSON and regular expressions for the index and exact key targeting.
+- Approximate time spent, if you can tell: About 5 minutes.

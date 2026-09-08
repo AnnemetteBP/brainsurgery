@@ -1,0 +1,47 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "pythia-1b",
+  "effort": "high",
+  "reasoning_effort": "high",
+  "test": "T4",
+  "condition": "B",
+  "repeat": 1,
+  "started_at": "2026-09-07T16:53:25+00:00",
+  "finished_at": "2026-09-07T16:59:27+00:00",
+  "wall_clock_s": 361.6,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.880628,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 12,
+  "tokens_in": 66860,
+  "tokens_out": 9332,
+  "cache_read_tokens": 532736,
+  "cache_write_tokens": null,
+  "tokens_in_total": 599596,
+  "reasoning_tokens": 4005,
+  "usage_raw": {
+    "input_tokens": 599596,
+    "cached_input_tokens": 532736,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 9332,
+    "reasoning_output_tokens": 4005
+  },
+  "executions": 2,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc \"sed -n '1,260p' out/T4/plan.yaml && brainsurgery out/T4/plan.yaml\"",
+      "message": "ft1::gpt_neox.layers.0.attention.masked_bias",
+      "n": 1,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Completed T4 successfully.\n\n- Output: [model.safetensors](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/high/T4-B-1/out/T4/model.safetensors)\n- Plan: [plan.yaml](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/high/T4-B-1/out/T4/plan.yaml)\n- Report: [REPORT.md](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/high/T4-B-1/out/T4/REPORT.md)\n\nBrainSurgery completed on execution 2 and wrote exactly 244 tensors. The grader was not present in this sandbox."
+}

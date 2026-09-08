@@ -1,0 +1,7 @@
+- Final artifact path: `out/T2/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): `concat` requires each source reference to resolve to exactly one tensor, so the final per-layer Q/K/V/O reassembly operations had to be enumerated explicitly.
+- Anything in the task text or documentation that was unclear: The `concat` and `split` examples in the built-in help render their first `from`/`to` list as blank, although the validation example makes the intended list syntax clear.
+- Tools used (condition F): N/A (condition B).
+- Approximate time spent, if you can tell: About 5 minutes.

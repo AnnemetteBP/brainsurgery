@@ -1,0 +1,13 @@
+{
+  "run_id": "T2-F-1",
+  "agent": "sol_eacl2027",
+  "target": "gpt-2",
+  "effort": "high",
+  "test": "T2",
+  "condition": "F",
+  "repeat": 1,
+  "created_at": "2026-09-07T16:14:22+00:00",
+  "repo_commit": "2d30e0251aaa406b9eb14535d3a7663fcfceafc1",
+  "venv": true,
+  "env_freeze_lines": 84
+}

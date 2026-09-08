@@ -1,0 +1,39 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_A\.weight'
+        is: 12
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.h\.\d+\.attn\.c_attn\.lora_B\.weight'
+        is: 12
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'base::__merge.\1.product'
+  - assert: { count: { of: 'base::__merge\.\d+\.product', is: 12 } }
+  - permute:
+      from: 'base::__merge\.(\d+)\.product'
+      to: 'base::__merge.\1.transposed'
+      order: [1, 0]
+  - scale:
+      from: 'base::__merge\.(\d+)\.transposed'
+      to: 'base::__merge.\1.delta'
+      by: 2.0
+  - add_:
+      from: 'base::__merge\.(\d+)\.delta'
+      to: 'base::h.\1.attn.c_attn.weight'
+  - assert: { count: { of: 'base::__merge\.\d+\.delta', is: 12 } }
+  - delete: { target: 'base::__merge\..*' }
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert: { shape: { of: 'base::h.0.attn.c_attn.weight', is: [768, 2304] } }
+  - assert: { count: { of: 'base::.*', is: 160 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB

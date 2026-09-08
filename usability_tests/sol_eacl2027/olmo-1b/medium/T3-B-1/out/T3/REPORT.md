@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Shard file sizes include safetensors headers, so they can be slightly larger than the 256 MiB tensor-data limit.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Not applicable (condition B; used BrainSurgery).
+- Approximate time spent, if you can tell: About 3 minutes.

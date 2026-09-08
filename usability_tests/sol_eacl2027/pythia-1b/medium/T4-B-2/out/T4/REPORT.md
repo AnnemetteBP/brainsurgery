@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed at the final `writes` assertion because BrainSurgery counts initial checkpoint materialization as a write, yielding 5 rather than the expected 4.
+- Pitfalls or surprises you hit (one line each): The provider write counter includes initial checkpoint materialization; temporary float32 tensors also had to remain under the base alias so output-model inference stayed unambiguous.
+- Anything in the task text or documentation that was unclear: The documentation did not specify whether loading/materialization contributes to `assert: writes` counts.
+- Tools used (condition F): N/A (Condition B; BrainSurgery plan only).
+- Approximate time spent, if you can tell: About 4 minutes.

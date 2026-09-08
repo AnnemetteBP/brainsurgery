@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/solution.py` (checkpoint and index in `out/T3/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The two 412 MB float32 embedding matrices exceed the shard limit and therefore each had to be placed alone; shard planning also had to use post-cast tensor sizes.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): N/A (condition P).
+- Approximate time spent, if you can tell: About 4 minutes.

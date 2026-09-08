@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/model.safetensors.index.json` and `out/T3/model-00001-of-00009.safetensors` through `out/T3/model-00009-of-00009.safetensors`; generating script: `out/T3/solution.py`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the sole exporter execution succeeded.
+- Pitfalls or surprises you hit (one line each): The float32 embedding tensors are about 412 MB each (the task's 206 MB figure corresponds to their float16 input size), so each correctly became an individually over-limit shard under the stated single-tensor exception.
+- Anything in the task text or documentation that was unclear: The advertised `grade.py` was not present in the sandbox, so the final artifact was checked directly for index/shard agreement and payload sizes instead.
+- Tools used (condition F): PyTorch 2.14.0 for exact float32/bfloat16 conversion; safetensors 0.5.3 for tensor-at-a-time input and sharded checkpoint output; Python standard library for explicit name matching, shard planning, assertions, and JSON index generation.
+- Approximate time spent, if you can tell: About 4 minutes.

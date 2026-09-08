@@ -1,0 +1,37 @@
+inputs:
+  - model::inputs/base
+
+transforms:
+  # Remove complete blocks before renumbering. This creates collision-free
+  # destinations for the first move in each run of surviving blocks.
+  - delete:
+      target: 'model::model\.layers\.(2|6|10|14)\..+'
+
+  # Move each surviving block downward in ascending source-index order.
+  - move: { from: 'model::model\.layers\.3\.(.+)',  to: 'model::model.layers.2.\1' }
+  - move: { from: 'model::model\.layers\.4\.(.+)',  to: 'model::model.layers.3.\1' }
+  - move: { from: 'model::model\.layers\.5\.(.+)',  to: 'model::model.layers.4.\1' }
+  - move: { from: 'model::model\.layers\.7\.(.+)',  to: 'model::model.layers.5.\1' }
+  - move: { from: 'model::model\.layers\.8\.(.+)',  to: 'model::model.layers.6.\1' }
+  - move: { from: 'model::model\.layers\.9\.(.+)',  to: 'model::model.layers.7.\1' }
+  - move: { from: 'model::model\.layers\.11\.(.+)', to: 'model::model.layers.8.\1' }
+  - move: { from: 'model::model\.layers\.12\.(.+)', to: 'model::model.layers.9.\1' }
+  - move: { from: 'model::model\.layers\.13\.(.+)', to: 'model::model.layers.10.\1' }
+  - move: { from: 'model::model\.layers\.15\.(.+)', to: 'model::model.layers.11.\1' }
+
+  # Required postconditions. These execute before the output is written.
+  - assert:
+      not:
+        exists: 'model::model\.layers\.(12|13|14|15)\..+'
+  - assert:
+      count:
+        of: 'model::model\.layers\.\d+\.self_attn\.q_proj\.weight'
+        is: 12
+  - assert:
+      count:
+        of: 'model::.*'
+        is: 86
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors

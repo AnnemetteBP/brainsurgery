@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/B/T3-defective.yaml",
+  "started_at": "2026-09-07T16:35:51+00:00",
+  "finished_at": "2026-09-07T16:35:57+00:00",
+  "wall_clock_s": 6.4,
+  "tokens_in": 21202,
+  "tokens_out": 79,
+  "cost_usd": 0.058268,
+  "verdict_text": "NO. The plan omits `self_attn.o_proj.weight` from its match patterns, so it casts only 96 matrices instead of the required 112 and incorrectly leaves all 16 output-projection matrices as float32. Its asserted bfloat16 count is likewise 96 rather than the required 112, violating Required result clause 1 and the first required check.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "One projection family is missing from the bfloat16 cast pattern (the attention output projection stays float32); the artifact's own count check was adjusted to the wrong number.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

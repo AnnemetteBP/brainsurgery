@@ -1,0 +1,61 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Preflight the adapter cardinality and the corresponding base targets.
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_A\.weight'
+        is: 12
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+        is: 12
+  - assert:
+      count:
+        of: 'base::h\.(\d+)\.attn\.c_attn\.weight'
+        is: 12
+
+  # PEFT factors use Linear layout. Compute B @ A, transpose it to GPT-2's
+  # Conv1D [in, out] layout, and apply alpha/r = 32/16 = 2.
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'base::__merge.\1.ba'
+  - permute:
+      from: 'base::__merge\.(\d+)\.ba'
+      to: 'base::__merge.\1.delta'
+      order: [1, 0]
+  - delete: { target: 'base::__merge\.(\d+)\.ba' }
+  - scale_: { target: 'base::__merge\.(\d+)\.delta', by: 2.0 }
+  - assert:
+      count:
+        of: 'base::__merge\.(\d+)\.delta'
+        is: 12
+  - assert:
+      shape:
+        of: 'base::__merge\.(\d+)\.delta'
+        is: [768, 2304]
+  - add_:
+      from: 'base::__merge\.(\d+)\.delta'
+      to: 'base::h.\1.attn.c_attn.weight'
+
+  # Remove all work tensors, then enforce the required final-state checks.
+  - delete: { target: 'base::__merge\..+' }
+  - assert:
+      not:
+        exists: 'base::.*lora_.*'
+  - assert:
+      shape:
+        of: base::h.0.attn.c_attn.weight
+        is: [768, 2304]
+  - assert:
+      count:
+        of: 'base::.+'
+        is: 160
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB

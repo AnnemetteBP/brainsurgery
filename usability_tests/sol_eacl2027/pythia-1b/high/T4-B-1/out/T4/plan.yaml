@@ -1,0 +1,104 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Preflight: verify complete name-set compatibility before modifying any tensor.
+  # Equal total counts, exact mapped equality of the 180 non-MLP tensors, and
+  # exhaustive counts over the 64 possible MLP names rule out missing or extra
+  # names in any checkpoint.
+  - assert: { count: { of: 'base::.+', is: 244 } }
+  - assert: { count: { of: 'ft1::.+', is: 244 } }
+  - assert: { count: { of: 'ft2::.+', is: 244 } }
+
+  # The four exact, disjoint groups below prove that exactly 4 * 16 = 64
+  # tensors are selected for merging (and exclude out-of-range layer names).
+  - assert:
+      all:
+        - count: { of: 'base::gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_h_to_4h\.weight', is: 16 }
+        - count: { of: 'base::gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_h_to_4h\.bias', is: 16 }
+        - count: { of: 'base::gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_4h_to_h\.weight', is: 16 }
+        - count: { of: 'base::gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_4h_to_h\.bias', is: 16 }
+        - count: { of: 'ft1::gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_(h_to_4h|4h_to_h)\.(weight|bias)', is: 64 }
+        - count: { of: 'ft2::gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_(h_to_4h|4h_to_h)\.(weight|bias)', is: 64 }
+
+  # Frozen-backbone check: every tensor outside the selected 64 must be
+  # bit-identical between the base and each fine-tune.
+  - assert:
+      equal:
+        left: 'base::((?!gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_(h_to_4h|4h_to_h)\.(weight|bias)$).+)'
+        right: 'ft1::\1'
+  - assert:
+      equal:
+        left: 'base::((?!gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_(h_to_4h|4h_to_h)\.(weight|bias)$).+)'
+        right: 'ft2::\1'
+
+  # Merge dense_h_to_4h.weight in float32. Each delta is formed against
+  # __work.base before the output tensor in the base alias is assigned.
+  - cast: { from: 'base::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_h_to_4h\.weight)', to: 'base::__work.base.\1', dtype: float32 }
+  - cast: { from: 'ft1::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_h_to_4h\.weight)', to: 'base::__work.ft1.\1', dtype: float32 }
+  - cast: { from: 'ft2::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_h_to_4h\.weight)', to: 'base::__work.ft2.\1', dtype: float32 }
+  - subtract: { from_a: 'base::__work\.ft1\.(.+)', from_b: 'base::__work.base.\1', to: 'base::__work.ft1.\1' }
+  - subtract: { from_a: 'base::__work\.ft2\.(.+)', from_b: 'base::__work.base.\1', to: 'base::__work.ft2.\1' }
+  - scale_: { target: 'base::__work\.ft1\..+', by: 0.4 }
+  - scale_: { target: 'base::__work\.ft2\..+', by: 0.4 }
+  - add_: { from: 'base::__work\.ft1\.(.+)', to: 'base::__work.base.\1' }
+  - add_: { from: 'base::__work\.ft2\.(.+)', to: 'base::__work.base.\1' }
+  - cast_: { target: 'base::__work\.base\..+', to: float16 }
+  - assert: { count: { of: 'base::__work\.base\..+', is: 16 } }
+  - assign: { from: 'base::__work\.base\.(.+)', to: 'base::\1' }
+  - delete: { target: 'base::__work\..+' }
+
+  # Merge dense_h_to_4h.bias.
+  - cast: { from: 'base::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_h_to_4h\.bias)', to: 'base::__work.base.\1', dtype: float32 }
+  - cast: { from: 'ft1::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_h_to_4h\.bias)', to: 'base::__work.ft1.\1', dtype: float32 }
+  - cast: { from: 'ft2::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_h_to_4h\.bias)', to: 'base::__work.ft2.\1', dtype: float32 }
+  - subtract: { from_a: 'base::__work\.ft1\.(.+)', from_b: 'base::__work.base.\1', to: 'base::__work.ft1.\1' }
+  - subtract: { from_a: 'base::__work\.ft2\.(.+)', from_b: 'base::__work.base.\1', to: 'base::__work.ft2.\1' }
+  - scale_: { target: 'base::__work\.ft1\..+', by: 0.4 }
+  - scale_: { target: 'base::__work\.ft2\..+', by: 0.4 }
+  - add_: { from: 'base::__work\.ft1\.(.+)', to: 'base::__work.base.\1' }
+  - add_: { from: 'base::__work\.ft2\.(.+)', to: 'base::__work.base.\1' }
+  - cast_: { target: 'base::__work\.base\..+', to: float16 }
+  - assert: { count: { of: 'base::__work\.base\..+', is: 16 } }
+  - assign: { from: 'base::__work\.base\.(.+)', to: 'base::\1' }
+  - delete: { target: 'base::__work\..+' }
+
+  # Merge dense_4h_to_h.weight.
+  - cast: { from: 'base::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_4h_to_h\.weight)', to: 'base::__work.base.\1', dtype: float32 }
+  - cast: { from: 'ft1::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_4h_to_h\.weight)', to: 'base::__work.ft1.\1', dtype: float32 }
+  - cast: { from: 'ft2::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_4h_to_h\.weight)', to: 'base::__work.ft2.\1', dtype: float32 }
+  - subtract: { from_a: 'base::__work\.ft1\.(.+)', from_b: 'base::__work.base.\1', to: 'base::__work.ft1.\1' }
+  - subtract: { from_a: 'base::__work\.ft2\.(.+)', from_b: 'base::__work.base.\1', to: 'base::__work.ft2.\1' }
+  - scale_: { target: 'base::__work\.ft1\..+', by: 0.4 }
+  - scale_: { target: 'base::__work\.ft2\..+', by: 0.4 }
+  - add_: { from: 'base::__work\.ft1\.(.+)', to: 'base::__work.base.\1' }
+  - add_: { from: 'base::__work\.ft2\.(.+)', to: 'base::__work.base.\1' }
+  - cast_: { target: 'base::__work\.base\..+', to: float16 }
+  - assert: { count: { of: 'base::__work\.base\..+', is: 16 } }
+  - assign: { from: 'base::__work\.base\.(.+)', to: 'base::\1' }
+  - delete: { target: 'base::__work\..+' }
+
+  # Merge dense_4h_to_h.bias.
+  - cast: { from: 'base::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_4h_to_h\.bias)', to: 'base::__work.base.\1', dtype: float32 }
+  - cast: { from: 'ft1::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_4h_to_h\.bias)', to: 'base::__work.ft1.\1', dtype: float32 }
+  - cast: { from: 'ft2::(gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_4h_to_h\.bias)', to: 'base::__work.ft2.\1', dtype: float32 }
+  - subtract: { from_a: 'base::__work\.ft1\.(.+)', from_b: 'base::__work.base.\1', to: 'base::__work.ft1.\1' }
+  - subtract: { from_a: 'base::__work\.ft2\.(.+)', from_b: 'base::__work.base.\1', to: 'base::__work.ft2.\1' }
+  - scale_: { target: 'base::__work\.ft1\..+', by: 0.4 }
+  - scale_: { target: 'base::__work\.ft2\..+', by: 0.4 }
+  - add_: { from: 'base::__work\.ft1\.(.+)', to: 'base::__work.base.\1' }
+  - add_: { from: 'base::__work\.ft2\.(.+)', to: 'base::__work.base.\1' }
+  - cast_: { target: 'base::__work\.base\..+', to: float16 }
+  - assert: { count: { of: 'base::__work\.base\..+', is: 16 } }
+  - assign: { from: 'base::__work\.base\.(.+)', to: 'base::\1' }
+  - delete: { target: 'base::__work\..+' }
+
+  # Final output invariants after all scratch tensors have been removed.
+  - assert: { count: { of: 'base::gpt_neox\.layers\.([0-9]|1[0-5])\.mlp\.dense_(h_to_4h|4h_to_h)\.(weight|bias)', is: 64 } }
+  - assert: { count: { of: 'base::.+', is: 244 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

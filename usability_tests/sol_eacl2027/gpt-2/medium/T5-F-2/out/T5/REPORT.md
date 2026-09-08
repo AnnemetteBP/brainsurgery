@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` and `out/T5/model-00001-of-00005.safetensors` through `out/T5/model-00005-of-00005.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The Conv1D base weights require transposing `B @ A`; the oversized `wte.weight` also has to be isolated even though it exceeds the nominal shard limit.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): PyTorch 2.14.0 for float32 matrix multiplication and tensor checks; safetensors 0.5.3 for direct checkpoint loading and sharded saving; Python standard library for adapter-name mapping, configuration parsing, and index generation. This direct approach avoids model instantiation and makes all required invariants explicit.
+- Approximate time spent, if you can tell: About 4 minutes.

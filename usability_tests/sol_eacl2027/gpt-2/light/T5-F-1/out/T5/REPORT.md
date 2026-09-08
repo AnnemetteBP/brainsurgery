@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/solution.py`; generated checkpoint index at `out/T5/model.safetensors.index.json` and five shard files at `out/T5/model-00001-of-00005.safetensors` through `out/T5/model-00005-of-00005.safetensors`.
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed before writing because the adapter-to-base mapping omitted the base tensor's `.weight` suffix.
+- Pitfalls or surprises you hit (one line each): PEFT adapter keys name the module stem before `.lora_A.weight`/`.lora_B.weight`, so mapping to the dense checkpoint requires appending `.weight`.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for float32 matrix multiplication and addition; `safetensors` 0.5.3 for direct tensor reads and sharded writes; Python standard library for config parsing, validation, shard planning, and index generation. This avoided model instantiation and kept non-adapted tensors unchanged.
+- Approximate time spent, if you can tell: 5 minutes.

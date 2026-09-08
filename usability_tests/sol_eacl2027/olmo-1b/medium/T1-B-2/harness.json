@@ -1,0 +1,47 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "olmo-1b",
+  "effort": "medium",
+  "reasoning_effort": "medium",
+  "test": "T1",
+  "condition": "B",
+  "repeat": 2,
+  "started_at": "2026-09-07T18:05:56+00:00",
+  "finished_at": "2026-09-07T18:08:50+00:00",
+  "wall_clock_s": 174.0,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.479268,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 9,
+  "tokens_in": 33194,
+  "tokens_out": 3431,
+  "cache_read_tokens": 420736,
+  "cache_write_tokens": null,
+  "tokens_in_total": 453930,
+  "reasoning_tokens": 1006,
+  "usage_raw": {
+    "input_tokens": 453930,
+    "cached_input_tokens": 420736,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 3431,
+    "reasoning_output_tokens": 1006
+  },
+  "executions": 2,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc \"sed -n '1,220p' out/T1/plan.yaml && brainsurgery out/T1/plan.yaml\"",
+      "message": "model::model\\.layers\\.(12|13|14|15)\\..+",
+      "n": 1,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Completed T1 successfully.\n\n- [Plan](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/olmo-1b/medium/T1-B-2/out/T1/plan.yaml)\n- [Output checkpoint](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/olmo-1b/medium/T1-B-2/out/T1/model.safetensors)\n- [Self-report](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/olmo-1b/medium/T1-B-2/out/T1/REPORT.md)\n\nThe final plan passed all three required assertions and saved exactly 86 tensors. The grader was not present inside this isolated sandbox, so it could not be run locally."
+}

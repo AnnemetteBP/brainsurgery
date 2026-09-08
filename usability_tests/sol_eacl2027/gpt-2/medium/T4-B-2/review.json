@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-07T18:04:58+00:00",
+  "finished_at": "2026-09-07T18:05:41+00:00",
+  "wall_clock_s": 42.4,
+  "tokens_in": 21407,
+  "tokens_out": 987,
+  "cost_usd": 0.086533,
+  "verdict_text": "NO. The plan does not verify that all three checkpoints have identical tensor-name sets before creating task vectors, violating Required result 1. Counts of 160 and equality checks only for non-MLP tensors do not establish full key-set equality, while the MLP-related checks occur after copying and arithmetic have begun.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

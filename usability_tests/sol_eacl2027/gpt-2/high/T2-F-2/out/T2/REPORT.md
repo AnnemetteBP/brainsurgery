@@ -1,0 +1,8 @@
+- Final artifact path: `out/T2/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): GPT-2 Conv1D stores `c_attn.weight` as `[in, out]`, so Q/K/V heads must be removed from columns while `c_proj.weight` heads must be removed from rows.
+- Pitfalls or surprises you hit (one line each): The fused Q/K/V tensor requires applying the same head-relative indices independently at offsets 0, 768, and 1536 while retaining Q/K/V order.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for explicit index construction and tensor slicing; `safetensors` 0.5.3 for exact checkpoint loading and saving.
+- Approximate time spent, if you can tell: About 3 minutes.

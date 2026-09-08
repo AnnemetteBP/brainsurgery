@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` and the six `out/T5/model-00001-of-00006.safetensors` through `model-00006-of-00006.safetensors` shard files; producer: `out/T5/solution.py`.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The task calls the roughly 206 MB embedding tensors larger than the 512 MiB cap, although they are smaller; I followed the explicit requirement that each be stored alone.
+- Anything in the task text or documentation that was unclear: The size wording above is internally inconsistent, but the required shard placement is unambiguous. The external grader was not available inside this sandbox.
+- Tools used (condition F): PyTorch 2.14.0 for float32 matrix multiplication and dtype conversion; safetensors 0.5.3 for lazy checkpoint reads and sharded serialization; Python standard library for configuration and index JSON.
+- Approximate time spent, if you can tell: About 5 minutes.

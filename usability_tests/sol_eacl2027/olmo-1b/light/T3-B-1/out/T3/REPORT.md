@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The projection selector needed to exclude both embedding matrices while covering all seven projection types in every layer.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: 4 minutes.

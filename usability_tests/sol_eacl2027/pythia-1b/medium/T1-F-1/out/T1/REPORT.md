@@ -1,0 +1,8 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): Renumbering was performed into a new key dictionary to avoid in-place destination-key collisions.
+- Pitfalls or surprises you hit (one line each): The sandbox did not contain `grade.py`, so I used an independent bit-exact comparison of every output tensor against its expected input tensor.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `safetensors` 0.5.3 for checkpoint loading, atomic temporary-file serialization, and saved-key inspection; `torch` 2.14.0+cu130 for the independent bit-exact tensor comparison; Python standard-library regex/path/file operations for exact layer matching, renaming, validation, and atomic publication.
+- Approximate time spent, if you can tell: 5 minutes.

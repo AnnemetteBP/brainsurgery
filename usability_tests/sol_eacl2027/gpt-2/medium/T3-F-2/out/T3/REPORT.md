@@ -1,0 +1,8 @@
+- Final artifact path: `out/T3/` (`model.safetensors.index.json` and four `model-*.safetensors` shards); reproducible with `out/T3/solution.py`.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): The 154,389,504-byte `wte.weight` tensor exceeds the shard limit and therefore must occupy a shard alone.
+- Pitfalls or surprises you hit (one line each): Projection names were enumerated explicitly to avoid casting embeddings, layer norms, or similarly suffixed biases.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for exact bfloat16 conversion and tensor checks; `safetensors` 0.5.3 for checkpoint loading, shard writing, and validation; Python standard-library `json` for the index.
+- Approximate time spent, if you can tell: About 5 minutes.

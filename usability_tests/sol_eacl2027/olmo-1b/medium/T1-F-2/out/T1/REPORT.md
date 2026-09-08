@@ -1,0 +1,7 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Renumbering in place could overwrite surviving blocks, so the solution builds a separate old-to-new key mapping and rejects destination-key collisions.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `safetensors` 0.5.3 for direct sharded tensor reads and a single-file save; Python standard library for manifest parsing, regex key rewriting, validation, and atomic publication.
+- Approximate time spent, if you can tell: About 5 minutes.

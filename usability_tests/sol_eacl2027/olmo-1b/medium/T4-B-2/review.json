@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T4.yaml",
+  "started_at": "2026-09-07T18:17:37+00:00",
+  "finished_at": "2026-09-07T18:18:00+00:00",
+  "wall_clock_s": 22.5,
+  "tokens_in": 21384,
+  "tokens_out": 526,
+  "cost_usd": 0.072588,
+  "verdict_text": "NO. The plan does not verify the complete tensor-name sets of all three checkpoints before mutation, as required by Required Result 1. Missing or renamed MLP tensors are detected only later\u2014after temporary tensors have already been copied into `base`\u2014and the `\\d+` pattern also fails to restrict layers to 0\u201315.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

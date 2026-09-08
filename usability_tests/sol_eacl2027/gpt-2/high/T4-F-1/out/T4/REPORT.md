@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first output-producing execution succeeded.
+- Pitfalls or surprises you hit (one line each): None. The implementation kept the original base tensor available for both task-vector differences and validated all frozen tensors before creating the output.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for tensor equality checks and float32 task-vector arithmetic; `safetensors` 0.5.3 for direct, per-tensor checkpoint reads and writing the final checkpoint.
+- Approximate time spent, if you can tell: About 5 minutes.

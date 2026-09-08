@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/model.safetensors.index.json` and `out/T3/model-00001-of-00009.safetensors` through `out/T3/model-00009-of-00009.safetensors`; implementation: `out/T3/solution.py`.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The float32 embedding tensors are 412,090,368 bytes each, although the task describes them as 206 MB; 206 MB is their float16 input size, and the output requirement makes each approximately 412 MB. They were correctly stored alone under the single-oversize-tensor exception.
+- Anything in the task text or documentation that was unclear: Only the embedding-size discrepancy noted above; the required dtype and oversize-shard behavior were otherwise explicit.
+- Tools used (condition F): PyTorch 2.14.0 for exact float32/bfloat16 conversion and tensor size checks; safetensors 0.5.3 for metadata-based input inspection and sharded serialization; Python standard-library `json` and `re` for the index and exact key classification. This low-level route provides explicit dtype, deletion, and shard-boundary control.
+- Approximate time spent, if you can tell: About 5 minutes.

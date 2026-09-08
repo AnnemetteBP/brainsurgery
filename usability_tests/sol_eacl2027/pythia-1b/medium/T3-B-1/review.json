@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/B/T3-defective.yaml",
+  "started_at": "2026-09-07T16:05:53+00:00",
+  "finished_at": "2026-09-07T16:05:59+00:00",
+  "wall_clock_s": 6.0,
+  "tokens_in": 21385,
+  "tokens_out": 74,
+  "cost_usd": 0.059033,
+  "verdict_text": "NO. The plan omits all 16 `attention.dense.weight` matrices, so it casts only 48 projection matrices to bfloat16 instead of the required 64. Those omitted matrices remain float32, violating Required result 1 and the required check that exactly 64 tensors are bfloat16; the plan itself incorrectly asserts 48.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "One projection family is missing from the bfloat16 cast pattern (the attention output projection stays float32); the artifact's own count check was adjusted to the wrong number.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

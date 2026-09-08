@@ -1,0 +1,8 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` (with four shard files in `out/T5/`); plan at `out/T5/plan.yaml`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): With two input aliases, every transform reference and the output-producing writes needed an explicit alias so BrainSurgery could infer `base` as the output model.
+- Pitfalls or surprises you hit (one line each): The merge required float32 working copies of the float16 base weights, followed by an explicit cast back to float16 before assigning into the original tensors.
+- Anything in the task text or documentation that was unclear: The statement that the roughly 206 MB embedding tensors are individually larger than the 512 MiB shard limit appears inconsistent; BrainSurgery correctly packed the checkpoint into shards whose tensor-data totals are each at most 512 MiB.
+- Tools used (condition F): N/A (condition B).
+- Approximate time spent, if you can tell: About 10 minutes.

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T3.yaml",
+  "started_at": "2026-09-07T18:26:08+00:00",
+  "finished_at": "2026-09-07T18:26:30+00:00",
+  "wall_clock_s": 21.3,
+  "tokens_in": 21409,
+  "tokens_out": 521,
+  "cost_usd": 0.072563,
+  "verdict_text": "YES.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

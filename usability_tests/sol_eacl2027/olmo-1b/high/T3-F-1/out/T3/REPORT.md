@@ -1,0 +1,8 @@
+- Final artifact path: `out/T3/` (exporter: `out/T3/solution.py`; checkpoint index: `out/T3/model.safetensors.index.json`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The two 412,090,368-byte float32 embedding tensors exceed the shard limit and therefore each require a singleton shard.
+- Pitfalls or surprises you hit (one line each): Two layers of converted projections total exactly 268,435,456 bytes; safetensors file sizes are slightly larger because the limit excludes headers.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for exact float32-to-bfloat16 conversion; `safetensors` 0.5.3 for header inspection and checkpoint I/O; Python standard library for validation, deterministic shard planning, and index JSON generation. A direct script was used to precisely select the seven projection names per layer and enforce pre-write checks.
+- Approximate time spent, if you can tell: About 8 minutes.

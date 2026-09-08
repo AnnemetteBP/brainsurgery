@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T1-defective.py",
+  "started_at": "2026-09-07T15:09:41+00:00",
+  "finished_at": "2026-09-07T15:09:47+00:00",
+  "wall_clock_s": 6.5,
+  "tokens_in": 21020,
+  "tokens_out": 86,
+  "cost_usd": 0.057568,
+  "verdict_text": "NO. The artifact drops block 15 instead of block 14 (`DROP = {2, 6, 10, 15}`), violating Required Result 1. Consequently, old block 14 is retained and renumbered to 11 while old block 15 is removed, violating the explicit mapping in Required Result 2; the tensor-count and contiguous-layer assertions do not detect this semantic error.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

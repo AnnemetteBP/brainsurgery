@@ -1,0 +1,54 @@
+inputs:
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Establish identical key sets and verify the frozen-backbone precondition
+  # before creating or changing any tensor.
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  - assert: { count: { of: 'ft1::.*', is: 114 } }
+  - assert: { count: { of: 'ft2::.*', is: 114 } }
+  - assert: { count: { of: 'base::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft1::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft2::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert:
+      equal:
+        left: 'base::((?!model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight).+)'
+        right: 'ft1::\1'
+  - assert:
+      equal:
+        left: 'base::((?!model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight).+)'
+        right: 'ft2::\1'
+
+  # Materialize both task vectors before changing the base.
+  - copy:
+      from: 'ft1::(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::__task1.\1'
+  - subtract_:
+      from: 'base::(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::__task1.\1'
+  - scale_: { target: 'base::__task1\..+', by: 0.4 }
+  - copy:
+      from: 'ft2::(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::__task2.\1'
+  - subtract_:
+      from: 'base::(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::__task2.\1'
+  - scale_: { target: 'base::__task2\..+', by: 0.4 }
+  - assert: { count: { of: 'base::__task[12]\..+', is: 96 } }
+
+  # Add both scaled task vectors to their corresponding base tensors.
+  - add_:
+      from: 'base::__task1\.(model\.layers\..+)'
+      to: 'base::\1'
+  - add_:
+      from: 'base::__task2\.(model\.layers\..+)'
+      to: 'base::\1'
+  - delete: { target: 'base::__task[12]\..+' }
+  - assert: { count: { of: 'base::.*', is: 114 } }
+  - assert: { count: { of: 'base::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

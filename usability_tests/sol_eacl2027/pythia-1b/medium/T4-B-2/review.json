@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-07T18:30:58+00:00",
+  "finished_at": "2026-09-07T18:31:22+00:00",
+  "wall_clock_s": 24.2,
+  "tokens_in": 22103,
+  "tokens_out": 611,
+  "cost_usd": 0.078733,
+  "verdict_text": "NO. The plan does not explicitly verify that all three checkpoints have identical tensor-name sets; counting `ft1` and `ft2` tensors and comparing only matched non-MLP tensors can miss substituted or unmatched names, violating Required Result 1. Its MLP regex also accepts any numeric layer rather than restricting layers to 0\u201315, so the 64-count checks do not prove that exactly the specified 64 tensors were merged.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T4.yaml",
+  "started_at": "2026-09-07T19:16:28+00:00",
+  "finished_at": "2026-09-07T19:17:07+00:00",
+  "wall_clock_s": 39.4,
+  "tokens_in": 22100,
+  "tokens_out": 1089,
+  "cost_usd": 0.093058,
+  "verdict_text": "NO. The plan never explicitly verifies that all three checkpoints have the same tensor-name set; equal counts plus one-way equality checks outside the MLP set do not establish key-set equality. Its `\\d+` patterns also treat MLP tensors from any layer number as mergeable rather than restricting the required set to layers 0\u201315. This violates Required Result 1 and could allow unexpected or mismatched tensor names to escape the precondition check.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,8 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Renaming in place could overwrite surviving blocks, so the script constructs a separate output mapping and rejects duplicate destination keys.
+- Pitfalls or surprises you hit (one line each): The script validates the complete result before atomically replacing the final output file, avoiding a partial final checkpoint.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 5 minutes.

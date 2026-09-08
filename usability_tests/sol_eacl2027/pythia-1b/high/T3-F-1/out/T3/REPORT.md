@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/model.safetensors.index.json` and the nine `out/T3/model-*-of-00009.safetensors` shard files; producer: `out/T3/solution.py`.
+- Number of times you executed the script or plan: 1 production execution (`out/T3/solution.py`), followed by one successful non-producing read-back validation (`out/T3/verify.py`).
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The embeddings are about 206 MiB in the float16 input but about 393 MiB after the required float32 conversion, so each must be an oversized singleton shard.
+- Anything in the task text or documentation that was unclear: Nothing material; the stated embedding size appears to describe the input representation, while the shard rule applies to output tensor bytes.
+- Tools used (condition F): `torch` 2.14.0 for exact dtype conversion and byte-level verification; `safetensors` 0.5.3 for streaming source reads and sharded writes; Python standard library for exact-name selection, shard planning, and index JSON.
+- Approximate time spent, if you can tell: About 5 minutes.
