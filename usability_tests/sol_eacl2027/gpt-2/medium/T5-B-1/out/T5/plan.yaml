@@ -1,0 +1,49 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Preflight: both complete factor sets must exist. The mapped matmul below
+  # additionally requires each B tensor to have its corresponding A tensor.
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_A\.weight'
+        is: 12
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+        is: 12
+
+  # PEFT factors use Linear layout: B @ A is [out, in].
+  - matmul:
+      from_a: 'lora::base_model\.model\.h\.(\d+)\.attn\.c_attn\.lora_B\.weight'
+      from_b: 'lora::base_model.model.h.\1.attn.c_attn.lora_A.weight'
+      to: 'base::__merge.\1.ba'
+  - assert: { count: { of: 'base::__merge\.(\d+)\.ba', is: 12 } }
+
+  # fan_in_fan_out=true requires [out, in] -> GPT-2 Conv1D [in, out].
+  - permute:
+      from: 'base::__merge\.(\d+)\.ba'
+      to: 'base::__merge.\1.delta'
+      order: [1, 0]
+  - scale_: { target: 'base::__merge\.(\d+)\.delta', by: 2.0 }
+  - add_:
+      from: 'base::__merge\.(\d+)\.delta'
+      to: 'base::h.\1.attn.c_attn.weight'
+
+  # Remove all products so the dense checkpoint contains only base keys.
+  - delete: { target: 'base::__merge\..+' }
+
+  # Required final checks, all evaluated before automatic output writing.
+  - assert: { count: { of: 'base::h\.(\d+)\.attn\.c_attn\.weight', is: 12 } }
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert:
+      shape:
+        of: 'base::h\.0\.attn\.c_attn\.weight'
+        is: [768, 2304]
+  - assert: { count: { of: 'base::.*', is: 160 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 100MB

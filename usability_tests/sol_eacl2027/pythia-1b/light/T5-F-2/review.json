@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-07T17:46:48+00:00",
+  "finished_at": "2026-09-07T17:47:00+00:00",
+  "wall_clock_s": 11.9,
+  "tokens_in": 21589,
+  "tokens_out": 224,
+  "cost_usd": 0.064553,
+  "verdict_text": "NO. The sharding function does not force `gpt_neox.embed_in.weight` and `embed_out.weight` into individual shards; because each is only about 206 MB\u2014below 512 MiB\u2014it may pack other tensors alongside them. This violates the explicit sharding clause requiring each of those tensors to be stored alone.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

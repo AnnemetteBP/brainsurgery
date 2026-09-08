@@ -1,0 +1,47 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "gpt-2",
+  "effort": "light",
+  "reasoning_effort": "low",
+  "test": "T4",
+  "condition": "B",
+  "repeat": 1,
+  "started_at": "2026-09-07T15:04:48+00:00",
+  "finished_at": "2026-09-07T15:07:28+00:00",
+  "wall_clock_s": 159.9,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.410552,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 8,
+  "tokens_in": 37662,
+  "tokens_out": 3615,
+  "cache_read_tokens": 227584,
+  "cache_write_tokens": null,
+  "tokens_in_total": 265246,
+  "reasoning_tokens": 1025,
+  "usage_raw": {
+    "input_tokens": 265246,
+    "cached_input_tokens": 227584,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 3615,
+    "reasoning_output_tokens": 1025
+  },
+  "executions": 2,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc 'brainsurgery out/T4/plan.yaml'",
+      "message": "exactly 2",
+      "n": 1,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Completed T4 successfully.\n\n- Plan: [plan.yaml](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/light/T4-B-1/out/T4/plan.yaml)\n- Output: [model.safetensors](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/light/T4-B-1/out/T4/model.safetensors)\n- Report: [REPORT.md](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/light/T4-B-1/out/T4/REPORT.md)\n\nThe successful execution preserved exactly 160 tensors and merged exactly 48 MLP tensors after all preflight assertions passed."
+}

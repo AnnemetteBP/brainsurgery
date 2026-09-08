@@ -1,0 +1,70 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Preflight: identical 244-name layouts and exactly the expected 64 MLP tensors.
+  - assert: { count: { of: 'base::(.+)', is: 244 } }
+  - assert: { count: { of: 'ft1::(.+)', is: 244 } }
+  - assert: { count: { of: 'ft2::(.+)', is: 244 } }
+  - assert: { count: { of: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+  - assert: { count: { of: 'ft1::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+  - assert: { count: { of: 'ft2::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+
+  # The 180 shared tensors must exist under the same names and be bit-identical.
+  # Since each alias has 244 total keys and 64 MLP keys, these mapped comparisons
+  # also rule out missing or extra names in either fine-tune.
+  - assert: { count: { of: 'base::((?!gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)$).+)', is: 180 } }
+  - assert: { count: { of: 'ft1::((?!gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)$).+)', is: 180 } }
+  - assert: { count: { of: 'ft2::((?!gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)$).+)', is: 180 } }
+  - assert:
+      equal:
+        left: 'base::((?!gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)$).+)'
+        right: 'ft1::\1'
+  - assert:
+      equal:
+        left: 'base::((?!gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)$).+)'
+        right: 'ft2::\1'
+
+  # Work entirely in float32. Each task vector is formed against the still
+  # unmodified (apart from dtype) base, then both are added to that base.
+  - cast_:
+      target: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)'
+      to: float32
+  - cast:
+      from: 'ft1::(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      to: 'base::__work.ft1.\1'
+      dtype: float32
+  - cast:
+      from: 'ft2::(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      to: 'base::__work.ft2.\1'
+      dtype: float32
+  - assert: { count: { of: 'base::__work\.ft1\..+', is: 64 } }
+  - assert: { count: { of: 'base::__work\.ft2\..+', is: 64 } }
+  - subtract_:
+      from: 'base::(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      to: 'base::__work.ft1.\1'
+  - subtract_:
+      from: 'base::(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      to: 'base::__work.ft2.\1'
+  - scale_: { target: 'base::__work\.ft1\..+', by: 0.4 }
+  - scale_: { target: 'base::__work\.ft2\..+', by: 0.4 }
+  - add_:
+      from: 'base::__work\.ft1\.(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      to: 'base::\1'
+  - add_:
+      from: 'base::__work\.ft2\.(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      to: 'base::\1'
+  - cast_:
+      target: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)'
+      to: float16
+  - delete: { target: 'base::__work\..+' }
+
+  # Final cardinality checks: 64 merged tensors, 244 output tensors total.
+  - assert: { count: { of: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+  - assert: { count: { of: 'base::(.+)', is: 244 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

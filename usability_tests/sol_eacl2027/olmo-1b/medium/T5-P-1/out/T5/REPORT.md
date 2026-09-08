@@ -1,0 +1,8 @@
+- Final artifact path: `out/T5/solution.py` (checkpoint and index in `out/T5/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): PEFT adapter names require removing the `base_model.model.` prefix before mapping each LoRA pair to its base weight.
+- Pitfalls or surprises you hit (one line each): The two 412 MB embedding/head tensors had to be forced into standalone shards even though each is numerically below the stated 512 MiB byte limit.
+- Anything in the task text or documentation that was unclear: The text calls the 412 MB tensors larger than the 512 MiB limit; I followed the explicit requirement that each be stored alone.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 5 minutes.

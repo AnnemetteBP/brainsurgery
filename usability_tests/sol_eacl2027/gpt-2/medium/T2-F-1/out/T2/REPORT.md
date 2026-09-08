@@ -1,0 +1,7 @@
+- Final artifact path: `out/T2/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): The fused Q/K/V tensor required removing the same 64-column head slice independently from each of its three 768-wide segments.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for exact tensor indexing and equality checks; `safetensors` 0.5.3 for direct checkpoint loading, inspection, and saving. These tools preserve tensor names, dtypes, and values without model-level export transformations.
+- Approximate time spent, if you can tell: About 3 minutes.

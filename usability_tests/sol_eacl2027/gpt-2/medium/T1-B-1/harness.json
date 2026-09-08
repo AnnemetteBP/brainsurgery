@@ -1,0 +1,47 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "gpt-2",
+  "effort": "medium",
+  "reasoning_effort": "medium",
+  "test": "T1",
+  "condition": "B",
+  "repeat": 1,
+  "started_at": "2026-09-07T15:32:34+00:00",
+  "finished_at": "2026-09-07T15:35:10+00:00",
+  "wall_clock_s": 155.4,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.469985,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 11,
+  "tokens_in": 36261,
+  "tokens_out": 2860,
+  "cache_read_tokens": 405760,
+  "cache_write_tokens": null,
+  "tokens_in_total": 442021,
+  "reasoning_tokens": 578,
+  "usage_raw": {
+    "input_tokens": 442021,
+    "cached_input_tokens": 405760,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 2860,
+    "reasoning_output_tokens": 578
+  },
+  "executions": 2,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc 'brainsurgery out/T1/plan.yaml'",
+      "message": "TransformError: count.of matched zero tensors: model::h\\.(9|10|11)\\..*",
+      "n": 1,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Completed T1 successfully.\n\n- [plan.yaml](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/medium/T1-B-1/out/T1/plan.yaml)\n- [model.safetensors](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/medium/T1-B-1/out/T1/model.safetensors) \u2014 121 tensors, 430 MB\n- [REPORT.md](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/medium/T1-B-1/out/T1/REPORT.md)\n\nThe plan succeeded on execution 2; all required assertions passed before the single output file was written."
+}

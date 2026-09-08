@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/solution.py`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The two named large tensors were explicitly placed in singleton shards even though their tensor-data sizes are below 512 MiB.
+- Anything in the task text or documentation that was unclear: The statement that the 412 MB embedding tensors are larger than the 512 MiB limit is numerically inconsistent, but the singleton-shard requirement itself was clear.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 4 minutes.

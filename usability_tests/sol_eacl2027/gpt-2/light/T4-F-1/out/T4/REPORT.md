@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The two task vectors had to be computed independently from the original base; the implementation keeps the base tensor unchanged in both subtraction terms.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0+cu130 for exact tensor comparison and float32 arithmetic; `safetensors` 0.5.3 for checkpoint reads and the required single-file write. A direct script made the precondition and tensor-count checks explicit.
+- Approximate time spent, if you can tell: About 3 minutes.

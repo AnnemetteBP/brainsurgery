@@ -1,0 +1,8 @@
+- Final artifact path: `out/T1/plan.yaml` (output checkpoint: `out/T1/model.safetensors`)
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed at the first final assertion because `assert.count` rejects a zero-match reference before comparing it with `is: 0`; no output was written.
+- Pitfalls or surprises you hit (one line each): Collision-free renumbering requires deleting the pruned blocks first and moving surviving blocks in ascending source-index order.
+- Pitfalls or surprises you hit (one line each): An absence check must use `assert.not` with `exists`, rather than `assert.count` with zero.
+- Anything in the task text or documentation that was unclear: The `assert.count` help does not state that a zero-match reference is itself an error, so `is: 0` appears valid but is not.
+- Tools used (condition F): N/A (condition B).
+- Approximate time spent, if you can tell: About 3 minutes.

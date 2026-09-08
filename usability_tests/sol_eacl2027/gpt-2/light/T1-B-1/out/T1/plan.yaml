@@ -1,0 +1,25 @@
+inputs:
+  - inputs/base/model.safetensors
+
+transforms:
+  # Remove the three pruned blocks in full.
+  - delete: { target: 'h\.(2|5|8)\..+' }
+
+  # Shift survivors upward in ascending order. Each destination was vacated by
+  # a deletion or the immediately preceding move, so no tensor is overwritten.
+  - move: { from: 'h\.3\.(.+)', to: 'h.2.\1' }
+  - move: { from: 'h\.4\.(.+)', to: 'h.3.\1' }
+  - move: { from: 'h\.6\.(.+)', to: 'h.4.\1' }
+  - move: { from: 'h\.7\.(.+)', to: 'h.5.\1' }
+  - move: { from: 'h\.9\.(.+)', to: 'h.6.\1' }
+  - move: { from: 'h\.10\.(.+)', to: 'h.7.\1' }
+  - move: { from: 'h\.11\.(.+)', to: 'h.8.\1' }
+
+  # Required postconditions, evaluated before output is written.
+  - assert: { not: { exists: 'h\.(9|10|11)\..+' } }
+  - assert: { count: { of: 'h\.[0-8]\.attn\.c_attn\.weight', is: 9 } }
+  - assert: { count: { of: '.*', is: 121 } }
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors

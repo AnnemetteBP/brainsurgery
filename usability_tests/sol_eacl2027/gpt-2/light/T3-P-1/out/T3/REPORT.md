@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/solution.py` (checkpoint output in `out/T3/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Oversized tensors must be isolated while ordinary tensors are packed without exceeding the 64 MiB tensor-data limit.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): name, version, and why: N/A (condition P).
+- Approximate time spent, if you can tell: About 5 minutes.

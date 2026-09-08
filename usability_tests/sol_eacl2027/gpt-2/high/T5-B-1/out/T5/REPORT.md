@@ -1,0 +1,8 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` (with five `model-*.safetensors` shards); plan at `out/T5/plan.yaml`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): The PEFT factors use Linear `[out, in]` orientation, so `B @ A` had to be transposed before adding it to GPT-2's Conv1D `[in, out]` weight.
+- Pitfalls or surprises you hit (one line each): With two input aliases, every generated intermediate and in-place edit had to target `base`, followed by deletion of all intermediates, so output-alias inference remained unambiguous and the final key count stayed 160.
+- Anything in the task text or documentation that was unclear: Nothing material; regex capture rewriting and binary-unit shard sizing were documented clearly.
+- Tools used (condition F): Not applicable (condition B); used the required BrainSurgery CLI and YAML plan only.
+- Approximate time spent, if you can tell: About 4 minutes.

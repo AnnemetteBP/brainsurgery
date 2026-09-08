@@ -1,0 +1,7 @@
+- Final artifact path: `out/T2/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The fused Q/K/V tensor requires removing the same 64-column head slice independently from each 768-wide segment; no execution issues occurred.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `safetensors` 0.5.3 for exact checkpoint loading/saving; `torch` 2.14.0 for index construction, slicing, and bit-exact verification.
+- Approximate time spent, if you can tell: About 3 minutes.

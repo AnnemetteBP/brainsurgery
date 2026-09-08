@@ -1,0 +1,8 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` and the five `out/T5/model-00001-of-00005.safetensors` through `out/T5/model-00005-of-00005.safetensors` shard files; generating script: `out/T5/solution.py`.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The LoRA `B @ A` product uses `[out, in]` layout and had to be transposed for GPT-2 Conv1D `[in, out]` weights.
+- Pitfalls or surprises you hit (one line each): `wte.weight` exceeds the 100 MiB shard limit and therefore had to be emitted alone, while every other shard had to remain within the limit.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for float32 matrix multiplication and tensor checks; `safetensors` 0.5.3 for direct checkpoint loading and sharded serialization; Python standard-library `json` for config and index handling. This direct route avoided instantiating a Transformers model.
+- Approximate time spent, if you can tell: About 5 minutes.

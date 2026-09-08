@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The exact bfloat16-count check requires combining an exact count and dtype check for the projection pattern with a float32 dtype check over its regex complement.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): N/A (condition B).
+- Approximate time spent, if you can tell: About 3 minutes.

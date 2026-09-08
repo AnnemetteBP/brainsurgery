@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/B/T1-defective.yaml",
+  "started_at": "2026-09-07T16:30:28+00:00",
+  "finished_at": "2026-09-07T16:30:35+00:00",
+  "wall_clock_s": 6.5,
+  "tokens_in": 21102,
+  "tokens_out": 87,
+  "cost_usd": 0.058008,
+  "verdict_text": "NO. The plan deletes blocks 2, 6, 10, and 15 instead of the required blocks 2, 6, 10, and 14, violating Required result 1. Consequently, it maps old block 14 to new block 11 instead of mapping old block 15 to new block 11, violating Required result 2 and producing incorrect tensor values despite the counts passing.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

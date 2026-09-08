@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed at the post-merge `writes` assertion because checkpoint loading counts as one write, making the expected count 3 rather than 2.
+- Pitfalls or surprises you hit (one line each): BrainSurgery access counters include the initial checkpoint load in each tensor's write count.
+- Anything in the task text or documentation that was unclear: The access-counter documentation did not make the load-time write count explicit.
+- Tools used (condition F): Not applicable (condition B); used the `brainsurgery` CLI and provided documentation.
+- Approximate time spent, if you can tell: 5 minutes.

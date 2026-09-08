@@ -1,0 +1,8 @@
+- Final artifact path: `out/T3/model.safetensors.index.json` and the ten indexed `out/T3/model-*-of-00010.safetensors` shard files; reproducible with `out/T3/solution.py`.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): The two 412,090,368-byte float32 embedding/head tensors exceed the 256 MiB limit and therefore each require a standalone shard.
+- Pitfalls or surprises you hit (one line each): The remaining 112 bfloat16 projections pack into eight shards of exactly 268,435,456 bytes each, so shard sizing must count tensor bytes rather than safetensors headers.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for explicit round-to-nearest-even float32-to-bfloat16 conversion; `safetensors` 0.5.3 for header inspection and streaming checkpoint reads/writes; Python standard library for deterministic sharding and index generation. This direct approach made the exact 112-name allowlist and byte accounting explicit.
+- Approximate time spent, if you can tell: About 6 minutes.

@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` and the six indexed `out/T5/model-*.safetensors` shards; producing script: `out/T5/solution.py`.
+- Number of times you executed the script or plan: 1.
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The text calls the approximately 206 MB embedding tensors larger than the 512 MiB limit, although they are smaller; I followed the explicit instruction to place each in its own shard anyway.
+- Anything in the task text or documentation that was unclear: Only the contradictory embedding-size wording noted above; it did not prevent implementation.
+- Tools used (condition F): PyTorch 2.14.0 for float32 `B @ A` computation and dtype conversion; safetensors 0.5.3 for lazy checkpoint reads and sharded serialization; Python standard-library JSON/path utilities for configuration and the index.
+- Approximate time spent, if you can tell: About 10 minutes.

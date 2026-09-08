@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed because an extra dtype assertion incorrectly required the non-MLP `attention.bias` mask buffers to be float16; they are uint8.
+- Pitfalls or surprises you hit (one line each): The checkpoint description says float16, but Pythia's non-parameter attention mask buffers are uint8; dtype validation therefore needs to require cross-checkpoint agreement globally and float16 only for the merged MLP tensors.
+- Anything in the task text or documentation that was unclear: Whether "244 tensors, float16" was intended to include non-parameter mask buffers was unclear; the actual checkpoint resolved this.
+- Tools used (condition F): `safetensors` 0.5.3 for keyed, atomic checkpoint serialization and `torch` 2.14.0 for exact tensor comparisons and float32 task-vector arithmetic.
+- Approximate time spent, if you can tell: About 5 minutes.

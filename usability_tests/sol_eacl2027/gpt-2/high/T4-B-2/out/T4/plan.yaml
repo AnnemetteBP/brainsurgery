@@ -1,0 +1,69 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Preflight.  The MLP regex denotes exactly the 48 permitted names.  Since
+  # every checkpoint has 160 names, has all 48 names from that finite set, and
+  # every one of the other 112 base names maps to an equal tensor in each
+  # fine-tune, these assertions also prove identical key sets.
+  - assert: { count: { of: 'base::.+', is: 160 } }
+  - assert: { count: { of: 'ft1::.+', is: 160 } }
+  - assert: { count: { of: 'ft2::.+', is: 160 } }
+  - assert:
+      count:
+        of: 'base::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)'
+        is: 48
+  - assert:
+      count:
+        of: 'ft1::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)'
+        is: 48
+  - assert:
+      count:
+        of: 'ft2::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)'
+        is: 48
+  - assert:
+      equal:
+        left: 'base::((?!h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)$).+)'
+        right: 'ft1::\1'
+  - assert:
+      equal:
+        left: 'base::((?!h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)$).+)'
+        right: 'ft2::\1'
+  - assert: { dtype: { of: 'base::.+', is: float32 } }
+  - assert: { dtype: { of: 'ft1::.+', is: float32 } }
+  - assert: { dtype: { of: 'ft2::.+', is: float32 } }
+
+  # Algebraically identical task arithmetic:
+  # base + .4*(ft1-base) + .4*(ft2-base) = .2*base + .4*ft1 + .4*ft2.
+  # All destinations are in the base alias so it is the unambiguous output.
+  - copy:
+      from: 'ft1::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::__t4_scaled.\1'
+  - assert: { count: { of: 'base::__t4_scaled\..+', is: 48 } }
+  - scale_: { target: 'base::__t4_scaled\..+', by: 0.4 }
+  - scale_:
+      target: 'base::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)'
+      by: 0.2
+  - add_:
+      from: 'base::__t4_scaled\.(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::\1'
+  - delete: { target: 'base::__t4_scaled\..+' }
+
+  - copy:
+      from: 'ft2::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::__t4_scaled.\1'
+  - assert: { count: { of: 'base::__t4_scaled\..+', is: 48 } }
+  - scale_: { target: 'base::__t4_scaled\..+', by: 0.4 }
+  - add_:
+      from: 'base::__t4_scaled\.(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::\1'
+  - delete: { target: 'base::__t4_scaled\..+' }
+
+  # Final cardinality check after all temporary tensors have been removed.
+  - assert: { count: { of: 'base::.+', is: 160 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

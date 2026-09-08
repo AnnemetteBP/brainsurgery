@@ -1,0 +1,10 @@
+- Final artifact path: `out/T3/`
+- Number of times you executed the script or plan: 3
+- Which executions failed, and why (one line each):
+  - Execution 1: all transforms passed, but output saving rejected the unsupported `256MiB` shard-size suffix.
+  - Execution 2: plan parsing rejected an integer shard value because `output.shard` must be a string.
+- Pitfalls or surprises you hit (one line each):
+  - Exact binary shard sizes must be written using the accepted byte suffix, here `268435456B`.
+- Anything in the task text or documentation that was unclear: The documentation lists decimal-style suffix examples but does not state that `MiB` is unsupported or that an exact byte count must be expressed as a string ending in `B`.
+- Tools used (condition F): N/A (condition B).
+- Approximate time spent, if you can tell: 3 minutes.

@@ -1,0 +1,7 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Avoided rename collisions by building a new mapping directly from explicit old-to-new block indices; validated before writing and used an atomic final rename.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): safetensors 0.5.3 for direct, bit-preserving checkpoint loading and saving; Python standard library for key parsing, validation, and atomic rename.
+- Approximate time spent, if you can tell: About 3 minutes.

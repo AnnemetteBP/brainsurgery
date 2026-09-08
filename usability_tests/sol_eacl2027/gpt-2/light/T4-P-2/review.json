@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-07T17:19:45+00:00",
+  "finished_at": "2026-09-07T17:19:57+00:00",
+  "wall_clock_s": 11.7,
+  "tokens_in": 20739,
+  "tokens_out": 249,
+  "cost_usd": 0.061053,
+  "verdict_text": "NO. The MLP regex accepts any numeric layer index, not only layers 0\u201311. Therefore, an unexpected tensor such as `h.12.mlp...` could be merged instead of being verified as unchanged, while the `merged == 48` check could still pass, violating Required Result 1 and 2.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

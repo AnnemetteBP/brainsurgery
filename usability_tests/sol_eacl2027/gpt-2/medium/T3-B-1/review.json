@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/B/T3-defective.yaml",
+  "started_at": "2026-09-07T15:38:34+00:00",
+  "finished_at": "2026-09-07T15:38:41+00:00",
+  "wall_clock_s": 7.1,
+  "tokens_in": 20920,
+  "tokens_out": 80,
+  "cost_usd": 0.056888,
+  "verdict_text": "NO. The plan omits all 12 `h.<i>.attn.c_proj.weight` matrices from its count, cast, and dtype assertions, so it casts only 36 projection matrices to bfloat16 instead of the required 48. Those omitted matrices remain float32, violating Required Result 1 and the required check that exactly 48 tensors are bfloat16.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "One projection family is missing from the bfloat16 cast pattern (the attention output projection stays float32); the artifact's own count check was adjusted to the wrong number.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T1.yaml",
+  "started_at": "2026-09-07T18:21:54+00:00",
+  "finished_at": "2026-09-07T18:22:01+00:00",
+  "wall_clock_s": 7.5,
+  "tokens_in": 21518,
+  "tokens_out": 124,
+  "cost_usd": 0.061198,
+  "verdict_text": "YES. The artifact exactly implements the required deletion, collision-safe renumbering, validation checks, and output path.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

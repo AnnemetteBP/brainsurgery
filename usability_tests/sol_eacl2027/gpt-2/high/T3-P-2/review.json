@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-07T18:37:41+00:00",
+  "finished_at": "2026-09-07T18:37:49+00:00",
+  "wall_clock_s": 8.7,
+  "tokens_in": 21061,
+  "tokens_out": 146,
+  "cost_usd": 0.059573,
+  "verdict_text": "YES.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

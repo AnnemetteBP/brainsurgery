@@ -1,0 +1,47 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "gpt-2",
+  "effort": "medium",
+  "reasoning_effort": "medium",
+  "test": "T2",
+  "condition": "B",
+  "repeat": 2,
+  "started_at": "2026-09-07T17:55:24+00:00",
+  "finished_at": "2026-09-07T17:59:58+00:00",
+  "wall_clock_s": 273.9,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.663501,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 8,
+  "tokens_in": 47031,
+  "tokens_out": 7187,
+  "cache_read_tokens": 425472,
+  "cache_write_tokens": null,
+  "tokens_in_total": 472503,
+  "reasoning_tokens": 939,
+  "usage_raw": {
+    "input_tokens": 472503,
+    "cached_input_tokens": 425472,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 7187,
+    "reasoning_output_tokens": 939
+  },
+  "executions": 2,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc 'ls -l out/T2/plan.yaml && brainsurgery out/T2/plan.yaml'",
+      "message": "    object_type=list",
+      "n": 1,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Completed T2 successfully.\n\n- Plan: [plan.yaml](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/medium/T2-B-2/out/T2/plan.yaml)\n- Output: [model.safetensors](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/medium/T2-B-2/out/T2/model.safetensors)\n- Report: [REPORT.md](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/medium/T2-B-2/out/T2/REPORT.md)\n\nBrainSurgery completed all 46 transforms and assertions, producing exactly 160 tensors. The grader was unavailable inside the sandbox."
+}

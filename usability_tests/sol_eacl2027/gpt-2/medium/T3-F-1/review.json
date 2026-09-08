@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T3-defective.py",
+  "started_at": "2026-09-07T15:38:02+00:00",
+  "finished_at": "2026-09-07T15:38:09+00:00",
+  "wall_clock_s": 6.6,
+  "tokens_in": 21132,
+  "tokens_out": 75,
+  "cost_usd": 0.057798,
+  "verdict_text": "NO. The projection-matrix regex omits all 12 `h.<i>.attn.c_proj.weight` tensors, so it casts only 36 matrices instead of the required 48, violating Required Result 1. Correspondingly, its pre-write check asserts 36 bfloat16 tensors rather than the required 48, violating the Required Checks.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "One projection family is missing from the bfloat16 cast pattern (the attention output projection stays float32); the artifact's own count check was adjusted to the wrong number.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

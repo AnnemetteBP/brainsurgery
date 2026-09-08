@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/B/T4-defective.yaml",
+  "started_at": "2026-09-07T16:25:12+00:00",
+  "finished_at": "2026-09-07T16:25:29+00:00",
+  "wall_clock_s": 16.4,
+  "tokens_in": 21384,
+  "tokens_out": 355,
+  "cost_usd": 0.067458,
+  "verdict_text": "NO. The second task vector subtracts the already modified base after `tv1` has been added, so it computes `ft2 - (base + tv1)` instead of `ft2 - original_base`, violating Required result 2. The initial checks also do not explicitly verify identical tensor-name sets across all three checkpoints, violating Required result 1.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

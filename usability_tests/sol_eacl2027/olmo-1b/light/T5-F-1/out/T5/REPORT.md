@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/` (`solution.py`, 10 safetensors shards, and `model.safetensors.index.json`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The nominal 512 MiB limit permits some shard files to display as 513 MB because safetensors headers are excluded; tensor payload was checked separately and is at most 536,870,912 bytes.
+- Anything in the task text or documentation that was unclear: Nothing material. The two 412 MB embedding tensors were explicitly required to be stored alone even though each is below 512 MiB, so the explicit rule was followed.
+- Tools used (condition F): PyTorch 2.14.0 for float32 `B @ A` and addition; safetensors 0.5.3 for direct checkpoint reads and sharded writes; Python standard library for config/index handling. This avoided instantiating the model and preserved unchanged tensor values directly.
+- Approximate time spent, if you can tell: About 4 minutes.

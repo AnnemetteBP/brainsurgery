@@ -1,0 +1,56 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Establish that all 16 complete adapter pairs are present.
+  - assert:
+      all:
+        - count:
+            of: 'lora::base_model\.model\.gpt_neox\.layers\.\d+\.attention\.query_key_value\.lora_A\.weight'
+            is: 16
+        - count:
+            of: 'lora::base_model\.model\.gpt_neox\.layers\.\d+\.attention\.query_key_value\.lora_B\.weight'
+            is: 16
+
+  # The adapter factors are float32, so promote only the 16 destination weights
+  # before forming and adding B @ A.
+  - cast_:
+      target: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight'
+      to: float32
+  - matmul:
+      from_a: 'lora::base_model\.model\.gpt_neox\.layers\.(\d+)\.attention\.query_key_value\.lora_B\.weight'
+      from_b: 'lora::base_model.model.gpt_neox.layers.\1.attention.query_key_value.lora_A.weight'
+      to: 'base::__lora_merge.\1'
+  - assert:
+      count:
+        of: 'base::__lora_merge\.\d+'
+        is: 16
+  - scale_:
+      target: 'base::__lora_merge\.\d+'
+      by: 2.0
+  - add_:
+      from: 'base::__lora_merge\.(\d+)'
+      to: 'base::gpt_neox.layers.\1.attention.query_key_value.weight'
+  - cast_:
+      target: 'base::gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight'
+      to: float16
+  - delete:
+      target: 'base::__lora_merge\.\d+'
+
+  # Required pre-write checks over the alias selected for output.
+  - assert:
+      all:
+        - count: { of: 'base::.*', is: 244 }
+        - not: { exists: 'base::.*lora_.*' }
+        - shape:
+            of: base::gpt_neox.layers.0.attention.query_key_value.weight
+            is: [6144, 2048]
+        - dtype:
+            of: base::gpt_neox.layers.0.attention.query_key_value.weight
+            is: float16
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

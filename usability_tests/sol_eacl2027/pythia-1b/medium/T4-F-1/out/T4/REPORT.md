@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): The frozen-backbone comparison had to complete before creating the output, and both task vectors had to use the original float32 base tensor.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for exact tensor comparisons and float32 task arithmetic; `safetensors` 0.5.3 for lazy checkpoint reads and serialization. A plain Python script was the most direct way to enforce all stated preconditions and output checks.
+- Approximate time spent, if you can tell: About 5 minutes.

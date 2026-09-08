@@ -1,0 +1,7 @@
+- Final artifact path: `out/T2/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The output projection stores heads in column blocks, while the query, key, and value projections store them in row blocks; the implementation handles these axes separately.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `torch` 2.14.0 for exact tensor slicing/concatenation and `safetensors` 0.5.3 for loading the two input shards and writing the required single-file checkpoint; these provide a direct, bit-preserving checkpoint transformation.
+- Approximate time spent, if you can tell: About 4 minutes.

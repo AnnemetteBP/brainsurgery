@@ -1,0 +1,8 @@
+- Final artifact path: `out/T4/model.safetensors` (plan: `out/T4/plan.yaml`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): With multiple input aliases, every mutation had to target `base` so BrainSurgery could infer the output alias uniquely.
+- Pitfalls or surprises you hit (one line each): The two task vectors must share the original base; the plan uses the equivalent float32 expression `0.2 * base + 0.4 * ft1 + 0.4 * ft2`.
+- Anything in the task text or documentation that was unclear: Nothing material.
+- Tools used (condition F): N/A (condition B; BrainSurgery only).
+- Approximate time spent, if you can tell: About 8 minutes.

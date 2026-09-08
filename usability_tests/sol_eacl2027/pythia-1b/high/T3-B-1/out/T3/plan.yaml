@@ -1,0 +1,41 @@
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # Remove only the three non-parameter buffer families from all 16 layers.
+  - delete:
+      target: 'gpt_neox\.layers\.[0-9]+\.attention\.(?:bias|masked_bias|rotary_emb\.inv_freq)'
+
+  # Establish float32 as the default dtype for every retained tensor.
+  - cast_: { target: '.*', to: float32 }
+
+  # Recast exactly the four large projection matrices in each layer.
+  - cast_:
+      target: 'gpt_neox\.layers\.[0-9]+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight'
+      to: bfloat16
+
+  # Required checks. Together, the count and complementary dtype checks prove
+  # that exactly these 64 tensors are bfloat16 and every other tensor is float32.
+  - assert:
+      all:
+        - count:
+            of: 'gpt_neox\.layers\.[0-9]+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight'
+            is: 64
+        - dtype:
+            of: 'gpt_neox\.layers\.[0-9]+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight'
+            is: bfloat16
+        - dtype:
+            of: '(?!gpt_neox\.layers\.[0-9]+\.(?:attention\.(?:query_key_value|dense)|mlp\.(?:dense_h_to_4h|dense_4h_to_h))\.weight$).*'
+            is: float32
+        - dtype:
+            of: 'gpt_neox\.layers\.0\.attention\.query_key_value\.weight'
+            is: bfloat16
+        - dtype:
+            of: 'gpt_neox\.embed_in\.weight'
+            is: float32
+        - count: { of: '.*', is: 196 }
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 256MB

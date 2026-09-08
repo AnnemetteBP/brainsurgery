@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-07T18:17:37+00:00",
+  "finished_at": "2026-09-07T18:18:07+00:00",
+  "wall_clock_s": 29.3,
+  "tokens_in": 21601,
+  "tokens_out": 776,
+  "cost_usd": 0.081173,
+  "verdict_text": "NO. The sharding function does not guarantee that `model.embed_tokens.weight` is stored alone: at roughly 412 MB, it is below the 512 MiB limit, so subsequent tensors may be packed into the same shard. This violates the explicit sharding clause requiring both `model.embed_tokens.weight` and `lm_head.weight` to occupy individual shards.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

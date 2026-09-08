@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/model.safetensors.index.json` (with nine shard files in `out/T3/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The assertion language has no direct count-by-dtype operator, so I proved exactly 64 bfloat16 tensors by asserting a 64-name projection set is bfloat16 and its full complement is float32.
+- Anything in the task text or documentation that was unclear: Nothing material.
+- Tools used (condition F): name, version, and why: N/A (condition B).
+- Approximate time spent, if you can tell: About 5 minutes.

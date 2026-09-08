@@ -1,0 +1,7 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Renames must follow the deleted holes in ascending order so that no surviving destination is overwritten.
+- Anything in the task text or documentation that was unclear: The documented invocation is `brainsurgery out/T1/plan.yaml`, but the installed CLI exposes plan execution under `brainsurgery cli out/T1/plan.yaml`.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: About 5 minutes.

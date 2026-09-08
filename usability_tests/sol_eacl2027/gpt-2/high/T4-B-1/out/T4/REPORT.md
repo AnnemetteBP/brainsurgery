@@ -1,0 +1,8 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): With three input aliases, every mutating transform had to target only `base` so BrainSurgery could infer the output alias.
+- Pitfalls or surprises you hit (one line each): Both task vectors had to be materialized before modifying the base, otherwise the second subtraction would use an already-merged base.
+- Anything in the task text or documentation that was unclear: Nothing material.
+- Tools used (condition F): N/A (Condition B).
+- Approximate time spent, if you can tell: About 5 minutes.

@@ -1,0 +1,28 @@
+inputs:
+  - inputs/base/model.safetensors
+
+transforms:
+  # Remove the four pruned blocks before shifting survivors into the gaps.
+  - delete: { target: 'gpt_neox\.layers\.(2|6|10|14)\..+' }
+
+  # Move in ascending source-index order. Each destination has either just
+  # been deleted or was vacated by the preceding move.
+  - move: { from: 'gpt_neox\.layers\.3\.(.+)',  to: 'gpt_neox.layers.2.\1' }
+  - move: { from: 'gpt_neox\.layers\.4\.(.+)',  to: 'gpt_neox.layers.3.\1' }
+  - move: { from: 'gpt_neox\.layers\.5\.(.+)',  to: 'gpt_neox.layers.4.\1' }
+  - move: { from: 'gpt_neox\.layers\.7\.(.+)',  to: 'gpt_neox.layers.5.\1' }
+  - move: { from: 'gpt_neox\.layers\.8\.(.+)',  to: 'gpt_neox.layers.6.\1' }
+  - move: { from: 'gpt_neox\.layers\.9\.(.+)',  to: 'gpt_neox.layers.7.\1' }
+  - move: { from: 'gpt_neox\.layers\.11\.(.+)', to: 'gpt_neox.layers.8.\1' }
+  - move: { from: 'gpt_neox\.layers\.12\.(.+)', to: 'gpt_neox.layers.9.\1' }
+  - move: { from: 'gpt_neox\.layers\.13\.(.+)', to: 'gpt_neox.layers.10.\1' }
+  - move: { from: 'gpt_neox\.layers\.15\.(.+)', to: 'gpt_neox.layers.11.\1' }
+
+  # Required postconditions; output is written only if all assertions pass.
+  - assert: { not: { exists: 'gpt_neox\.layers\.(12|13|14|15)\..+' } }
+  - assert: { count: { of: 'gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight', is: 12 } }
+  - assert: { count: { of: '.*', is: 184 } }
+
+output:
+  path: out/T1/model.safetensors
+  format: safetensors

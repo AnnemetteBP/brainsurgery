@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T4-defective.py",
+  "started_at": "2026-09-07T16:56:08+00:00",
+  "finished_at": "2026-09-07T16:56:14+00:00",
+  "wall_clock_s": 5.5,
+  "tokens_in": 20968,
+  "tokens_out": 62,
+  "cost_usd": 0.056588,
+  "verdict_text": "NO. The second update computes `0.4 * (ft2 - tmp)` instead of `0.4 * (ft2 - base)`, so the first task vector is effectively scaled by `0.24` rather than `0.4`, violating Required result 2.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

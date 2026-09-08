@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T4.py",
+  "started_at": "2026-09-07T19:10:55+00:00",
+  "finished_at": "2026-09-07T19:11:11+00:00",
+  "wall_clock_s": 15.6,
+  "tokens_in": 20888,
+  "tokens_out": 380,
+  "cost_usd": 0.065728,
+  "verdict_text": "NO. The MLP regex accepts any numeric layer index instead of restricting it to layers 0\u201315, so it does not precisely identify the specified 64 tensors. A checkpoint with an unexpected matching layer could be merged and excluded from shared-tensor verification, violating Required result clauses 1\u20133.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

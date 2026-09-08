@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/solution.py` (checkpoint and index in `out/T3/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The oversized `wte.weight` tensor must be isolated in its own shard even though it exceeds the 64 MiB limit.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 3 minutes.

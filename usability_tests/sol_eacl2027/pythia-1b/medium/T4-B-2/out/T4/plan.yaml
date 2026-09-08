@@ -1,0 +1,70 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Preflight name-set checks. The MLP regex has exactly 16 * 2 * 2 = 64
+  # possible names, so 244 total plus all 64 MLP names establishes the exact
+  # expected key set independently for every input.
+  - assert: { count: { of: 'base::.*', is: 244 } }
+  - assert: { count: { of: 'ft1::.*', is: 244 } }
+  - assert: { count: { of: 'ft2::.*', is: 244 } }
+  - assert: { count: { of: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+  - assert: { count: { of: 'ft1::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+  - assert: { count: { of: 'ft2::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+
+  # Before any writes, verify all 180 frozen-backbone tensors against base.
+  - assert:
+      equal:
+        left: 'base::((?!gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)$).+)'
+        right: 'ft1::\1'
+  - assert:
+      equal:
+        left: 'base::((?!gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)$).+)'
+        right: 'ft2::\1'
+
+  # Materialize both task-vector sources in float32 before changing base, then
+  # compute each delta against that same (merely dtype-cast) original base.
+  - cast:
+      from: 'ft1::(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      to: 'base::__taskvec1.\1'
+      dtype: float32
+  - cast:
+      from: 'ft2::(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      to: 'base::__taskvec2.\1'
+      dtype: float32
+  - cast_: { target: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', to: float32 }
+  - subtract:
+      from_a: 'base::__taskvec1\.(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      from_b: 'base::\1'
+      to: 'base::__taskvec1.\1'
+  - subtract:
+      from_a: 'base::__taskvec2\.(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      from_b: 'base::\1'
+      to: 'base::__taskvec2.\1'
+  - scale_: { target: 'base::__taskvec1\.gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', by: 0.4 }
+  - scale_: { target: 'base::__taskvec2\.gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', by: 0.4 }
+  - add_:
+      from: 'base::__taskvec1\.(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      to: 'base::\1'
+  - add_:
+      from: 'base::__taskvec2\.(gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias))'
+      to: 'base::\1'
+  - cast_: { target: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', to: float16 }
+  - delete: { target: 'base::__taskvec1\..*' }
+  - delete: { target: 'base::__taskvec2\..*' }
+
+  # Required postconditions: all 64 merge destinations were written by the
+  # arithmetic pipeline, temporary tensors are gone, and output has 244 keys.
+  - assert: { count: { of: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 64 } }
+  # The provider counts initial checkpoint materialization as one write, plus
+  # cast-to-fp32, two additions, and cast-back-to-fp16: five in total.
+  - assert: { writes: { of: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: 5 } }
+  - assert: { dtype: { of: 'base::gpt_neox\.layers\.(?:[0-9]|1[0-5])\.mlp\.dense_(?:h_to_4h|4h_to_h)\.(?:weight|bias)', is: float16 } }
+  - assert: { not: { exists: 'base::__taskvec[12]\..*' } }
+  - assert: { count: { of: 'base::.*', is: 244 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

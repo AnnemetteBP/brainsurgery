@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Both task-vector deltas had to be materialized before either was added to the base, so the second delta still referenced the unmodified base.
+- Anything in the task text or documentation that was unclear: Nothing material; the transform help clarified regex capture rewrites and that `subtract` requires an existing destination.
+- Tools used (condition F): Not applicable (condition B; BrainSurgery CLI only).
+- Approximate time spent, if you can tell: About 5 minutes.

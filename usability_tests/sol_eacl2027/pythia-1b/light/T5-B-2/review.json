@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-07T17:48:37+00:00",
+  "finished_at": "2026-09-07T17:48:56+00:00",
+  "wall_clock_s": 19.3,
+  "tokens_in": 21447,
+  "tokens_out": 466,
+  "cost_usd": 0.071103,
+  "verdict_text": "NO. The plan only sets a 512 MiB shard limit and does not ensure that `gpt_neox.embed_in.weight` and `embed_out.weight` are each placed alone in separate shards, violating the explicit sharding clause.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

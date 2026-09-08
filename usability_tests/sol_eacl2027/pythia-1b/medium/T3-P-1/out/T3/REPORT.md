@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/solution.py` (checkpoint and index in `out/T3/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Final shard names require the total shard count, and oversized tensors must be isolated; shards were therefore written under temporary names, with large tensors flushed immediately, then renamed after the shard count was known.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): N/A (condition P).
+- Approximate time spent, if you can tell: About 5 minutes.

@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T3.yaml",
+  "started_at": "2026-09-07T17:59:47+00:00",
+  "finished_at": "2026-09-07T17:59:54+00:00",
+  "wall_clock_s": 7.6,
+  "tokens_in": 20952,
+  "tokens_out": 123,
+  "cost_usd": 0.058338,
+  "verdict_text": "YES.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

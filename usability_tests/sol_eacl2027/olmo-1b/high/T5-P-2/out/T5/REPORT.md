@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/solution.py` (checkpoint at `out/T5/model.safetensors.index.json` and `out/T5/model-00001-of-00010.safetensors` through `out/T5/model-00010-of-00010.safetensors`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; execution 1 succeeded.
+- Pitfalls or surprises you hit (one line each): Sharding had to use tensor payload byte counts rather than output file sizes, because safetensors headers add bytes beyond the 512 MiB tensor-data limit.
+- Anything in the task text or documentation that was unclear: The statement calling the 412 MB embedding and LM-head tensors individually larger than 512 MiB was numerically inconsistent; the greedy packing rule nevertheless isolates them because neither fits with the following tensors.
+- Tools used (condition F): N/A (condition P).
+- Approximate time spent, if you can tell: About 8 minutes.

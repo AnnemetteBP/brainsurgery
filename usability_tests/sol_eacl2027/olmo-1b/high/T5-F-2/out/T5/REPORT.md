@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` and `out/T5/model-00001-of-00010.safetensors` through `out/T5/model-00010-of-00010.safetensors` (producer: `out/T5/solution.py`; independent audit: `out/T5/verify.py`).
+- Number of times you executed the script or plan: 1 production execution. The separate verification script was executed once after export and passed.
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The task describes the approximately 412 MB embedding and LM-head tensors as larger than the 512 MiB byte limit even though each is numerically below it; I followed the explicit requirement to store each alone.
+- Anything in the task text or documentation that was unclear: Only the 412 MB versus 512 MiB wording noted above; it did not prevent a conservative implementation.
+- Tools used (condition F): `torch` 2.14.0 for float32 `B @ A` and scaled addition; `safetensors` 0.5.3 for metadata inspection and streaming sharded checkpoint I/O; Python standard-library JSON/path/context tools for index creation and bounded-memory orchestration.
+- Approximate time spent, if you can tell: About 10 minutes, including implementation and a full independent value audit.

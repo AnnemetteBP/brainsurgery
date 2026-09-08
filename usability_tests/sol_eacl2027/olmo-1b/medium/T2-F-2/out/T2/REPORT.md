@@ -1,0 +1,7 @@
+- Final artifact path: `out/T2/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The Q/K/V head blocks are on rows, while the output-projection head blocks are on columns; the script handles these axes separately.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `safetensors` 0.5.3 for loading the two input shards and writing the required single-file checkpoint; `torch` 2.14.0 for exact tensor slicing and concatenation.
+- Approximate time spent, if you can tell: About 2 minutes.

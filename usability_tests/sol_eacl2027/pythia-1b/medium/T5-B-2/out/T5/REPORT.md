@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` (with four shard files in `out/T5/`)
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed at the final no-adapter assertion because `count` treats zero matches as an error before checking `is: 0`; changed it to `not: { exists: ... }`.
+- Pitfalls or surprises you hit (one line each): A zero-match condition must use `not` plus `exists`, rather than `count` with an expected value of zero.
+- Anything in the task text or documentation that was unclear: The statement that the approximately 206 MB embedding tensors are individually larger than the 512 MiB shard limit appears inconsistent; BrainSurgery correctly packed tensors by the specified 512 MiB tensor-data limit.
+- Tools used (condition F): N/A (condition B; BrainSurgery only).
+- Approximate time spent, if you can tell: About 5 minutes.

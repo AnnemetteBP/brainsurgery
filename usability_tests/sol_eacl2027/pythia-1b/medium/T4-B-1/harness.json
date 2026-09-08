@@ -1,0 +1,53 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "pythia-1b",
+  "effort": "medium",
+  "reasoning_effort": "medium",
+  "test": "T4",
+  "condition": "B",
+  "repeat": 1,
+  "started_at": "2026-09-07T16:05:29+00:00",
+  "finished_at": "2026-09-07T16:11:16+00:00",
+  "wall_clock_s": 347.5,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.83588,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 14,
+  "tokens_in": 46668,
+  "tokens_out": 7850,
+  "cache_read_tokens": 734080,
+  "cache_write_tokens": null,
+  "tokens_in_total": 780748,
+  "reasoning_tokens": 3219,
+  "usage_raw": {
+    "input_tokens": 780748,
+    "cached_input_tokens": 734080,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 7850,
+    "reasoning_output_tokens": 3219
+  },
+  "executions": 3,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc 'brainsurgery out/T4/plan.yaml'",
+      "message": "ft1::gpt_neox.layers.0.attention.masked_bias",
+      "n": 1,
+      "error_class": ""
+    },
+    {
+      "command": "/usr/bin/zsh -lc 'brainsurgery out/T4/plan.yaml'",
+      "message": "torch.float32",
+      "n": 2,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 3,
+  "final_text": "Completed T4 successfully.\n\n- [plan.yaml](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/medium/T4-B-1/out/T4/plan.yaml)\n- [model.safetensors](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/medium/T4-B-1/out/T4/model.safetensors) \u2014 244 tensors, 2.0 GB\n- [REPORT.md](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/medium/T4-B-1/out/T4/REPORT.md)\n\nBrainSurgery succeeded on attempt 3, including all required assertions. The external `grade.py` is not present in this sandbox, so grading could not be run locally."
+}

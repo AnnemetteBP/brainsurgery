@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/plan.yaml`
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed at the no-LoRA assertion because `count` treats zero matches as an error before testing `is: 0`; changed it to `not: { exists: ... }`.
+- Pitfalls or surprises you hit (one line each): Zero-match absence checks require `not exists`, not `count` with zero.
+- Anything in the task text or documentation that was unclear: Nothing material.
+- Tools used (condition F): N/A (condition B).
+- Approximate time spent, if you can tell: About 4 minutes.

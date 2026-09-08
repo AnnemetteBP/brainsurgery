@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The shard size limit counts tensor data only, so safetensors files can exceed 512 MiB slightly because of their headers.
+- Anything in the task text or documentation that was unclear: The statement that each 412 MB embedding tensor is individually larger than 512 MiB is numerically inconsistent; BrainSurgery nevertheless placed the large tensors according to its documented tensor-data shard budget.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: 5 minutes.

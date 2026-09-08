@@ -1,0 +1,7 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): In-place layer renaming could overwrite surviving blocks; I avoided it by building a new destination mapping and rejecting duplicate keys before saving.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `safetensors` 0.5.3 for direct checkpoint key/tensor I/O because this task only requires lossless renaming and deletion; `torch` 2.14.0 for an independent bit-exact tensor comparison after writing.
+- Approximate time spent, if you can tell: About 3 minutes.

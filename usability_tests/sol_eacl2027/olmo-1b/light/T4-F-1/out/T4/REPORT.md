@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The base is sharded while both fine-tunes are single files, so the script resolves each base tensor through the index and keeps all files memory-mapped.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Python; PyTorch 2.14.0 for exact comparisons and float32 task-vector arithmetic; safetensors 0.5.3 for memory-mapped checkpoint reads and single-file output, chosen to avoid loading all three roughly 5.1 GB checkpoints into RAM.
+- Approximate time spent, if you can tell: About 4 minutes.

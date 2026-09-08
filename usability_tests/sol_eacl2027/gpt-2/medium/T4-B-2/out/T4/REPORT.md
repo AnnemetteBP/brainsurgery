@@ -1,0 +1,8 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Both task vectors had to be materialized before either was added to the base, or the second subtraction would use an already-modified base.
+- Pitfalls or surprises you hit (one line each): Exact key-set validation required combining 160-tensor counts with empty-slice mapped equality checks, because ordinary equality would reject the intentionally changed MLP values.
+- Anything in the task text or documentation that was unclear: The documentation does not expose a direct assert operator for equality of tensor-name sets.
+- Tools used (condition F): Not applicable (condition B; BrainSurgery plan only).
+- Approximate time spent, if you can tell: About 8 minutes.

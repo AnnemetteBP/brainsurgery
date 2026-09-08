@@ -1,0 +1,47 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "olmo-1b",
+  "effort": "light",
+  "reasoning_effort": "low",
+  "test": "T5",
+  "condition": "B",
+  "repeat": 1,
+  "started_at": "2026-09-07T15:17:39+00:00",
+  "finished_at": "2026-09-07T15:20:59+00:00",
+  "wall_clock_s": 199.9,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.612712,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 11,
+  "tokens_in": 39372,
+  "tokens_out": 3818,
+  "cache_read_tokens": 602624,
+  "cache_write_tokens": null,
+  "tokens_in_total": 641996,
+  "reasoning_tokens": 905,
+  "usage_raw": {
+    "input_tokens": 641996,
+    "cached_input_tokens": 602624,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 3818,
+    "reasoning_output_tokens": 905
+  },
+  "executions": 2,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc \"sed -n '1,240p' out/T5/plan.yaml && brainsurgery out/T5/plan.yaml --provider arena --arena-root out/.arena\"",
+      "message": "TransformError: count.of matched zero tensors: base::.*lora_.*",
+      "n": 1,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Completed T5.\n\n- Plan: [plan.yaml](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/olmo-1b/light/T5-B-1/out/T5/plan.yaml)\n- Report: [REPORT.md](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/olmo-1b/light/T5-B-1/out/T5/REPORT.md)\n- Output: 114 tensors across 10 safetensors shards with a 512 MiB limit\n- All required plan assertions passed\n- Plan executions: 2; the second succeeded\n\nThe local grading script was unavailable in this sandbox, so no grader result was produced."
+}

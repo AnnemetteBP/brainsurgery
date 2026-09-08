@@ -1,0 +1,53 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "olmo-1b",
+  "effort": "medium",
+  "reasoning_effort": "medium",
+  "test": "T5",
+  "condition": "B",
+  "repeat": 1,
+  "started_at": "2026-09-07T15:55:32+00:00",
+  "finished_at": "2026-09-07T16:00:33+00:00",
+  "wall_clock_s": 301.2,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.97553,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 16,
+  "tokens_in": 54336,
+  "tokens_out": 6203,
+  "cache_read_tokens": 1035520,
+  "cache_write_tokens": null,
+  "tokens_in_total": 1089856,
+  "reasoning_tokens": 2397,
+  "usage_raw": {
+    "input_tokens": 1089856,
+    "cached_input_tokens": 1035520,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 6203,
+    "reasoning_output_tokens": 2397
+  },
+  "executions": 3,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc 'brainsurgery out/T5/plan.yaml'",
+      "message": "lora::base_model\\.model\\.model.layers.0.self_attn.q_proj\\.lora_A\\.weight",
+      "n": 1,
+      "error_class": ""
+    },
+    {
+      "command": "/usr/bin/zsh -lc 'brainsurgery out/T5/plan.yaml'",
+      "message": "TransformError: count.of matched zero tensors: base::.*lora_.*",
+      "n": 2,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 3,
+  "final_text": "Completed T5 successfully.\n\n- Plan: [plan.yaml](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/olmo-1b/medium/T5-B-1/out/T5/plan.yaml)\n- Report: [REPORT.md](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/olmo-1b/medium/T5-B-1/out/T5/REPORT.md)\n- Output index: [model.safetensors.index.json](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/olmo-1b/medium/T5-B-1/out/T5/model.safetensors.index.json)\n\nThe successful third execution produced 114 tensors across 10 shards, with no `lora_` keys. All required plan assertions passed."
+}

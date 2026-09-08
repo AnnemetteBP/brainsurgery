@@ -1,0 +1,116 @@
+inputs:
+  - model::inputs/base
+
+transforms:
+  # Validate the input key set and the complete set of head-bearing tensors.
+  - assert: { count: { of: 'model::.*', is: 114 } }
+  - assert: { count: { of: 'model::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight', is: 48 } }
+  - assert: { count: { of: 'model::model\.layers\.(\d+)\.self_attn\.o_proj\.weight', is: 16 } }
+  - assert: { shape: { of: 'model::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight', is: [2048, 2048] } }
+  - assert: { shape: { of: 'model::model\.layers\.(\d+)\.self_attn\.o_proj\.weight', is: [2048, 2048] } }
+
+  # Save the ranges on either side of head 5 (rows 640:768) for Q/K/V.
+  - copy:
+      from: 'model::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight::[:640, :]'
+      to: 'model::model.layers.\1.self_attn.\2_proj.weight.__keep_low'
+  - copy:
+      from: 'model::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight::[768:, :]'
+      to: 'model::model.layers.\1.self_attn.\2_proj.weight.__keep_high'
+
+  # Save the corresponding column ranges for the output projections.
+  - copy:
+      from: 'model::model\.layers\.(\d+)\.self_attn\.o_proj\.weight::[:, :640]'
+      to: 'model::model.layers.\1.self_attn.o_proj.weight.__keep_low'
+  - copy:
+      from: 'model::model\.layers\.(\d+)\.self_attn\.o_proj\.weight::[:, 768:]'
+      to: 'model::model.layers.\1.self_attn.o_proj.weight.__keep_high'
+
+  # Remove the original projection slots so concat can recreate them.
+  - delete: { target: 'model::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight' }
+  - delete: { target: 'model::model\.layers\.(\d+)\.self_attn\.o_proj\.weight' }
+
+  # Reassemble Q/K/V row blocks and O column blocks under the original names.
+  - concat: { from: [model::model.layers.0.self_attn.q_proj.weight.__keep_low, model::model.layers.0.self_attn.q_proj.weight.__keep_high], to: model::model.layers.0.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.0.self_attn.k_proj.weight.__keep_low, model::model.layers.0.self_attn.k_proj.weight.__keep_high], to: model::model.layers.0.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.0.self_attn.v_proj.weight.__keep_low, model::model.layers.0.self_attn.v_proj.weight.__keep_high], to: model::model.layers.0.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.0.self_attn.o_proj.weight.__keep_low, model::model.layers.0.self_attn.o_proj.weight.__keep_high], to: model::model.layers.0.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.1.self_attn.q_proj.weight.__keep_low, model::model.layers.1.self_attn.q_proj.weight.__keep_high], to: model::model.layers.1.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.1.self_attn.k_proj.weight.__keep_low, model::model.layers.1.self_attn.k_proj.weight.__keep_high], to: model::model.layers.1.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.1.self_attn.v_proj.weight.__keep_low, model::model.layers.1.self_attn.v_proj.weight.__keep_high], to: model::model.layers.1.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.1.self_attn.o_proj.weight.__keep_low, model::model.layers.1.self_attn.o_proj.weight.__keep_high], to: model::model.layers.1.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.2.self_attn.q_proj.weight.__keep_low, model::model.layers.2.self_attn.q_proj.weight.__keep_high], to: model::model.layers.2.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.2.self_attn.k_proj.weight.__keep_low, model::model.layers.2.self_attn.k_proj.weight.__keep_high], to: model::model.layers.2.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.2.self_attn.v_proj.weight.__keep_low, model::model.layers.2.self_attn.v_proj.weight.__keep_high], to: model::model.layers.2.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.2.self_attn.o_proj.weight.__keep_low, model::model.layers.2.self_attn.o_proj.weight.__keep_high], to: model::model.layers.2.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.3.self_attn.q_proj.weight.__keep_low, model::model.layers.3.self_attn.q_proj.weight.__keep_high], to: model::model.layers.3.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.3.self_attn.k_proj.weight.__keep_low, model::model.layers.3.self_attn.k_proj.weight.__keep_high], to: model::model.layers.3.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.3.self_attn.v_proj.weight.__keep_low, model::model.layers.3.self_attn.v_proj.weight.__keep_high], to: model::model.layers.3.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.3.self_attn.o_proj.weight.__keep_low, model::model.layers.3.self_attn.o_proj.weight.__keep_high], to: model::model.layers.3.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.4.self_attn.q_proj.weight.__keep_low, model::model.layers.4.self_attn.q_proj.weight.__keep_high], to: model::model.layers.4.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.4.self_attn.k_proj.weight.__keep_low, model::model.layers.4.self_attn.k_proj.weight.__keep_high], to: model::model.layers.4.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.4.self_attn.v_proj.weight.__keep_low, model::model.layers.4.self_attn.v_proj.weight.__keep_high], to: model::model.layers.4.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.4.self_attn.o_proj.weight.__keep_low, model::model.layers.4.self_attn.o_proj.weight.__keep_high], to: model::model.layers.4.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.5.self_attn.q_proj.weight.__keep_low, model::model.layers.5.self_attn.q_proj.weight.__keep_high], to: model::model.layers.5.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.5.self_attn.k_proj.weight.__keep_low, model::model.layers.5.self_attn.k_proj.weight.__keep_high], to: model::model.layers.5.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.5.self_attn.v_proj.weight.__keep_low, model::model.layers.5.self_attn.v_proj.weight.__keep_high], to: model::model.layers.5.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.5.self_attn.o_proj.weight.__keep_low, model::model.layers.5.self_attn.o_proj.weight.__keep_high], to: model::model.layers.5.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.6.self_attn.q_proj.weight.__keep_low, model::model.layers.6.self_attn.q_proj.weight.__keep_high], to: model::model.layers.6.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.6.self_attn.k_proj.weight.__keep_low, model::model.layers.6.self_attn.k_proj.weight.__keep_high], to: model::model.layers.6.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.6.self_attn.v_proj.weight.__keep_low, model::model.layers.6.self_attn.v_proj.weight.__keep_high], to: model::model.layers.6.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.6.self_attn.o_proj.weight.__keep_low, model::model.layers.6.self_attn.o_proj.weight.__keep_high], to: model::model.layers.6.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.7.self_attn.q_proj.weight.__keep_low, model::model.layers.7.self_attn.q_proj.weight.__keep_high], to: model::model.layers.7.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.7.self_attn.k_proj.weight.__keep_low, model::model.layers.7.self_attn.k_proj.weight.__keep_high], to: model::model.layers.7.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.7.self_attn.v_proj.weight.__keep_low, model::model.layers.7.self_attn.v_proj.weight.__keep_high], to: model::model.layers.7.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.7.self_attn.o_proj.weight.__keep_low, model::model.layers.7.self_attn.o_proj.weight.__keep_high], to: model::model.layers.7.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.8.self_attn.q_proj.weight.__keep_low, model::model.layers.8.self_attn.q_proj.weight.__keep_high], to: model::model.layers.8.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.8.self_attn.k_proj.weight.__keep_low, model::model.layers.8.self_attn.k_proj.weight.__keep_high], to: model::model.layers.8.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.8.self_attn.v_proj.weight.__keep_low, model::model.layers.8.self_attn.v_proj.weight.__keep_high], to: model::model.layers.8.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.8.self_attn.o_proj.weight.__keep_low, model::model.layers.8.self_attn.o_proj.weight.__keep_high], to: model::model.layers.8.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.9.self_attn.q_proj.weight.__keep_low, model::model.layers.9.self_attn.q_proj.weight.__keep_high], to: model::model.layers.9.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.9.self_attn.k_proj.weight.__keep_low, model::model.layers.9.self_attn.k_proj.weight.__keep_high], to: model::model.layers.9.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.9.self_attn.v_proj.weight.__keep_low, model::model.layers.9.self_attn.v_proj.weight.__keep_high], to: model::model.layers.9.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.9.self_attn.o_proj.weight.__keep_low, model::model.layers.9.self_attn.o_proj.weight.__keep_high], to: model::model.layers.9.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.10.self_attn.q_proj.weight.__keep_low, model::model.layers.10.self_attn.q_proj.weight.__keep_high], to: model::model.layers.10.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.10.self_attn.k_proj.weight.__keep_low, model::model.layers.10.self_attn.k_proj.weight.__keep_high], to: model::model.layers.10.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.10.self_attn.v_proj.weight.__keep_low, model::model.layers.10.self_attn.v_proj.weight.__keep_high], to: model::model.layers.10.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.10.self_attn.o_proj.weight.__keep_low, model::model.layers.10.self_attn.o_proj.weight.__keep_high], to: model::model.layers.10.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.11.self_attn.q_proj.weight.__keep_low, model::model.layers.11.self_attn.q_proj.weight.__keep_high], to: model::model.layers.11.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.11.self_attn.k_proj.weight.__keep_low, model::model.layers.11.self_attn.k_proj.weight.__keep_high], to: model::model.layers.11.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.11.self_attn.v_proj.weight.__keep_low, model::model.layers.11.self_attn.v_proj.weight.__keep_high], to: model::model.layers.11.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.11.self_attn.o_proj.weight.__keep_low, model::model.layers.11.self_attn.o_proj.weight.__keep_high], to: model::model.layers.11.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.12.self_attn.q_proj.weight.__keep_low, model::model.layers.12.self_attn.q_proj.weight.__keep_high], to: model::model.layers.12.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.12.self_attn.k_proj.weight.__keep_low, model::model.layers.12.self_attn.k_proj.weight.__keep_high], to: model::model.layers.12.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.12.self_attn.v_proj.weight.__keep_low, model::model.layers.12.self_attn.v_proj.weight.__keep_high], to: model::model.layers.12.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.12.self_attn.o_proj.weight.__keep_low, model::model.layers.12.self_attn.o_proj.weight.__keep_high], to: model::model.layers.12.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.13.self_attn.q_proj.weight.__keep_low, model::model.layers.13.self_attn.q_proj.weight.__keep_high], to: model::model.layers.13.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.13.self_attn.k_proj.weight.__keep_low, model::model.layers.13.self_attn.k_proj.weight.__keep_high], to: model::model.layers.13.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.13.self_attn.v_proj.weight.__keep_low, model::model.layers.13.self_attn.v_proj.weight.__keep_high], to: model::model.layers.13.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.13.self_attn.o_proj.weight.__keep_low, model::model.layers.13.self_attn.o_proj.weight.__keep_high], to: model::model.layers.13.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.14.self_attn.q_proj.weight.__keep_low, model::model.layers.14.self_attn.q_proj.weight.__keep_high], to: model::model.layers.14.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.14.self_attn.k_proj.weight.__keep_low, model::model.layers.14.self_attn.k_proj.weight.__keep_high], to: model::model.layers.14.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.14.self_attn.v_proj.weight.__keep_low, model::model.layers.14.self_attn.v_proj.weight.__keep_high], to: model::model.layers.14.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.14.self_attn.o_proj.weight.__keep_low, model::model.layers.14.self_attn.o_proj.weight.__keep_high], to: model::model.layers.14.self_attn.o_proj.weight, dim: 1 }
+  - concat: { from: [model::model.layers.15.self_attn.q_proj.weight.__keep_low, model::model.layers.15.self_attn.q_proj.weight.__keep_high], to: model::model.layers.15.self_attn.q_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.15.self_attn.k_proj.weight.__keep_low, model::model.layers.15.self_attn.k_proj.weight.__keep_high], to: model::model.layers.15.self_attn.k_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.15.self_attn.v_proj.weight.__keep_low, model::model.layers.15.self_attn.v_proj.weight.__keep_high], to: model::model.layers.15.self_attn.v_proj.weight, dim: 0 }
+  - concat: { from: [model::model.layers.15.self_attn.o_proj.weight.__keep_low, model::model.layers.15.self_attn.o_proj.weight.__keep_high], to: model::model.layers.15.self_attn.o_proj.weight, dim: 1 }
+
+  # Remove all temporary slices, restoring the original 114-key namespace.
+  - delete: { target: 'model::model\.layers\.(\d+)\.self_attn\.([qkvo])_proj\.weight\.__keep_(low|high)' }
+
+  # Required checks, evaluated before the output write.
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.q_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.k_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.v_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model::model\.layers\.0\.self_attn\.o_proj\.weight', is: [2048, 1920] } }
+  - assert: { count: { of: 'model::.*', is: 114 } }
+
+  # Apply the same final shape invariants to every layer as an additional guard.
+  - assert: { count: { of: 'model::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight', is: 48 } }
+  - assert: { count: { of: 'model::model\.layers\.(\d+)\.self_attn\.o_proj\.weight', is: 16 } }
+  - assert: { shape: { of: 'model::model\.layers\.(\d+)\.self_attn\.([qkv])_proj\.weight', is: [1920, 2048] } }
+  - assert: { shape: { of: 'model::model\.layers\.(\d+)\.self_attn\.o_proj\.weight', is: [2048, 1920] } }
+
+output:
+  path: out/T2/model.safetensors
+  format: safetensors

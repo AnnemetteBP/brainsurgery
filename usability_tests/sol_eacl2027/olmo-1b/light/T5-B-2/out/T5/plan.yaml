@@ -1,0 +1,58 @@
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Preflight: 32 matched A tensors and 32 matched B tensors establish the
+  # complete set of adapter pairs. The mapped matmul will also fail if a
+  # corresponding partner or destination cannot be resolved.
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_A\.weight'
+        is: 32
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_B\.weight'
+        is: 32
+  - assert:
+      dtype:
+        of: 'lora::base_model\.model\.model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.lora_[AB]\.weight'
+        is: float32
+
+  # For every B match, captures 1 and 2 are the layer and projection name.
+  # Reconstruct B @ A into the base alias, scale by alpha/r = 2, and add it
+  # to the dense nn.Linear [out, in] weight without transposition.
+  - matmul:
+      from_a: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.(q_proj|v_proj)\.lora_B\.weight'
+      from_b: 'lora::base_model.model.model.layers.\1.self_attn.\2.lora_A.weight'
+      to: 'base::__lora_merge.\1.\2.delta'
+  - assert:
+      count:
+        of: 'base::__lora_merge\.\d+\.(q_proj|v_proj)\.delta'
+        is: 32
+  - scale_:
+      target: 'base::__lora_merge\.\d+\.(q_proj|v_proj)\.delta'
+      by: 2.0
+  - add_:
+      from: 'base::__lora_merge\.(\d+)\.(q_proj|v_proj)\.delta'
+      to: 'base::model.layers.\1.self_attn.\2.weight'
+  - delete:
+      target: 'base::__lora_merge\.\d+\.(q_proj|v_proj)\.delta'
+
+  # Required post-merge checks, all evaluated before output serialization.
+  - assert:
+      not:
+        exists: 'base::.*lora_.*'
+  - assert:
+      shape:
+        of: base::model.layers.0.self_attn.q_proj.weight
+        is: [2048, 2048]
+  - assert:
+      count:
+        of: 'base::.*'
+        is: 114
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

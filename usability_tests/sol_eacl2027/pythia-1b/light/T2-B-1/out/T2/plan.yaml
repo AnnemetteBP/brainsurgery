@@ -1,0 +1,70 @@
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  # Remove QKV rows 3840:4608 (head 5) and dense columns 1280:1536.
+  # Temporary names allow the originals to be replaced without collisions.
+  - concat: { from: ['gpt_neox.layers.0.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.0.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.0.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.0.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.0.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.0.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.0.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.0.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.0.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.1.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.1.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.1.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.1.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.1.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.1.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.1.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.1.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.1.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.2.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.2.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.2.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.2.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.2.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.2.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.2.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.2.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.2.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.3.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.3.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.3.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.3.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.3.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.3.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.3.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.3.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.3.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.4.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.4.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.4.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.4.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.4.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.4.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.4.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.4.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.4.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.5.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.5.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.5.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.5.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.5.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.5.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.5.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.5.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.5.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.6.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.6.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.6.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.6.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.6.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.6.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.6.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.6.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.6.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.7.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.7.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.7.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.7.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.7.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.7.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.7.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.7.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.7.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.8.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.8.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.8.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.8.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.8.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.8.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.8.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.8.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.8.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.9.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.9.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.9.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.9.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.9.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.9.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.9.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.9.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.9.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.10.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.10.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.10.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.10.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.10.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.10.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.10.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.10.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.10.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.11.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.11.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.11.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.11.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.11.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.11.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.11.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.11.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.11.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.12.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.12.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.12.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.12.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.12.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.12.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.12.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.12.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.12.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.13.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.13.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.13.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.13.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.13.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.13.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.13.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.13.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.13.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.14.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.14.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.14.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.14.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.14.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.14.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.14.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.14.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.14.dense.weight', dim: 1 }
+  - concat: { from: ['gpt_neox.layers.15.attention.query_key_value.weight::[:3840, :]', 'gpt_neox.layers.15.attention.query_key_value.weight::[4608:, :]'], to: 'tmp.layers.15.qkv.weight', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.15.attention.query_key_value.bias::[:3840]', 'gpt_neox.layers.15.attention.query_key_value.bias::[4608:]'], to: 'tmp.layers.15.qkv.bias', dim: 0 }
+  - concat: { from: ['gpt_neox.layers.15.attention.dense.weight::[:, :1280]', 'gpt_neox.layers.15.attention.dense.weight::[:, 1536:]'], to: 'tmp.layers.15.dense.weight', dim: 1 }
+
+  - delete: { target: 'gpt_neox\.layers\.\d+\.attention\.query_key_value\.weight' }
+  - delete: { target: 'gpt_neox\.layers\.\d+\.attention\.query_key_value\.bias' }
+  - delete: { target: 'gpt_neox\.layers\.\d+\.attention\.dense\.weight' }
+  - move: { from: 'tmp\.layers\.(\d+)\.qkv\.weight', to: 'gpt_neox.layers.\1.attention.query_key_value.weight' }
+  - move: { from: 'tmp\.layers\.(\d+)\.qkv\.bias', to: 'gpt_neox.layers.\1.attention.query_key_value.bias' }
+  - move: { from: 'tmp\.layers\.(\d+)\.dense\.weight', to: 'gpt_neox.layers.\1.attention.dense.weight' }
+
+  - assert: { shape: { of: 'gpt_neox.layers.0.attention.query_key_value.weight', is: [5376, 2048] } }
+  - assert: { shape: { of: 'gpt_neox.layers.0.attention.query_key_value.bias', is: [5376] } }
+  - assert: { shape: { of: 'gpt_neox.layers.0.attention.dense.weight', is: [2048, 1792] } }
+  - assert: { count: { of: '.*', is: 244 } }
+
+output:
+  path: out/T2/model.safetensors
+  format: safetensors

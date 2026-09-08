@@ -1,0 +1,58 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Preflight: prove all three key sets have the expected partition, then
+  # compare every frozen (non-MLP) tensor exactly before making any writes.
+  - assert: { count: { of: 'base::.+', is: 160 } }
+  - assert: { count: { of: 'ft1::.+', is: 160 } }
+  - assert: { count: { of: 'ft2::.+', is: 160 } }
+  - assert: { count: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias)', is: 48 } }
+  - assert: { count: { of: 'ft1::h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias)', is: 48 } }
+  - assert: { count: { of: 'ft2::h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias)', is: 48 } }
+  - assert:
+      equal:
+        left: 'base::((?!h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias)$).+)'
+        right: 'ft1::\1'
+  - assert:
+      equal:
+        left: 'base::((?!h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias)$).+)'
+        right: 'ft2::\1'
+  - assert: { dtype: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias)', is: float32 } }
+  - assert: { dtype: { of: 'ft1::h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias)', is: float32 } }
+  - assert: { dtype: { of: 'ft2::h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias)', is: float32 } }
+
+  # Materialize both deltas against the still-unmodified base.
+  - copy:
+      from: 'ft1::(h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias))'
+      to: 'base::__delta1.\1'
+  - subtract_:
+      from: 'base::(h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias))'
+      to: 'base::__delta1.\1'
+  - scale_: { target: 'base::__delta1\..+', by: 0.4 }
+  - copy:
+      from: 'ft2::(h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias))'
+      to: 'base::__delta2.\1'
+  - subtract_:
+      from: 'base::(h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias))'
+      to: 'base::__delta2.\1'
+  - scale_: { target: 'base::__delta2\..+', by: 0.4 }
+  - assert: { count: { of: 'base::__delta1\..+', is: 48 } }
+  - assert: { count: { of: 'base::__delta2\..+', is: 48 } }
+
+  # Merge the 48 destinations, remove scratch tensors, and validate output size.
+  - add_:
+      from: 'base::__delta1\.(h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias))'
+      to: 'base::\1'
+  - add_:
+      from: 'base::__delta2\.(h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias))'
+      to: 'base::\1'
+  - delete: { target: 'base::__delta[12]\..+' }
+  - assert: { count: { of: 'base::.+', is: 160 } }
+  - assert: { count: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.c_(?:fc|proj)\.(?:weight|bias)', is: 48 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

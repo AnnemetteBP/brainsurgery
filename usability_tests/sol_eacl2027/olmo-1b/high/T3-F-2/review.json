@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-07T18:53:42+00:00",
+  "finished_at": "2026-09-07T18:53:53+00:00",
+  "wall_clock_s": 11.2,
+  "tokens_in": 21353,
+  "tokens_out": 194,
+  "cost_usd": 0.112585,
+  "verdict_text": "YES. The artifact does exactly what the specification requires.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

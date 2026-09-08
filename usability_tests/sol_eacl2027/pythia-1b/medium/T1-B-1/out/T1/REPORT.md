@@ -1,0 +1,7 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Renames had to run in ascending source-layer order after deletion so that every destination name was vacant and no surviving block could be overwritten.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: About 5 minutes.

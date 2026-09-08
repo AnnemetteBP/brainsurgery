@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/` (`model.safetensors.index.json` and five shard files)
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed at `matmul` because escaped literal dots in the regex rewrite were retained in the synthesized `lora_A` tensor name.
+- Pitfalls or surprises you hit (one line each): Regex source rewrites synthesize exact counterpart names, so literal portions of the destination-side reference must not retain regex escaping.
+- Anything in the task text or documentation that was unclear: The documentation did not explicitly illustrate a cross-alias ternary mapping where a captured source name rewrites to another existing input tensor.
+- Tools used (condition F): Not applicable (condition B); used only the `brainsurgery` CLI and the supplied documentation.
+- Approximate time spent, if you can tell: About 4 minutes.

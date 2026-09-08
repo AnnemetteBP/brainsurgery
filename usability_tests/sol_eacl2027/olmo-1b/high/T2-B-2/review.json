@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/B/T2.yaml",
+  "started_at": "2026-09-07T18:52:34+00:00",
+  "finished_at": "2026-09-07T18:52:42+00:00",
+  "wall_clock_s": 7.2,
+  "tokens_in": 24901,
+  "tokens_out": 82,
+  "cost_usd": 0.076853,
+  "verdict_text": "YES.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

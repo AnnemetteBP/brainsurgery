@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/solution.py`; checkpoint at `out/T5/model.safetensors.index.json` and its six mapped shard files.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The task explicitly requires the two roughly 206 MB embedding tensors to be stored alone despite each being below the stated 512 MiB cap, so the sharder handles them as explicit solo tensors.
+- Anything in the task text or documentation that was unclear: The phrase "single tensor larger than that" conflicts with the supplied 206 MB embedding sizes versus the 512 MiB limit; I followed the explicit requirement that those tensors be stored alone.
+- Tools used (condition F): PyTorch 2.14.0 for float32 matrix multiplication and dtype conversion; safetensors 0.5.3 for direct checkpoint reads and sharded writes; Python standard library for configuration and index JSON.
+- Approximate time spent, if you can tell: About 5 minutes.

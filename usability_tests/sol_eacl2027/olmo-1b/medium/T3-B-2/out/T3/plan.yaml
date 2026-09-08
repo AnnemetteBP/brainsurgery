@@ -1,0 +1,40 @@
+inputs:
+  - inputs/base
+
+transforms:
+  # Establish the exact input/key-set assumptions before modifying anything.
+  - assert: { count: { of: ".+", is: 114 } }
+  - assert:
+      count:
+        of: "model\\.layers\\.(?:[0-9]|1[0-5])\\.(?:self_attn\\.(?:q|k|v|o)_proj|mlp\\.(?:gate|up|down)_proj)\\.weight"
+        is: 112
+
+  # Cast only the seven projection matrices in each of the sixteen layers.
+  - cast_:
+      target: "model\\.layers\\.(?:[0-9]|1[0-5])\\.(?:self_attn\\.(?:q|k|v|o)_proj|mlp\\.(?:gate|up|down)_proj)\\.weight"
+      to: bfloat16
+
+  # Required pre-write checks.
+  - assert:
+      all:
+        - count:
+            of: "model\\.layers\\.(?:[0-9]|1[0-5])\\.(?:self_attn\\.(?:q|k|v|o)_proj|mlp\\.(?:gate|up|down)_proj)\\.weight"
+            is: 112
+        - dtype:
+            of: "model\\.layers\\.(?:[0-9]|1[0-5])\\.(?:self_attn\\.(?:q|k|v|o)_proj|mlp\\.(?:gate|up|down)_proj)\\.weight"
+            is: bfloat16
+        - dtype:
+            of: model.layers.0.self_attn.q_proj.weight
+            is: bfloat16
+        - dtype:
+            of: model.embed_tokens.weight
+            is: float32
+        - dtype:
+            of: lm_head.weight
+            is: float32
+        - count: { of: ".+", is: 114 }
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 256MB

@@ -1,0 +1,11 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 3
+- Which executions failed, and why (one line each):
+  - Attempt 1: the all-tensor infinite-epsilon layout comparison encountered equal `-inf` sentinel values, whose subtraction produced `NaN`; no mutation occurred.
+  - Attempt 2: `subtract_` rejected a float16 base source and float32 task-vector destination because it requires matching dtypes.
+- Pitfalls or surprises you hit (one line each):
+  - Infinite epsilon is unsuitable for layout-only comparison of tensors containing infinities.
+  - BrainSurgery in-place arithmetic requires source and destination dtypes to match exactly.
+- Anything in the task text or documentation that was unclear: Nothing material; the `subtract_` dtype constraint was visible in the runtime error but not prominent in the transform help excerpt.
+- Tools used (condition F): N/A (condition B; BrainSurgery CLI only).
+- Approximate time spent, if you can tell: 8 minutes.

@@ -1,0 +1,40 @@
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  - cast_:
+      target: 'h\.(?:[0-9]|1[01])\.(?:attn\.(?:c_attn|c_proj)|mlp\.(?:c_fc|c_proj))\.weight'
+      to: bfloat16
+  - delete:
+      target: 'h\.(?:[0-9]|1[01])\.attn\.bias'
+
+  # Together, these checks prove that exactly the intended 48 tensors are
+  # bfloat16 and that every remaining tensor is float32.
+  - assert:
+      all:
+        - count:
+            of: 'h\.(?:[0-9]|1[01])\.(?:attn\.(?:c_attn|c_proj)|mlp\.(?:c_fc|c_proj))\.weight'
+            is: 48
+        - dtype:
+            of: 'h\.(?:[0-9]|1[01])\.(?:attn\.(?:c_attn|c_proj)|mlp\.(?:c_fc|c_proj))\.weight'
+            is: bfloat16
+        - dtype:
+            of: '(?!h\.(?:[0-9]|1[01])\.(?:attn\.(?:c_attn|c_proj)|mlp\.(?:c_fc|c_proj))\.weight$).+'
+            is: float32
+  - assert:
+      dtype:
+        of: h.0.attn.c_attn.weight
+        is: bfloat16
+  - assert:
+      dtype:
+        of: wte.weight
+        is: float32
+  - assert:
+      count:
+        of: '.*'
+        is: 148
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 64MB

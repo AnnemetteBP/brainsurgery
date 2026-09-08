@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/model.safetensors.index.json` and the ten `out/T5/model-00001-of-00010.safetensors` through `model-00010-of-00010.safetensors` shard files; producer source is `out/T5/solution.py`.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first execution succeeded.
+- Pitfalls or surprises you hit (one line each): The two 412,090,368-byte embedding matrices are smaller than 512 MiB despite the task calling them larger, so I explicitly isolated them as requested by the parenthetical while enforcing the byte cap independently.
+- Anything in the task text or documentation that was unclear: The statement that the 412 MB tensors are each larger than 512 MiB is arithmetically inconsistent, but the intended sharding behavior was still clear enough to implement conservatively.
+- Tools used (condition F): `torch` 2.14.0 (float32 `addmm` for each scaled `B @ A` update) and `safetensors` 0.5.3 (metadata inspection plus direct sharded checkpoint reads/writes); chosen to avoid instantiating the model and to preserve every unchanged tensor exactly.
+- Approximate time spent, if you can tell: About 5 minutes.

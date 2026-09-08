@@ -1,0 +1,47 @@
+inputs:
+  - base::inputs/base
+  - lora::inputs/lora/adapter_model.safetensors
+
+transforms:
+  # Establish that the adapter contains exactly 32 complete A/B pairs.
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.(q_proj|v_proj)\.lora_A\.weight'
+        is: 32
+  - assert:
+      count:
+        of: 'lora::base_model\.model\.model\.layers\.(\d+)\.self_attn\.(q_proj|v_proj)\.lora_B\.weight'
+        is: 32
+
+  # Build B @ A in float32. Captures map each adapter pair to one temporary
+  # tensor in the base alias, then apply alpha/r = 32/16 = 2.
+  - matmul:
+      from_a: 'lora::base_model\.model\.model\.layers\.(\d+)\.(self_attn\.(?:q_proj|v_proj))\.lora_B\.weight'
+      from_b: 'lora::base_model.model.model.layers.\1.\2.lora_A.weight'
+      to: 'base::__merge.\1.\2.weight'
+  - assert: { count: { of: 'base::__merge\.\d+\.self_attn\.(q_proj|v_proj)\.weight', is: 32 } }
+  - assert: { dtype: { of: 'base::__merge\.\d+\.self_attn\.(q_proj|v_proj)\.weight', is: float32 } }
+  - scale_: { target: 'base::__merge\.\d+\.self_attn\.(q_proj|v_proj)\.weight', by: 2.0 }
+
+  # Merge each scaled delta into its existing dense nn.Linear weight.
+  - add_:
+      from: 'base::__merge\.(\d+)\.(self_attn\.(?:q_proj|v_proj))\.weight'
+      to: 'base::model.layers.\1.\2.weight'
+  - assert:
+      count:
+        of: 'base::model\.layers\.\d+\.self_attn\.(q_proj|v_proj)\.weight'
+        is: 32
+
+  # Remove all work tensors before final validation and export.
+  - delete: { target: 'base::__merge\..+' }
+  - assert: { not: { exists: 'base::.*lora_.*' } }
+  - assert:
+      shape:
+        of: base::model.layers.0.self_attn.q_proj.weight
+        is: [2048, 2048]
+  - assert: { count: { of: 'base::.*', is: 114 } }
+
+output:
+  path: out/T5
+  format: safetensors
+  shard: 512MB

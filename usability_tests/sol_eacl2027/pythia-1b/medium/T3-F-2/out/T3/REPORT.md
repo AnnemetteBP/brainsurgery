@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/model.safetensors.index.json` and `out/T3/model-00001-of-00009.safetensors` through `out/T3/model-00009-of-00009.safetensors`; producer: `out/T3/solution.py`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The two embedding tensors become 412,090,368 bytes each after conversion to float32, so each must be placed alone despite their roughly 206 MB float16 input size.
+- Anything in the task text or documentation that was unclear: The parenthetical calls the embeddings 206 MB while saying they exceed 256 MiB; 206 MB is their input float16 size, whereas their required output float32 size is about 412 MB.
+- Tools used (condition F): PyTorch 2.14.0 for exact float16-to-bfloat16/float32 conversions; safetensors 0.5.3 for lazy checkpoint reads, shard serialization, and independent output validation; Python standard library for exact-name regexes, size-aware sharding, and JSON index generation.
+- Approximate time spent, if you can tell: About 5 minutes.

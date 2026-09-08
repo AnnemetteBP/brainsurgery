@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T2.yaml",
+  "started_at": "2026-09-07T18:23:53+00:00",
+  "finished_at": "2026-09-07T18:24:01+00:00",
+  "wall_clock_s": 8.4,
+  "tokens_in": 24208,
+  "tokens_out": 110,
+  "cost_usd": 0.074228,
+  "verdict_text": "YES. The artifact exactly implements the required pruning, preserves tensor order and names, removes temporary tensors, performs all required assertions, and writes the specified 244-tensor output file.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,47 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "gpt-2",
+  "effort": "light",
+  "reasoning_effort": "low",
+  "test": "T5",
+  "condition": "B",
+  "repeat": 2,
+  "started_at": "2026-09-07T17:23:36+00:00",
+  "finished_at": "2026-09-07T17:26:00+00:00",
+  "wall_clock_s": 143.5,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.45208,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 9,
+  "tokens_in": 32706,
+  "tokens_out": 2973,
+  "cache_read_tokens": 398720,
+  "cache_write_tokens": null,
+  "tokens_in_total": 431426,
+  "reasoning_tokens": 683,
+  "usage_raw": {
+    "input_tokens": 431426,
+    "cached_input_tokens": 398720,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 2973,
+    "reasoning_output_tokens": 683
+  },
+  "executions": 2,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc \"sed -n '1,240p' out/T5/plan.yaml && brainsurgery out/T5/plan.yaml\"",
+      "message": "lora::base_model\\.model\\.h\\.0\\.attn\\.c_attn\\.lora_A\\.weight",
+      "n": 1,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Completed the LoRA merge and sharded export.\n\n- Plan: [plan.yaml](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/light/T5-B-2/out/T5/plan.yaml)\n- Report: [REPORT.md](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/light/T5-B-2/out/T5/REPORT.md)\n- Output index: [model.safetensors.index.json](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/gpt-2/light/T5-B-2/out/T5/model.safetensors.index.json)\n\nAll assertions passed. The output contains 160 tensors across five shards, with the oversized `wte.weight` isolated in its own shard. The plan was executed twice; the report documents the first failed attempt."
+}

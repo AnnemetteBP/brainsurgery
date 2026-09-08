@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/B/T4.yaml",
+  "started_at": "2026-09-07T18:45:07+00:00",
+  "finished_at": "2026-09-07T18:45:32+00:00",
+  "wall_clock_s": 24.1,
+  "tokens_in": 21404,
+  "tokens_out": 579,
+  "cost_usd": 0.074278,
+  "verdict_text": "NO. The plan never explicitly verifies that all three checkpoints have the same tensor names, especially among the 48 MLP tensors, before mutations begin. Counting 160 tensors and later relying on copy/subtract matching does not satisfy Required Result 1\u2019s up-front full key-set verification.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

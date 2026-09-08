@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/B/T2-defective.yaml",
+  "started_at": "2026-09-07T16:52:09+00:00",
+  "finished_at": "2026-09-07T16:52:17+00:00",
+  "wall_clock_s": 7.6,
+  "tokens_in": 24205,
+  "tokens_out": 100,
+  "cost_usd": 0.073913,
+  "verdict_text": "NO. The plan removes head 6, keeping QKV rows `0:4608` and `5376:6144` and dense columns `0:1536` and `1792:2048`. The specification requires removing head 5 by keeping QKV rows `0:3840` and `4608:6144`, and dense columns `0:1280` and `1536:2048`, violating Required result clauses 1\u20133.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The removed head is off by one (head N+1 instead of head N). All shapes are still correct, so the artifact's own shape checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

@@ -1,0 +1,47 @@
+{
+  "phase": "solve",
+  "driver": "run_codex.py",
+  "model_id": "gpt-5.6-sol",
+  "agent": "sol_eacl2027",
+  "target": "pythia-1b",
+  "effort": "light",
+  "reasoning_effort": "low",
+  "test": "T1",
+  "condition": "B",
+  "repeat": 2,
+  "started_at": "2026-09-07T17:37:20+00:00",
+  "finished_at": "2026-09-07T17:39:41+00:00",
+  "wall_clock_s": 140.8,
+  "exit_code": 0,
+  "cap_hit": "none",
+  "timeout_s": 1800,
+  "cost_usd": 0.399361,
+  "cost_source": "rate card via run_codex.py price arguments",
+  "turns": 1,
+  "tool_calls": 9,
+  "tokens_in": 31953,
+  "tokens_out": 2730,
+  "cache_read_tokens": 315392,
+  "cache_write_tokens": null,
+  "tokens_in_total": 347345,
+  "reasoning_tokens": 522,
+  "usage_raw": {
+    "input_tokens": 347345,
+    "cached_input_tokens": 315392,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 2730,
+    "reasoning_output_tokens": 522
+  },
+  "executions": 2,
+  "failed_executions": [
+    {
+      "command": "/usr/bin/zsh -lc \"sed -n '1,220p' out/T1/plan.yaml && brainsurgery out/T1/plan.yaml\"",
+      "message": "model::gpt_neox\\.layers\\.(12|13|14|15)\\..+",
+      "n": 1,
+      "error_class": ""
+    }
+  ],
+  "first_execution_success": false,
+  "executions_until_first_success": 2,
+  "final_text": "Completed T1 successfully.\n\n- Plan: [plan.yaml](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/light/T1-B-2/out/T1/plan.yaml)\n- Checkpoint: [model.safetensors](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/light/T1-B-2/out/T1/model.safetensors)\n- Report: [REPORT.md](/home/rootkidd/Projects/brainsurgery/usability_tests/sol_eacl2027/pythia-1b/light/T1-B-2/out/T1/REPORT.md)\n\nThe plan\u2019s second execution passed all required assertions and preserved 184 tensors. The external grading script was not present inside this sandbox."
+}

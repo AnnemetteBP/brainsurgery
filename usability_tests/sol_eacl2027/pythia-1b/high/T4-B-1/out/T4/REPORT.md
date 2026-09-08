@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed during preflight because a large-epsilon `equal` name-compatibility check compared identical `-inf` sentinel tensors; subtraction produced NaN, so the assertion rejected them. No transforms had modified tensors.
+- Pitfalls or surprises you hit (one line each): `assert: equal` with a finite epsilon cannot be used as a value-agnostic mapped-name check when tensors contain infinities; I replaced it with exhaustive MLP-name counts, total counts, and mapped exact equality for all non-MLP tensors.
+- Anything in the task text or documentation that was unclear: The documentation does not expose a direct assertion for symmetric tensor-name-set equality, so that invariant had to be composed from the available count and equal assertions.
+- Tools used (condition F): N/A (condition B; BrainSurgery only).
+- Approximate time spent, if you can tell: About 8 minutes.

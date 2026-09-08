@@ -1,8 +1,9 @@
 # Handover: finishing the usability study
 
-State at 2026-09-06 22:00, branch `usability-study`, last commit `a96fda78`.
-Two pieces of work remain: 138 blocked Fable 5.1 re-reviews on this machine,
-and the Codex runs. Everything else is done and committed.
+State at 2026-09-07, branch `main`. One piece of work remains: 139 Fable 5.1
+re-reviews on this machine, blocked on a weekly account limit (section 3).
+The Codex cohort is complete. Everything else is done; the Codex cells and
+this update are not yet committed.
 
 ## 1. What is already finished
 
@@ -11,8 +12,8 @@ and the Codex runs. Everything else is done and committed.
 | Kit (tasks, conditions, references, grader, drivers) | complete, verified on all three targets |
 | Solve phase, Claude agents | 810 cells (3 agents x 3 targets x 3 tiers x 5 tests x 3 conditions x 2 repeats), **all pass**, no cap hits, 580.80 USD |
 | Reviews, Sonnet 5 and Opus 5 | complete under the final protocol (`review-v2`) against the final artifacts |
-| Reviews, Fable 5.1 | **138 stale**, blocked by a model-specific account limit |
-| Codex runs | 3 cells exist (`usability_tests/astra/gpt-2/light/T1-*-1`), the rest not run |
+| Reviews, Fable 5.1 | **139 outstanding** (130 against superseded artifacts, 9 blocked by the account limit); see section 3 |
+| Codex runs | complete: `sol_eacl2027`, model `gpt-5.6-sol`, 270 cells over both repeats, all pass, no cap hits, 104.60 USD imputed |
 | Doc-consultation time | derived from the transcripts for all 810 Claude cells and committed as `doctime.json`; results in `README.md` |
 
 Records per cell: `run.json`, `harness.json`, `grade.json`, `review.json`,
@@ -32,50 +33,118 @@ git commit -m "usability_tests: reviews under the final protocol (sonnet5, opus5
 
 ## 3. Finishing the Fable 5.1 reviews
 
-Why they are stale: the reference artifacts changed after those reviews ran
-(the Python baselines became self-contained, T3/T4/T5 plans got literal
-required checks). A review is only valid for the artifact text it read, so
-`review_pass.py` compares `artifact_sha256` in `review.json` against the file
-on disk and redoes a cell when they differ.
+**State confirmed 2026-09-07.** 139 of the 270 fable51 cells still need their
+review redone. Nothing about the solve phase is affected: all 270 fable51
+cells solved successfully (`grade.json` `passed=true`, no cap hits), and every
+participant-side measure (success, time, retries, tokens, cost) is final. Only
+the bug-detection review is outstanding, and only for fable51 -- opus5 and
+sonnet5 are 270/270 clean.
 
-A waiter is running (`log/fable-rereview-waiter.txt`); it probes the limit
-every 15 minutes and starts the re-review automatically. If it is gone, do it
-by hand once `claude -p "Reply with the single word OK." --model claude-fable-5-1`
-answers without a limit message:
+The 139 split into two causes:
+
+| n | cause | `review.json` state |
+|---|---|---|
+| 130 | reviewed against artifact text that commit `a9d721c8` (2026-09-06 18:48) then rewrote | `protocol: review-v2`, real verdict, but `artifact_sha256` no longer matches the file on disk |
+| 9 | the Fable account limit was reached mid-review | `protocol: null`, `verdict_text` is literally `"You've reached your Fable limit..."`, 3-4 `review-attempt-*.json` already beside it |
+
+All 130 stale ones are condition **P**: `a9d721c8` made the Python references
+self-contained, so 36 distinct artifacts under `review/*/P/` and
+`solutions/*/P/` changed. A review is only valid for the artifact text it
+read, which is why `review_pass.py` compares `artifact_sha256`.
+
+The 9 limit-blocked cells, for reference:
+
+```
+fable51/gpt-2/low/T1-P-1
+fable51/pythia-1b/high/T1-P-1   T1-P-2   T2-P-1   T2-P-2
+fable51/pythia-1b/high/T3-P-1   T3-P-2   T4-P-1   T4-P-2
+```
+
+### Why this matters before the tables are written
+
+`analyze.py` currently reports fable51 at a 5.3% false-alarm rate over n=131,
+but 130 of the counted verdicts were formed against superseded artifacts and
+9 are excluded outright. **That number is not comparable to the other agents
+until this pass is redone.** opus5 (0.0%), sonnet5 (17.8%) and sol_eacl2027
+(23.7%) are all computed from current artifacts. Bug detection is 100% for
+every agent, so the false-alarm column is the one that carries the result.
+
+### Precondition: has the limit reset?
+
+The waiter from 2026-09-06 (`log/fable-rereview-waiter.txt`) probed six times
+between 20:48 and 22:03 and got "still limited" every time; it is no longer
+running. Probe by hand:
 
 ```bash
+claude -p "Reply with the single word OK." --model claude-fable-5-1
+```
+
+A plain `OK` means go. A limit message means wait -- it is a weekly cap, so
+check once a day rather than looping.
+
+### The run
+
+```bash
+cd /home/rootkidd/Projects/brainsurgery
 .venv/bin/python usability_tests/review_pass.py --agents fable51 --parallel 4 --max-attempts 4
 ```
 
-Roughly 138 reviews, about 20 minutes, about 20 USD. Then check nothing is
-stale and commit:
+No `--force` is needed and it must not be used: `review_cell()` skips a cell
+only when `protocol == review-v2` **and** `artifact_sha256` matches the file
+on disk, so exactly the 139 are redone and the 131 good ones are left alone.
+Each cell's previous review is preserved as `review-attempt-<n>.json`. On a
+reply containing "limit" the driver waits `--limit-wait-s` (900 s) before
+retrying, so a partial reset will stall rather than corrupt anything; re-run
+the same command to resume. Budget roughly 20 minutes and ~20 USD.
+
+### Verify, then re-derive
 
 ```bash
-.venv/bin/python - <<'PY'
+# expect: fable51 drops out entirely (sol_eacl2027's 270 are a known false
+# positive -- run_codex.py writes no protocol/verdict/artifact_sha256 field)
+.venv/bin/python - <<'EOF'
 import json, hashlib
 from pathlib import Path
-HERE = Path("usability_tests"); stale = 0
+HERE = Path("usability_tests"); bad = {}
 for c in HERE.glob("*/*/*/*"):
     rv = c / "review.json"
     if not (c / "grade.json").exists() or not rv.exists(): continue
     r = json.loads(rv.read_text()); art = HERE / (r.get("artifact") or "")
     cur = hashlib.sha256(art.read_bytes()).hexdigest() if art.exists() else None
-    stale += r.get("protocol") != "review-v2" or r.get("verdict") not in ("yes","no") or r.get("artifact_sha256") != cur
-print("stale reviews:", stale)
-PY
-```
+    if r.get("protocol") != "review-v2" or r.get("verdict") not in ("yes","no") \
+       or r.get("artifact_sha256") != cur:
+        bad[c.parts[1]] = bad.get(c.parts[1], 0) + 1
+print("stale reviews by agent:", bad)
+EOF
 
-Then the final tables:
-
-```bash
 .venv/bin/python usability_tests/resummarise.py     # execution counts from transcripts
-.venv/bin/python usability_tests/doc_time.py        # doc-consultation time from transcripts
+.venv/bin/python usability_tests/doc_time.py        # doc-consultation time (Claude transcripts only)
 .venv/bin/python usability_tests/analyze.py         # per agent/target/effort/condition + pooled
 ```
 
-and write them into `usability_tests/README.md` ("Results, repeat 1" section,
-which currently holds repeat-1-only numbers) and into the PR description at
+Then re-archive the transcripts, since a re-review writes new ones and the
+existing snapshot predates them:
+
+```bash
+find usability_tests -name transcript.jsonl -print0 | sort -z > /tmp/tx.list
+tar --zstd -cf /mnt/nvme/brainsurgery/log/usability_tests-transcripts-<date>.tar.zst \
+    --null -T /tmp/tx.list
+```
+
+Finally write the tables into `usability_tests/README.md` ("Results, repeat 1"
+still holds repeat-1-only numbers) and into the PR description at
 `/mnt/nvme/brainsurgery/log/PR-usability-study.md`.
+
+### Traps specific to this pass
+
+- `pgrep -f run_full_codex.sh` and similar self-match the shell running the
+  check. Match on `'^[0-9]+ bash usability_tests/...'` instead.
+- The 9 limit-blocked cells already carry 3-4 `review-attempt-*.json` files.
+  That is expected history, not corruption; do not delete them.
+- `review.detected` is null and `error_class` empty across all 1080 cells in
+  every cohort. That is the intended state -- `analyze.py` derives detection
+  from `verdict_text` -- not outstanding work. Filling them for one agent only
+  would break parity.
 
 ## 4. Running Codex
 

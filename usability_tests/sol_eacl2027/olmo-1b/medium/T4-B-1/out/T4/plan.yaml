@@ -1,0 +1,83 @@
+inputs:
+  - base::inputs/base
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Preflight: exact total and MLP counts in every checkpoint.  Combined with
+  # the mapped equality checks below, this proves that all three key sets are
+  # identical and that precisely the specified 48 tensors are merge targets.
+  - assert: { count: { of: 'base::.+', is: 114 } }
+  - assert: { count: { of: 'ft1::.+', is: 114 } }
+  - assert: { count: { of: 'ft2::.+', is: 114 } }
+  - assert: { count: { of: 'base::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft1::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { count: { of: 'ft2::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+
+  # All tensors are required to remain/computate in float32.
+  - assert: { dtype: { of: 'base::.+', is: float32 } }
+  - assert: { dtype: { of: 'ft1::.+', is: float32 } }
+  - assert: { dtype: { of: 'ft2::.+', is: float32 } }
+
+  # Verify every non-MLP tensor maps by the same name and is bit-identical.
+  # Since each checkpoint has 114 total keys and exactly the same 48 allowed
+  # MLP keys, these 66 mapped equalities also establish exact key-set equality.
+  - assert:
+      equal:
+        left: 'base::((?!model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight$).+)'
+        right: 'ft1::\1'
+  - assert:
+      equal:
+        left: 'base::((?!model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight$).+)'
+        right: 'ft2::\1'
+
+  # Validate the expected MLP layouts before performing any writes.
+  - assert: { shape: { of: 'base::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj)\.weight', is: [8192, 2048] } }
+  - assert: { shape: { of: 'base::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.down_proj\.weight', is: [2048, 8192] } }
+  - assert: { shape: { of: 'ft1::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj)\.weight', is: [8192, 2048] } }
+  - assert: { shape: { of: 'ft1::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.down_proj\.weight', is: [2048, 8192] } }
+  - assert: { shape: { of: 'ft2::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj)\.weight', is: [8192, 2048] } }
+  - assert: { shape: { of: 'ft2::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.down_proj\.weight', is: [2048, 8192] } }
+
+  # Materialize both task vectors before modifying base, so both differences
+  # are taken against the same unmodified checkpoint.
+  - copy:
+      from: 'ft1::(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::__t4_ft1__.\1'
+  - subtract:
+      from_a: 'base::__t4_ft1__\.(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      from_b: 'base::\1'
+      to: 'base::__t4_ft1__.\1'
+  - scale_: { target: 'base::__t4_ft1__\..+', by: 0.4 }
+
+  - copy:
+      from: 'ft2::(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::__t4_ft2__.\1'
+  - subtract:
+      from_a: 'base::__t4_ft2__\.(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      from_b: 'base::\1'
+      to: 'base::__t4_ft2__.\1'
+  - scale_: { target: 'base::__t4_ft2__\..+', by: 0.4 }
+
+  # These assertions make the exact 48-tensor merge cardinality explicit.
+  - assert: { count: { of: 'base::__t4_ft1__\..+', is: 48 } }
+  - assert: { count: { of: 'base::__t4_ft2__\..+', is: 48 } }
+
+  - add_:
+      from: 'base::__t4_ft1__\.(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::\1'
+  - add_:
+      from: 'base::__t4_ft2__\.(model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight)'
+      to: 'base::\1'
+
+  # Remove working tensors, then prove the output state dict has exactly the
+  # original 114 names and all 48 intended MLP tensors.
+  - delete: { target: 'base::__t4_ft1__\..+' }
+  - delete: { target: 'base::__t4_ft2__\..+' }
+  - assert: { count: { of: 'base::.+', is: 114 } }
+  - assert: { count: { of: 'base::model\.layers\.(?:[0-9]|1[0-5])\.mlp\.(?:gate_proj|up_proj|down_proj)\.weight', is: 48 } }
+  - assert: { not: { exists: 'base::__t4_ft[12]__\..+' } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

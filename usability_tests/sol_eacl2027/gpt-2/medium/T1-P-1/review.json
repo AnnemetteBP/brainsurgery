@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T1-defective.py",
+  "started_at": "2026-09-07T15:33:14+00:00",
+  "finished_at": "2026-09-07T15:33:23+00:00",
+  "wall_clock_s": 8.6,
+  "tokens_in": 20914,
+  "tokens_out": 79,
+  "cost_usd": 0.056828,
+  "verdict_text": "NO. The artifact drops block 9 instead of block 8, violating Required Result 1. Consequently, its renumbering maps old blocks 10 and 11 to 8 and 9, leaving block index 9 in the output and violating Required Result 2 and the required check that no tensors of blocks 9, 10, or 11 remain.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

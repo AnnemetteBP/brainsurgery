@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/solution.py` (checkpoint index: `out/T5/model.safetensors.index.json`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): The two embedding tensors needed explicit dedicated-shard handling in addition to ordinary greedy packing.
+- Anything in the task text or documentation that was unclear: The text calls the approximately 206 MB embedding tensors larger than the 512 MiB limit, although 206 MB is smaller; I followed the explicit instruction to store each alone.
+- Tools used (condition F): Not applicable (condition P; used only Python, PyTorch, and safetensors).
+- Approximate time spent, if you can tell: About 5 minutes.

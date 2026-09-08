@@ -1,0 +1,7 @@
+- Final artifact path: `out/T3/model.safetensors.index.json` and the nine `out/T3/model-*-of-00009.safetensors` shard files; implementation at `out/T3/solution.py`.
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Post-conversion float32 embeddings are about 412 MB each, so each must be accepted as an oversized singleton shard.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): PyTorch 2.14.0+cu130 for exact dtype conversion and tensor operations; safetensors 0.5.3 for lazy input access and sharded serialization; Python standard-library JSON for the HuggingFace-style index.
+- Approximate time spent, if you can tell: About 5 minutes.

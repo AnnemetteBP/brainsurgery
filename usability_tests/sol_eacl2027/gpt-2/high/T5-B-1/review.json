@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/B/T5-defective.yaml",
+  "started_at": "2026-09-07T16:27:53+00:00",
+  "finished_at": "2026-09-07T16:27:59+00:00",
+  "wall_clock_s": 6.4,
+  "tokens_in": 21307,
+  "tokens_out": 55,
+  "cost_usd": 0.058073,
+  "verdict_text": "NO. The plan omits the required `alpha / r = 2` scaling and instead adds only `(B @ A).T` to each adapted weight. This violates Required Result clause 1, so all 12 merged tensors have incorrect values.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The adapter scaling factor alpha / r is missing: the raw low-rank product is added.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

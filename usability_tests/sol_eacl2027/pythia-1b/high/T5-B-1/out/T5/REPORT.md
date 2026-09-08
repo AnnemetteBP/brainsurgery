@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/plan.yaml` (output checkpoint: `out/T5/model.safetensors.index.json` and four shard files)
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed because the mapped `from_b` template retained regex escapes in the synthesized LoRA A tensor name, so `matmul` reported its source B operand missing.
+- Pitfalls or surprises you hit (one line each): Capture-based source/destination templates are concrete rewritten tensor names; literal dots in those templates must not be regex-escaped.
+- Anything in the task text or documentation that was unclear: The mapping documentation explained capture reuse, but it was not explicit that escaping regex metacharacters in a rewritten source template preserves those escapes in the synthesized name.
+- Tools used (condition F): N/A (condition B).
+- Approximate time spent, if you can tell: About 5 minutes.

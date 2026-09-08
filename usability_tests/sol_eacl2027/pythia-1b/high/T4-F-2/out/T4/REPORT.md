@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed because PyTorch cannot directly reinterpret a scalar (0-D) float16 tensor as bytes; flattening before the byte view fixed the verifier. No output checkpoint had been written.
+- Pitfalls or surprises you hit (one line each): Bit-exact comparison must handle scalar tensors as well as ordinary parameter arrays.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): PyTorch 2.14.0+cu130 for float32 task-vector arithmetic and exact tensor comparison; safetensors 0.5.3 for streaming reads and single-file checkpoint output. A plain script was the clearest way to enforce every precondition and output invariant.
+- Approximate time spent, if you can tell: About 5 minutes.

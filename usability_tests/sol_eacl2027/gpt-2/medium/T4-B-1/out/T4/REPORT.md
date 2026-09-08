@@ -1,0 +1,8 @@
+- Final artifact path: out/T4/model.safetensors
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None; the first plan execution succeeded.
+- Pitfalls or surprises you hit (one line each): Both task vectors had to be materialized before either was added to the base, so the second subtraction could not accidentally use an already-modified base.
+- Pitfalls or surprises you hit (one line each): Exact key-set verification required combining total counts, per-family counts for all 12 layers, and mapped equality checks for the 112 non-MLP tensors.
+- Anything in the task text or documentation that was unclear: Nothing material.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: About 7 minutes.

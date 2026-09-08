@@ -1,0 +1,7 @@
+- Final artifact path: `out/T5/solution.py` (checkpoint output in `out/T5/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Safetensors shard file sizes include headers, so files whose tensor data is exactly 512 MiB are slightly larger than 512 MiB on disk; the task explicitly excludes headers from the cap.
+- Anything in the task text or documentation that was unclear: The statement that the two 412 MB tensors are examples of tensors larger than the 512 MiB limit is numerically inconsistent; I followed the explicit requirement that each be stored alone.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 5 minutes.

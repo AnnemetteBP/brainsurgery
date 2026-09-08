@@ -1,0 +1,8 @@
+- Final artifact path: `out/T5/solution.py` (checkpoint at `out/T5/model.safetensors.index.json` and six shard files)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): PEFT adapter names required stripping `base_model.model.` and replacing the LoRA suffix to obtain each dense base-weight name.
+- Pitfalls or surprises you hit (one line each): The two embedding tensors were explicitly placed alone even though their approximately 197 MiB tensor payloads are individually below the 512 MiB shard limit.
+- Anything in the task text or documentation that was unclear: The statement that the approximately 206 MB embedding tensors are larger than 512 MiB is numerically inconsistent; I followed the accompanying explicit requirement that each be stored alone.
+- Tools used (condition F): Not applicable (condition P).
+- Approximate time spent, if you can tell: About 6 minutes.

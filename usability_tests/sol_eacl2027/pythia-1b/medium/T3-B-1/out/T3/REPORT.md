@@ -1,0 +1,8 @@
+- Final artifact path: `out/T3/model.safetensors.index.json` (with nine shard files in `out/T3/`)
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): Tensor-reference regexes use full-match semantics, so the projection and buffer patterns had to describe complete names exactly.
+- Pitfalls or surprises you hit (one line each): Upcasting all retained tensors first and then recasting the exact 64 projection weights made the mixed-precision invariant straightforward to assert.
+- Anything in the task text or documentation that was unclear: Nothing material.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: About 4 minutes.

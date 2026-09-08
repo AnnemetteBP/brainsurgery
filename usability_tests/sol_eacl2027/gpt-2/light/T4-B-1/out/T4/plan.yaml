@@ -1,0 +1,63 @@
+inputs:
+  - base::inputs/base/model.safetensors
+  - ft1::inputs/ft1/model.safetensors
+  - ft2::inputs/ft2/model.safetensors
+
+transforms:
+  # Preflight: each checkpoint must contain exactly the complete 160-key GPT-2
+  # layout, including all 48 and only the expected MLP tensor names.
+  - assert: { count: { of: 'base::.+', is: 160 } }
+  - assert: { count: { of: 'ft1::.+', is: 160 } }
+  - assert: { count: { of: 'ft2::.+', is: 160 } }
+  - assert: { count: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 48 } }
+  - assert: { count: { of: 'ft1::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 48 } }
+  - assert: { count: { of: 'ft2::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 48 } }
+
+  # Full-match negative lookahead selects all 112 non-MLP tensors. Mapped
+  # equality also fails if either fine-tune lacks any corresponding base key.
+  - assert:
+      equal:
+        left: 'base::(?!h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)$)(.+)'
+        right: 'ft1::\1'
+  - assert:
+      equal:
+        left: 'base::(?!h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)$)(.+)'
+        right: 'ft2::\1'
+
+  # Materialize both task vectors before changing base, then scale them.
+  - copy:
+      from: 'ft1::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::__task1.\1'
+  - subtract_:
+      from: 'base::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)'
+      to: 'base::__task1.\g<0>'
+  - scale_: { target: 'base::__task1\..+', by: 0.4 }
+  - copy:
+      from: 'ft2::(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::__task2.\1'
+  - subtract_:
+      from: 'base::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)'
+      to: 'base::__task2.\g<0>'
+  - scale_: { target: 'base::__task2\..+', by: 0.4 }
+
+  # Merge both independently computed vectors into the base MLP tensors.
+  - add_:
+      from: 'base::__task1\.(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::\1'
+  - add_:
+      from: 'base::__task2\.(h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias))'
+      to: 'base::\1'
+
+  # Exactly the 48 intended tensors have one load write plus two merge writes.
+  - assert: { writes: { of: 'base::h\.(?:[0-9]|1[01])\.mlp\.(?:c_fc|c_proj)\.(?:weight|bias)', is: 3 } }
+  - assert: { count: { of: 'base::__task1\..+', is: 48 } }
+  - assert: { count: { of: 'base::__task2\..+', is: 48 } }
+  - delete: { target: 'base::__task1\..+' }
+  - delete: { target: 'base::__task2\..+' }
+
+  # Final output cardinality check after temporary tensors are removed.
+  - assert: { count: { of: 'base::.+', is: 160 } }
+
+output:
+  path: out/T4/model.safetensors
+  format: safetensors

@@ -1,0 +1,7 @@
+- Final artifact path: `out/T4/model.safetensors`
+- Number of times you executed the script or plan: 1
+- Which executions failed, and why (one line each): None.
+- Pitfalls or surprises you hit (one line each): None; each task vector was computed against the original, unmodified base tensor.
+- Anything in the task text or documentation that was unclear: Nothing.
+- Tools used (condition F): `safetensors` 0.5.3 for streamed checkpoint reads and single-file serialization; `torch` 2.14.0 for float32 tensor arithmetic and exact-equality validation. A plain Python script was chosen to make all required preconditions and counts explicit.
+- Approximate time spent, if you can tell: About 5 minutes.

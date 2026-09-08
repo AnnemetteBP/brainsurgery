@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T3-defective.py",
+  "started_at": "2026-09-07T16:33:56+00:00",
+  "finished_at": "2026-09-07T16:34:02+00:00",
+  "wall_clock_s": 5.6,
+  "tokens_in": 21268,
+  "tokens_out": 66,
+  "cost_usd": 0.058208,
+  "verdict_text": "NO. The regex omits all 16 `self_attn.o_proj.weight` tensors, so it casts only 96 projection matrices instead of the required 112, violating Required Result 1. Correspondingly, its pre-write check asserts 96 bfloat16 tensors rather than the explicitly required 112.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "One projection family is missing from the bfloat16 cast pattern (the attention output projection stays float32); the artifact's own count check was adjusted to the wrong number.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

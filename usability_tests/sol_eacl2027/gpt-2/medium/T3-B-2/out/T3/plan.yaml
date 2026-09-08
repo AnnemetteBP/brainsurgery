@@ -1,0 +1,32 @@
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  - assert: { count: { of: '.*', is: 160 } }
+  - assert: { count: { of: 'h\.(?:[0-9]|1[01])\.attn\.bias', is: 12 } }
+  - cast_:
+      target: 'h\.(?:[0-9]|1[01])\.(?:attn\.(?:c_attn|c_proj)|mlp\.(?:c_fc|c_proj))\.weight'
+      to: bfloat16
+  - delete: { target: 'h\.(?:[0-9]|1[01])\.attn\.bias' }
+  - assert:
+      all:
+        - count:
+            of: 'h\.(?:[0-9]|1[01])\.(?:attn\.(?:c_attn|c_proj)|mlp\.(?:c_fc|c_proj))\.weight'
+            is: 48
+        - dtype:
+            of: 'h\.(?:[0-9]|1[01])\.(?:attn\.(?:c_attn|c_proj)|mlp\.(?:c_fc|c_proj))\.weight'
+            is: bfloat16
+        - count:
+            of: '(?!h\.(?:[0-9]|1[01])\.(?:attn\.(?:c_attn|c_proj)|mlp\.(?:c_fc|c_proj))\.weight).+'
+            is: 100
+        - dtype:
+            of: '(?!h\.(?:[0-9]|1[01])\.(?:attn\.(?:c_attn|c_proj)|mlp\.(?:c_fc|c_proj))\.weight).+'
+            is: float32
+        - dtype: { of: 'h\.0\.attn\.c_attn\.weight', is: bfloat16 }
+        - dtype: { of: 'wte\.weight', is: float32 }
+        - count: { of: '.*', is: 148 }
+
+output:
+  path: out/T3
+  format: safetensors
+  shard: 64MB

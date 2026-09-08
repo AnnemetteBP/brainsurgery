@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T4.py",
+  "started_at": "2026-09-07T18:13:09+00:00",
+  "finished_at": "2026-09-07T18:13:29+00:00",
+  "wall_clock_s": 19.6,
+  "tokens_in": 20786,
+  "tokens_out": 358,
+  "cost_usd": 0.064558,
+  "verdict_text": "NO. The regex accepts MLP tensors from any numeric layer, rather than only layers 0\u201315. Checking only `merged == 48` does not verify that the exact specified 48 tensor names are present, violating Required Result 1 and the exact merge set defined in Required Result 2.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm)."
+}

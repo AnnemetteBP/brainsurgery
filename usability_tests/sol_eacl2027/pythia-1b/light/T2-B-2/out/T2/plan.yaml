@@ -1,0 +1,112 @@
+inputs:
+  - model::inputs/base/model.safetensors
+
+transforms:
+  - concat: { from: ['model::gpt_neox.layers.0.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.0.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_0', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.0.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.0.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_0', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.0.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.0.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_0', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.1.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.1.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_1', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.1.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.1.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_1', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.1.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.1.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_1', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.2.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.2.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_2', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.2.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.2.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_2', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.2.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.2.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_2', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.3.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.3.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_3', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.3.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.3.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_3', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.3.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.3.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_3', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.4.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.4.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_4', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.4.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.4.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_4', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.4.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.4.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_4', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.5.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.5.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_5', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.5.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.5.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_5', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.5.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.5.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_5', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.6.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.6.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_6', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.6.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.6.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_6', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.6.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.6.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_6', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.7.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.7.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_7', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.7.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.7.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_7', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.7.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.7.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_7', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.8.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.8.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_8', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.8.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.8.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_8', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.8.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.8.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_8', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.9.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.9.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_9', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.9.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.9.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_9', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.9.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.9.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_9', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.10.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.10.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_10', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.10.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.10.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_10', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.10.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.10.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_10', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.11.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.11.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_11', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.11.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.11.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_11', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.11.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.11.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_11', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.12.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.12.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_12', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.12.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.12.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_12', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.12.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.12.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_12', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.13.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.13.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_13', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.13.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.13.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_13', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.13.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.13.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_13', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.14.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.14.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_14', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.14.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.14.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_14', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.14.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.14.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_14', dim: 1 }
+  - concat: { from: ['model::gpt_neox.layers.15.attention.query_key_value.weight::[:3840, :]', 'model::gpt_neox.layers.15.attention.query_key_value.weight::[4608:, :]'], to: 'model::__pruned_qkv_weight_15', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.15.attention.query_key_value.bias::[:3840]', 'model::gpt_neox.layers.15.attention.query_key_value.bias::[4608:]'], to: 'model::__pruned_qkv_bias_15', dim: 0 }
+  - concat: { from: ['model::gpt_neox.layers.15.attention.dense.weight::[:, :1280]', 'model::gpt_neox.layers.15.attention.dense.weight::[:, 1536:]'], to: 'model::__pruned_dense_weight_15', dim: 1 }
+  - delete: { target: 'gpt_neox\.layers\.[0-9]+\.attention\.query_key_value\.weight' }
+  - delete: { target: 'gpt_neox\.layers\.[0-9]+\.attention\.query_key_value\.bias' }
+  - delete: { target: 'gpt_neox\.layers\.[0-9]+\.attention\.dense\.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_0', to: 'model::gpt_neox.layers.0.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_0', to: 'model::gpt_neox.layers.0.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_0', to: 'model::gpt_neox.layers.0.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_1', to: 'model::gpt_neox.layers.1.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_1', to: 'model::gpt_neox.layers.1.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_1', to: 'model::gpt_neox.layers.1.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_2', to: 'model::gpt_neox.layers.2.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_2', to: 'model::gpt_neox.layers.2.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_2', to: 'model::gpt_neox.layers.2.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_3', to: 'model::gpt_neox.layers.3.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_3', to: 'model::gpt_neox.layers.3.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_3', to: 'model::gpt_neox.layers.3.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_4', to: 'model::gpt_neox.layers.4.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_4', to: 'model::gpt_neox.layers.4.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_4', to: 'model::gpt_neox.layers.4.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_5', to: 'model::gpt_neox.layers.5.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_5', to: 'model::gpt_neox.layers.5.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_5', to: 'model::gpt_neox.layers.5.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_6', to: 'model::gpt_neox.layers.6.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_6', to: 'model::gpt_neox.layers.6.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_6', to: 'model::gpt_neox.layers.6.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_7', to: 'model::gpt_neox.layers.7.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_7', to: 'model::gpt_neox.layers.7.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_7', to: 'model::gpt_neox.layers.7.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_8', to: 'model::gpt_neox.layers.8.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_8', to: 'model::gpt_neox.layers.8.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_8', to: 'model::gpt_neox.layers.8.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_9', to: 'model::gpt_neox.layers.9.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_9', to: 'model::gpt_neox.layers.9.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_9', to: 'model::gpt_neox.layers.9.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_10', to: 'model::gpt_neox.layers.10.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_10', to: 'model::gpt_neox.layers.10.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_10', to: 'model::gpt_neox.layers.10.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_11', to: 'model::gpt_neox.layers.11.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_11', to: 'model::gpt_neox.layers.11.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_11', to: 'model::gpt_neox.layers.11.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_12', to: 'model::gpt_neox.layers.12.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_12', to: 'model::gpt_neox.layers.12.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_12', to: 'model::gpt_neox.layers.12.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_13', to: 'model::gpt_neox.layers.13.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_13', to: 'model::gpt_neox.layers.13.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_13', to: 'model::gpt_neox.layers.13.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_14', to: 'model::gpt_neox.layers.14.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_14', to: 'model::gpt_neox.layers.14.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_14', to: 'model::gpt_neox.layers.14.attention.dense.weight' }
+  - move: { from: 'model::__pruned_qkv_weight_15', to: 'model::gpt_neox.layers.15.attention.query_key_value.weight' }
+  - move: { from: 'model::__pruned_qkv_bias_15', to: 'model::gpt_neox.layers.15.attention.query_key_value.bias' }
+  - move: { from: 'model::__pruned_dense_weight_15', to: 'model::gpt_neox.layers.15.attention.dense.weight' }
+  - assert: { shape: { of: 'model::gpt_neox.layers.0.attention.query_key_value.weight', is: [5376, 2048] } }
+  - assert: { shape: { of: 'model::gpt_neox.layers.0.attention.query_key_value.bias', is: [5376] } }
+  - assert: { shape: { of: 'model::gpt_neox.layers.0.attention.dense.weight', is: [2048, 1792] } }
+  - assert: { count: { of: 'model::.*', is: 244 } }
+
+output:
+  path: out/T2/model.safetensors
+  format: safetensors
+

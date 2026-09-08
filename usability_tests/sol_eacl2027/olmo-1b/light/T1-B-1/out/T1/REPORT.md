@@ -1,0 +1,7 @@
+- Final artifact path: `out/T1/model.safetensors`
+- Number of times you executed the script or plan: 2
+- Which executions failed, and why (one line each): Execution 1 failed before output because `assert.count` cannot resolve a zero-match reference; the absence check was changed to `not` + `exists`.
+- Pitfalls or surprises you hit (one line each): A zero expected count must be expressed as `not: { exists: ... }`, since `count.of` itself rejects zero matches.
+- Anything in the task text or documentation that was unclear: Nothing in the task text; the `count` help did not make its zero-match resolution behavior explicit.
+- Tools used (condition F): Not applicable (condition B).
+- Approximate time spent, if you can tell: About 3 minutes.
