@@ -1,107 +1,56 @@
-# Handover: finishing the usability study
+# Handover: the usability study
 
-State at 2026-09-07, branch `main`. One piece of work remains: 139 Fable 5.1
-re-reviews on this machine, blocked on a weekly account limit (section 3).
-The Codex cohort is complete. Everything else is done; the Codex cells and
-this update are not yet committed.
+State at 2026-09-10, branch `main`. **The study is complete.** All 1080 cells
+are solved, graded and reviewed under the final protocol, for all four agents.
+Nothing is outstanding. This file is now a record of how it was run and of the
+traps worth not hitting again; sections 4 and 5 are the parts still worth
+reading before touching the kit.
 
-## 1. What is already finished
+## 1. Final state
 
 | Piece | State |
 |---|---|
 | Kit (tasks, conditions, references, grader, drivers) | complete, verified on all three targets |
-| Solve phase, Claude agents | 810 cells (3 agents x 3 targets x 3 tiers x 5 tests x 3 conditions x 2 repeats), **all pass**, no cap hits, 580.80 USD |
-| Reviews, Sonnet 5 and Opus 5 | complete under the final protocol (`review-v2`) against the final artifacts |
-| Reviews, Fable 5.1 | **139 outstanding** (130 against superseded artifacts, 9 blocked by the account limit); see section 3 |
-| Codex runs | complete: `sol_eacl2027`, model `gpt-5.6-sol`, 270 cells over both repeats, all pass, no cap hits, 104.60 USD imputed |
-| Doc-consultation time | derived from the transcripts for all 810 Claude cells and committed as `doctime.json`; results in `README.md` |
+| Solve phase | 1080 cells (4 agents x 3 targets x 3 tiers x 5 tests x 3 conditions x 2 repeats), **all pass**, no cap hits |
+| Reviews | 1080 cells under `review-v2`, every verdict formed against the artifact text on disk |
+| Doc-consultation time | `doctime.json` for the 810 Claude cells; Codex transcripts are an unsupported format |
+| Cost | 707.35 USD total: 575.28 solve, 132.07 review. The Codex share (121.54) is imputed from the rate card |
+
+Agents: `fable51`, `opus5`, `sonnet5` (Claude Code, tiers `low`/`medium`/`high`)
+and `sol_eacl2027` (model `gpt-5.6-sol`, Codex CLI, tiers `light`/`medium`/`high`),
+270 cells each. `astra/` holds two excluded macOS pilot cells and is skipped by
+`analyze.py`; pass `--include-excluded` to see them.
 
 Records per cell: `run.json`, `harness.json`, `grade.json`, `review.json`,
 `doctime.json`, `env-freeze.txt`, the participant's artifact under
 `out/<test>/` and its `REPORT.md`. `analyze.py` reads only the JSON files.
 
-## 2. Uncommitted work in the tree
+## 2. The headline result
 
-`git status` shows ~400 modified `review.json` files: the Sonnet 5 and Opus 5
-re-reviews plus the `artifact_sha256` backfill. Commit them before anything
-else, or they are lost:
+Bug detection is 100% for every agent in every condition, so that half of the
+review measure does not discriminate. False alarms do, but they separate
+models rather than conditions: Opus 5 and Fable 5.1 raise none, Sonnet 5
+17.8%, gpt-5.6-sol 23.7%, each roughly flat across P, F and B. All 1080 cells
+passed the grader, so correctness does not separate the conditions either. The
+measures that do move are effort (a plan costs and takes about twice a Python
+script) and Claude first-run success, where condition B leads at 268/270
+against 260 for Python. Full tables and caveats are in `README.md`.
 
-```bash
-git add usability_tests/sonnet5 usability_tests/opus5 usability_tests/fable51
-git commit -m "usability_tests: reviews under the final protocol (sonnet5, opus5)"
-```
-
-## 3. Finishing the Fable 5.1 reviews
-
-**State confirmed 2026-09-07.** 139 of the 270 fable51 cells still need their
-review redone. Nothing about the solve phase is affected: all 270 fable51
-cells solved successfully (`grade.json` `passed=true`, no cap hits), and every
-participant-side measure (success, time, retries, tokens, cost) is final. Only
-the bug-detection review is outstanding, and only for fable51 -- opus5 and
-sonnet5 are 270/270 clean.
-
-The 139 split into two causes:
-
-| n | cause | `review.json` state |
-|---|---|---|
-| 130 | reviewed against artifact text that commit `a9d721c8` (2026-09-06 18:48) then rewrote | `protocol: review-v2`, real verdict, but `artifact_sha256` no longer matches the file on disk |
-| 9 | the Fable account limit was reached mid-review | `protocol: null`, `verdict_text` is literally `"You've reached your Fable limit..."`, 3-4 `review-attempt-*.json` already beside it |
-
-All 130 stale ones are condition **P**: `a9d721c8` made the Python references
-self-contained, so 36 distinct artifacts under `review/*/P/` and
-`solutions/*/P/` changed. A review is only valid for the artifact text it
-read, which is why `review_pass.py` compares `artifact_sha256`.
-
-The 9 limit-blocked cells, for reference:
-
-```
-fable51/gpt-2/low/T1-P-1
-fable51/pythia-1b/high/T1-P-1   T1-P-2   T2-P-1   T2-P-2
-fable51/pythia-1b/high/T3-P-1   T3-P-2   T4-P-1   T4-P-2
-```
-
-### Why this matters before the tables are written
-
-`analyze.py` currently reports fable51 at a 5.3% false-alarm rate over n=131,
-but 130 of the counted verdicts were formed against superseded artifacts and
-9 are excluded outright. **That number is not comparable to the other agents
-until this pass is redone.** opus5 (0.0%), sonnet5 (17.8%) and sol_eacl2027
-(23.7%) are all computed from current artifacts. Bug detection is 100% for
-every agent, so the false-alarm column is the one that carries the result.
-
-### Precondition: has the limit reset?
-
-The waiter from 2026-09-06 (`log/fable-rereview-waiter.txt`) probed six times
-between 20:48 and 22:03 and got "still limited" every time; it is no longer
-running. Probe by hand:
+## 3. Reproducing the numbers
 
 ```bash
-claude -p "Reply with the single word OK." --model claude-fable-5-1
+.venv/bin/python usability_tests/resummarise.py   # execution counts from Claude transcripts
+.venv/bin/python usability_tests/doc_time.py      # doc-consultation time, Claude transcripts only
+.venv/bin/python usability_tests/analyze.py       # per agent/target/effort/condition + pooled
 ```
 
-A plain `OK` means go. A limit message means wait -- it is a weekly cap, so
-check once a day rather than looping.
+Both `resummarise.py` and `doc_time.py` skip transcripts they cannot parse and
+say how many; a non-zero "unsupported format" count is the Codex cohort and is
+expected. Neither writes to a cell whose transcript is missing.
 
-### The run
-
-```bash
-cd /home/rootkidd/Projects/brainsurgery
-.venv/bin/python usability_tests/review_pass.py --agents fable51 --parallel 4 --max-attempts 4
-```
-
-No `--force` is needed and it must not be used: `review_cell()` skips a cell
-only when `protocol == review-v2` **and** `artifact_sha256` matches the file
-on disk, so exactly the 139 are redone and the 131 good ones are left alone.
-Each cell's previous review is preserved as `review-attempt-<n>.json`. On a
-reply containing "limit" the driver waits `--limit-wait-s` (900 s) before
-retrying, so a partial reset will stall rather than corrupt anything; re-run
-the same command to resume. Budget roughly 20 minutes and ~20 USD.
-
-### Verify, then re-derive
+To confirm every review is still valid for the artifact it read:
 
 ```bash
-# expect: fable51 drops out entirely (sol_eacl2027's 270 are a known false
-# positive -- run_codex.py writes no protocol/verdict/artifact_sha256 field)
 .venv/bin/python - <<'EOF'
 import json, hashlib
 from pathlib import Path
@@ -116,35 +65,28 @@ for c in HERE.glob("*/*/*/*"):
         bad[c.parts[1]] = bad.get(c.parts[1], 0) + 1
 print("stale reviews by agent:", bad)
 EOF
-
-.venv/bin/python usability_tests/resummarise.py     # execution counts from transcripts
-.venv/bin/python usability_tests/doc_time.py        # doc-consultation time (Claude transcripts only)
-.venv/bin/python usability_tests/analyze.py         # per agent/target/effort/condition + pooled
 ```
 
-Then re-archive the transcripts, since a re-review writes new ones and the
-existing snapshot predates them:
+Expected output: `{'astra': 2, 'sol_eacl2027': 270}`. Both are known false
+positives -- `astra` is the excluded pilot, and `run_codex.py` writes no
+`protocol`/`artifact_sha256` field, so its cells can never satisfy the check.
+Any `fable51`, `opus5` or `sonnet5` entry means a reference or defective
+variant changed and those reviews must be redone:
 
 ```bash
-find usability_tests -name transcript.jsonl -print0 | sort -z > /tmp/tx.list
-tar --zstd -cf /mnt/nvme/brainsurgery/log/usability_tests-transcripts-<date>.tar.zst \
-    --null -T /tmp/tx.list
+.venv/bin/python usability_tests/review_pass.py --agents <agent> --parallel 4 --max-attempts 4
 ```
 
-Finally write the tables into `usability_tests/README.md` ("Results, repeat 1"
-still holds repeat-1-only numbers) and into the PR description at
-`/mnt/nvme/brainsurgery/log/PR-usability-study.md`.
+Never pass `--force`. `review_cell()` skips a cell only when its protocol is
+`review-v2` and its `artifact_sha256` matches the file on disk, so exactly the
+affected cells are redone; each previous review is kept as
+`review-attempt-<n>.json`. On a reply containing "limit" the driver waits
+`--limit-wait-s` (900 s) and retries, so a partial reset stalls rather than
+corrupts. Probe a Claude limit by hand with:
 
-### Traps specific to this pass
-
-- `pgrep -f run_full_codex.sh` and similar self-match the shell running the
-  check. Match on `'^[0-9]+ bash usability_tests/...'` instead.
-- The 9 limit-blocked cells already carry 3-4 `review-attempt-*.json` files.
-  That is expected history, not corruption; do not delete them.
-- `review.detected` is null and `error_class` empty across all 1080 cells in
-  every cohort. That is the intended state -- `analyze.py` derives detection
-  from `verdict_text` -- not outstanding work. Filling them for one agent only
-  would break parity.
+```bash
+claude -p "Reply with the single word OK." --model claude-fable-5-1
+```
 
 ## 4. Running Codex
 
@@ -215,16 +157,30 @@ time cap, so `cap_hit` values are not directly comparable; the tier names are
 - **Transcripts are gitignored**, so a measure derived from one is lost when
   the machine is cleaned. `doc_time.py` writes `doctime.json` per cell;
   run it before cleanup, and on every machine that drives an agent.
+- **A derivation script must refuse transcripts it cannot read.**
+  `resummarise.py` applied the Claude Code parser to every transcript,
+  found nothing in the Codex event stream, and rewrote all 270 valid
+  `sol_eacl2027` records to zero executions and `first_execution_success:
+  false` -- which showed up only as pooled first-run success dropping from 92%
+  to 74%. It now skips a transcript with no `assistant` record and reports the
+  count, as `doc_time.py` already did. Any future reader must do the same.
+- **`analyze.py` excludes the pilot namespaces in `EXCLUDED_AGENTS`.** Before
+  that, `astra`'s two macOS pilot cells were silently pooled into the "all"
+  rows, which read 361 runs instead of 360.
 - **A review is only valid for the artifact it read.** If any reference or
   defective variant changes, `review_pass.py` will redo exactly the affected
   reviews; never edit those files without rerunning it.
 
 ## 6. Open decisions for the paper
 
-- Detection is 100% in every condition, so that half does not discriminate;
-  harder defects would be needed for separation.
-- In 4 of 10 plan false alarms the verdict text contradicts its own first
-  word. Scored on the first word (pre-registered rule), but worth a footnote.
-- Sonnet 5 raises every false alarm; Opus 5 raises none. Report per model.
+- Detection is 100% in every condition for every agent, so that half does not
+  discriminate; harder defects would be needed for separation.
+- False alarms separate models, not conditions: Opus 5 and Fable 5.1 raise
+  none, Sonnet 5 24/135, gpt-5.6-sol 32/135, each roughly flat across P, F
+  and B. Report per model, and do not read the review phase as evidence about
+  the artifact format.
+- In 7 of the 56 false alarms the verdict text concedes after its opening `NO`
+  that the behaviour is correct; all 7 are Sonnet 5. Scored on the first word
+  (pre-registered rule), but worth a footnote.
 - T2 is longer as a plan than as a script because `concat` takes single tensor
   references; a bulk form would change that number.

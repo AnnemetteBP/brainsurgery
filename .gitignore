@@ -33,3 +33,6 @@ tmp
 
 # Team members keep personal notes here; never tracked.
 /private/
+
+# Run artifacts (AGENTS.md: benchmark and study runs write under log/<run-id>/)
+/log
