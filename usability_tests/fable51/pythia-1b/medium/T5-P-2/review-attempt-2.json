@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:38:43+00:00",
+  "finished_at": "2026-09-06T16:38:57+00:00",
+  "wall_clock_s": 13.5,
+  "tokens_in": 2,
+  "tokens_out": 885,
+  "cost_usd": 0.24547375,
+  "verdict": "no",
+  "verdict_text": "NO. The merge itself is correct: `B @ A` in float32 with scale 2, no transpose since `fan_in_fan_out` is false, cast back to float16, and the four required checks are asserted before writing. But the entire sharded export required by clause 4 of \"Required result\" is delegated to `save_sharded_safetensors` from an unshown `_ckpt` module, so the 512 MiB per-shard limit, the lone-shard rule for `embed_in.weight` and `embed_out.weight`, and the `model.safetensors.index.json` name and `weight_map` contents cannot be verified from the artifact. Likewise `load_checkpoint` is unshown, so bit-exact preservation of the 228 unchanged float16 tensors (clause 3) is not verifiable. The condition also requires a standalone script, which this is not.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

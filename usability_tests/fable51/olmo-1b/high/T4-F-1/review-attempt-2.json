@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/olmo-1b/P/T4-defective.py",
+  "started_at": "2026-09-06T16:32:11+00:00",
+  "finished_at": "2026-09-06T16:32:17+00:00",
+  "wall_clock_s": 6.3,
+  "tokens_in": 2,
+  "tokens_out": 261,
+  "cost_usd": 0.20233575,
+  "verdict": "no",
+  "verdict_text": "NO. The merge computes the second task vector against the already-modified tensor: `tmp = b + \u03bb(f1 - b)` and then `tmp + \u03bb(f2 - tmp)`, so the ft2 delta is taken relative to `tmp` rather than the unmodified base. This yields `b + \u03bb(f1-b) + \u03bb(f2-b) - \u03bb\u00b2(f1-b)`, which differs from the required formula by `\u03bb\u00b2(f1-b)` wherever ft1 changed the tensor. That violates Required result step 2 (`out[X] = base[X] + \u03bb(ft1[X]-base[X]) + \u03bb(ft2[X]-base[X])`) and the ordering hazard called out in the Objective, and would exceed the 1e-5 relative Frobenius tolerance on the merged tensors.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "Task vector 2 is computed against the base after task vector 1 has already been added, so the second delta is taken from the wrong reference point.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

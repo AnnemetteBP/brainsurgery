@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T3.py",
+  "started_at": "2026-09-06T16:35:30+00:00",
+  "finished_at": "2026-09-06T16:35:41+00:00",
+  "wall_clock_s": 11.0,
+  "tokens_in": 2,
+  "tokens_out": 614,
+  "cost_usd": 0.23548775,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops exactly the 48 buffers via a full-match regex (so `attention.dense.bias` is untouched), casts exactly the 64 projection matrices to bfloat16 through float32 (identical to a direct cast per the spec), upcasts every remaining tensor to float32, keeps names unchanged, runs all four required checks as hard assertions before any write, and delegates the 256 MiB sharding plus index file to the provided `save_sharded_safetensors` helper with the correct byte limit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

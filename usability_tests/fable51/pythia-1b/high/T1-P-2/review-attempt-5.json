@@ -1,0 +1,18 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T1.py",
+  "started_at": "2026-09-06T17:29:11+00:00",
+  "finished_at": "2026-09-06T17:29:13+00:00",
+  "wall_clock_s": 2.0,
+  "tokens_in": 0,
+  "tokens_out": 0,
+  "cost_usd": 0,
+  "verdict": "none",
+  "verdict_text": "You've reached your Fable limit. Switch to another model, or manage usage credits at claude.ai/settings/usage?from=cc_cli_limit_message, to continue.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "artifact_sha256": "445483f5b51837497d7a08eb024b2a58686278532f4e520bfcee7541bc7697c1"
+}

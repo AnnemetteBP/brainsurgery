@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T4.py",
+  "started_at": "2026-09-06T16:29:41+00:00",
+  "finished_at": "2026-09-06T16:29:51+00:00",
+  "wall_clock_s": 10.1,
+  "tokens_in": 2,
+  "tokens_out": 573,
+  "cost_usd": 0.21634674999999998,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script verifies the name sets and the identity of every non-MLP tensor across all three checkpoints before any modification, computes each of the 48 MLP merges against the untouched `base` tensors in float32 with lambda 0.4, leaves the other 112 tensors as the base values, asserts the merge count is 48 and the output has 160 tensors, and writes a single `out/T4/model.safetensors`.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

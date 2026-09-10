@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/gpt-2/P/T1-defective.py",
+  "started_at": "2026-09-06T16:30:04+00:00",
+  "finished_at": "2026-09-06T16:30:10+00:00",
+  "wall_clock_s": 6.4,
+  "tokens_in": 2,
+  "tokens_out": 241,
+  "cost_usd": 0.20355075,
+  "verdict": "no",
+  "verdict_text": "NO. The script drops blocks {2, 5, 9} instead of the required {2, 5, 8}, violating \"Required result\" clause 1. Consequently the renumbering is wrong: old block 8 is kept and mapped to index 6, and old 10 and 11 map to 7 and 8, whereas the spec requires old 9\u21926, old 10\u21927, old 11\u21928, violating clause 2. The output would still have 121 tensors and 9 contiguous blocks, so the in-script asserts pass while the values are wrong, and grading against the hidden reference would fail on values. The script also does not explicitly check that no tensor of blocks 9, 10, 11 remains as a distinct check, though the contiguity assertion implicitly covers it.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The drop set is off by one: the last dropped block is the one after the specified block (for example blocks 2, 5, 9 instead of 2, 5, 8). Block counts still match, so the artifact's own checks pass.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

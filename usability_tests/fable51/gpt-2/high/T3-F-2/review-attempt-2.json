@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T3.py",
+  "started_at": "2026-09-06T16:27:58+00:00",
+  "finished_at": "2026-09-06T16:28:19+00:00",
+  "wall_clock_s": 20.6,
+  "tokens_in": 2,
+  "tokens_out": 1386,
+  "cost_usd": 0.25946575,
+  "verdict": "no",
+  "verdict_text": "NO. The dtype casting, buffer deletion, name preservation, and the four required pre-write checks are all implemented correctly in the shown code. But clause 5 (sharded layout) is entirely delegated to `save_sharded_safetensors` from an unshown `_ckpt` module, so the artifact does not demonstrate that shards are capped at 67,108,864 bytes of tensor data, that the oversize `wte.weight` is placed alone in its own shard, or that an index file named `model.safetensors.index.json` with a complete `weight_map` is written. Without that helper the artifact cannot be confirmed to satisfy the output requirements of clause 5.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

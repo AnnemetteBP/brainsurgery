@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T5.py",
+  "started_at": "2026-09-06T16:31:03+00:00",
+  "finished_at": "2026-09-06T16:31:11+00:00",
+  "wall_clock_s": 8.4,
+  "tokens_in": 2,
+  "tokens_out": 460,
+  "cost_usd": 0.22197875,
+  "verdict": "yes",
+  "verdict_text": "YES. The script computes `B @ A`, transposes it when `fan_in_fan_out` is true, scales by `lora_alpha / r` in float32, adds it in place to `h.<i>.attn.c_attn.weight` for all 12 layers, leaves every other tensor untouched, keeps no adapter or intermediate tensor in the state dict, enforces all four required checks with assertions before writing, and writes the result sharded at the 104,857,600-byte limit into `out/T5/` via the checkpoint helper.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

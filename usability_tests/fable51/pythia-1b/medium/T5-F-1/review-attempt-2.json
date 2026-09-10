@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T5-defective.py",
+  "started_at": "2026-09-06T16:38:36+00:00",
+  "finished_at": "2026-09-06T16:38:42+00:00",
+  "wall_clock_s": 5.4,
+  "tokens_in": 2,
+  "tokens_out": 165,
+  "cost_usd": 0.21163475,
+  "verdict": "no",
+  "verdict_text": "NO. The script sets `scale = 1.0` instead of `lora_alpha / r = 2`, so each merged weight receives `B @ A` rather than `2 * B @ A`, violating Required result clause 1. The resulting merged tensors will fail the 1e-3 relative Frobenius error tolerance against the reference. The name mapping, `fan_in_fan_out` handling, float32 accumulation, dtype cast, required assertions, and sharding call are otherwise consistent with the specification.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "The adapter scaling factor alpha / r is missing: the raw low-rank product is added.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

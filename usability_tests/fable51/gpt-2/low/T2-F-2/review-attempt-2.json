@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/gpt-2/P/T2.py",
+  "started_at": "2026-09-06T16:29:16+00:00",
+  "finished_at": "2026-09-06T16:29:25+00:00",
+  "wall_clock_s": 9.6,
+  "tokens_in": 2,
+  "tokens_out": 505,
+  "cost_usd": 0.22095175,
+  "verdict": "yes",
+  "verdict_text": "YES. The script drops the 64-wide block for head 5 inside each of the three 768-wide segments of `c_attn.weight` (dim 1) and `c_attn.bias` (dim 0), yielding the required column/row ranges in order and shapes `[768, 2112]` / `[2112]`; for `c_proj.weight` it drops rows 320..383 (dim 0), yielding `[704, 768]` from rows 0..319, 384..767. All other tensors are left untouched, names are unchanged, the four required checks are asserted before `save_file`, and the output is written to `out/T2/model.safetensors` with 160 tensors.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T3.py",
+  "started_at": "2026-09-06T16:34:09+00:00",
+  "finished_at": "2026-09-06T16:34:24+00:00",
+  "wall_clock_s": 14.8,
+  "tokens_in": 2,
+  "tokens_out": 646,
+  "cost_usd": 0.22978674999999998,
+  "verdict": "yes",
+  "verdict_text": "YES. The regex fullmatches exactly the 112 per-layer projection weights (7 names \u00d7 16 layers), casts them with `.to(torch.bfloat16)` (round-to-nearest-even), and leaves every other tensor float32 with unchanged values since the input is already float32. The buffer pattern `(?!)` never matches, so nothing is deleted; names are preserved; the four required asserts run before writing; and the output goes to `out/T3` via `save_sharded_safetensors` with a 268,435,456-byte cap, which is the required shard limit.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}
