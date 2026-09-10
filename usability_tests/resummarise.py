@@ -5,6 +5,11 @@
 
 Use after changing how run_claude.py counts executions; other fields
 (timestamps, wall clock, cap, ids) are kept. Runs without a transcript are left alone.
+
+`summarise` reads the Claude Code stream-json transcript. A transcript in any
+other shape (a Codex run, for instance) carries no `assistant` records, so it
+is reported as unsupported and its harness.json is left untouched; counting it
+would silently rewrite valid records as zero executions.
 """
 
 from __future__ import annotations
@@ -25,12 +30,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=HERE)
     args = parser.parse_args()
-    n = 0
+    n = unsupported = 0
     for transcript in sorted(args.root.glob("*/*/*/*/transcript.jsonl")):
         harness_path = transcript.parent / "harness.json"
         if not harness_path.exists():
             continue
         events = [json.loads(line) for line in transcript.read_text().splitlines() if line.strip()]
+        if not any(e.get("type") == "assistant" for e in events):
+            print(f"[resummarise] unreadable transcript format, skipped: "
+                  f"{transcript.parent.relative_to(args.root)}")
+            unsupported += 1
+            continue
         fresh = summarise(events)
         harness = json.loads(harness_path.read_text())
         old_classes = {f["n"]: f.get("error_class", "") for f in harness.get("failed_executions", [])}
@@ -41,7 +51,7 @@ def main() -> int:
         harness_path.write_text(json.dumps(harness, indent=2) + "\n")
         print(f"{transcript.parent.relative_to(args.root)}: executions {before} -> {fresh['executions']}")
         n += 1
-    print(f"resummarised {n} runs")
+    print(f"resummarised {n} runs, {unsupported} in an unsupported format")
     return 0
 
 
