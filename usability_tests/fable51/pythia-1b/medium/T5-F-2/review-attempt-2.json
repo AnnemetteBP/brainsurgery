@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T5.py",
+  "started_at": "2026-09-06T16:38:37+00:00",
+  "finished_at": "2026-09-06T16:38:48+00:00",
+  "wall_clock_s": 10.7,
+  "tokens_in": 2,
+  "tokens_out": 602,
+  "cost_usd": 0.23345875000000002,
+  "verdict": "yes",
+  "verdict_text": "YES. The script loads the base and adapter, reads scale as alpha over r (2) and `fan_in_fan_out` from the config, computes `B @ A` in float32 (the adapter tensors are float32) and adds `scale * delta` to the base weight promoted to float32, then casts back to the base dtype (float16), for each of the 16 `attention.query_key_value` modules, matching clause 1. No adapter or intermediate tensor is written to `sd`, so clauses 2 and 3 hold, and all four required checks are enforced with `assert` before writing. Sharding is delegated to `save_sharded_safetensors` with the 536,870,912-byte limit, which is the same helper used for the baseline and is assumed to write the shards plus `model.safetensors.index.json` as required.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

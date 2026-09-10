@@ -16,6 +16,10 @@ targets, and pooled over everything per (effort, condition) and per condition:
     condition B), bug-detection rate and false-alarm rate.
 
 Missing files are counted, not fatal, so partial studies can be inspected.
+
+Agents in EXCLUDED_AGENTS are pilot namespaces kept in the tree for provenance
+and are left out of every table (see usability_tests/AGENTS.md); pass
+--include-excluded to fold them back in.
 """
 
 from __future__ import annotations
@@ -29,6 +33,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 HERE = Path(__file__).resolve().parent
+
+# Pilot namespaces tracked for provenance but not part of the study.
+EXCLUDED_AGENTS = frozenset({"astra"})
 
 
 def read(path: Path) -> dict | None:
@@ -47,11 +54,13 @@ def rate(num: int, den: int) -> str:
     return f"{num}/{den} ({100 * num / den:.0f}%)" if den else "-"
 
 
-def collect(root: Path) -> list[dict]:
+def collect(root: Path, excluded: frozenset[str] = EXCLUDED_AGENTS) -> list[dict]:
     runs = []
     for run_json in sorted(root.glob("*/*/*/*/run.json")):
         sandbox = run_json.parent
         run = read(run_json) or {}
+        if run.get("agent", sandbox.parts[-4]) in excluded:
+            continue
         harness = read(sandbox / "harness.json") or {}
         grade = read(sandbox / "grade.json") or {}
         review = read(sandbox / "review.json") or {}
@@ -122,8 +131,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", type=Path, default=HERE)
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--include-excluded",
+        action="store_true",
+        help=f"also count pilot namespaces normally left out ({', '.join(sorted(EXCLUDED_AGENTS))})",
+    )
     args = parser.parse_args()
-    runs = collect(args.root)
+    runs = collect(args.root, frozenset() if args.include_excluded else EXCLUDED_AGENTS)
     groups: dict[tuple, list[dict]] = defaultdict(list)
     for r in runs:
         groups[(r["agent"], r["target"], r["effort"], r["condition"])].append(r)

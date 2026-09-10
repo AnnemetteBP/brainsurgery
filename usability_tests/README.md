@@ -71,9 +71,9 @@ vendors alike:
   The model ids are chosen by whoever runs it; nothing in the kit names one.
   Codex does not report cost, so pass the input, output, cache-read and
   cache-write rates (USD per million tokens), or leave `cost_usd` null for
-  the analysis. Written without
-  a Codex installation to test on: on first use run one cell and compare
-  `harness.json` with `transcript.jsonl` (see the docstring).
+  the analysis. Used on this machine for gpt-5.6-sol, whose cells are under
+  the frozen namespace `sol_eacl2027`. On first use with a new model, run one
+  cell and compare `harness.json` with `transcript.jsonl` (see the docstring).
 
 For full Codex runs on Linux, `run_matrix_codex.py` runs one resumable effort
 tier and repeat, while `run_full_codex.sh` covers all three effort tiers for
@@ -250,48 +250,115 @@ layers times up to four tensors for OLMo); the renumbering moves in T1 are
 spelled out for the same reason. Both are genuine usability findings about
 the DSL and stay in the task set.
 
-## Results, repeat 1
+## Results
 
-Sonnet 5, Opus 5 and Fable 5.1 through Claude Code; three effort tiers; 3
-targets x 5 tests x 3 conditions; one repeat; 405 cells, all under commit
-8b7c76a or later with the fixed doc pack. Records are under
-`usability_tests/<agent>/<target>/<effort>/`; the full table is `analyze.py`.
+Four agents, two complete repeats, 1080 cells: Sonnet 5, Opus 5 and Fable 5.1
+through Claude Code (`low`/`medium`/`high` tiers) and gpt-5.6-sol through the
+Codex CLI (`light`/`medium`/`high`, namespace `sol_eacl2027`). Every agent ran
+3 targets x 5 tests x 3 conditions x 3 tiers x 2 repeats = 270 cells. Records
+are under `usability_tests/<agent>/<target>/<effort>/`; `analyze.py`
+reproduces every table below.
 
-| Condition | Success | First run OK | Median cost (USD) | Median time to solution | Median output tokens | Bug detected |
-|---|---|---|---|---|---|---|
-| P (Python) | 135/135 | 132/135 (98%) | 0.39 | 61 s | 3.8k | 135/135 |
-| F (free choice) | 135/135 | 122/135 (90%) | 0.49 | 87 s | 5.3k | 134/135 |
-| B (BrainSurgery) | 135/135 | 134/135 (99%) | 0.77 | 131 s | 7.0k | 135/135 |
+Pooled over agents, targets and tiers:
 
-By agent (pooled over targets and tiers):
+| Condition | Success | First run OK | Median cost (USD) | Median time to solution | Median output tokens |
+|---|---|---|---|---|---|
+| P (Python) | 360/360 | 349/360 (97%) | 0.32 | 72 s | 3.5k |
+| F (free choice) | 360/360 | 329/360 (91%) | 0.41 | 107 s | 4.9k |
+| B (BrainSurgery) | 360/360 | 333/360 (92%) | 0.68 | 140 s | 6.1k |
 
-| Agent | Cond | First run OK | Median cost | Median time |
+By agent (pooled over targets and tiers), as P / F / B:
+
+| Agent | First run OK | Median cost | Median time | Median output tokens |
 |---|---|---|---|---|
-| Sonnet 5 | P / F / B | 98% / 84% / 98% | 0.16 / 0.21 / 0.48 | 61 / 90 / 168 s |
-| Opus 5 | P / F / B | 98% / 93% / 100% | 0.38 / 0.54 / 0.76 | 69 / 113 / 134 s |
-| Fable 5.1 | P / F / B | 98% / 93% / 100% | 0.51 / 0.61 / 1.04 | 57 / 77 / 115 s |
+| Sonnet 5 | 96% / 89% / 98% | 0.16 / 0.21 / 0.49 | 61 / 85 / 164 s | 4.0k / 5.7k / 11.2k |
+| Opus 5 | 99% / 92% / 100% | 0.38 / 0.54 / 0.76 | 71 / 111 / 127 s | 4.4k / 6.8k / 7.1k |
+| Fable 5.1 | 94% / 96% / 100% | 0.53 / 0.63 / 1.02 | 55 / 76 / 104 s | 3.1k / 4.1k / 5.3k |
+| gpt-5.6-sol | 99% / 89% / 72% | 0.28 / 0.34 / 0.50 | 124 / 169 / 173 s | 2.8k / 4.1k / 3.7k |
 
-By effort tier (pooled over agents and targets):
+By effort tier, Claude agents only (the Codex tiers are named differently and
+map to reasoning effort, so they are not pooled with these):
 
-| Tier | Cond | First run OK | Median cost | Median time |
-|---|---|---|---|---|
-| low | P / F / B | 96% / 91% / 98% | 0.29 / 0.36 / 0.57 | 49 / 67 / 96 s |
-| medium | P / F / B | 98% / 89% / 100% | 0.37 / 0.53 / 0.76 | 61 / 85 / 121 s |
-| high | P / F / B | 100% / 91% / 100% | 0.53 / 0.69 / 1.13 | 86 / 130 / 183 s |
+| Tier | First run OK | Median cost | Median time |
+|---|---|---|---|
+| low | 94% / 93% / 99% | 0.30 / 0.36 / 0.61 | 50 / 65 / 97 s |
+| medium | 99% / 91% / 99% | 0.37 / 0.53 / 0.78 | 59 / 84 / 115 s |
+| high | 96% / 92% / 100% | 0.53 / 0.71 / 1.12 | 83 / 130 / 181 s |
 
-Reading, for repeat 1: every one of the 405 cells passed, in every
-condition, on every target, for every agent and tier, with no cap hits, so
-correctness does not separate the conditions for these agents. Effort does,
-and the ordering is the same everywhere: a BrainSurgery plan costs about
-twice a Python script and takes about twice as long, the free-choice condition
-sits in between and has the lowest first-run success (tool invocations fail
-before the model falls back to a script), and raising the effort tier scales
-cost and time in all conditions without changing outcomes. The plan condition
-has the highest first-run success (134 of 135), which is what the executable
-checks in a plan are for. Bug detection is at or near 100 percent in all
-conditions, but only defective artifacts were shown (odd repeat); the
-false-alarm rate needs repeat 2. Repeat 1 cost 280.63 USD in total (233 solve,
-47 review) and about 5 hours of wall clock at four cells in parallel.
+By target (pooled over agents and tiers):
+
+| Target | First run OK | Median cost | Median time |
+|---|---|---|---|
+| gpt-2 | 99% / 93% / 94% | 0.30 / 0.38 / 0.65 | 61 / 100 / 131 s |
+| olmo-1b | 98% / 91% / 93% | 0.33 / 0.44 / 0.69 | 80 / 116 / 153 s |
+| pythia-1b | 94% / 90% / 90% | 0.33 / 0.39 / 0.71 | 71 / 103 / 145 s |
+
+### Correctness does not separate the conditions
+
+All 1080 cells passed the hidden-reference grader, on every target, in every
+condition, for every agent and tier, with no cap hits. For agents of this
+capability the three ways of expressing checkpoint surgery are equally
+reliable at producing a correct result. What separates them is effort, and the
+ordering is the same everywhere: a BrainSurgery plan costs about twice a
+Python script and takes about twice as long, with the free-choice condition in
+between. Raising the effort tier scales cost and time in all three conditions
+without changing any outcome.
+
+First-run success is the one place the plan condition wins outright for the
+Claude agents: 268 of 270, against 260 for Python and 249 for free choice.
+That is what the executable assertions in a plan are for, and it is the
+clearest quantitative support for the paper's inspectability claim. It does
+not hold for the Codex agent, which is at 72% in condition B against 99% in
+Python. Its 22 condition-B first-run failures are plan-authoring errors caught
+by the plan itself before anything is written: schema rejections from the
+loader, transform errors such as a path pattern matching zero tensors, and
+failed `assert` and write-count checks. It recovered from every one of them
+within the turn budget, and all 90 of its condition-B cells passed. The
+comparison to draw is not that plans are harder for this agent, but that in
+condition B a mistake surfaces as a refusal to run, where the Python condition
+offers no equivalent check.
+
+### Bug detection is saturated; false alarms are not
+
+Odd repeats show the reviewer a defective artifact, even repeats the correct
+reference, so each agent contributes 135 detection trials and 135 false-alarm
+trials.
+
+| Agent | Bug detected | False alarms | P / F / B false alarms |
+|---|---|---|---|
+| Opus 5 | 135/135 (100%) | 0/135 (0.0%) | 0 / 0 / 0 |
+| Fable 5.1 | 135/135 (100%) | 0/135 (0.0%) | 0 / 0 / 0 |
+| Sonnet 5 | 135/135 (100%) | 24/135 (17.8%) | 8 / 6 / 10 |
+| gpt-5.6-sol | 135/135 (100%) | 32/135 (23.7%) | 10 / 11 / 11 |
+
+Detection is 100% for every agent in every condition, so that half of the
+review measure does not discriminate: the seeded defects are too easy for
+frontier agents, and separating the conditions on detection would need harder
+ones. The false-alarm column does discriminate, but it separates *models*, not
+conditions. The two strongest models raise no false alarms at all; the two
+others raise them at similar rates across P, F and B. Read the review phase as
+a property of the reviewer rather than of the artifact format.
+
+Total study cost is 707.35 USD: 575.28 for the solve phases and 132.07 for the
+reviews. The Codex figures are imputed from the published rate card, because
+the runs went through a ChatGPT subscription that reports no per-call cost;
+they are not directly comparable to the metered Claude figures.
+
+### Caveats
+
+- Coding agents are proxies for practitioners, not substitutes. Every number
+  here is agent latency and agent token cost.
+- The tests were sized so that a competent agent can finish them. A ceiling at
+  100% success means the tasks do not discriminate, not that the conditions
+  are interchangeable at every difficulty.
+- Codex has no turn cap, only the 30-minute time cap, so `cap_hit` is not
+  comparable between vendors. No cell hit either cap.
+- In 7 of the 56 false alarms the verdict text concedes, after its opening
+  `NO`, that the behaviour it objects to is in fact correct ("this is actually
+  consistent with the spec", "matches the spec's mapping"). All 7 are Sonnet 5
+  and they are spread over P, F and B. They are scored on the first word, the
+  pre-registered rule; the count comes from a phrase search, so read it as a
+  floor rather than an exact figure.
 
 ## Doc-consultation time
 
@@ -374,9 +441,14 @@ Output is still not atomic on other save-time failures.
 
 ## Open items
 
-1. The condition-F allowed list and lock are the kit's proposal from the
-   paper's related-systems table; the team may replace them before the pilot.
-2. Repeats `k` and the per-run caps (default in `run_claude.py`: 40 turns,
-   15 minutes). Pilot one agent with k=2 across all cells, then fix them.
-3. The sandbox permission denies cover Claude Code participants; other
+1. The seeded defects are detected 100% of the time by every agent. Separating
+   the conditions on review quality needs harder defects, which would mean a
+   second generation of `review/` artifacts and a fresh review pass.
+2. Doc-consultation time exists for the Claude cohort only. `doc_time.py`
+   reads the Claude Code stream-json transcript; a Codex column needs a reader
+   for the `codex exec --json` event stream.
+3. Codex cost is imputed from the rate card, because the runs went through a
+   ChatGPT subscription that reports no per-call cost. Metered runs would make
+   the cost column comparable across vendors.
+4. The sandbox permission denies cover Claude Code participants; other
    agents need the equivalent in their own driver, or a container.

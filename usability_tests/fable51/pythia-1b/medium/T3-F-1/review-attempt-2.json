@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "defective",
+  "artifact": "review/pythia-1b/P/T3-defective.py",
+  "started_at": "2026-09-06T16:38:04+00:00",
+  "finished_at": "2026-09-06T16:38:10+00:00",
+  "wall_clock_s": 5.3,
+  "tokens_in": 2,
+  "tokens_out": 174,
+  "cost_usd": 0.21330174999999998,
+  "verdict": "no",
+  "verdict_text": "NO. The matrix pattern omits `attention.dense.weight`, so only 48 of the 64 projection matrices listed in Required result 1 are cast to bfloat16, and the 16 `attention.dense.weight` tensors are left in float32, violating clauses 1 and 2. The assertion is also written to expect 48 bfloat16 tensors rather than the 64 demanded by the Required checks, so the required \"exactly 64 tensors are bfloat16\" check is not enforced and the script passes despite the wrong casting.",
+  "auto_says_defective": true,
+  "detected": null,
+  "expected_defect": "One projection family is missing from the bfloat16 cast pattern (the attention output projection stays float32); the artifact's own count check was adjusted to the wrong number.",
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

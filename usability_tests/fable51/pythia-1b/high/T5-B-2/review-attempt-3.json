@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/B/T5.yaml",
+  "started_at": "2026-09-06T16:36:14+00:00",
+  "finished_at": "2026-09-06T16:36:46+00:00",
+  "wall_clock_s": 32.1,
+  "tokens_in": 2,
+  "tokens_out": 2364,
+  "cost_usd": 0.32786275000000004,
+  "verdict": "yes",
+  "verdict_text": "YES. The plan computes `B @ A` in float32 (both factors are float32), scales by alpha/r = 2, upcasts the target weight to float32, adds the delta, casts back to float16, and deletes the intermediate delta tensors so only the 244 base names remain in the `model` namespace that is written. All four required checks are present as `assert` transforms: 16 adapter pairs (16 `lora_A` counted, plus 16 deltas counted after the matmul, which would itself fail on a missing `lora_B`), no `lora_` name in the output namespace, the layer-0 QKV weight shape `[6144, 2048]`, and an exact tensor count of 244. Output goes to `out/T5` as safetensors with a 512 MB shard limit, which satisfies the at-most-512 MiB per-shard rule under either binary or decimal interpretation.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

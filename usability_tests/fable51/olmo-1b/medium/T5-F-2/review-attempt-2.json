@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/olmo-1b/P/T5.py",
+  "started_at": "2026-09-06T16:34:41+00:00",
+  "finished_at": "2026-09-06T16:34:50+00:00",
+  "wall_clock_s": 9.6,
+  "tokens_in": 2,
+  "tokens_out": 531,
+  "cost_usd": 0.22994275,
+  "verdict": "yes",
+  "verdict_text": "YES. The script computes `scale = lora_alpha / r = 2`, forms `B @ A` in float32 with the correct `[out, in]` orientation (honoring `fan_in_fan_out = false`), adds it to each of the 32 targeted `model.layers.<i>.{q_proj,v_proj}.weight` tensors while preserving name, shape and float32 dtype, never inserts adapter or intermediate tensors into the state dict, leaves the other 82 tensors untouched, enforces all four required checks with assertions before writing, and exports with the 512 MiB shard limit via the shared sharded-safetensors writer.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}

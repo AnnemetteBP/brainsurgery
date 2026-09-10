@@ -1,0 +1,19 @@
+{
+  "phase": "review",
+  "artifact_kind": "correct",
+  "artifact": "solutions/pythia-1b/P/T2.py",
+  "started_at": "2026-09-06T16:36:52+00:00",
+  "finished_at": "2026-09-06T16:36:59+00:00",
+  "wall_clock_s": 6.9,
+  "tokens_in": 2,
+  "tokens_out": 334,
+  "cost_usd": 0.21860475,
+  "verdict": "yes",
+  "verdict_text": "YES\n\nThe script keeps rows 0..3839 and 4608..6143 of the fused weight and bias (head blocks 0..4 and 6..7 of width 768), keeps columns 0..1279 and 1536..2047 of the dense weight (256-wide blocks minus head 5), leaves all other tensors and names untouched, enforces the four required shape and count assertions before saving, and writes a single `out/T2/model.safetensors` with 244 tensors in the original float16 dtype.",
+  "auto_says_defective": false,
+  "detected": null,
+  "expected_defect": null,
+  "note": "experimenter: set `detected` (true if the stated problem matches expected_defect; for a correct artifact, true means a false alarm). verdict none = no answer, excluded from rates.",
+  "protocol": "review-v2",
+  "artifact_sha256": "stale-artifact-changed"
+}
